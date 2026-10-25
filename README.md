@@ -18,10 +18,11 @@ Everything is saved in your browser, on your computer. No account, no analytics.
 
 ## Structure
 
-- `index.html`: the Raging Studio home page
+- `index.html`: the Raging Studio home page (English), `fr/`: the same page in French
 - `page/`: Raging Page
 - `draw/`: Raging Draw
 - `guide.html`: how the tools work
+- `assets/`: screenshots, icons and the social image; `sitemap.xml`, `robots.txt`, `404.html`
 
 ## Honest warning
 
