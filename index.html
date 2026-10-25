@@ -67,6 +67,10 @@
   ::selection{background:#BFE3FA;}
   html[data-theme="dark"] ::selection{background:#24506E;}
   img{max-width:100%; display:block;}
+  /* pas de mot tout seul en fin de ligne : titres équilibrés, paragraphes sans veuve */
+  h1, h2, h3, h4, summary{text-wrap:balance;}
+  p, li, .lead, .sub{text-wrap:pretty;}
+  .tile p, .feat p, .chain p, .yours p, .tool-id p, details p, .foot p, .cap, .facts{text-wrap:balance;}
   .mm-word{display:inline-flex; align-items:center; line-height:0; white-space:nowrap;}
   .mm-word svg{display:block; height:1em;}
   .mm-word .w1, .mm-word .w2s{fill:var(--ink);}

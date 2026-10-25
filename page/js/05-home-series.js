@@ -145,7 +145,7 @@ function renderHome(){
         <div class="wd-navs">
         <button class="btn wd-nav" data-act="triggerImport">${icon('upload')}<span>${L('Importer','Import')}<small>.fdx, .fountain, .txt, .pdf</small></span></button>
         <button class="btn wd-nav" data-act="vaultOpenFromFile" title="${L('Rouvrir un scénario enregistré sur ton ordinateur, et rester relié à ce fichier','Reopen a screenplay saved on your computer, and stay linked to that file')}">${icon('save')}<span>${L('Ouvrir depuis mon ordinateur','Open from my computer')}<small>.smmproj</small></span></button>
-        <button class="btn wd-nav wd-nav-sample" data-act="openSampleModal">${icon('book')}<span>${L('Scénario d\u2019exemple','Example screenplay')}<small>${L('17 pages annotées · FR / EN','17 annotated pages · FR / EN')}</small></span></button>
+        <button class="btn wd-nav wd-nav-sample" data-act="openSampleModal">${icon('book')}<span>${L('Scénario d\u2019exemple','Example screenplay')}</span></button>
         <button class="btn wd-nav" data-act="openHelp">${icon('read')}<span>${L('Comment faire','How it works')}</span></button>
         <input type="file" id="importFile" accept=".txt,.fountain,.fdx,.pdf,.smmproj,.json" class="hidden">
         </div>
@@ -153,12 +153,6 @@ function renderHome(){
         <div class="wd-about">
           <b>${mmWordmark()}</b>
           <p class="wd-tag">${L('L\u2019écriture de scénario, gratuite et sans compte.','Screenwriting, free and without an account.')}</p>
-          <ul class="wd-points">
-            <li>${icon('doc')}<span>${L('Pagination professionnelle','Industry-standard pagination')}</span></li>
-            <li>${icon('swap')}<span>${L('Compatible Final Draft (.fdx), Fountain, texte et PDF','Final Draft (.fdx), Fountain, text and PDF')}</span></li>
-            <li>${icon('save')}<span>${L('Tes données restent sur ton ordinateur','Your work stays on your computer')}</span></li>
-          </ul>
-          <div class="wd-ver" style="margin-top:16px;"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 8px;border-radius:999px;background:var(--tag-chip-bg);color:var(--ink-soft);font-size:11.5px;font-weight:600;letter-spacing:.02em;line-height:1.4;font-variant-numeric:tabular-nums;"><i style="width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.8;flex:none;"></i>v1.12</span></div>
           <a class="wd-ato" href="https://alternativeto.net/software/raging-page/about/?utm_source=badge&utm_medium=referral" target="_blank" rel="noopener" title="${L('Raging Page sur AlternativeTo','Raging Page on AlternativeTo')}" style="display:block;width:150px;margin-top:14px;opacity:.92;"><img src="https://alternativeto.net/static/badges/badge-compact-color.svg" alt="Raging Page | AlternativeTo" width="150" height="49" style="display:block;width:150px;height:auto;"></a>
         </div>
       </aside>

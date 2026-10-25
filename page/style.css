@@ -2645,3 +2645,6 @@ html[data-theme="dark"] .app-home .hblb{fill:#2A2B31;}
 .rdlb{fill:#A51F2B;}
 html[data-theme="dark"] .rdlb{fill:#D9363E;}
 .app-switch .as-word.rd .w2{fill:#D9363E;}
+
+/* accueil : pas de mot tout seul en fin de ligne */
+#homeView p, #homeView small, #homeView h1, #homeView h2{text-wrap:balance;}

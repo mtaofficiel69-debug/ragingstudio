@@ -53,19 +53,13 @@ function renderHome(){
         <div class="wd-navs">
           <button class="btn wd-nav" data-act="homeImportImage">${icon('image')}<span>${L('Partir d’une photo','Start from a photo')}<small>JPG, PNG, WebP, SVG…</small></span></button>
           <button class="btn wd-nav" data-act="homeOpenProject">${icon('folder')}<span>${L('Ouvrir un projet','Open a project')}<small>.rdraw</small></span></button>
-          <button class="btn wd-nav wd-nav-sample" data-act="openSample">${icon('poster')}<span>${L('Affiche d’exemple','Example poster')}<small>${L('Un thriller, calque par calque','A thriller, layer by layer')}</small></span></button>
+          <button class="btn wd-nav wd-nav-sample" data-act="openSample">${icon('poster')}<span>${L('Affiche d’exemple','Example poster')}</span></button>
           <button class="btn wd-nav" data-act="openHelp">${icon('read')}<span>${L('Comment faire','How it works')}</span></button>
         </div>
         ${homeTipHtml()}
         <div class="wd-about">
           <b>${rdWordmark()}</b>
-          <p class="wd-tag">${L('Tes affiches de films, dessinées et personnalisées de A à Z, gratuitement et sans compte.','Your film posters, drawn and customised from A to Z, free and without an account.')}</p>
-          <ul class="wd-points">
-            <li>${icon('sparkles')}<span>${L('Textes, formes, décors et dessins vectoriels','Vector text, shapes, decor and drawings')}</span></li>
-            <li>${icon('export')}<span>${L('Export PNG, JPEG et PDF jusqu’au 300 dpi','PNG, JPEG and PDF export up to 300 dpi')}</span></li>
-            <li>${icon('save')}<span>${L('Tes affiches restent sur ton ordinateur','Your posters stay on your computer')}</span></li>
-          </ul>
-          <div class="wd-ver"><span class="ver-chip"><i></i>${RD_VERSION}</span><a class="rp-link" href="../page/index.html">${L('Par l’équipe de Raging Page','By the Raging Page team')}</a></div>
+          <p class="wd-tag">${L('Tes affiches de films, de A à Z, gratuitement.','Your film posters, from A to Z, for free.')}</p>
         </div>
       </aside>
       <main class="wd-main">

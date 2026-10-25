@@ -706,3 +706,6 @@ html[data-theme="dark"] .vault-chip.warn{color:#F5B55B; border-color:rgba(245,18
 
 html[data-theme="dark"] .rd-toast{background:#2A2B31;}
 html[data-theme="dark"] .tthumb{background-color:#1E1F24;}
+
+/* accueil : pas de mot tout seul en fin de ligne */
+#homeView p, #homeView small, #homeView h1, #homeView h2{text-wrap:balance;}
