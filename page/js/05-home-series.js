@@ -198,8 +198,7 @@ function homeTipIndex(){
 function homeTipInner(){
   const k = homeTipIndex(), t = HOME_TIPS[k];
   return `<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5.6 10.6C4.5 9.8 3.8 8.6 3.8 7.2a4.2 4.2 0 0 1 8.4 0c0 1.4-.7 2.6-1.8 3.4v1.4H5.6z"/><path d="M6.2 14h3.6"/></svg>
-    <span>${L('Astuce','Tip')} <em>${k + 1}/${HOME_TIPS.length}</em><small>${esc(L(t[0], t[1]))}</small></span>
-    <svg class="icon wd-tip-go" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"/></svg>`;
+<small><span class="sr">${L('Astuce','Tip')} : </span>${esc(L(t[0], t[1]))}</small>`;
 }
 function homeTipHtml(){ return `<button type="button" class="btn wd-nav wd-tip" id="wdTip" data-act="homeTipStep" data-id="1" title="${L('Astuce suivante','Next tip')}" aria-live="polite">${homeTipInner()}</button>`; }
 function homeTipStep(d){
@@ -258,6 +257,7 @@ function icon(name){
     keyboard:'<rect x="1.5" y="4" width="13" height="8.5" rx="1.5"/><path d="M4.2 6.9h.01M6.7 6.9h.01M9.3 6.9h.01M11.8 6.9h.01M5 10h6"/>',
     font:'<path d="M1.8 13.5 5.5 3l3.7 10.5M3.1 10h4.8"/><path d="M10.6 13.5l2-6 2 6M11.3 11.7h2.6"/>',
     home:'<path d="M2 7.5 8 2.5l6 5"/><path d="M3.5 6.8V14h9V6.8M6.5 14V9.5h3V14"/>',
+    back:'<path d="M13 8H3.5M7.5 4 3.5 8l4 4"/>',
     scene:'<rect x="2" y="7" width="12" height="7" rx=".8"/><path d="M2 7 1.6 4.4 13.9 2.4 14 7"/><path d="M5.4 3.9 6.6 7M9 3.3 10.2 7"/>',
     card:'<rect x="1.8" y="3" width="12.4" height="10" rx="1"/><path d="M5 7.2h6M6.5 9.8h3"/>',
     align:'<path d="M2 3.5h12M2 8h8M2 12.5h10"/>',

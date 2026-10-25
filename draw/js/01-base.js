@@ -113,6 +113,7 @@ function icon(name, cls){
     redo:'<path d="M12 4v4H8"/><path d="M12 8a6 6 0 1 0-2 4.5"/>',
     export:'<path d="M8 10V2M4 6l4-4 4 4"/><path d="M2 13h12"/>',
     home:'<path d="M2 7.5 8 2.5l6 5"/><path d="M3.5 6.5V14h9V6.5"/><path d="M6.5 14v-4h3v4"/>',
+    back:'<path d="M13 8H3.5M7.5 4 3.5 8l4 4"/>',
     doc:'<path d="M3 1h7l3 3v11H3z"/><path d="M9 1v4h4"/>',
     poster:'<rect x="3" y="1.5" width="10" height="13" rx="1"/><path d="M5 11.5h6M5.8 9.5h4.4"/><path d="M5 4.5l3 3 3-3"/>',
     layers:'<path d="M8 1.5l6.2 3.3L8 8.1 1.8 4.8z"/><path d="M1.8 8.2 8 11.5l6.2-3.3"/><path d="M1.8 11.5 8 14.8l6.2-3.3"/>',

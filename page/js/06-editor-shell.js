@@ -39,7 +39,7 @@ function renderEditorShell(){
   <div id="editorView"${railShut ? ' class="rail-collapsed"' : ''}>
     <div class="rail">
       <div class="rail-top">
-        <div class="rail-brand" data-act="goHome" title="${L('Retour au portfolio','Back to portfolio')}">${mmLogo(38,'rail-logo')}${mmWordmark()}</div>
+        <div class="rail-brand" data-act="goHome" title="${L('Retour à mes scénarios','Back to my screenplays')}">${mmLogo(38,'rail-logo')}${mmWordmark()}</div>
         <div class="rail-project" data-label="${L('Scénario','Screenplay')}">${esc(p.title)}</div>
       </div>
       <div class="rail-nav">${items}</div>
@@ -50,7 +50,7 @@ function renderEditorShell(){
     <div class="main-col">
       <div class="topbar">
         <div class="topbar-left">
-          <button class="btn btn-sm btn-ghost" data-act="goHome" title="${L('Retour au portfolio','Back to portfolio')}">${icon('home')} <span class="tb-lbl">${L('Portfolio','Portfolio')}</span></button>
+          <button class="btn tb-back" data-act="goHome" title="${L('Retour à mes scénarios','Back to my screenplays')}">${icon('back')}<span class="tb-lbl">${L('Mes scénarios','My screenplays')}</span></button>
           <span class="tb-div"></span>
           <button class="btn btn-sm" data-act="insertScene" title="${L('Insérer une nouvelle entête de scène','Insert a new scene heading')}">${icon('scene')} + <span class="tb-lbl">${L('Scène','Scene')}</span></button>
           <button class="btn btn-sm" data-act="insertCard" title="${L('Insérer un carton : texte placé où tu veux (milieu de page, gros titre, cadre…), taille et style réglables','Insert a title card: text placed anywhere (centered, big title, frame…) with adjustable size and style')}">${icon('card')} + <span class="tb-lbl">${L('Carton','Card')}</span></button>

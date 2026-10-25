@@ -139,7 +139,7 @@ function renderEditorShell(){
     <div class="main-col">
       <div class="topbar">
         <div class="topbar-left">
-          <button class="btn" data-act="goHome" title="${L('Accueil','Home')}">${icon('home')}<span class="tb-lbl">${L('Accueil','Home')}</span></button>
+          <button class="btn tb-back" data-act="goHome" title="${L('Retour à mes affiches','Back to my posters')}">${icon('back')}<span class="tb-lbl">${L('Mes affiches','My posters')}</span></button>
           <span class="tb-div"></span>
           <input class="tb-title" id="docTitle" value="${esc(d.title)}" spellcheck="false" aria-label="${L('Titre de l’affiche','Poster title')}">
           <span class="tb-div"></span>

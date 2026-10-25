@@ -90,7 +90,7 @@ function cpActions(){
     { id:'openLayout', ic:'align', t:['Aligner la ligne (alignement, retraits)', 'Align the line (alignment, indents)'], k:'aligner centrer retrait align center indent', w:CP_W.top, ed:true, line:true, run:() => openLayout() },
     { id:'doUndo', ic:'undo', t:['Annuler', 'Undo'], k:'annuler retour undo', w:CP_W.top, keys:[M, 'Z'], ed:true, run:() => doUndo() },
     { id:'doRedo', ic:'redo', t:['Rétablir', 'Redo'], k:'retablir refaire redo', w:CP_W.top, keys:[M, Sh, 'Z'], ed:true, run:() => doRedo() },
-    { id:'goHome', ic:'home', t:['Retour au portfolio (accueil)', 'Back to portfolio (home)'], k:'accueil portfolio home quitter liste scenarios', w:CP_W.top, run:() => goHome() },
+    { id:'goHome', ic:'home', t:['Retour à mes scénarios (accueil)', 'Back to my screenplays (home)'], k:'accueil portfolio home quitter liste scenarios mes scenarios retour', w:CP_W.top, run:() => goHome() },
     { id:'goToPage', ic:'flag', t:['Aller à une page…', 'Go to a page…'], k:'page aller numero go', w:['Indicateur « Page x / y »', '“Page x / y” indicator'], keys:[M, 'G'], ed:true, run:() => goToPage() },
     { id:'manualSave', ic:'save', t:['Sauvegarder maintenant', 'Save now'], k:'sauvegarder enregistrer save', w:CP_W.key, keys:[M, 'S'], run:() => manualSave() },
     { id:'toggleRail', ic:railClosed() ? 'railshow' : 'railhide', t:railClosed() ? ['Afficher la colonne de gauche', 'Show the left sidebar'] : ['Masquer la colonne de gauche', 'Hide the left sidebar'], k:'colonne gauche masquer afficher replier sidebar hide show plein ecran', w:CP_W.rail, run:() => toggleRail() },
