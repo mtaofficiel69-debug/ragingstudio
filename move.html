@@ -116,7 +116,16 @@
   .tile:hover .go{transform:translateX(2px);}
 
   /* vitrine : les vrais outils */
-  .show{margin:30px 0 0;}
+  .show{margin:30px 0 0; position:relative;}
+  /* vitrine : une flèche de chaque côté pour passer d'un outil à l'autre */
+  .sh-nav{position:absolute; top:calc(50% + 24px); z-index:2; width:46px; height:46px; display:grid; place-items:center; padding:0; border:1px solid var(--hair); border-radius:50%; background:var(--surface); color:var(--ink); box-shadow:var(--shadow-md); cursor:pointer; transform:translateY(-50%); transition:border-color .15s, color .15s, transform .15s;}
+  .sh-nav svg{width:18px; height:18px;}
+  .sh-nav.prev{left:-72px;} .sh-nav.next{right:-72px;}
+  .sh-nav[data-to="p"]:hover{border-color:var(--blue-soft); color:var(--blue);}
+  .sh-nav[data-to="d"]:hover{border-color:var(--red-soft); color:var(--red);}
+  .sh-nav.prev:hover svg{transform:translateX(-1px);} .sh-nav.next:hover svg{transform:translateX(1px);}
+  .sh-nav:active{transform:translateY(-50%) scale(.95);}
+  @media (max-width:1339px){ .sh-nav.prev{left:14px;} .sh-nav.next{right:14px;} .sh-nav{background:color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);} }
   .frame{background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-md); overflow:hidden;}
   .frame-h{display:flex; align-items:center; gap:14px; height:48px; padding:0 14px; background:var(--surface-soft-2); border-bottom:1px solid var(--hair);}
   .tabs{display:flex; gap:4px; margin:0 auto; padding:3px; border-radius:10px; background:var(--chip-bg);}
@@ -230,6 +239,7 @@
     .hero .lead{font-size:16px;}
     .pick{grid-template-columns:1fr;}
     .frame-h{padding:0 8px;}
+    .sh-nav{width:36px; height:36px;} .sh-nav svg{width:15px; height:15px;} .sh-nav.prev{left:8px;} .sh-nav.next{right:8px;}
     .tabs button{padding:6px 10px 6px 6px; font-size:12.5px;}
     h2{font-size:26px;}
     section.s{padding:52px 0 4px;}

@@ -139,7 +139,16 @@
   .tile:hover .go{transform:translateX(2px);}
 
   /* vitrine : les vrais outils */
-  .show{margin:30px 0 0;}
+  .show{margin:30px 0 0; position:relative;}
+  /* vitrine : une flèche de chaque côté pour passer d'un outil à l'autre */
+  .sh-nav{position:absolute; top:calc(50% + 24px); z-index:2; width:46px; height:46px; display:grid; place-items:center; padding:0; border:1px solid var(--hair); border-radius:50%; background:var(--surface); color:var(--ink); box-shadow:var(--shadow-md); cursor:pointer; transform:translateY(-50%); transition:border-color .15s, color .15s, transform .15s;}
+  .sh-nav svg{width:18px; height:18px;}
+  .sh-nav.prev{left:-72px;} .sh-nav.next{right:-72px;}
+  .sh-nav[data-to="p"]:hover{border-color:var(--blue-soft); color:var(--blue);}
+  .sh-nav[data-to="d"]:hover{border-color:var(--red-soft); color:var(--red);}
+  .sh-nav.prev:hover svg{transform:translateX(-1px);} .sh-nav.next:hover svg{transform:translateX(1px);}
+  .sh-nav:active{transform:translateY(-50%) scale(.95);}
+  @media (max-width:1339px){ .sh-nav.prev{left:14px;} .sh-nav.next{right:14px;} .sh-nav{background:color-mix(in srgb, var(--surface) 90%, transparent); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);} }
   .frame{background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-md); overflow:hidden;}
   .frame-h{display:flex; align-items:center; gap:14px; height:48px; padding:0 14px; background:var(--surface-soft-2); border-bottom:1px solid var(--hair);}
   .tabs{display:flex; gap:4px; margin:0 auto; padding:3px; border-radius:10px; background:var(--chip-bg);}
@@ -253,6 +262,7 @@
     .hero .lead{font-size:16px;}
     .pick{grid-template-columns:1fr;}
     .frame-h{padding:0 8px;}
+    .sh-nav{width:36px; height:36px;} .sh-nav svg{width:15px; height:15px;} .sh-nav.prev{left:8px;} .sh-nav.next{right:8px;}
     .tabs button{padding:6px 10px 6px 6px; font-size:12.5px;}
     h2{font-size:26px;}
     section.s{padding:52px 0 4px;}
@@ -295,6 +305,8 @@
     </section>
 
     <div class="show">
+      <button type="button" class="sh-nav prev" data-d="-1" data-to="d" aria-controls="scr-p scr-d" aria-label="Voir Raging Draw" title="Raging Draw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+      <button type="button" class="sh-nav next" data-d="1" data-to="d" aria-controls="scr-p scr-d" aria-label="Voir Raging Draw" title="Raging Draw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
       <div class="frame">
         <div class="frame-h">
           <div class="tabs" role="tablist" aria-label="Voir les outils">
@@ -425,9 +437,20 @@
       s('ragingstudio_theme', dark ? 'light' : 'dark');
     });
     // vitrine : un onglet par outil
-    var tabs = document.querySelectorAll('.tabs [role="tab"]');
+    var tabs = document.querySelectorAll('.tabs [role="tab"]'), navs = document.querySelectorAll('.sh-nav'), cur = 0;
     function pick(t){
-      tabs.forEach(function(x){ var on = x === t; x.setAttribute('aria-selected', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
+      tabs.forEach(function(x, j){ var on = x === t; if(on) cur = j; x.setAttribute('aria-selected', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
+      // chaque flèche annonce l'outil vers lequel elle mène
+      navs.forEach(function(b){ var to = tabs[(cur + (+b.dataset.d) + tabs.length) % tabs.length], name = to.textContent.trim();
+        b.dataset.to = to.id === 'tab-p' ? 'p' : 'd'; b.title = name; b.setAttribute('aria-label', (doc.lang === 'fr' ? 'Voir ' : 'Show ') + name); });
+    }
+    function step(d){ pick(tabs[(cur + d + tabs.length) % tabs.length]); }
+    navs.forEach(function(b){ b.addEventListener('click', function(){ step(+b.dataset.d); }); });
+    // sur téléphone : glisser l'image vers la gauche ou la droite
+    var scr = document.querySelector('.show .screen'), x0 = null, y0 = 0;
+    if(scr){
+      scr.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+      scr.addEventListener('touchend', function(e){ if(x0 === null) return; var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null; if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.4) step(dx < 0 ? 1 : -1); }, {passive:true});
     }
     tabs.forEach(function(t, i){
       t.addEventListener('click', function(){ pick(t); });
