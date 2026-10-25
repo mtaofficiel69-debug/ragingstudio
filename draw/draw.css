@@ -615,6 +615,8 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:var(--focus-rin
 .app-guide{display:inline-flex; align-items:center; gap:7px; padding:7px 10px; border-radius:6px; color:var(--ink); text-decoration:none; font-size:13.5px; font-weight:500; white-space:nowrap; transition:background .12s;}
 .app-guide:hover{background:var(--overlay-hover);}
 .app-guide .icon{width:15px; height:15px; color:var(--ink-soft);}
+.app-home .ah-logo{width:20px; height:20px; border-radius:5px; flex:none; display:block;}
+html[data-theme="dark"] .app-home .hblb{fill:#2A2B31;}
 .app-switch{display:inline-flex; align-items:center; gap:9px; height:36px; padding:0 12px 0 5px; border:1px solid var(--hair); border-radius:10px; background:var(--surface); color:var(--ink); text-decoration:none; box-shadow:var(--shadow-sm); transition:border-color .12s, box-shadow .12s;}
 .app-switch:hover{border-color:#F2C4C7; box-shadow:var(--shadow-sm), 0 0 0 3px rgba(217,54,62,.12);}
 .app-switch .as-logo{width:26px; height:26px; flex:none; display:block; border-radius:6px;}
@@ -624,6 +626,20 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:var(--focus-rin
 .app-guide:focus-visible, .app-switch:focus-visible{outline:none; box-shadow:0 0 0 3px rgba(217,54,62,.22);}
 .app-sep{width:1px; height:22px; background:var(--hair); margin:0 4px; flex:none;}
 @media (max-width:720px){ .app-guide span, .app-switch .as-word, .app-sep{display:none;} .app-switch{padding:0 8px 0 5px; gap:6px;} }
+/* téléphone : la barre de l'accueil tient sur la largeur (le guide reste dans « Comment ça marche ») */
+@media (max-width:520px){
+  #homeView .wd-top{gap:8px; padding:0 12px;}
+  #homeView .wd-top-r{gap:4px;}
+  #homeView .wd-brand{gap:8px;}
+  #homeView .wd-brand .wd-logo{width:30px; height:30px;}
+  #homeView .wd-brand .mm-word{font-size:21px;}
+  .app-links{gap:2px;}
+  .app-links .app-guide:not(.app-home){display:none;}
+  .app-guide{padding:7px 6px;}
+  #homeView .wd-top .btn-ghost{font-size:0; gap:0; padding:7px 8px;}
+  #homeView .wd-top .lang-flag{padding-left:9px; padding-right:9px;}
+  #homeView .wd-brand .mm-word{font-size:19px;}
+}
 @media (prefers-reduced-motion:reduce){ .app-switch .as-ar{transition:none;} }
 .app-switch .as-word.rp .w2{fill:#3699D4;}
 
