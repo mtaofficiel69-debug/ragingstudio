@@ -79,8 +79,9 @@
   .rdlb{fill:#A51F2B;} html[data-theme="dark"] .rdlb{fill:#D9363E;}
   .lg{display:block; flex:none;}
   html[data-theme="dark"] .hblb{fill:#2A2B31;}
-  .slug{font-family:'Courier Prime','Courier New',monospace; font-weight:700; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);}
-  .slug b{color:var(--blue); font-weight:700; margin-right:10px;}
+  /* petit titre de section, sobre : celui des colonnes du pied de page */
+  .slug{font-size:12px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft);}
+  .tool.p .slug, .chain .c1 .slug{color:var(--blue);} .tool.d .slug, .chain .c2 .slug, .give .slug{color:var(--red);}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
   :focus-visible{outline:none; box-shadow:var(--focus-ring); border-radius:6px;}
 
@@ -180,9 +181,6 @@
   .chain{display:grid; grid-template-columns:repeat(3, 1fr); background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden;}
   .chain > div{padding:22px; border-left:1px solid var(--hair); display:flex; flex-direction:column; gap:8px;}
   .chain > div:first-child{border-left:0;}
-  .chain .slug b{margin-right:8px;}
-  .chain .c2 .slug b{color:var(--red);}
-  .chain .c3 .slug b{color:var(--ink-soft);}
   .chain h3{margin:2px 0 0; font-size:17px; font-weight:700; letter-spacing:-.015em;}
   .chain p{margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft); flex:1;}
   .chain .st{font-size:13.5px; font-weight:600; text-decoration:none;}
@@ -219,7 +217,6 @@
   /* bandeau final : la colonne sombre de Raging Page */
   .band{margin:72px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:30px 32px; border-radius:14px; background:var(--studio); color:var(--studio-text);}
   html[data-theme="dark"] .band{background:#141518; box-shadow:0 0 0 1px var(--hair);}
-  .band .slug{color:var(--studio-dim);}
   .band h2{color:#fff; margin-top:6px; font-size:26px;}
   .band .btns{margin:0; padding:0;}
   .band .btn{border-color:transparent;}
@@ -286,7 +283,6 @@
 <main>
   <div class="wrap">
     <section class="hero" aria-labelledby="h1">
-      <div class="slug"><b>1.</b>INT. RAGING STUDIO — JOUR</div>
       <h1 id="h1">Des outils gratuits pour <span class="t-p">écrire</span> ton film et <span class="t-d">dessiner</span> son affiche.</h1>
       <p class="lead">Raging Studio réunit des outils gratuits pour les cinéastes. Ils s’ouvrent dans ton navigateur, sans rien installer ni créer de compte, et ton travail reste sur ton ordinateur.</p>
       <p class="facts">Gratuit · Sans compte · Open source</p>
@@ -320,7 +316,7 @@
     <section class="s" id="raging-page" aria-labelledby="h-rp">
       <article class="tool p">
         <div class="tool-id">
-          <div class="slug"><b>2.</b>Écrire</div>
+          <div class="slug">Écrire</div>
           <div class="row"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rp"/></svg><span class="mm-word" role="img" aria-label="Raging Page"><svg viewBox="0 -1911 11713 2422" style="width:4.836em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-p" class="w2p" transform="translate(7180 0)"/></svg></span></div>
           <h2 id="h-rp" class="sr">Raging Page</h2>
           <h3>Le logiciel d’écriture de scénario gratuit, dans ton navigateur.</h3>
@@ -341,7 +337,7 @@
     <section class="s" id="raging-draw" aria-labelledby="h-rd" style="padding-top:8px">
       <article class="tool d">
         <div class="tool-id">
-          <div class="slug"><b style="color:var(--red)">3.</b>Dessiner</div>
+          <div class="slug">Dessiner</div>
           <div class="row"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rd"/></svg><span class="mm-word" role="img" aria-label="Raging Draw"><svg viewBox="0 -1911 12592 2422" style="width:5.199em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-d" class="w2d" transform="translate(7180 0)"/></svg></span></div>
           <h2 id="h-rd" class="sr">Raging Draw</h2>
           <h3>Pour créer l’affiche de ton film, de A à Z, gratuitement.</h3>
@@ -360,17 +356,17 @@
     </section>
 
     <section class="s" id="studio" aria-labelledby="h-chain">
-      <div class="sh"><div><div class="slug"><b>4.</b>Tout le film</div><h2 id="h-chain">De la première ligne à l’affiche</h2>
+      <div class="sh"><div><div class="slug">Tout le film</div><h2 id="h-chain">De la première ligne à l’affiche</h2>
         <p class="sub">Chaque outil couvre une étape de la fabrication d’un film, et ils marchent tous de la même façon.</p></div></div>
       <div class="chain">
-        <div class="c1"><div class="slug"><b>01</b>Écrire</div><h3>Raging Page</h3><p>Le scénario, du premier jet à la version de tournage.</p><a class="st" href="../page/">Ouvrir →</a></div>
-        <div class="c2"><div class="slug"><b>02</b>Dessiner</div><h3>Raging Draw</h3><p>L’affiche de ton film.</p><a class="st" href="../draw/">Ouvrir →</a></div>
-        <div class="c3"><div class="slug"><b>03</b>Préparer</div><h3>Outils de production</h3><p>Pour organiser le tournage. Ils arriveront ici quand ils seront prêts.</p><span class="st">En préparation</span></div>
+        <div class="c1"><div class="slug">Écrire</div><h3>Raging Page</h3><p>Le scénario, du premier jet à la version de tournage.</p><a class="st" href="../page/">Ouvrir →</a></div>
+        <div class="c2"><div class="slug">Dessiner</div><h3>Raging Draw</h3><p>L’affiche de ton film.</p><a class="st" href="../draw/">Ouvrir →</a></div>
+        <div class="c3"><div class="slug">Préparer</div><h3>Outils de production</h3><p>Pour organiser le tournage. Ils arriveront ici quand ils seront prêts.</p><span class="st">En préparation</span></div>
       </div>
     </section>
 
     <section class="s" id="yours" aria-labelledby="h-yours">
-      <div class="sh"><div><div class="slug"><b>5.</b>Ton travail</div><h2 id="h-yours">Il reste à toi</h2>
+      <div class="sh"><div><div class="slug">Ton travail</div><h2 id="h-yours">Il reste à toi</h2>
         <p class="sub">Pas de serveur, pas de compte : rien à créer, rien à céder.</p></div></div>
       <div class="yours">
         <div><h3>Sur ton ordinateur</h3><p>Scénarios et affiches s’enregistrent dans ton navigateur, automatiquement. Nous ne les recevons jamais.</p></div>
@@ -381,21 +377,21 @@
     </section>
 
     <section class="s" id="faq" aria-labelledby="h-faq">
-      <div class="sh"><div><div class="slug"><b>6.</b>Questions</div><h2 id="h-faq">Bon à savoir</h2></div></div>
+      <div class="sh"><div><div class="slug">Questions</div><h2 id="h-faq">Bon à savoir</h2></div></div>
       <div class="faq"><div class="faq-col"><details><summary>Raging Studio est vraiment gratuit ?</summary><p>Oui. Pas d’abonnement, pas de publicité, pas de version payante. Raging Page et Raging Draw sont open source.</p></details><details><summary>Faut-il un compte ?</summary><p>Non. Ouvre un outil et commence. La seule connexion facultative est Google, si tu veux une copie sur ton Drive.</p></details><details><summary>Raging Page est-il une alternative gratuite à Final Draft ?</summary><p>Oui. Raging Page met ton scénario aux normes professionnelles, et importe et exporte le .fdx, le format lu par Final Draft, WriterDuet, Fade In et la plupart des productions.</p></details><details><summary>Je peux imprimer mes affiches ?</summary><p>Oui. Raging Draw exporte un PDF à la taille réelle de l’affiche, jusqu’au 300 dpi, prêt pour n’importe quel imprimeur.</p></details></div><div class="faq-col"><details><summary>Où est enregistré mon travail ?</summary><p>Dans ton navigateur, sur ton ordinateur, automatiquement. Vider les données du navigateur l’efface : garde de temps en temps une copie en fichier.</p></details><details><summary>Je peux changer d’ordinateur ?</summary><p>Oui : enregistre ton fichier projet (.smmproj ou .rdraw) et ouvre-le depuis l’accueil de l’outil sur l’autre ordinateur, ou passe par Google Drive.</p></details><details><summary>Ça marche sur téléphone ?</summary><p>Oui, mais les outils sont pensés d’abord pour un ordinateur. Ils ont besoin d’internet pour les polices.</p></details><details><summary>Un bug ou une idée ?</summary><p>Dis-le sur <a href="https://github.com/mtaofficiel69-debug/ragingpage/issues" target="_blank" rel="noopener">GitHub</a>. Raging Studio est fait par un cinéaste, en open source, et s’améliore grâce à tes retours.</p></details></div></div>
       <p class="more">L’aide pas à pas de chaque outil est dans le <a href="../guide.html?from=page">guide</a>.</p>
     </section>
 
     <section class="s" id="support" aria-labelledby="h-give">
       <div class="give">
-        <div><div class="slug"><b style="color:var(--red)">7.</b>Soutenir</div><h2 id="h-give">Gratuit, et ça le restera.</h2>
+        <div><div class="slug">Soutenir</div><h2 id="h-give">Gratuit, et ça le restera.</h2>
           <p class="sub">Pas de pub, pas d’abonnement, pas de version payante. Si Raging Studio t’aide, un don sur Ko-fi l’aide à grandir, avec de nouveaux outils pour les cinéastes.</p></div>
         <div><a class="btn bd" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg>Soutenir sur Ko-fi</a><p class="note">Don ponctuel, sans créer de compte</p></div>
       </div>
     </section>
 
     <section class="band" aria-labelledby="h-go">
-      <div><div class="slug">OUVERTURE AU NOIR :</div><h2 id="h-go">Ton prochain film commence ici.</h2></div>
+      <div><h2 id="h-go" style="margin-top:0">Ton prochain film commence ici.</h2></div>
       <div class="btns"><a class="btn bp" href="../page/"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true" style="width:20px;height:20px;border-radius:5px;box-shadow:0 0 0 1.5px rgba(255,255,255,.6)"><use href="#l-rp"/></svg>Écrire un scénario</a><a class="btn bd" href="../draw/"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true" style="width:20px;height:20px;border-radius:5px;box-shadow:0 0 0 1.5px rgba(255,255,255,.6)"><use href="#l-rd"/></svg>Dessiner une affiche</a></div>
     </section>
   </div>

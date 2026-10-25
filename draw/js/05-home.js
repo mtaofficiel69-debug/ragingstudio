@@ -55,12 +55,12 @@ function renderHome(){
           <button class="btn wd-nav" data-act="homeOpenProject">${icon('folder')}<span>${L('Ouvrir un projet','Open a project')}<small>.rdraw</small></span></button>
           <button class="btn wd-nav wd-nav-sample" data-act="openSample">${icon('poster')}<span>${L('Affiche d’exemple','Example poster')}</span></button>
           <button class="btn wd-nav" data-act="openHelp">${icon('read')}<span>${L('Comment faire','How it works')}</span></button>
+        <a class="btn wd-nav wd-sup" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener" title="${L('Raging Studio est gratuit. S\u2019il t\u2019aide, tu peux le soutenir sur Ko-fi.','Raging Studio is free. If it helps you, you can support it on Ko-fi.')}"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg><span>${L('Soutenir Raging Studio','Support Raging Studio')}<small>${L('Un don sur Ko-fi','A donation on Ko-fi')}</small></span></a>
         </div>
         ${homeTipHtml()}
         <div class="wd-about">
           <b>${rdWordmark()}</b>
           <p class="wd-tag">${L('Tes affiches de films, de A à Z, gratuitement.','Your film posters, from A to Z, for free.')}</p>
-          <a class="wd-sup" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener" title="${L('Raging Studio est gratuit. S\u2019il t\u2019aide, tu peux le soutenir sur Ko-fi.','Raging Studio is free. If it helps you, you can support it on Ko-fi.')}"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg><span>${L('Soutenir Raging Studio','Support Raging Studio')}</span></a>
         </div>
       </aside>
       <main class="wd-main">

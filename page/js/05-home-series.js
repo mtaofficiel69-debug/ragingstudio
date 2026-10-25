@@ -147,13 +147,13 @@ function renderHome(){
         <button class="btn wd-nav" data-act="vaultOpenFromFile" title="${L('Rouvrir un scénario enregistré sur ton ordinateur, et rester relié à ce fichier','Reopen a screenplay saved on your computer, and stay linked to that file')}">${icon('save')}<span>${L('Ouvrir depuis mon ordinateur','Open from my computer')}<small>.smmproj</small></span></button>
         <button class="btn wd-nav wd-nav-sample" data-act="openSampleModal">${icon('book')}<span>${L('Scénario d\u2019exemple','Example screenplay')}</span></button>
         <button class="btn wd-nav" data-act="openHelp">${icon('read')}<span>${L('Comment faire','How it works')}</span></button>
+        <a class="btn wd-nav wd-sup" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener" title="${L('Raging Studio est gratuit. S\u2019il t\u2019aide, tu peux le soutenir sur Ko-fi.','Raging Studio is free. If it helps you, you can support it on Ko-fi.')}"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg><span>${L('Soutenir Raging Studio','Support Raging Studio')}<small>${L('Un don sur Ko-fi','A donation on Ko-fi')}</small></span></a>
         <input type="file" id="importFile" accept=".txt,.fountain,.fdx,.pdf,.smmproj,.json" class="hidden">
         </div>
         ${homeTipHtml()}
         <div class="wd-about">
           <b>${mmWordmark()}</b>
           <p class="wd-tag">${L('L\u2019écriture de scénario, gratuite et sans compte.','Screenwriting, free and without an account.')}</p>
-          <a class="wd-sup" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener" title="${L('Raging Studio est gratuit. S\u2019il t\u2019aide, tu peux le soutenir sur Ko-fi.','Raging Studio is free. If it helps you, you can support it on Ko-fi.')}"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg><span>${L('Soutenir Raging Studio','Support Raging Studio')}</span></a>
           <a class="wd-ato" href="https://alternativeto.net/software/raging-page/about/?utm_source=badge&utm_medium=referral" target="_blank" rel="noopener" title="${L('Raging Page sur AlternativeTo','Raging Page on AlternativeTo')}" style="display:block;width:150px;margin-top:14px;opacity:.92;"><img src="https://alternativeto.net/static/badges/badge-compact-color.svg" alt="Raging Page | AlternativeTo" width="150" height="49" style="display:block;width:150px;height:auto;"></a>
         </div>
       </aside>

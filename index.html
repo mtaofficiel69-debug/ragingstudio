@@ -79,8 +79,9 @@
   .rdlb{fill:#A51F2B;} html[data-theme="dark"] .rdlb{fill:#D9363E;}
   .lg{display:block; flex:none;}
   html[data-theme="dark"] .hblb{fill:#2A2B31;}
-  .slug{font-family:'Courier Prime','Courier New',monospace; font-weight:700; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);}
-  .slug b{color:var(--blue); font-weight:700; margin-right:10px;}
+  /* petit titre de section, sobre : celui des colonnes du pied de page */
+  .slug{font-size:12px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft);}
+  .tool.p .slug, .chain .c1 .slug{color:var(--blue);} .tool.d .slug, .chain .c2 .slug, .give .slug{color:var(--red);}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
   :focus-visible{outline:none; box-shadow:var(--focus-ring); border-radius:6px;}
 
@@ -180,9 +181,6 @@
   .chain{display:grid; grid-template-columns:repeat(3, 1fr); background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden;}
   .chain > div{padding:22px; border-left:1px solid var(--hair); display:flex; flex-direction:column; gap:8px;}
   .chain > div:first-child{border-left:0;}
-  .chain .slug b{margin-right:8px;}
-  .chain .c2 .slug b{color:var(--red);}
-  .chain .c3 .slug b{color:var(--ink-soft);}
   .chain h3{margin:2px 0 0; font-size:17px; font-weight:700; letter-spacing:-.015em;}
   .chain p{margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft); flex:1;}
   .chain .st{font-size:13.5px; font-weight:600; text-decoration:none;}
@@ -219,7 +217,6 @@
   /* bandeau final : la colonne sombre de Raging Page */
   .band{margin:72px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:30px 32px; border-radius:14px; background:var(--studio); color:var(--studio-text);}
   html[data-theme="dark"] .band{background:#141518; box-shadow:0 0 0 1px var(--hair);}
-  .band .slug{color:var(--studio-dim);}
   .band h2{color:#fff; margin-top:6px; font-size:26px;}
   .band .btns{margin:0; padding:0;}
   .band .btn{border-color:transparent;}
@@ -286,7 +283,6 @@
 <main>
   <div class="wrap">
     <section class="hero" aria-labelledby="h1">
-      <div class="slug"><b>1.</b>INT. RAGING STUDIO — DAY</div>
       <h1 id="h1">Free tools to <span class="t-p">write</span> your film and <span class="t-d">design</span> its poster.</h1>
       <p class="lead">Raging Studio brings together free tools for filmmakers. They open in your browser, with nothing to install and no account, and your work stays on your computer.</p>
       <p class="facts">Free · No account · Open source</p>
@@ -320,7 +316,7 @@
     <section class="s" id="raging-page" aria-labelledby="h-rp">
       <article class="tool p">
         <div class="tool-id">
-          <div class="slug"><b>2.</b>Write</div>
+          <div class="slug">Write</div>
           <div class="row"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rp"/></svg><span class="mm-word" role="img" aria-label="Raging Page"><svg viewBox="0 -1911 11713 2422" style="width:4.836em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-p" class="w2p" transform="translate(7180 0)"/></svg></span></div>
           <h2 id="h-rp" class="sr">Raging Page</h2>
           <h3>Free screenwriting software, in your browser.</h3>
@@ -341,7 +337,7 @@
     <section class="s" id="raging-draw" aria-labelledby="h-rd" style="padding-top:8px">
       <article class="tool d">
         <div class="tool-id">
-          <div class="slug"><b style="color:var(--red)">3.</b>Design</div>
+          <div class="slug">Design</div>
           <div class="row"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rd"/></svg><span class="mm-word" role="img" aria-label="Raging Draw"><svg viewBox="0 -1911 12592 2422" style="width:5.199em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-d" class="w2d" transform="translate(7180 0)"/></svg></span></div>
           <h2 id="h-rd" class="sr">Raging Draw</h2>
           <h3>A free film poster maker, from A to Z.</h3>
@@ -360,17 +356,17 @@
     </section>
 
     <section class="s" id="studio" aria-labelledby="h-chain">
-      <div class="sh"><div><div class="slug"><b>4.</b>The whole film</div><h2 id="h-chain">From the first line to the poster</h2>
+      <div class="sh"><div><div class="slug">The whole film</div><h2 id="h-chain">From the first line to the poster</h2>
         <p class="sub">Each tool covers one step of making a film, and they all work the same way.</p></div></div>
       <div class="chain">
-        <div class="c1"><div class="slug"><b>01</b>Write</div><h3>Raging Page</h3><p>The screenplay, from the first draft to the shooting script.</p><a class="st" href="page/">Open →</a></div>
-        <div class="c2"><div class="slug"><b>02</b>Design</div><h3>Raging Draw</h3><p>The poster of your film.</p><a class="st" href="draw/">Open →</a></div>
-        <div class="c3"><div class="slug"><b>03</b>Prepare</div><h3>Production tools</h3><p>To organise the shoot. They will appear here when they are ready.</p><span class="st">In the works</span></div>
+        <div class="c1"><div class="slug">Write</div><h3>Raging Page</h3><p>The screenplay, from the first draft to the shooting script.</p><a class="st" href="page/">Open →</a></div>
+        <div class="c2"><div class="slug">Design</div><h3>Raging Draw</h3><p>The poster of your film.</p><a class="st" href="draw/">Open →</a></div>
+        <div class="c3"><div class="slug">Prepare</div><h3>Production tools</h3><p>To organise the shoot. They will appear here when they are ready.</p><span class="st">In the works</span></div>
       </div>
     </section>
 
     <section class="s" id="yours" aria-labelledby="h-yours">
-      <div class="sh"><div><div class="slug"><b>5.</b>Your work</div><h2 id="h-yours">It stays yours</h2>
+      <div class="sh"><div><div class="slug">Your work</div><h2 id="h-yours">It stays yours</h2>
         <p class="sub">No server, no account: there is nothing to sign up for, and nothing to give away.</p></div></div>
       <div class="yours">
         <div><h3>On your computer</h3><p>Screenplays and posters are saved in your browser, automatically. We never receive them.</p></div>
@@ -381,21 +377,21 @@
     </section>
 
     <section class="s" id="faq" aria-labelledby="h-faq">
-      <div class="sh"><div><div class="slug"><b>6.</b>Questions</div><h2 id="h-faq">Good to know</h2></div></div>
+      <div class="sh"><div><div class="slug">Questions</div><h2 id="h-faq">Good to know</h2></div></div>
       <div class="faq"><div class="faq-col"><details><summary>Is Raging Studio really free?</summary><p>Yes. No subscription, no ads, no paid version. Raging Page and Raging Draw are open source.</p></details><details><summary>Do I need an account?</summary><p>No. Open a tool and start. The only optional sign-in is Google, if you want a copy on your Drive.</p></details><details><summary>Is Raging Page a free alternative to Final Draft?</summary><p>Yes. Raging Page formats your screenplay to industry standards and imports and exports .fdx, the format read by Final Draft, WriterDuet, Fade In and most productions.</p></details><details><summary>Can I print the posters I make?</summary><p>Yes. Raging Draw exports a PDF at the poster’s actual size, up to 300 dpi, ready for any printer.</p></details></div><div class="faq-col"><details><summary>Where is my work saved?</summary><p>In your browser, on your computer, automatically. Clearing your browser data erases it, so keep a file copy now and then.</p></details><details><summary>Can I switch computers?</summary><p>Yes: save your project file (.smmproj or .rdraw) and open it from the tool’s home screen on the other computer, or use Google Drive.</p></details><details><summary>Does it work on a phone?</summary><p>Yes, but the tools are designed for a computer first. They need the internet for fonts.</p></details><details><summary>Found a bug or have an idea?</summary><p>Tell us on <a href="https://github.com/mtaofficiel69-debug/ragingpage/issues" target="_blank" rel="noopener">GitHub</a>. Raging Studio is made by a filmmaker, in the open, and gets better with your feedback.</p></details></div></div>
       <p class="more">Step-by-step help for each tool in the <a href="guide.html?from=page">guide</a>.</p>
     </section>
 
     <section class="s" id="support" aria-labelledby="h-give">
       <div class="give">
-        <div><div class="slug"><b style="color:var(--red)">7.</b>Support</div><h2 id="h-give">Free, and it will stay that way.</h2>
+        <div><div class="slug">Support</div><h2 id="h-give">Free, and it will stay that way.</h2>
           <p class="sub">No ads, no subscription, no paid version. If Raging Studio helps you, a donation on Ko-fi helps it grow, with new tools for filmmakers.</p></div>
         <div><a class="btn bd" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg>Support on Ko-fi</a><p class="note">One-off donation, no account needed</p></div>
       </div>
     </section>
 
     <section class="band" aria-labelledby="h-go">
-      <div><div class="slug">FADE IN:</div><h2 id="h-go">Your next film starts here.</h2></div>
+      <div><h2 id="h-go" style="margin-top:0">Your next film starts here.</h2></div>
       <div class="btns"><a class="btn bp" href="page/"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true" style="width:20px;height:20px;border-radius:5px;box-shadow:0 0 0 1.5px rgba(255,255,255,.6)"><use href="#l-rp"/></svg>Write a screenplay</a><a class="btn bd" href="draw/"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true" style="width:20px;height:20px;border-radius:5px;box-shadow:0 0 0 1.5px rgba(255,255,255,.6)"><use href="#l-rd"/></svg>Design a poster</a></div>
     </section>
   </div>

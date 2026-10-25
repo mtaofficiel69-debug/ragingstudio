@@ -56,8 +56,9 @@
   .rdlb{fill:#A51F2B;} html[data-theme="dark"] .rdlb{fill:#D9363E;}
   .lg{display:block; flex:none;}
   html[data-theme="dark"] .hblb{fill:#2A2B31;}
-  .slug{font-family:'Courier Prime','Courier New',monospace; font-weight:700; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);}
-  .slug b{color:var(--blue); font-weight:700; margin-right:10px;}
+  /* petit titre de section, sobre : celui des colonnes du pied de page */
+  .slug{font-size:12px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft);}
+  .tool.p .slug, .chain .c1 .slug{color:var(--blue);} .tool.d .slug, .chain .c2 .slug, .give .slug{color:var(--red);}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
   :focus-visible{outline:none; box-shadow:var(--focus-ring); border-radius:6px;}
 
@@ -157,9 +158,6 @@
   .chain{display:grid; grid-template-columns:repeat(3, 1fr); background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden;}
   .chain > div{padding:22px; border-left:1px solid var(--hair); display:flex; flex-direction:column; gap:8px;}
   .chain > div:first-child{border-left:0;}
-  .chain .slug b{margin-right:8px;}
-  .chain .c2 .slug b{color:var(--red);}
-  .chain .c3 .slug b{color:var(--ink-soft);}
   .chain h3{margin:2px 0 0; font-size:17px; font-weight:700; letter-spacing:-.015em;}
   .chain p{margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft); flex:1;}
   .chain .st{font-size:13.5px; font-weight:600; text-decoration:none;}
@@ -196,7 +194,6 @@
   /* bandeau final : la colonne sombre de Raging Page */
   .band{margin:72px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:30px 32px; border-radius:14px; background:var(--studio); color:var(--studio-text);}
   html[data-theme="dark"] .band{background:#141518; box-shadow:0 0 0 1px var(--hair);}
-  .band .slug{color:var(--studio-dim);}
   .band h2{color:#fff; margin-top:6px; font-size:26px;}
   .band .btns{margin:0; padding:0;}
   .band .btn{border-color:transparent;}
@@ -284,13 +281,11 @@
   <div class="wrap">
 
     <section class="hero st on" id="st-wait" aria-live="polite">
-      <div class="slug"><b>1.</b><span class="en">EXT. NEW ADDRESS — DAY</span><span class="fr">EXT. NOUVELLE ADRESSE — JOUR</span><span class="caret" aria-hidden="true"></span></div>
       <h1><span class="en">Receiving your work…</span><span class="fr">Réception de ton travail…</span></h1>
       <p class="lead"><span class="en">Keep the other tab open for a few seconds.</span><span class="fr">Garde l’autre onglet ouvert quelques secondes.</span></p>
     </section>
 
     <section class="hero st" id="st-done" aria-live="polite">
-      <div class="slug"><b>1.</b><span class="en">EXT. NEW ADDRESS — DAY</span><span class="fr">EXT. NOUVELLE ADRESSE — JOUR</span></div>
       <h1><span class="en">Your work is <span class="t-p">here</span>.</span><span class="fr">Ton travail est <span class="t-p">arrivé</span>.</span></h1>
       <p class="lead"><span class="en">Everything was copied into this browser, at <b>ragingstudio.com</b>. Nothing was removed from the old address.</span><span class="fr">Tout a été copié dans ce navigateur, sur <b>ragingstudio.com</b>. Rien n’a été retiré de l’ancienne adresse.</span></p>
       <div class="pick">
@@ -301,18 +296,16 @@
     </section>
 
     <section class="hero st" id="st-manual">
-      <div class="slug"><b>1.</b><span class="en">EXT. NEW ADDRESS — DAY</span><span class="fr">EXT. NOUVELLE ADRESSE — JOUR</span></div>
       <h1><span class="en">Bring your work <span class="t-p">here</span>.</span><span class="fr">Amène ton travail <span class="t-p">ici</span>.</span></h1>
       <p class="lead"><span class="en">Your screenplays and posters are saved in your browser, at the old address. Three steps bring them here.</span><span class="fr">Tes scénarios et tes affiches sont enregistrés dans ton navigateur, à l’ancienne adresse. Trois étapes pour les amener ici.</span></p>
       <div class="chain">
-        <div class="c1"><div class="slug"><b>01</b><span class="en">Open</span><span class="fr">Ouvrir</span></div><h3><span class="en">The old site</span><span class="fr">L’ancien site</span></h3><p><a href="https://mtaofficiel69-debug.github.io/ragingpage/">mtaofficiel69-debug.github.io/ragingpage</a></p></div>
-        <div class="c2"><div class="slug"><b>02</b><span class="en">Click</span><span class="fr">Cliquer</span></div><h3><span class="en">Transfer my work</span><span class="fr">Transférer mon travail</span></h3><p><span class="en">In the banner at the top of its home screen.</span><span class="fr">Dans le bandeau en haut de son accueil.</span></p></div>
-        <div class="c3"><div class="slug"><b>03</b><span class="en">Done</span><span class="fr">C’est fait</span></div><h3><span class="en">Everything arrives</span><span class="fr">Tout arrive</span></h3><p><span class="en">This page opens and receives it all, in one go. Or use files: <code>.smmproj</code>, <code>.rdraw</code>.</span><span class="fr">Cette page s’ouvre et reçoit tout, d’un coup. Ou passe par les fichiers : <code>.smmproj</code>, <code>.rdraw</code>.</span></p></div>
+        <div class="c1"><div class="slug"><span class="en">Open</span><span class="fr">Ouvrir</span></div><h3><span class="en">The old site</span><span class="fr">L’ancien site</span></h3><p><a href="https://mtaofficiel69-debug.github.io/ragingpage/">mtaofficiel69-debug.github.io/ragingpage</a></p></div>
+        <div class="c2"><div class="slug"><span class="en">Click</span><span class="fr">Cliquer</span></div><h3><span class="en">Transfer my work</span><span class="fr">Transférer mon travail</span></h3><p><span class="en">In the banner at the top of its home screen.</span><span class="fr">Dans le bandeau en haut de son accueil.</span></p></div>
+        <div class="c3"><div class="slug"><span class="en">Done</span><span class="fr">C’est fait</span></div><h3><span class="en">Everything arrives</span><span class="fr">Tout arrive</span></h3><p><span class="en">This page opens and receives it all, in one go. Or use files: <code>.smmproj</code>, <code>.rdraw</code>.</span><span class="fr">Cette page s’ouvre et reçoit tout, d’un coup. Ou passe par les fichiers : <code>.smmproj</code>, <code>.rdraw</code>.</span></p></div>
       </div>
     </section>
 
     <section class="hero st" id="st-error" aria-live="polite">
-      <div class="slug"><b style="color:var(--red)">1.</b><span class="en">EXT. NEW ADDRESS — DAY</span><span class="fr">EXT. NOUVELLE ADRESSE — JOUR</span></div>
       <h1><span class="en">The transfer didn’t finish.</span><span class="fr">Le transfert n’a pas abouti.</span></h1>
       <p class="lead"><span class="en">Nothing was lost: your work is still at the old address. Try again, or move it with files (.smmproj, .rdraw).</span><span class="fr">Rien n’est perdu : ton travail est toujours à l’ancienne adresse. Réessaie, ou déménage-le avec des fichiers (.smmproj, .rdraw).</span></p>
     </section>

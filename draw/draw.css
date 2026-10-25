@@ -710,9 +710,6 @@ html[data-theme="dark"] .tthumb{background-color:#1E1F24;}
 /* accueil : pas de mot tout seul en fin de ligne */
 #homeView p, #homeView small, #homeView h1, #homeView h2{text-wrap:balance;}
 
-/* accueil : lien discret pour soutenir le projet (Ko-fi) */
-#homeView .wd-sup{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:14px; height:38px; padding:0 14px; border-radius:6px; border:1px solid var(--hair); background:var(--surface); color:var(--ink); font-size:13.5px; font-weight:600; text-decoration:none; transition:border-color .15s, background .15s;}
-#homeView .wd-sup .icon{width:15px; height:15px; color:#D9363E; fill:#D9363E;}
-#homeView .wd-sup:hover{border-color:#F2C4C7; background:#D9363E12;}
-html[data-theme="dark"] #homeView .wd-sup:hover{border-color:#7A2E33; background:#D9363E1f;}
-#homeView .wd-sup:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+/* accueil : « Soutenir », une ligne comme les autres de la colonne, avec un cœur rouge */
+#homeView .wd-sup{text-decoration:none;}
+#homeView .wd-sup .icon{color:#D9363E; fill:#D9363E;}
