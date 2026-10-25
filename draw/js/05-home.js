@@ -4,6 +4,8 @@
    colonne d'actions à gauche, « Mes affiches » à droite.
 ===================================================================== */
 const HOME_TIPS = [
+  ['Clic droit maintenu + glisser : tu te déplaces sur l’affiche. Un clic droit simple ouvre le menu.', 'Hold right-click and drag to move around the poster. A simple right-click opens the menu.'],
+  ['Double-clique sur une image pour la recadrer : glisse la photo, tire les coins.', 'Double-click an image to crop it: drag the photo, pull the corners.'],
   ['Glisse une photo sur un cadre photo : elle le remplit sans se déformer.', 'Drop a photo on a photo frame: it fills it without stretching.'],
   ['Alt + glisser un élément : il est dupliqué en même temps.', 'Alt + drag an element: it’s duplicated at the same time.'],
   ['La gomme n’abîme rien : « Restaurer » récupère tout.', 'The eraser never destroys: “Restore” brings everything back.'],
