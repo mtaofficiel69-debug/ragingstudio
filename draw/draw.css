@@ -726,3 +726,6 @@ html[data-theme="dark"] .tthumb{background-color:#1E1F24;}
 .topbar .btn.tb-back[data-act="goHome"] .icon{width:14px; height:14px; color:currentColor;}
 .topbar .btn.tb-back[data-act="goHome"] .tb-lbl{margin-right:2px;}
 .topbar .btn.tb-back[data-act="goHome"]:hover{background:var(--tag-chip-bg); color:var(--tag-chip-text);}
+
+/* mode sombre : un fin contour blanc autour du logo Raging Studio */
+html[data-theme="dark"] .app-home .ah-logo{box-shadow:0 0 0 1.25px #FCFDFE;}
