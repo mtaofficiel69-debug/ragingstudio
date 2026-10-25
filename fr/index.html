@@ -93,6 +93,12 @@
   .nav a.l{display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap;}
   .nav a.l:hover{background:var(--overlay-hover);}
   .nav a.l .lg{width:20px; height:20px; border-radius:5px;}
+  .sup{display:inline-flex; align-items:center; gap:7px; padding:7px 11px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap;}
+  .sup:hover{background:var(--overlay-hover);}
+  .sup svg{width:15px; height:15px; color:var(--red);}
+  .foot .foot-sup{margin-top:8px;}
+  .foot .foot-sup a{color:var(--ink); text-decoration:underline; text-decoration-color:var(--hair); text-underline-offset:3px;}
+  .foot .foot-sup a:hover{text-decoration-color:var(--red);}
   .gh{display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:6px; color:var(--ink-soft);}
   .gh:hover{background:var(--overlay-hover); color:var(--ink);}
   .gh svg{width:18px; height:18px;}
@@ -231,7 +237,8 @@
   @media (max-width:720px){
     .top{padding:0 12px; gap:8px;}
     .brand{gap:9px;} .brand .mm-word{font-size:24px;} .brand .lg{width:32px; height:32px;}
-    .gh, .sep, .theme span{display:none;}
+    .gh, .sep, .theme span, .sup span{display:none;}
+    .sup{padding:7px 8px;}
     .wrap{padding:0 16px;}
     .hero{padding:36px 0 18px;}
     .hero h1{font-size:34px;}
@@ -260,6 +267,7 @@
     <a class="l" href="#raging-draw"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rd"/></svg>Raging Draw</a>
     <a class="l" href="../guide.html?from=page">Guide</a>
     <a class="l" href="#faq">Questions</a>
+    <a class="sup" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener" title="Raging Studio est gratuit. S’il t’aide, tu peux le soutenir sur Ko-fi."><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg><span>Soutenir</span></a>
     <a class="gh" href="https://github.com/mtaofficiel69-debug/ragingstudio" target="_blank" rel="noopener" aria-label="Code source sur GitHub" title="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .2a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 .2z"/></svg></a>
     <span class="sep"></span>
     <div class="lang" role="group" aria-label="Language / Langue"><a href="../" hreflang="en" lang="en" class="" data-l="en">EN</a><a href="./" hreflang="fr" lang="fr" class="on" data-l="fr">FR</a></div>
@@ -380,10 +388,11 @@
 <footer>
   <div class="wrap foot">
     <div><a class="brand" href="./" aria-label="Raging Studio"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-hub"/></svg><span class="mm-word" role="img" aria-label="Raging Studio"><svg viewBox="0 -1911 13160 2422" style="width:5.434em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-s" class="w2s" transform="translate(7180 0)"/></svg></span></a>
-      <p>Des outils gratuits pour les cinéastes. Faits par un cinéaste, en open source.</p></div>
+      <p>Des outils gratuits pour les cinéastes. Faits par un cinéaste, en open source.</p>
+      <p class="foot-sup">Gratuit, et ça le restera. S’il t’aide, <a href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener">soutiens-le sur Ko-fi</a>.</p></div>
     <div><h3>Outils</h3><ul><li><a href="../page/">Raging Page</a></li><li><a href="../draw/">Raging Draw</a></li></ul></div>
     <div><h3>Aide</h3><ul><li><a href="../guide.html?from=page">Guide</a></li><li><a href="#faq">Questions</a></li><li><a href="https://github.com/mtaofficiel69-debug/ragingpage/issues" target="_blank" rel="noopener">Signaler un bug</a></li></ul></div>
-    <div><h3>Raging Studio</h3><ul><li><a href="https://github.com/mtaofficiel69-debug/ragingstudio" target="_blank" rel="noopener">GitHub</a></li><li><a href="../privacy.html">Confidentialité</a></li><li><a href="../" hreflang="en">English</a></li></ul></div>
+    <div><h3>Raging Studio</h3><ul><li><a href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener">Soutenir sur Ko-fi</a></li><li><a href="https://github.com/mtaofficiel69-debug/ragingstudio" target="_blank" rel="noopener">GitHub</a></li><li><a href="../privacy.html">Confidentialité</a></li><li><a href="../" hreflang="en">English</a></li></ul></div>
     <div class="legal"><span>© 2026 Raging Studio · Gratuit et open source (MIT)</span><span>ragingstudio.com</span></div>
   </div>
 </footer>
