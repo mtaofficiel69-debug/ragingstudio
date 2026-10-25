@@ -20,15 +20,14 @@
    S.pagination.pageOf. Aucun risque pour le document lui-même.
 ===================================================================== */
 function navDefaultOpen(){
-  // Ouvert d'office sur un grand écran (il y a la place à côté du papier),
-  // fermé sur une fenêtre étroite où il passerait par-dessus le texte.
-  // Le choix de l'utilisateur, lui, est retenu d'une session à l'autre.
+  // Fermé par défaut : la page d'abord. Le bouton « Scènes » l'ouvre,
+  // et le choix de l'utilisateur est retenu d'une session à l'autre.
   try{
     const v = localStorage.getItem('scriptmm_nav');
     if(v === '1') return true;
     if(v === '0') return false;
   }catch(e){}
-  return window.innerWidth >= 1180;
+  return false;
 }
 function navTitle(){
   return S.navOpen

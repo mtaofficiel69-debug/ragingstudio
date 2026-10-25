@@ -70,7 +70,7 @@
   /* pas de mot tout seul en fin de ligne : titres équilibrés, paragraphes sans veuve */
   h1, h2, h3, h4, summary{text-wrap:balance;}
   p, li, .lead, .sub{text-wrap:pretty;}
-  .tile p, .feat p, .chain p, .yours p, .tool-id p, details p, .foot p, .cap, .facts{text-wrap:balance;}
+  .tile p, .feat p, .chain p, .yours p, .tool-id p, .foot p, .cap, .facts{text-wrap:balance;}
   .mm-word{display:inline-flex; align-items:center; line-height:0; white-space:nowrap;}
   .mm-word svg{display:block; height:1em;}
   .mm-word .w1, .mm-word .w2s{fill:var(--ink);}
@@ -190,7 +190,9 @@
   .yours h3{margin:0 0 6px; font-size:15px; font-weight:600;}
   .yours p{margin:0; font-size:13.5px; line-height:1.55; color:var(--ink-soft);}
 
-  .faq{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .faq{display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start;}
+  .faq-col{display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .faq-col details{align-self:stretch;}
   details{background:var(--surface); border:1px solid var(--hair); border-radius:10px; align-self:start;}
   summary{list-style:none; cursor:pointer; padding:15px 18px; font-size:14.5px; font-weight:600; display:flex; align-items:center; justify-content:space-between; gap:12px; border-radius:10px;}
   summary::-webkit-details-marker{display:none;}
@@ -364,7 +366,7 @@
 
     <section class="s" id="faq" aria-labelledby="h-faq">
       <div class="sh"><div><div class="slug"><b>6.</b>Questions</div><h2 id="h-faq">Good to know</h2></div></div>
-      <div class="faq"><details><summary>Is Raging Studio really free?</summary><p>Yes. No subscription, no ads, no paid version. Raging Page and Raging Draw are open source.</p></details><details><summary>Do I need an account?</summary><p>No. Open a tool and start. The only optional sign-in is Google, if you want a copy on your Drive.</p></details><details><summary>Is Raging Page a free alternative to Final Draft?</summary><p>Yes. Raging Page formats your screenplay to industry standards and imports and exports .fdx, the format read by Final Draft, WriterDuet, Fade In and most productions.</p></details><details><summary>Can I print the posters I make?</summary><p>Yes. Raging Draw exports a PDF at the poster’s actual size, up to 300 dpi, ready for any printer.</p></details><details><summary>Where is my work saved?</summary><p>In your browser, on your computer, automatically. Clearing your browser data erases it, so keep a file copy now and then.</p></details><details><summary>Can I switch computers?</summary><p>Yes: save your project file (.smmproj or .rdraw) and open it from the tool’s home screen on the other computer, or use Google Drive.</p></details><details><summary>Does it work on a phone?</summary><p>Yes, but the tools are designed for a computer first. They need the internet for fonts.</p></details><details><summary>Found a bug or have an idea?</summary><p>Tell us on <a href="https://github.com/mtaofficiel69-debug/ragingpage/issues" target="_blank" rel="noopener">GitHub</a>. Raging Studio is made by a filmmaker, in the open, and gets better with your feedback.</p></details></div>
+      <div class="faq"><div class="faq-col"><details><summary>Is Raging Studio really free?</summary><p>Yes. No subscription, no ads, no paid version. Raging Page and Raging Draw are open source.</p></details><details><summary>Do I need an account?</summary><p>No. Open a tool and start. The only optional sign-in is Google, if you want a copy on your Drive.</p></details><details><summary>Is Raging Page a free alternative to Final Draft?</summary><p>Yes. Raging Page formats your screenplay to industry standards and imports and exports .fdx, the format read by Final Draft, WriterDuet, Fade In and most productions.</p></details><details><summary>Can I print the posters I make?</summary><p>Yes. Raging Draw exports a PDF at the poster’s actual size, up to 300 dpi, ready for any printer.</p></details></div><div class="faq-col"><details><summary>Where is my work saved?</summary><p>In your browser, on your computer, automatically. Clearing your browser data erases it, so keep a file copy now and then.</p></details><details><summary>Can I switch computers?</summary><p>Yes: save your project file (.smmproj or .rdraw) and open it from the tool’s home screen on the other computer, or use Google Drive.</p></details><details><summary>Does it work on a phone?</summary><p>Yes, but the tools are designed for a computer first. They need the internet for fonts.</p></details><details><summary>Found a bug or have an idea?</summary><p>Tell us on <a href="https://github.com/mtaofficiel69-debug/ragingpage/issues" target="_blank" rel="noopener">GitHub</a>. Raging Studio is made by a filmmaker, in the open, and gets better with your feedback.</p></details></div></div>
       <p class="more">Step-by-step help for each tool in the <a href="guide.html?from=page">guide</a>.</p>
     </section>
 
