@@ -93,9 +93,9 @@
   .nav a.l{display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap;}
   .nav a.l:hover{background:var(--overlay-hover);}
   .nav a.l .lg{width:20px; height:20px; border-radius:5px;}
-  .sup{display:inline-flex; align-items:center; gap:7px; padding:7px 11px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap;}
-  .sup:hover{background:var(--overlay-hover);}
-  .sup svg{width:15px; height:15px; color:var(--red);}
+  .sup{display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 11px; margin:0 4px 0 6px; border-radius:999px; border:1px solid var(--hair); background:var(--surface); text-decoration:none; font-size:13.5px; font-weight:600; white-space:nowrap; transition:border-color .15s, background .15s;}
+  .sup:hover{border-color:var(--red-soft); background:var(--red-tint);}
+  .sup svg{width:15px; height:15px; color:var(--red); fill:var(--red);}
   .foot .foot-sup{margin-top:8px;}
   .foot .foot-sup a{color:var(--ink); text-decoration:underline; text-decoration-color:var(--hair); text-underline-offset:3px;}
   .foot .foot-sup a:hover{text-decoration-color:var(--red);}
@@ -208,6 +208,14 @@
   details a, .more a{color:var(--blue);}
   .more{margin:16px 0 0; font-size:13.5px; color:var(--ink-soft);}
 
+
+  /* soutenir : une carte simple, juste avant le bandeau final */
+  .give{display:flex; align-items:center; justify-content:space-between; gap:28px; flex-wrap:wrap; padding:28px 32px; background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm);}
+  .give h2{font-size:26px;}
+  .give .sub{margin-top:8px; max-width:620px;}
+  .give .btn{font-size:15px; padding:12px 20px;}
+  .give .btn svg{width:16px; height:16px; fill:currentColor;}
+  .give .note{margin:10px 0 0; font-size:12.5px; color:var(--ink-soft); text-align:center;}
   /* bandeau final : la colonne sombre de Raging Page */
   .band{margin:72px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:30px 32px; border-radius:14px; background:var(--studio); color:var(--studio-text);}
   html[data-theme="dark"] .band{background:#141518; box-shadow:0 0 0 1px var(--hair);}
@@ -238,7 +246,7 @@
     .top{padding:0 12px; gap:8px;}
     .brand{gap:9px;} .brand .mm-word{font-size:24px;} .brand .lg{width:32px; height:32px;}
     .gh, .sep, .theme span, .sup span{display:none;}
-    .sup{padding:7px 8px;}
+    .sup{padding:0; width:34px; justify-content:center; margin:0 2px;}
     .wrap{padding:0 16px;}
     .hero{padding:36px 0 18px;}
     .hero h1{font-size:34px;}
@@ -376,6 +384,14 @@
       <div class="sh"><div><div class="slug"><b>6.</b>Questions</div><h2 id="h-faq">Bon à savoir</h2></div></div>
       <div class="faq"><div class="faq-col"><details><summary>Raging Studio est vraiment gratuit ?</summary><p>Oui. Pas d’abonnement, pas de publicité, pas de version payante. Raging Page et Raging Draw sont open source.</p></details><details><summary>Faut-il un compte ?</summary><p>Non. Ouvre un outil et commence. La seule connexion facultative est Google, si tu veux une copie sur ton Drive.</p></details><details><summary>Raging Page est-il une alternative gratuite à Final Draft ?</summary><p>Oui. Raging Page met ton scénario aux normes professionnelles, et importe et exporte le .fdx, le format lu par Final Draft, WriterDuet, Fade In et la plupart des productions.</p></details><details><summary>Je peux imprimer mes affiches ?</summary><p>Oui. Raging Draw exporte un PDF à la taille réelle de l’affiche, jusqu’au 300 dpi, prêt pour n’importe quel imprimeur.</p></details></div><div class="faq-col"><details><summary>Où est enregistré mon travail ?</summary><p>Dans ton navigateur, sur ton ordinateur, automatiquement. Vider les données du navigateur l’efface : garde de temps en temps une copie en fichier.</p></details><details><summary>Je peux changer d’ordinateur ?</summary><p>Oui : enregistre ton fichier projet (.smmproj ou .rdraw) et ouvre-le depuis l’accueil de l’outil sur l’autre ordinateur, ou passe par Google Drive.</p></details><details><summary>Ça marche sur téléphone ?</summary><p>Oui, mais les outils sont pensés d’abord pour un ordinateur. Ils ont besoin d’internet pour les polices.</p></details><details><summary>Un bug ou une idée ?</summary><p>Dis-le sur <a href="https://github.com/mtaofficiel69-debug/ragingpage/issues" target="_blank" rel="noopener">GitHub</a>. Raging Studio est fait par un cinéaste, en open source, et s’améliore grâce à tes retours.</p></details></div></div>
       <p class="more">L’aide pas à pas de chaque outil est dans le <a href="../guide.html?from=page">guide</a>.</p>
+    </section>
+
+    <section class="s" id="support" aria-labelledby="h-give">
+      <div class="give">
+        <div><div class="slug"><b style="color:var(--red)">7.</b>Soutenir</div><h2 id="h-give">Gratuit, et ça le restera.</h2>
+          <p class="sub">Pas de pub, pas d’abonnement, pas de version payante. Si Raging Studio t’aide, un don sur Ko-fi l’aide à grandir, avec de nouveaux outils pour les cinéastes.</p></div>
+        <div><a class="btn bd" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg>Soutenir sur Ko-fi</a><p class="note">Don ponctuel, sans créer de compte</p></div>
+      </div>
     </section>
 
     <section class="band" aria-labelledby="h-go">

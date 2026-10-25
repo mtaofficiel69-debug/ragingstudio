@@ -70,9 +70,9 @@
   .nav a.l{display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap;}
   .nav a.l:hover{background:var(--overlay-hover);}
   .nav a.l .lg{width:20px; height:20px; border-radius:5px;}
-  .sup{display:inline-flex; align-items:center; gap:7px; padding:7px 11px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap;}
-  .sup:hover{background:var(--overlay-hover);}
-  .sup svg{width:15px; height:15px; color:var(--red);}
+  .sup{display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 11px; margin:0 4px 0 6px; border-radius:999px; border:1px solid var(--hair); background:var(--surface); text-decoration:none; font-size:13.5px; font-weight:600; white-space:nowrap; transition:border-color .15s, background .15s;}
+  .sup:hover{border-color:var(--red-soft); background:var(--red-tint);}
+  .sup svg{width:15px; height:15px; color:var(--red); fill:var(--red);}
   .foot .foot-sup{margin-top:8px;}
   .foot .foot-sup a{color:var(--ink); text-decoration:underline; text-decoration-color:var(--hair); text-underline-offset:3px;}
   .foot .foot-sup a:hover{text-decoration-color:var(--red);}
@@ -185,6 +185,14 @@
   details a, .more a{color:var(--blue);}
   .more{margin:16px 0 0; font-size:13.5px; color:var(--ink-soft);}
 
+
+  /* soutenir : une carte simple, juste avant le bandeau final */
+  .give{display:flex; align-items:center; justify-content:space-between; gap:28px; flex-wrap:wrap; padding:28px 32px; background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm);}
+  .give h2{font-size:26px;}
+  .give .sub{margin-top:8px; max-width:620px;}
+  .give .btn{font-size:15px; padding:12px 20px;}
+  .give .btn svg{width:16px; height:16px; fill:currentColor;}
+  .give .note{margin:10px 0 0; font-size:12.5px; color:var(--ink-soft); text-align:center;}
   /* bandeau final : la colonne sombre de Raging Page */
   .band{margin:72px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:30px 32px; border-radius:14px; background:var(--studio); color:var(--studio-text);}
   html[data-theme="dark"] .band{background:#141518; box-shadow:0 0 0 1px var(--hair);}
@@ -215,7 +223,7 @@
     .top{padding:0 12px; gap:8px;}
     .brand{gap:9px;} .brand .mm-word{font-size:24px;} .brand .lg{width:32px; height:32px;}
     .gh, .sep, .theme span, .sup span{display:none;}
-    .sup{padding:7px 8px;}
+    .sup{padding:0; width:34px; justify-content:center; margin:0 2px;}
     .wrap{padding:0 16px;}
     .hero{padding:36px 0 18px;}
     .hero h1{font-size:34px;}
