@@ -55,7 +55,8 @@
     sz3:'<rect x="2.5" y="3" width="11" height="10" rx="1.5"/>',
     grid:'<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>',
     list:'<path d="M5.5 4h8M5.5 8h8M5.5 12h8"/><circle cx="2.8" cy="4" r=".9" fill="currentColor"/><circle cx="2.8" cy="8" r=".9" fill="currentColor"/><circle cx="2.8" cy="12" r=".9" fill="currentColor"/>',
-    cam:'<rect x="1.8" y="4.5" width="9" height="7" rx="1.4"/><path d="M10.8 7.2l3.4-1.9v5.4l-3.4-1.9"/>'
+    cam:'<rect x="1.8" y="4.5" width="9" height="7" rx="1.4"/><path d="M10.8 7.2l3.4-1.9v5.4l-3.4-1.9"/>',
+    info:'<path d="M8 7.2v4.6" stroke-width="1.9"/><circle cx="8" cy="4.6" r="1.15" fill="currentColor" stroke="none"/>'
   };
   const SIZES = { s:170, m:230, l:320 };
   const VIEW_KEY = 'scriptmm_sb_view';
@@ -117,7 +118,7 @@
     const f = x.f, sel = R().SELS.has(f.id), s = shotOf(f), sum = shotParts(f, true).join(' · ');
     return `<div class="sbt-f${sel ? ' sel' : ''}${s.done ? ' done' : ''}" data-id="${f.id}">
       <div class="sbt-img" draggable="true" title="${esc(L('Clique pour voir en grand · glisse pour déplacer', 'Click to view large · drag to move'))}">
-        <img src="${f.src}" alt="" draggable="false" loading="lazy" decoding="async"><span class="sbt-num"${s.done ? ` title="${esc(L('Plan tourné', 'Shot done'))}"` : ''}>${s.done ? ic(I.chk, 10) : ''}${x.num}</span>${s.vfx ? '<span class="sbt-vfx">VFX</span>' : ''}
+        <img src="${f.src}" alt="" draggable="false" loading="lazy" decoding="async"><span class="sbt-tl"><span class="sbt-num"${s.done ? ` title="${esc(L('Plan tourné', 'Shot done'))}"` : ''}>${s.done ? ic(I.chk, 10) : ''}${x.num}</span><button type="button" class="sbt-info${hasShot(f) ? ' on' : ''}" data-sb="shot" aria-label="${esc(L('Découpage du plan ', 'Shot details ') + x.num)}" title="${esc(hasShot(f) ? L('Découpage : ', 'Shot details: ') + (window.sbShotSummary(f) || L('rempli', 'filled')) : L('Découpage du plan : valeur, angle, mouvement, focale…', 'Shot details: size, angle, movement, lens…'))}">${ic(I.info, 14)}</button></span>${s.vfx ? '<span class="sbt-vfx">VFX</span>' : ''}
         <button type="button" class="sbt-chk" data-sb="sel" aria-pressed="${sel}" title="${esc(L('Cocher pour télécharger', 'Tick to download'))}">${ic(I.chk, 12)}</button>
         <div class="sbt-tools">
           <button type="button" data-sb="mv" title="${esc(L('Déplacer vers une autre séquence…', 'Move to another sequence…'))}">${ic(I.mv, 13)}</button>
@@ -161,7 +162,7 @@
         <span class="sbt-ix">${idx + 1}</span>
         <input class="sbt-title" type="text" maxlength="120" value="${esc(q.title || '')}" placeholder="${esc(sc ? sc.title : L('Titre de la séquence (ex. Générique, Ouverture…)', 'Sequence title (e.g. Opening credits…)'))}" aria-label="${esc(L('Titre de la séquence', 'Sequence title'))}">
         ${chip}
-        <span class="sbt-cnt">${items.length ? esc(plans(items.length)) : esc(L('vide', 'empty'))}</span>
+        <span class="sbt-cnt">${items.length ? esc(plans(items.length)) : esc(L('vide', 'empty'))}${(() => { const d = items.filter(x => shotOf(x.f).done).length; return d ? ' · <b class="sbt-dn">' + esc(d + ' ' + (d > 1 ? L('tournés', 'done') : L('tourné', 'done'))) + '</b>' : ''; })()}</span>
         <span class="sbt-hb">
           ${items.length ? `<button type="button" data-sb="play-sq" title="${esc(L('Lire à partir de cette séquence', 'Play from this sequence'))}">${ic(I.play, 12)}</button>` : ''}
           <button type="button" data-sb="sqmenu" title="${esc(L('Plus d’options', 'More options'))}" aria-haspopup="menu">${ic(I.more, 15)}</button></span>
@@ -266,6 +267,11 @@
         <label class="w"><span>${esc(SHK.gear)}</span>${shotGear(s.gear, 'sbt-fi')}</label>
         <div class="w sbt-ticks">${shotTick('vfx', s.vfx, L('Effets visuels (VFX)', 'Visual effects (VFX)'))}${shotTick('done', s.done, L('Plan tourné', 'Shot done'))}</div>
       </div>`, 364);
+    if(btn.classList.contains('sbt-info')){
+      const r = btn.getBoundingClientRect(); m.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - m.offsetWidth - 8, r.left - 4))) + 'px';
+      btn.classList.add('open'); const fid = f.id;
+      new MutationObserver((ms, o) => { if(!m.isConnected){ o.disconnect(); const b2 = document.querySelector('.sbt-f[data-id="' + fid + '"] .sbt-info'); if(b2) b2.classList.remove('open'); } }).observe(document.body, { childList:true });
+    }
     const first = m.querySelector('select'); if(first) setTimeout(() => first.focus(), 0);
     m.addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); m.remove(); btn.focus(); } });
   }
@@ -276,7 +282,7 @@
     const k = t.dataset.shk, v = t.type === 'checkbox' ? t.checked : t.value.trim();
     setShot(f, k, k === 'lens' ? v.replace(/\s*mm$/i, '') : v);
     if(host.tagName === 'TR'){ if(k === 'done'){ host.classList.toggle('done', !!v); refreshStats(); } }
-    else if(!live) refresh();
+    else if(!live){ refresh(); const b = document.querySelector('.sbt-f[data-id="' + f.id + '"] .sbt-info'); if(b) b.classList.add('open'); }
   }
   function refreshStats(){
     const el = document.querySelector('#centerPane .sbt-stats'); if(!el) return;
@@ -670,6 +676,7 @@
   .sbt-chip:hover{border-color:var(--accent); color:var(--accent);}
   .sbt-chip.on{border-style:solid; border-color:transparent; background:color-mix(in srgb, var(--accent) 11%, var(--surface)); color:var(--accent);}
   .sbt-cnt{flex:none; font-size:12.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums;}
+  .sbt-dn{font-weight:600; color:#2F9E44;}
   .sbt-hb{flex:none; display:flex; gap:4px; margin-left:2px;}
   .sbt-hb button{width:30px; height:30px; display:grid; place-items:center; padding:0; border:1px solid transparent; border-radius:8px; background:none; color:var(--ink-soft); cursor:pointer;}
   .sbt-hb button:hover{border-color:var(--hair); color:var(--ink); background:var(--surface);}
@@ -739,8 +746,16 @@
   .sbt-meta:hover, .sbt-meta:focus-visible{opacity:1; color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, transparent); outline:none;}
   .sbt-meta.on{opacity:1; color:var(--ink); font-weight:600;}
   .sbt-meta.on svg{color:var(--accent);}
-  .sbt-f:not(:hover):not(:focus-within) .sbt-meta:not(.on){opacity:0;}
-  @media (hover:none){ .sbt-f .sbt-meta{opacity:.75 !important;} }
+  .sbt-meta:not(.on){display:none;}
+  .sbt-tl{position:absolute; top:7px; left:7px; display:flex; align-items:center; gap:5px;}
+  .sbt-tl .sbt-num{position:static;}
+  .sbt-info{width:20px; height:20px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:rgba(15,17,21,.55); color:#fff; cursor:pointer; opacity:.85; transition:opacity .14s ease, background .14s ease, transform .14s ease;}
+  .sbt-info svg{width:12px; height:12px;}
+  .sbt-img:hover .sbt-info, .sbt-info:focus-visible{opacity:1;}
+  .sbt-info:hover{background:var(--accent); transform:scale(1.08);}
+  .sbt-info:focus-visible{outline:2px solid #fff; outline-offset:1px;}
+  .sbt-info.on{background:var(--accent); opacity:1;}
+  .sbt-info.open{background:var(--accent); opacity:1; box-shadow:0 0 0 3px rgba(54,153,212,.35);}
   .sbt-num svg{margin-right:3px;}
   .sbt-f.done .sbt-num{background:#2F9E44; display:inline-flex; align-items:center;}
   .sbt-vfx{position:absolute; bottom:7px; right:7px; height:18px; padding:0 6px; display:grid; place-items:center; border-radius:5px; background:rgba(15,17,21,.78); color:#fff; font-size:10px; font-weight:700; letter-spacing:.06em;}
