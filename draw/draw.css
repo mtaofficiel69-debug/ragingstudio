@@ -729,3 +729,10 @@ html[data-theme="dark"] .tthumb{background-color:#1E1F24;}
 
 /* mode sombre : un fin contour blanc autour du logo Raging Studio */
 html[data-theme="dark"] .app-home .ah-logo{box-shadow:0 0 0 1.25px #FCFDFE;}
+
+/* recadrage sur l'affiche : la barre qui flotte en haut du plan de travail */
+.rd-cropbar{position:absolute; top:14px; left:14px; z-index:6; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 14px; border-radius:12px; background:var(--surface); border:1px solid var(--hair); box-shadow:var(--shadow-md); white-space:nowrap; animation:mmdPop .16s ease;}
+.rd-cropbar .cb-t{display:flex; align-items:center; gap:8px; margin-right:4px; font-size:13px; color:var(--ink);}
+.rd-cropbar .cb-t .icon{width:15px; height:15px; color:var(--accent);}
+.rd-cropbar .cb-h{color:var(--ink-soft);}
+@media (max-width:720px){ .rd-cropbar{top:auto; left:50%; transform:translateX(-50%); bottom:84px; padding:5px 5px 5px 12px;} .rd-cropbar .cb-h{display:none;} }

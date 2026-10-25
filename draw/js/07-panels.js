@@ -394,7 +394,7 @@ function imageSection(o){
   const res = im ? Math.round(im.naturalWidth) + ' × ' + Math.round(im.naturalHeight) + ' px' : '';
   return sec('image', L('Image','Image'),
     `<p class="pnote">${L('Originale : ','Original: ')}${res}</p>
-     <div class="pbtns"><button class="btn btn-sm" data-act="replaceImage">${icon('upload')} ${L('Remplacer','Replace')}</button><button class="btn btn-sm" data-act="coverDoc">${icon('fit')} ${L('Remplir l’affiche','Fill poster')}</button><button class="btn btn-sm" data-act="containDoc">${icon('ratio')} ${L('Tout montrer','Fit inside')}</button></div>`) +
+     <div class="pbtns"><button class="btn btn-sm btn-primary" data-act="cropStart" title="${L('Recadrer sur l’affiche (ou double-clic sur l’image)','Crop right on the poster (or double-click the image)')}">${icon('crop')} ${L('Recadrer','Crop')}</button><button class="btn btn-sm" data-act="replaceImage">${icon('upload')} ${L('Remplacer','Replace')}</button><button class="btn btn-sm" data-act="coverDoc">${icon('fit')} ${L('Remplir l’affiche','Fill poster')}</button><button class="btn btn-sm" data-act="containDoc">${icon('ratio')} ${L('Tout montrer','Fit inside')}</button></div>`) +
     sec('filters', L('Réglages photo','Photo adjustments'),
       fRange(L('Luminosité','Brightness'), 'filters.brightness', 0, 200, 1, {unit:'%'}) +
       fRange(L('Contraste','Contrast'), 'filters.contrast', 0, 200, 1, {unit:'%'}) +
@@ -411,6 +411,7 @@ function imageSection(o){
       fRange(L('Haut','Top'), 'fade.top', 0, 100, 1, {unit:'%'}) + fRange(L('Bas','Bottom'), 'fade.bottom', 0, 100, 1, {unit:'%'}) +
       fRange(L('Gauche','Left'), 'fade.left', 0, 100, 1, {unit:'%'}) + fRange(L('Droite','Right'), 'fade.right', 0, 100, 1, {unit:'%'})) +
     sec('crop', L('Recadrage et forme','Crop & shape'),
+      `<div class="hint">${icon('crop')}<span>${L('Plus simple : <b>double-clique</b> sur l’image, glisse la photo et tire les coins.','Easier: <b>double-click</b> the image, drag the photo and pull the corners.')}</span></div>` +
       fRange(L('Rogner à gauche','Crop left'), 'crop.l', 0, 45, 0.5, {mul:100, unit:'%', dec:1}) + fRange(L('Rogner à droite','Crop right'), 'crop.r', 0, 45, 0.5, {mul:100, unit:'%', dec:1}) +
       fRange(L('Rogner en haut','Crop top'), 'crop.t', 0, 45, 0.5, {mul:100, unit:'%', dec:1}) + fRange(L('Rogner en bas','Crop bottom'), 'crop.b', 0, 45, 0.5, {mul:100, unit:'%', dec:1}) +
       fToggle(L('Forme ronde','Round shape'), 'ellipse') + fRange(L('Coins arrondis','Rounded corners'), 'radius', 0, Math.round(Math.min(o.w, o.h)/2), 1, {unit:'px'}) + strokeFields());
