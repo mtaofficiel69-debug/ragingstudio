@@ -71,11 +71,39 @@ function renderHome(){
       <main class="wd-main">
         <div class="wd-main-h"><h1>${L('Mes affiches','My posters')}</h1>${nb ? `<span class="wd-count">${nb}</span>` : ''}${last ? `<button type="button" class="wd-resume" data-act="openPoster" data-id="${esc(last.id)}" title="${L('Rouvrir la dernière affiche modifiée','Reopen the last poster you edited')}"><span class="wd-resume-l">${L('Reprendre','Resume')}</span><span class="wd-resume-t">${esc(last.title || L('Sans titre','Untitled'))}</span>${icon('chevR')}</button>` : ''}</div>
         <div class="wd-table">${main}
-          <div class="wd-strip" aria-hidden="true"><span class="wd-strip-holes"></span><span class="wd-strip-sw">${['#D9363E','#F0646B','#5E1418','#A51F2B','#F2C94C','#F2994A','#2F9E44','#8E5BD6','#E86FB0','#23262E','#FCFDFE'].map(c => `<i style="--c:${c}"></i>`).join('')}</span><span class="wd-strip-n">${L('PRISE 1','TAKE 1')}</span></div>
+          <div class="wd-slug" aria-hidden="true"><span class="wd-slug-n">1</span><span class="wd-slug-t"></span><span class="wd-slug-c"></span><span class="wd-slug-n wd-slug-r">1</span></div>
         </div>
       </main>
     </div>
   </div>`;
+}
+/* bandeau « entête de scène » tapé à la machine, le même qu'à l'accueil de Raging Page */
+let __reelT = 0;
+function homeReel(){
+  clearTimeout(__reelT);
+  const box = document.querySelector('#homeView .wd-slug'); if(!box) return;
+  const lines = getLang() === 'en'
+    ? ['INT. POSTER STUDIO - NIGHT', 'EXT. CINEMA FRONT - DUSK', 'INT. PRINT SHOP - DAY', 'EXT. FESTIVAL STEPS - NIGHT', 'INT. YOUR NEXT POSTER - CONTINUOUS']
+    : ['INT. ATELIER D\u2019AFFICHES - NUIT', 'EXT. DEVANTURE DU CINÉMA - CRÉPUSCULE', 'INT. IMPRIMERIE - JOUR', 'EXT. MARCHES DU FESTIVAL - NUIT', 'INT. TA PROCHAINE AFFICHE - CONTINU'];
+  const t = box.querySelector('.wd-slug-t'), ns = box.querySelectorAll('.wd-slug-n');
+  let k = 0, i = 0, del = false;
+  const setN = () => ns.forEach(n => { n.textContent = String(k + 1); });
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){ t.textContent = lines[0]; setN(); return; }
+  const step = () => {
+    if(!box.isConnected) return;
+    if(document.hidden){ __reelT = setTimeout(step, 800); return; }
+    const L0 = lines[k];
+    if(!del){
+      i++; t.textContent = L0.slice(0, i);
+      if(i >= L0.length){ del = true; __reelT = setTimeout(step, 2600); return; }
+      __reelT = setTimeout(step, 55 + Math.random() * 70);
+    } else {
+      i--; t.textContent = L0.slice(0, i);
+      if(i <= 0){ del = false; k = (k + 1) % lines.length; setN(); __reelT = setTimeout(step, 500); return; }
+      __reelT = setTimeout(step, 22);
+    }
+  };
+  setN(); __reelT = setTimeout(step, 700);
 }
 function attachHomeEvents(){
   const hv = document.getElementById('homeView');
@@ -89,6 +117,7 @@ function attachHomeEvents(){
     if(/\.rdraw$|\.json$/i.test(f.name)) openProjectFile(f);
     else if(/^image\//.test(f.type) || /\.svg$/i.test(f.name)) startFromPhoto(f);
   });
+  homeReel();
 }
 async function refreshIndex(){
   try{ S.index = await Store.listMeta(); }catch(e){ S.index = []; }

@@ -34,18 +34,18 @@
     --tag-chip-text:#145073;
   }
   html[data-theme="dark"]{
-    --backdrop:#14141C;
-    --ink:#E8EAF2;
-    --ink-soft:#A7ACC0;
-    --hair:#363548;
-    --surface:#262535;
-    --surface-soft:#2B2A3D;
-    --surface-soft-2:#2B2A3D;
-    --row-hover:#ffffff0d;
-    --chip-bg:#ffffff14;
-    --overlay-hover:#ffffff12;
-    --overlay-hover-soft:#ffffff0a;
-    --tag-chip-bg:#3699D433;
+    --backdrop:#101114;
+    --ink:#ECEDF0;
+    --ink-soft:#9DA1AB;
+    --hair:#2A2C32;
+    --surface:#18191D;
+    --surface-soft:#1E1F24;
+    --surface-soft-2:#1E1F24;
+    --row-hover:#ffffff08;
+    --chip-bg:#ffffff10;
+    --overlay-hover:#ffffff0d;
+    --overlay-hover-soft:#ffffff08;
+    --tag-chip-bg:#3699D426;
     --tag-chip-text:#A9D8F5;
     /* La feuille de scénario, elle, reste claire en thème sombre (comme
        dans la plupart des logiciels d'écriture) : on repique donc l'encre
@@ -53,6 +53,8 @@
        sur papier clair. */
     --paper-ink:#1A1D22;
     --paper-ink-soft:#5A5F68;
+    /* sombre neutre (graphite) : la colonne garde un cran plus foncé que les panneaux */
+    --studio:#141518; --studio-2:#1C1D21; --hair-dark:#26282D; --studio-text-dim:#8D919B;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
@@ -1526,7 +1528,7 @@
     --shadow-md:0 2px 4px rgba(16,24,40,.05), 0 8px 20px -6px rgba(16,24,40,.14);
     --focus-ring:0 0 0 3px rgba(54,153,212,.22);
   }
-  html[data-theme="dark"]{ --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow-md:0 8px 22px -6px rgba(0,0,0,.55); }
+  html[data-theme="dark"]{ --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow-md:0 8px 22px -8px rgba(0,0,0,.6); }
   body{font-feature-settings:'cv11','ss01'; letter-spacing:-.003em;}
 
   /* Le nom « Raging Page » */
@@ -1694,7 +1696,7 @@
      de l'interface (comme WriterDuet), pour que la page blanche se détache nettement. Limité à
      l'éditeur : les autres onglets gardent le fond habituel. */
   :root{--editor-backdrop:#DCE0E7;}
-  html[data-theme="dark"]{--editor-backdrop:#0D0D13;}
+  html[data-theme="dark"]{--editor-backdrop:#0A0B0D;}
   .center-pane:has(#pageStack){background:var(--editor-backdrop);}
   .cards-toolbar{padding:26px 24px 6px; gap:14px; flex-wrap:wrap;}
   .pane-title{font-family:var(--sans); font-weight:700; font-size:26px; line-height:1.15; letter-spacing:-.025em; border-bottom:0; padding-bottom:0; margin-bottom:0;}

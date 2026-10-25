@@ -35,21 +35,23 @@
   --focus-ring:0 0 0 3px rgba(217,54,62,.22);
 }
 html[data-theme="dark"]{
-  --backdrop:#14141C;
-  --editor-backdrop:#0D0D13;
-  --ink:#E8EAF2;
-  --ink-soft:#A7ACC0;
-  --hair:#363548;
-  --surface:#262535;
-  --surface-soft:#2B2A3D;
-  --surface-soft-2:#2B2A3D;
-  --row-hover:#ffffff0d;
-  --chip-bg:#ffffff14;
-  --overlay-hover:#ffffff12;
-  --tag-chip-bg:#D9363E33;
+  --backdrop:#101114;
+  --editor-backdrop:#0A0B0D;
+  --ink:#ECEDF0;
+  --ink-soft:#9DA1AB;
+  --hair:#2A2C32;
+  --surface:#18191D;
+  --surface-soft:#1E1F24;
+  --surface-soft-2:#1E1F24;
+  --row-hover:#ffffff08;
+  --chip-bg:#ffffff10;
+  --overlay-hover:#ffffff0d;
+  --tag-chip-bg:#D9363E26;
   --tag-chip-text:#F5B5B9;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
-  --shadow-md:0 8px 22px -6px rgba(0,0,0,.55);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow-md:0 8px 22px -8px rgba(0,0,0,.6);
+  /* sombre neutre (graphite) : la colonne garde un cran plus foncé que les panneaux */
+  --studio:#141518; --studio-2:#1C1D21; --hair-dark:#26282D; --studio-text-dim:#8D919B;
 }
 *{box-sizing:border-box;}
 html,body{height:100%;}
@@ -176,15 +178,15 @@ html[data-theme="dark"] .rdlb, .rail .rdlb{fill:#D9363E;}
 .wd-poster i:nth-child(1){top:12px; left:16px; right:16px; height:16px; border-radius:50%; background:#F0646B;}
 .wd-poster i:nth-child(2){bottom:18px; height:7px; background:#FCFDFE;}
 .wd-poster i:nth-child(3){bottom:10px; left:14px; right:14px; opacity:.6;}
-/* bande « pellicule » en pied du tableau : un nuancier qui défile, comme la ligne de scène de Raging Page */
-.wd-strip{flex:none; display:flex; align-items:center; gap:14px; height:46px; padding:0 20px; border-top:1px solid var(--hair); background:var(--surface-soft); overflow:hidden;}
-.wd-strip-holes{width:28px; height:14px; flex:none; background:radial-gradient(circle, var(--hair) 2.2px, transparent 2.6px) 0 0/9px 7px;}
-.wd-strip-sw{flex:1; display:flex; gap:8px; overflow:hidden;}
-.wd-strip-sw i{width:16px; height:16px; border-radius:50%; background:var(--c); flex:none; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); animation:swIn 6s ease-in-out infinite; animation-delay:calc(var(--i, 0) * .2s);}
-.wd-strip-sw i:nth-child(2){animation-delay:.25s} .wd-strip-sw i:nth-child(3){animation-delay:.5s} .wd-strip-sw i:nth-child(4){animation-delay:.75s} .wd-strip-sw i:nth-child(5){animation-delay:1s} .wd-strip-sw i:nth-child(6){animation-delay:1.25s} .wd-strip-sw i:nth-child(7){animation-delay:1.5s} .wd-strip-sw i:nth-child(8){animation-delay:1.75s} .wd-strip-sw i:nth-child(9){animation-delay:2s} .wd-strip-sw i:nth-child(10){animation-delay:2.25s} .wd-strip-sw i:nth-child(11){animation-delay:2.5s}
-@keyframes swIn{0%,100%{transform:none;} 8%{transform:translateY(-4px);} 16%{transform:none;}}
-.wd-strip-n{font-family:'Courier Prime','Courier New',monospace; font-weight:700; font-size:12.5px; letter-spacing:.06em; color:var(--accent);}
-@media (prefers-reduced-motion:reduce){ .wd-strip-sw i{animation:none;} }
+/* bandeau « entête de scène » tapé à la machine, en pied du tableau, comme à l'accueil de Raging Page */
+#homeView .wd-slug{flex:none; margin-top:auto; display:flex; align-items:center; gap:16px; height:46px; padding:0 22px; border-top:1px dashed var(--hair);
+  font-family:'Courier Prime','Courier New',monospace; font-size:13px; letter-spacing:.03em; color:color-mix(in srgb, var(--ink) 55%, var(--surface)); background:var(--surface-soft); -webkit-user-select:none; user-select:none;}
+#homeView .wd-slug-n{flex:none; min-width:16px; font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums;}
+#homeView .wd-slug-t{font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:clip;}
+#homeView .wd-slug-c{flex:none; width:8px; height:15px; margin-left:-12px; background:var(--accent); opacity:.85; animation:wdSlugBlink 1.05s steps(1) infinite;}
+#homeView .wd-slug-r{margin-left:auto; text-align:right;}
+@keyframes wdSlugBlink{50%{opacity:0;}}
+@media (prefers-reduced-motion:reduce){ #homeView .wd-slug-c{animation:none;} }
 #homeView button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
 @media (max-width:900px){
   #homeView{overflow:auto;}
@@ -685,3 +687,6 @@ html[data-theme="dark"] .vault-chip.warn{color:#F5B55B; border-color:rgba(245,18
 .cm-ib:disabled{opacity:.35; cursor:default;}
 .cm-ib .icon{width:15px; height:15px;}
 @media (prefers-reduced-motion:reduce){ .cmenu{animation:none;} }
+
+html[data-theme="dark"] .rd-toast{background:#2A2B31;}
+html[data-theme="dark"] .tthumb{background-color:#1E1F24;}

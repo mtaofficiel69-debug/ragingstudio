@@ -54,10 +54,10 @@
     --focus-ring:0 0 0 3px rgba(54,153,212,.22);
   }
   html[data-theme="dark"]{
-    --ink:#E8EAF2; --ink-soft:#A7ACC0; --hair:#363548; --backdrop:#14141C;
-    --surface:#262535; --surface-soft:#2B2A3D; --surface-soft-2:#2B2A3D; --chip-bg:#ffffff14; --overlay-hover:#ffffff12;
-    --blue-tint:#3699D433; --blue-ink:#A9D8F5; --red-tint:#D9363E33; --red-ink:#F5B5B9;
-    --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow-md:0 8px 22px -6px rgba(0,0,0,.55);
+    --ink:#ECEDF0; --ink-soft:#9DA1AB; --hair:#2A2C32; --backdrop:#101114;
+    --surface:#18191D; --surface-soft:#1E1F24; --surface-soft-2:#1E1F24; --chip-bg:#ffffff10; --overlay-hover:#ffffff0d;
+    --blue-soft:#2F5F80; --red-soft:#7A2E33; --blue-tint:#3699D426; --blue-ink:#A9D8F5; --red-tint:#D9363E26; --red-ink:#F5B5B9;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow-md:0 8px 22px -8px rgba(0,0,0,.6);
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth; scroll-padding-top:76px;}
@@ -65,6 +65,7 @@
   a{color:inherit;}
   button{font-family:inherit; cursor:pointer;}
   ::selection{background:#BFE3FA;}
+  html[data-theme="dark"] ::selection{background:#24506E;}
   img{max-width:100%; display:block;}
   .mm-word{display:inline-flex; align-items:center; line-height:0; white-space:nowrap;}
   .mm-word svg{display:block; height:1em;}
@@ -73,7 +74,7 @@
   .mmlb{fill:#1F6FA0;} html[data-theme="dark"] .mmlb{fill:#3699D4;}
   .rdlb{fill:#A51F2B;} html[data-theme="dark"] .rdlb{fill:#D9363E;}
   .lg{display:block; flex:none;}
-  html[data-theme="dark"] .hblb{fill:#3B3A52;}
+  html[data-theme="dark"] .hblb{fill:#2A2B31;}
   .slug{font-family:'Courier Prime','Courier New',monospace; font-weight:700; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);}
   .slug b{color:var(--blue); font-weight:700; margin-right:10px;}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
@@ -108,43 +109,34 @@
   .hero h1{margin:14px auto 0; max-width:820px; font-size:52px; line-height:1.07; font-weight:700; letter-spacing:-.035em;}
   .hero h1 .t-p{color:var(--blue);} .hero h1 .t-d{color:var(--red);}
   .hero .lead{margin:18px auto 0; max-width:640px; font-size:17.5px; line-height:1.55; color:var(--ink-soft);}
-  .facts{display:flex; justify-content:center; flex-wrap:wrap; gap:6px 22px; margin:22px 0 0; padding:0; list-style:none; font-size:13.5px; font-weight:500; color:var(--ink-soft);}
-  .facts li{display:inline-flex; align-items:center; gap:7px;}
-  .facts svg{width:15px; height:15px; color:#2F9E44;}
+  .facts{margin:16px 0 0; font-size:13.5px; font-weight:500; color:var(--ink-soft);}
 
   /* les outils, tout de suite */
-  .pick{display:grid; grid-template-columns:1fr 1fr 0.62fr; gap:14px; margin:34px 0 0; text-align:left;}
+  .pick{display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:900px; margin:30px auto 0; text-align:left;}
   .tile{position:relative; display:flex; align-items:center; gap:16px; padding:18px 20px; border-radius:12px; background:var(--surface); border:1px solid var(--hair); box-shadow:var(--shadow-sm); text-decoration:none; transition:border-color .15s, box-shadow .15s, transform .15s;}
   .tile .lg{width:52px; height:52px; border-radius:10px;}
   .tile .tx{flex:1; min-width:0;}
   .tile .mm-word{font-size:25px;}
   .tile p{margin:6px 0 0; font-size:14px; line-height:1.4; color:var(--ink-soft);}
-  .tile .go{flex:none; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; transition:transform .15s;}
-  .tile .go svg{width:16px; height:16px;}
-  .tile.p .go{background:var(--blue);} .tile.d .go{background:var(--red);}
+  .tile .go{flex:none; display:flex; color:var(--ink-soft); transition:transform .15s, color .15s;}
+  .tile .go svg{width:18px; height:18px;}
+  .tile.p:hover .go{color:var(--blue);} .tile.d:hover .go{color:var(--red);}
   .tile.p:hover{border-color:var(--blue-soft); box-shadow:var(--shadow-md);} .tile.d:hover{border-color:var(--red-soft); box-shadow:var(--shadow-md);}
   .tile:hover .go{transform:translateX(2px);}
-  .tile.soon{background:transparent; border:1.5px dashed var(--hair); box-shadow:none;}
-  .tile.soon .ic{width:52px; height:52px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; background:var(--chip-bg); color:var(--ink-soft);}
-  .tile.soon .ic svg{width:24px; height:24px;}
-  .tile.soon b{display:block; font-size:16px; letter-spacing:-.01em;}
 
   /* vitrine : les vrais outils */
   .show{margin:30px 0 0;}
-  .frame{background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:0 30px 60px -28px rgba(10,10,20,.35), var(--shadow-sm); overflow:hidden;}
+  .frame{background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-md); overflow:hidden;}
   .frame-h{display:flex; align-items:center; gap:14px; height:48px; padding:0 14px; background:var(--surface-soft-2); border-bottom:1px solid var(--hair);}
-  .dots{display:flex; gap:6px;} .dots i{width:10px; height:10px; border-radius:50%; background:var(--hair);}
   .tabs{display:flex; gap:4px; margin:0 auto; padding:3px; border-radius:10px; background:var(--chip-bg);}
   .tabs button{display:inline-flex; align-items:center; gap:8px; padding:6px 14px 6px 8px; border:0; border-radius:8px; background:transparent; color:var(--ink-soft); font-size:13.5px; font-weight:600;}
   .tabs button .lg{width:20px; height:20px; border-radius:5px;}
   .tabs button[aria-selected="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow-sm);}
-  .addr{font-size:12px; color:var(--ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap; min-width:150px; text-align:right;}
   .screen{position:relative; aspect-ratio:1440/860; background:var(--backdrop);}
   .screen img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:top left;}
   .screen .dk{display:none;}
   html[data-theme="dark"] .screen .lt{display:none;} html[data-theme="dark"] .screen .dk{display:block;}
   .screen [hidden]{display:none !important;}
-  .cap{margin:14px 0 0; text-align:center; font-size:13.5px; color:var(--ink-soft);}
 
   /* sections */
   section.s{padding:72px 0 8px;}
@@ -153,8 +145,6 @@
   .sub{margin:10px 0 0; max-width:640px; font-size:16px; line-height:1.55; color:var(--ink-soft);}
 
   .tool{display:grid; grid-template-columns:320px 1fr; gap:28px; padding:28px; background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm); margin-bottom:18px; position:relative; overflow:hidden;}
-  .tool::before{content:''; position:absolute; left:0; top:0; bottom:0; width:4px;}
-  .tool.p::before{background:var(--blue);} .tool.d::before{background:var(--red);}
   .tool-id{display:flex; flex-direction:column; gap:14px;}
   .tool-id .row{display:flex; align-items:center; gap:12px;}
   .tool-id .lg{width:48px; height:48px; border-radius:9px;}
@@ -167,32 +157,32 @@
   .btn svg{width:15px; height:15px;}
   .btn.bp{background:var(--blue); border-color:var(--blue); color:#fff; box-shadow:0 1px 2px rgba(31,111,160,.35);} .btn.bp:hover{background:var(--blue-h); border-color:var(--blue-h);}
   .btn.bd{background:var(--red); border-color:var(--red); color:#fff; box-shadow:0 1px 2px rgba(165,31,43,.35);} .btn.bd:hover{background:var(--red-h); border-color:var(--red-h);}
-  .feats{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;}
-  .feat{padding:16px; border-radius:10px; background:var(--surface-soft); border:1px solid var(--hair);}
-  .feat .fi{width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
-  .feat .fi svg{width:17px; height:17px;}
-  .tool.p .fi{background:var(--blue-tint); color:var(--blue);} .tool.d .fi{background:var(--red-tint); color:var(--red);}
-  .feat h4{margin:0 0 4px; font-size:14.5px; font-weight:600; letter-spacing:-.01em;}
+  .feats{display:grid; grid-template-columns:1fr 1fr; column-gap:32px; align-content:start;}
+  .feat{display:grid; grid-template-columns:18px 1fr; align-content:start; column-gap:12px; padding:14px 0; border-top:1px solid var(--hair);}
+  .feat:nth-child(-n+2){border-top:0; padding-top:2px;}
+  .feat .fi{grid-row:1 / span 2; padding-top:1px; color:var(--ink-soft);}
+  .feat .fi svg{width:17px; height:17px; display:block;}
+  .tool.p .fi{color:var(--blue);} .tool.d .fi{color:var(--red);}
+  .feat h4{margin:0 0 3px; font-size:14.5px; font-weight:600; letter-spacing:-.01em;}
   .feat p{margin:0; font-size:13.5px; line-height:1.5; color:var(--ink-soft);}
 
   /* chaîne du film */
-  .chain{display:grid; grid-template-columns:repeat(4, 1fr); background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden;}
+  .chain{display:grid; grid-template-columns:repeat(3, 1fr); background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden;}
   .chain > div{padding:22px; border-left:1px solid var(--hair); display:flex; flex-direction:column; gap:8px;}
   .chain > div:first-child{border-left:0;}
   .chain .slug b{margin-right:8px;}
   .chain .c2 .slug b{color:var(--red);}
-  .chain .c3 .slug b, .chain .c4 .slug b{color:var(--ink-soft);}
+  .chain .c3 .slug b{color:var(--ink-soft);}
   .chain h3{margin:2px 0 0; font-size:17px; font-weight:700; letter-spacing:-.015em;}
   .chain p{margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft); flex:1;}
-  .tag{align-self:flex-start; display:inline-flex; align-items:center; gap:7px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600;}
-  .tag.ok{background:rgba(47,158,68,.12); color:#2F9E44;}
-  .tag.wip{background:var(--chip-bg); color:var(--ink-soft);}
-  .chain a.tg{text-decoration:none;}
-  .chain .c3, .chain .c4{background:var(--surface-soft);}
+  .chain .st{font-size:13.5px; font-weight:600; text-decoration:none;}
+  .chain a.st{color:var(--blue);} .chain .c2 a.st{color:var(--red);}
+  .chain a.st:hover{text-decoration:underline;}
+  .chain span.st{color:var(--ink-soft); font-weight:500;}
 
-  .yours{display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;}
-  .yours > div{padding:20px; background:var(--surface); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow-sm);}
-  .yours svg{width:20px; height:20px; color:var(--blue); margin-bottom:12px;}
+  .yours{display:grid; grid-template-columns:repeat(4, 1fr); background:var(--surface); border:1px solid var(--hair); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden;}
+  .yours > div{padding:20px 22px; border-left:1px solid var(--hair);}
+  .yours > div:first-child{border-left:0;}
   .yours h3{margin:0 0 6px; font-size:15px; font-weight:600;}
   .yours p{margin:0; font-size:13.5px; line-height:1.55; color:var(--ink-soft);}
 
@@ -208,7 +198,7 @@
 
   /* bandeau final : la colonne sombre de Raging Page */
   .band{margin:72px 0; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; padding:30px 32px; border-radius:14px; background:var(--studio); color:var(--studio-text);}
-  html[data-theme="dark"] .band{background:#1C1B29; box-shadow:0 0 0 1px var(--hair);}
+  html[data-theme="dark"] .band{background:#141518; box-shadow:0 0 0 1px var(--hair);}
   .band .slug{color:var(--studio-dim);}
   .band h2{color:#fff; margin-top:6px; font-size:26px;}
   .band .btns{margin:0; padding:0;}
@@ -226,10 +216,9 @@
   .legal{grid-column:1 / -1; padding-top:18px; border-top:1px solid var(--hair); font-size:12.5px; color:var(--ink-soft); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;}
 
   @media (max-width:1080px){
-    .pick{grid-template-columns:1fr 1fr;} .tile.soon{display:none;}
     .tool{grid-template-columns:1fr;}
-    .chain, .yours{grid-template-columns:1fr 1fr;}
-    .chain > div:nth-child(3){border-left:0;} .chain > div:nth-child(n+3){border-top:1px solid var(--hair);}
+    .yours{grid-template-columns:1fr 1fr;}
+    .yours > div:nth-child(3){border-left:0;} .yours > div:nth-child(n+3){border-top:1px solid var(--hair);}
     .nav a.l{display:none;}
     .foot{grid-template-columns:1fr 1fr;}
   }
@@ -242,18 +231,17 @@
     .hero h1{font-size:34px;}
     .hero .lead{font-size:16px;}
     .pick{grid-template-columns:1fr;}
-    .frame-h{padding:0 8px;} .dots, .addr{display:none;}
+    .frame-h{padding:0 8px;}
     .tabs button{padding:6px 10px 6px 6px; font-size:12.5px;}
     h2{font-size:26px;}
     section.s{padding:52px 0 4px;}
     .tool{padding:22px 18px;}
-    .feats{grid-template-columns:1fr 1fr; gap:8px;} .feat{padding:13px;}
+    .feats{grid-template-columns:1fr;} .feat:nth-child(2){border-top:1px solid var(--hair); padding-top:14px;}
     .chain, .yours, .faq{grid-template-columns:1fr;}
-    .chain > div{border-left:0; border-top:1px solid var(--hair);} .chain > div:first-child{border-top:0;}
+    .chain > div, .yours > div{border-left:0; border-top:1px solid var(--hair);} .chain > div:first-child, .yours > div:first-child{border-top:0;}
     .band{padding:24px; margin:52px 0;}
     .foot{grid-template-columns:1fr;}
   }
-  @media (max-width:400px){ .feats{grid-template-columns:1fr;} }
   @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} .tile, .tile .go{transition:none;} }
 </style>
 </head>
@@ -279,28 +267,20 @@
       <div class="slug"><b>1.</b>INT. RAGING STUDIO — JOUR</div>
       <h1 id="h1">Des outils gratuits pour <span class="t-p">écrire</span> ton film et <span class="t-d">dessiner</span> son affiche.</h1>
       <p class="lead">Raging Studio réunit des outils gratuits pour les cinéastes. Ils s’ouvrent dans ton navigateur, sans rien installer ni créer de compte, et ton travail reste sur ton ordinateur.</p>
-      <ul class="facts">
-        <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8"/></svg>100 % gratuit</li>
-        <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8"/></svg>Sans compte</li>
-        <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8"/></svg>Enregistré sur ton ordinateur</li>
-        <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8"/></svg>Open source</li>
-      </ul>
+      <p class="facts">Gratuit · Sans compte · Open source</p>
       <div class="pick">
         <a class="tile p" href="../page/"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rp"/></svg><span class="tx"><span class="mm-word" role="img" aria-label="Raging Page"><svg viewBox="0 -1911 11713 2422" style="width:4.836em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-p" class="w2p" transform="translate(7180 0)"/></svg></span><p>Écris ton scénario, avec la mise en page professionnelle.</p></span><span class="go"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg></span></a>
         <a class="tile d" href="../draw/"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rd"/></svg><span class="tx"><span class="mm-word" role="img" aria-label="Raging Draw"><svg viewBox="0 -1911 12592 2422" style="width:5.199em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-d" class="w2d" transform="translate(7180 0)"/></svg></span><p>Dessine l’affiche de ton film, puis imprime-la en 300 dpi.</p></span><span class="go"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg></span></a>
-        <div class="tile soon"><span class="ic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="6" width="13" height="8.5" rx="1"/><path d="M1.5 6 3 2l11.5 1.3L14.5 6"/><path d="M5.2 2.4 4.4 6M9 2.8 8.2 6M12.6 3.2 11.8 6"/></svg></span><span class="tx"><b>D’autres outils</b><p>En route, mêmes principes.</p></span></div>
       </div>
     </section>
 
     <div class="show">
       <div class="frame">
         <div class="frame-h">
-          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
           <div class="tabs" role="tablist" aria-label="Voir les outils">
             <button role="tab" id="tab-p" aria-controls="scr-p" aria-selected="true" type="button"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rp"/></svg>Raging Page</button>
             <button role="tab" id="tab-d" aria-controls="scr-d" aria-selected="false" type="button"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rd"/></svg>Raging Draw</button>
           </div>
-          <span class="addr" id="addr">ragingstudio.com/page</span>
         </div>
         <div class="screen">
           <div id="scr-p" role="tabpanel" aria-labelledby="tab-p">
@@ -313,7 +293,6 @@
           </div>
         </div>
       </div>
-      <p class="cap">Vraies captures : c’est exactement ce qui s’ouvre quand tu cliques.</p>
     </div>
 
     <section class="s" id="raging-page" aria-labelledby="h-rp">
@@ -323,7 +302,7 @@
           <div class="row"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rp"/></svg><span class="mm-word" role="img" aria-label="Raging Page"><svg viewBox="0 -1911 11713 2422" style="width:4.836em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-p" class="w2p" transform="translate(7180 0)"/></svg></span></div>
           <h2 id="h-rp" class="sr">Raging Page</h2>
           <h3>Le logiciel d’écriture de scénario gratuit, dans ton navigateur.</h3>
-          <p>Tu tapes, la mise en page se fait toute seule. Entrée passe à l’élément suivant, Tab passe en personnage. Une vraie alternative aux logiciels de scénario payants.</p>
+          <p>Tu tapes, la mise en page se fait toute seule. Entrée passe à l’élément suivant, Tab passe en personnage.</p>
           <div class="btns"><a class="btn bp" href="../page/">Ouvrir Raging Page<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></svg></a></div>
         </div>
         <div class="feats">
@@ -359,13 +338,12 @@
     </section>
 
     <section class="s" id="studio" aria-labelledby="h-chain">
-      <div class="sh"><div><div class="slug"><b>4.</b>Tout le film</div><h2 id="h-chain">Un studio, de la première ligne à l’avant-première</h2>
-        <p class="sub">Chaque outil couvre une étape de la fabrication d’un film. Ils ont le même style, les mêmes réflexes et la même promesse.</p></div></div>
+      <div class="sh"><div><div class="slug"><b>4.</b>Tout le film</div><h2 id="h-chain">De la première ligne à l’affiche</h2>
+        <p class="sub">Chaque outil couvre une étape de la fabrication d’un film, et ils marchent tous de la même façon.</p></div></div>
       <div class="chain">
-        <div class="c1"><div class="slug"><b>01</b>Écrire</div><h3>Raging Page</h3><p>Le scénario, du premier jet à la version de tournage.</p><a class="tag ok tg" href="../page/">Disponible</a></div>
-        <div class="c2"><div class="slug"><b>02</b>Dessiner</div><h3>Raging Draw</h3><p>L’affiche, l’identité visuelle de ton film.</p><a class="tag ok tg" href="../draw/">Disponible</a></div>
-        <div class="c3"><div class="slug"><b>03</b>Préparer</div><h3>Outils de production</h3><p>Pour organiser le tournage, sur les mêmes principes.</p><span class="tag wip">En préparation</span></div>
-        <div class="c4"><div class="slug"><b>04</b>Partager</div><h3>Et ensuite</h3><p>De nouveaux outils rejoignent le studio quand ils sont prêts, ici même.</p><span class="tag wip">À venir</span></div>
+        <div class="c1"><div class="slug"><b>01</b>Écrire</div><h3>Raging Page</h3><p>Le scénario, du premier jet à la version de tournage.</p><a class="st" href="../page/">Ouvrir →</a></div>
+        <div class="c2"><div class="slug"><b>02</b>Dessiner</div><h3>Raging Draw</h3><p>L’affiche de ton film.</p><a class="st" href="../draw/">Ouvrir →</a></div>
+        <div class="c3"><div class="slug"><b>03</b>Préparer</div><h3>Outils de production</h3><p>Pour organiser le tournage. Ils arriveront ici quand ils seront prêts.</p><span class="st">En préparation</span></div>
       </div>
     </section>
 
@@ -373,10 +351,10 @@
       <div class="sh"><div><div class="slug"><b>5.</b>Ton travail</div><h2 id="h-yours">Il reste à toi</h2>
         <p class="sub">Pas de serveur, pas de compte : rien à créer, rien à céder.</p></div></div>
       <div class="yours">
-        <div><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3" width="11" height="7.5" rx="1"/><path d="M1 13h14"/></svg><h3>Sur ton ordinateur</h3><p>Scénarios et affiches s’enregistrent dans ton navigateur, automatiquement. Nous ne les recevons jamais.</p></div>
-        <div><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 1.5h6.5L13 5v9.5H3z"/><path d="M9.5 1.5V5H13M5.5 9h5M5.5 11.5h3"/></svg><h3>Dans tes fichiers</h3><p>Un clic enregistre une copie complète (.smmproj, .rdraw), à rouvrir partout.</p></div>
-        <div><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5h7a3 3 0 0 0 .4-6 4 4 0 0 0-7.7 1A2.5 2.5 0 0 0 4.5 12.5z"/></svg><h3>Sur Google Drive, si tu veux</h3><p>Une copie facultative, mise à jour toute seule. Les outils ne voient que leurs fichiers.</p></div>
-        <div><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9 3l-2 10"/></svg><h3>Open source</h3><p>Code public sous licence MIT. Pas de publicité, pas de pistage.</p></div>
+        <div><h3>Sur ton ordinateur</h3><p>Scénarios et affiches s’enregistrent dans ton navigateur, automatiquement. Nous ne les recevons jamais.</p></div>
+        <div><h3>Dans tes fichiers</h3><p>Un clic enregistre une copie complète (.smmproj, .rdraw), à rouvrir partout.</p></div>
+        <div><h3>Sur Google Drive, si tu veux</h3><p>Une copie facultative, mise à jour toute seule. Les outils ne voient que leurs fichiers.</p></div>
+        <div><h3>Open source</h3><p>Code public sous licence MIT. Pas de publicité, pas de pistage.</p></div>
       </div>
     </section>
 
@@ -418,10 +396,9 @@
       s('ragingstudio_theme', dark ? 'light' : 'dark');
     });
     // vitrine : un onglet par outil
-    var tabs = document.querySelectorAll('.tabs [role="tab"]'), addr = document.getElementById('addr');
+    var tabs = document.querySelectorAll('.tabs [role="tab"]');
     function pick(t){
       tabs.forEach(function(x){ var on = x === t; x.setAttribute('aria-selected', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
-      addr.textContent = t.id === 'tab-p' ? 'ragingstudio.com/page' : 'ragingstudio.com/draw';
     }
     tabs.forEach(function(t, i){
       t.addEventListener('click', function(){ pick(t); });
