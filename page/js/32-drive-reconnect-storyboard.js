@@ -1147,6 +1147,8 @@
 
   /* ---------- image d'un plan → canvas (avec numéro et légende si demandé) ---------- */
   const loadImg = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('img')); im.src = src; });
+  /* légende exportée : le découpage du plan (GP · Plongée · 50 mm…) puis la légende */
+  const sbCapText = f => [window.sbShotSummary ? window.sbShotSummary(f) : '', f.cap || ''].filter(Boolean).join(' \u2014 ');
   const canvasBlob = cv => new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('png')), 'image/png'));
   function wrapLines(cx, text, maxW){
     const words = String(text || '').split(/\s+/).filter(Boolean), lines = []; let cur = '';
@@ -1162,7 +1164,7 @@
       const m = document.createElement('canvas').getContext('2d');
       fs = Math.max(12, Math.round(W * .026)); lh = Math.round(fs * 1.45); tp = Math.round(W * .021);
       m.font = fs + 'px ' + ff;
-      lines = wrapLines(m, x.f.cap || '', W - Math.round(W * .06));
+      lines = wrapLines(m, sbCapText(x.f), W - Math.round(W * .06));
     }
     const strip = caps ? tp * 2 + lh * (1 + lines.length) : 0;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H + strip;
@@ -1214,7 +1216,7 @@
       doc.text(safe(L('PLAN', 'SHOT') + ' ' + it.num), x0, y0 + ih + 14);
       doc.setFont('helvetica', 'normal'); doc.setTextColor(110, 115, 125);
       doc.text(safe(clip(it.label || '', per === 6 ? 26 : 50)), x0 + iw, y0 + ih + 14, { align:'right' });
-      const cap = safe(it.f.cap || '').trim();
+      const cap = safe(sbCapText(it.f)).trim();
       if(cap){
         const fs = per === 6 ? 9 : 10.5, lh = fs * 1.3, maxL = Math.max(1, Math.floor((capH - 22) / lh));
         doc.setFontSize(fs); doc.setTextColor(35, 38, 46);

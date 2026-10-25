@@ -52,9 +52,53 @@
     ins:'<path d="M2.5 4h11M2.5 12h11M8 6v4M6 8h4"/>',
     sz1:'<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>',
     sz2:'<rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="M8 3v10"/>',
-    sz3:'<rect x="2.5" y="3" width="11" height="10" rx="1.5"/>'
+    sz3:'<rect x="2.5" y="3" width="11" height="10" rx="1.5"/>',
+    grid:'<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>',
+    list:'<path d="M5.5 4h8M5.5 8h8M5.5 12h8"/><circle cx="2.8" cy="4" r=".9" fill="currentColor"/><circle cx="2.8" cy="8" r=".9" fill="currentColor"/><circle cx="2.8" cy="12" r=".9" fill="currentColor"/>',
+    cam:'<rect x="1.8" y="4.5" width="9" height="7" rx="1.4"/><path d="M10.8 7.2l3.4-1.9v5.4l-3.4-1.9"/>'
   };
   const SIZES = { s:170, m:230, l:320 };
+  const VIEW_KEY = 'scriptmm_sb_view';
+
+  /* ---------------- découpage technique d'un plan (f.shot) ----------------
+     Valeur, angle, mouvement, focale, matériel, VFX, tourné : les colonnes
+     d'un découpage de tournage. Tout est facultatif ; les listes restent
+     courtes et standard (abrégées sur les vignettes : GP, PM, PE…). */
+  const SHOT = {
+    size:[['tgp','Très gros plan','Extreme close-up','TGP','ECU'], ['gp','Gros plan','Close-up','GP','CU'], ['pr','Plan rapproché','Medium close-up','PR','MCU'],
+      ['pa','Plan américain','Cowboy shot','PA','Cowboy'], ['pm','Plan moyen','Medium shot','PM','MS'], ['pe','Plan d’ensemble','Wide shot','PE','WS'],
+      ['pg','Plan général','Extreme wide shot','PG','EWS'], ['ins','Insert','Insert','Insert','Insert'], ['am','Amorce (épaule)','Over the shoulder','Amorce','OTS'],
+      ['pov','Plan subjectif','Point of view','Subjectif','POV'], ['2p','Plan à deux','Two-shot','Plan à deux','Two-shot']],
+    angle:[['neu','Neutre','Eye level'], ['plo','Plongée','High angle'], ['con','Contre-plongée','Low angle'], ['dess','Vue de dessus','Overhead'],
+      ['deb','Débullé','Dutch angle'], ['sol','Au ras du sol','Ground level']],
+    move:[['fix','Fixe','Static'], ['pan','Panoramique','Pan'], ['tilt','Tilt','Tilt'], ['trav','Travelling','Dolly'], ['zoom','Zoom','Zoom'],
+      ['epa','Caméra épaule','Handheld'], ['stea','Steadicam','Steadicam'], ['grue','Grue','Crane'], ['drone','Drone','Drone']]
+  };
+  const LENSES = ['14', '18', '24', '28', '35', '50', '65', '85', '100', '135'];
+  const SHK = { size:L('Valeur', 'Size'), angle:L('Angle', 'Angle'), move:L('Mouvement', 'Movement'), lens:L('Focale', 'Lens'), gear:L('Matériel', 'Equipment') };
+  const shotOf = f => f.shot || {};
+  const optLabel = (k, v, short) => { const o = (SHOT[k] || []).find(x => x[0] === v); return !o ? '' : short && o[3] ? L(o[3], o[4]) : L(o[1], o[2]); };
+  function shotParts(f, short){
+    const s = shotOf(f), out = [];
+    if(s.size) out.push(optLabel('size', s.size, short));
+    if(s.angle) out.push(optLabel('angle', s.angle));
+    if(s.move) out.push(optLabel('move', s.move));
+    if(s.lens) out.push(s.lens + ' mm');
+    return out;
+  }
+  const hasShot = f => Object.keys(shotOf(f)).length > 0;
+  /* résumé d'une ligne, repris dans les PDF et PNG du storyboard */
+  window.sbShotSummary = f => { const s = shotOf(f), p = shotParts(f, true); if(s.gear) p.push(s.gear); if(s.vfx) p.push('VFX'); return p.join(' · '); };
+  function setShot(f, k, v){
+    const s = Object.assign({}, f.shot);
+    if(v === '' || v === false || v == null) delete s[k]; else s[k] = v;
+    if(Object.keys(s).length) f.shot = s; else delete f.shot;
+    R().save();
+  }
+  const shotSel = (k, v, cls) => `<select class="${cls}" data-shk="${k}" aria-label="${esc(SHK[k])}"><option value="">—</option>${SHOT[k].map(o => `<option value="${o[0]}"${o[0] === v ? ' selected' : ''}>${esc(L(o[1], o[2]))}</option>`).join('')}</select>`;
+  const shotLens = (v, cls) => `<input class="${cls}" data-shk="lens" type="text" inputmode="numeric" maxlength="7" list="sbtLens" value="${esc(v || '')}" placeholder="mm" aria-label="${esc(SHK.lens)}">`;
+  const shotGear = (v, cls) => `<input class="${cls}" data-shk="gear" type="text" maxlength="80" value="${esc(v || '')}" placeholder="${esc(L('Grue, drone, caisson…', 'Crane, drone, housing…'))}" aria-label="${esc(SHK.gear)}">`;
+  const shotTick = (k, on, txt) => `<label class="sbt-tick"><input type="checkbox" data-shk="${k}"${on ? ' checked' : ''}><span>${esc(txt)}</span></label>`;
 
   /* ---------------- données ---------------- */
   const st = () => R().store();
@@ -70,10 +114,10 @@
 
   /* ---------------- affichage ---------------- */
   function frameCard(x){
-    const f = x.f, sel = R().SELS.has(f.id);
-    return `<div class="sbt-f${sel ? ' sel' : ''}" data-id="${f.id}">
+    const f = x.f, sel = R().SELS.has(f.id), s = shotOf(f), sum = shotParts(f, true).join(' · ');
+    return `<div class="sbt-f${sel ? ' sel' : ''}${s.done ? ' done' : ''}" data-id="${f.id}">
       <div class="sbt-img" draggable="true" title="${esc(L('Clique pour voir en grand · glisse pour déplacer', 'Click to view large · drag to move'))}">
-        <img src="${f.src}" alt="" draggable="false" loading="lazy" decoding="async"><span class="sbt-num">${x.num}</span>
+        <img src="${f.src}" alt="" draggable="false" loading="lazy" decoding="async"><span class="sbt-num"${s.done ? ` title="${esc(L('Plan tourné', 'Shot done'))}"` : ''}>${s.done ? ic(I.chk, 10) : ''}${x.num}</span>${s.vfx ? '<span class="sbt-vfx">VFX</span>' : ''}
         <button type="button" class="sbt-chk" data-sb="sel" aria-pressed="${sel}" title="${esc(L('Cocher pour télécharger', 'Tick to download'))}">${ic(I.chk, 12)}</button>
         <div class="sbt-tools">
           <button type="button" data-sb="mv" title="${esc(L('Déplacer vers une autre séquence…', 'Move to another sequence…'))}">${ic(I.mv, 13)}</button>
@@ -82,11 +126,29 @@
           <button type="button" data-sb="del" title="${esc(L('Supprimer ce plan', 'Delete this shot'))}">${ic(I.del, 13)}</button>
         </div></div>
       <input class="sbt-cap" type="text" maxlength="200" placeholder="${esc(L('Légende (cadrage, mouvement…)', 'Caption (framing, movement…)'))}" value="${esc(f.cap || '')}">
+      <button type="button" class="sbt-meta${hasShot(f) ? ' on' : ''}" data-sb="shot" title="${esc(L('Découpage du plan : valeur, angle, mouvement, focale, matériel…', 'Shot details: size, angle, movement, lens, equipment…'))}">${ic(I.cam, 13)}<span>${esc(sum || s.gear || L('Découpage', 'Shot details'))}</span></button>
     </div>`;
   }
   function addTile(){
     return `<div class="sbt-add"><span class="sbt-add-t">${ic(I.plus, 15)}${esc(L('Ajouter un plan', 'Add a shot'))}</span>
       <span class="sbt-add-b"><button type="button" data-sb="add-img" title="${esc(L('Importer une ou plusieurs images', 'Import one or more pictures'))}">${esc(L('Image', 'Picture'))}</button><i></i><button type="button" data-sb="add-draw" title="${esc(L('Dessiner un plan', 'Draw a shot'))}">${esc(L('Dessin', 'Drawing'))}</button><i></i><button type="button" data-sb="add-paste" title="${esc(L('Coller l’image copiée (ou Ctrl+V en survolant la séquence)', 'Paste the copied picture (or Ctrl+V while hovering the sequence)'))}">${esc(L('Coller', 'Paste'))}</button></span></div>`;
+  }
+  function shotRow(x){
+    const f = x.f, s = shotOf(f);
+    return `<tr class="sbt-r${s.done ? ' done' : ''}" data-id="${f.id}">
+      <td class="p"><span class="sbt-th" title="${esc(L('Voir en grand', 'View large'))}"><img src="${f.src}" alt="" loading="lazy" decoding="async"></span><b>${x.num}</b></td>
+      <td class="d"><input class="sbt-cap sbt-ti" type="text" maxlength="200" value="${esc(f.cap || '')}" placeholder="${esc(L('Ce qui se passe dans le plan…', 'What happens in the shot…'))}" aria-label="${esc(L('Description', 'Description'))}"></td>
+      <td>${shotSel('size', s.size, 'sbt-ti')}</td><td>${shotSel('angle', s.angle, 'sbt-ti')}</td><td>${shotSel('move', s.move, 'sbt-ti')}</td>
+      <td class="l">${shotLens(s.lens, 'sbt-ti')}</td><td class="g">${shotGear(s.gear, 'sbt-ti')}</td>
+      <td class="c"><input type="checkbox" data-shk="vfx"${s.vfx ? ' checked' : ''} aria-label="VFX"></td>
+      <td class="c"><input type="checkbox" data-shk="done"${s.done ? ' checked' : ''} aria-label="${esc(L('Plan tourné', 'Shot done'))}"></td></tr>`;
+  }
+  function shotTable(items){
+    if(!items.length) return `<div class="sbt-tadd">${addTile()}</div>`;
+    return `<div class="sbt-tw"><table class="sbt-tbl"><thead><tr><th class="p">${esc(L('Plan', 'Shot'))}</th><th class="d">${esc(L('Description', 'Description'))}</th>
+      <th>${esc(SHK.size)}</th><th>${esc(SHK.angle)}</th><th>${esc(SHK.move)}</th><th class="l">${esc(SHK.lens)}</th><th class="g">${esc(SHK.gear)}</th>
+      <th class="c" title="${esc(L('Effets visuels', 'Visual effects'))}">VFX</th><th class="c">${esc(L('Tourné', 'Done'))}</th></tr></thead>
+      <tbody>${items.map(shotRow).join('')}</tbody></table></div><div class="sbt-tadd">${addTile()}</div>`;
   }
   function seqCard(q, idx, items, scs){
     const sc = q.sc && scs[q.sc], label = R().seqLabel(q, scs);
@@ -104,7 +166,7 @@
           ${items.length ? `<button type="button" data-sb="play-sq" title="${esc(L('Lire à partir de cette séquence', 'Play from this sequence'))}">${ic(I.play, 12)}</button>` : ''}
           <button type="button" data-sb="sqmenu" title="${esc(L('Plus d’options', 'More options'))}" aria-haspopup="menu">${ic(I.more, 15)}</button></span>
       </header>
-      <div class="sbt-grid">${items.map(frameCard).join('')}${addTile()}</div>
+      ${lsGet(VIEW_KEY, 'grid') === 'list' ? shotTable(items) : `<div class="sbt-grid">${items.map(frameCard).join('')}${addTile()}</div>`}
     </section>`;
   }
   window.renderStoryboard = function(){
@@ -112,7 +174,8 @@
     const list = R().sbOrdered(), seqs = st().seqs, scs = scenesById(), n = list.length, nSel = R().SELS.size;
     const by = {}; list.forEach(x => { (by[x.sq] = by[x.sq] || []).push(x); });
     const size = SIZES[lsGet(SIZE_KEY, 'm')] ? lsGet(SIZE_KEY, 'm') : 'm';
-    const hasScenes = R().sbScenes().length > 0;
+    const hasScenes = R().sbScenes().length > 0, view = lsGet(VIEW_KEY, 'grid') === 'list' ? 'list' : 'grid';
+    const nDone = list.filter(x => shotOf(x.f).done).length;
     const body = seqs.length ? seqs.map((q, i) => seqCard(q, i, by[q.id] || [], scs)).join('') + `<button type="button" class="sbt-newsq" data-sb="newsq">${ic(I.plus, 14)}${esc(L('Nouvelle séquence', 'New sequence'))}</button>`
       : `<div class="sbt-start">
           <div class="sbt-start-ic">${ic(I.scene, 26)}</div>
@@ -126,22 +189,25 @@
           <button type="button" class="btn btn-sm" data-sb="manual"${n ? '' : ' disabled'} title="${esc(L('Passe d’un plan à l’autre toi-même (flèches, clic ou glisser)', 'Go from shot to shot yourself (arrows, click or swipe)'))}">${ic(I.manual, 13)} ${esc(L('Défilement manuel', 'Manual'))}</button>
           <button type="button" class="btn btn-sm" data-sb="dlall"${n ? '' : ' disabled'} title="${esc(L('Télécharger les plans (PNG ou PDF)…', 'Download the shots (PNG or PDF)…'))}">${ic(I.dl, 13)} ${esc(L('Télécharger', 'Download'))}</button>
         </div></div>
-      <div class="sbt-sub"${seqs.length ? '' : ' hidden'}><span class="sbt-stats">${esc(plans(n))} · ${esc(seqsTxt(seqs.length))}${nSel ? ` · <button type="button" class="sbt-clr" data-sb="clearsel" title="${esc(L('Tout décocher', 'Clear the selection'))}">${nSel} ${esc(nSel > 1 ? L('cochés', 'selected') : L('coché', 'selected'))} ✕</button>` : ''}</span>
-        <span class="sbt-subr">${n ? `<span class="sbt-seg" role="group" aria-label="${esc(L('Taille des vignettes', 'Thumbnail size'))}">${['s', 'm', 'l'].map((k, i) => `<button type="button" data-sb="size" data-v="${k}" class="${k === size ? 'on' : ''}" aria-pressed="${k === size}" title="${esc([L('Petites vignettes', 'Small thumbnails'), L('Vignettes moyennes', 'Medium thumbnails'), L('Grandes vignettes', 'Large thumbnails')][i])}">${ic(I['sz' + (i + 1)], 14)}</button>`).join('')}</span>` : ''}
+      <div class="sbt-sub"${seqs.length ? '' : ' hidden'}><span class="sbt-stats">${esc(plans(n))} · ${esc(seqsTxt(seqs.length))}${nDone ? ' · ' + esc(nDone + '/' + n + ' ' + (nDone > 1 ? L('tournés', 'done') : L('tourné', 'done'))) : ''}${nSel ? ` · <button type="button" class="sbt-clr" data-sb="clearsel" title="${esc(L('Tout décocher', 'Clear the selection'))}">${nSel} ${esc(nSel > 1 ? L('cochés', 'selected') : L('coché', 'selected'))} ✕</button>` : ''}</span>
+        <span class="sbt-subr">${n ? `<span class="sbt-seg sbt-view" role="group" aria-label="${esc(L('Affichage', 'View'))}">${[['grid', I.grid, L('Vignettes', 'Thumbnails')], ['list', I.list, L('Découpage', 'Shot list')]].map(v => `<button type="button" data-sb="view" data-v="${v[0]}" class="${v[0] === view ? 'on' : ''}" aria-pressed="${v[0] === view}" title="${esc(v[2])}">${ic(v[1], 14)}<span>${esc(v[2])}</span></button>`).join('')}</span>` : ''}
+        ${n && view === 'list' ? `<button type="button" class="btn btn-sm" data-sb="csv" title="${esc(L('Télécharger le découpage en tableau (CSV : Excel, Numbers, Google Sheets)', 'Download the shot list as a spreadsheet (CSV: Excel, Numbers, Google Sheets)'))}">${ic(I.dl, 12)} ${esc(L('Tableau CSV', 'CSV sheet'))}</button>` : ''}
+        ${n && view === 'grid' ? `<span class="sbt-seg" role="group" aria-label="${esc(L('Taille des vignettes', 'Thumbnail size'))}">${['s', 'm', 'l'].map((k, i) => `<button type="button" data-sb="size" data-v="${k}" class="${k === size ? 'on' : ''}" aria-pressed="${k === size}" title="${esc([L('Petites vignettes', 'Small thumbnails'), L('Vignettes moyennes', 'Medium thumbnails'), L('Grandes vignettes', 'Large thumbnails')][i])}">${ic(I['sz' + (i + 1)], 14)}</button>`).join('')}</span>` : ''}
         ${seqs.length ? `<button type="button" class="btn btn-sm" data-sb="newsq">${ic(I.plus, 12)} ${esc(L('Nouvelle séquence', 'New sequence'))}</button>` : ''}</span></div>
-      <div class="sbt-wrap sz-${size}" id="sbtWrap">${body}</div>`;
+      <div class="sbt-wrap sz-${size} v-${view}" id="sbtWrap">${body}</div>
+      <datalist id="sbtLens">${LENSES.map(v => `<option value="${v}">`).join('')}</datalist>`;
   };
   function refresh(focusTitleOf){
     if(!(S && S.view === 'editor' && S.tab === 'storyboard')) return;
     const c = $('centerPane'); if(!c) return;
     const y = c.scrollTop, act = document.activeElement;
-    const capId = act && act.classList && act.classList.contains('sbt-cap') ? act.closest('.sbt-f').dataset.id : null;
+    const capId = act && act.classList && act.classList.contains('sbt-cap') ? act.closest('[data-id]').dataset.id : null;
     const titleId = act && act.classList && act.classList.contains('sbt-title') ? act.closest('.sbt-sq').dataset.sq : null;
     c.innerHTML = renderStoryboard();
     c.scrollTop = y;
     const fid = focusTitleOf || titleId;
     if(fid){ const i = c.querySelector('.sbt-sq[data-sq="' + fid + '"] .sbt-title'); if(i){ i.focus(); if(focusTitleOf){ i.closest('.sbt-sq').scrollIntoView({ block:'nearest', behavior:'smooth' }); } } }
-    else if(capId){ const i = c.querySelector('.sbt-f[data-id="' + capId + '"] .sbt-cap'); if(i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+    else if(capId){ const i = c.querySelector('[data-id="' + capId + '"] .sbt-cap'); if(i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   }
   window.sbTabRefresh = () => refresh();
   const flash = (sel) => { const el = document.querySelector('#sbtWrap ' + sel); if(!el) return; el.scrollIntoView({ block:'nearest', behavior:'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300); };
@@ -187,6 +253,52 @@
       const q = seqById(b.dataset.msq), was = moveTo(f, q.id);
       R().snack(L('Plan déplacé vers « ', 'Shot moved to “') + R().seqLabel(q, scs) + L(' ».', '”.'), () => undoMove(f, was));
     });
+  }
+  /* fiche de découpage d'un plan (depuis la vignette) */
+  function shotMenu(btn, f){
+    const s = shotOf(f), x = R().sbOrdered().find(y => y.f.id === f.id);
+    const m = popMenu(btn, `<h4>${esc(L('Plan ', 'Shot ') + (x ? x.num : ''))} · ${esc(L('Découpage', 'Shot details'))}</h4>
+      <div class="sbt-form" data-fid="${esc(f.id)}">
+        <label><span>${esc(SHK.size)}</span>${shotSel('size', s.size, 'sbt-fi')}</label>
+        <label><span>${esc(SHK.angle)}</span>${shotSel('angle', s.angle, 'sbt-fi')}</label>
+        <label><span>${esc(SHK.move)}</span>${shotSel('move', s.move, 'sbt-fi')}</label>
+        <label><span>${esc(SHK.lens)}</span>${shotLens(s.lens, 'sbt-fi')}</label>
+        <label class="w"><span>${esc(SHK.gear)}</span>${shotGear(s.gear, 'sbt-fi')}</label>
+        <div class="w sbt-ticks">${shotTick('vfx', s.vfx, L('Effets visuels (VFX)', 'Visual effects (VFX)'))}${shotTick('done', s.done, L('Plan tourné', 'Shot done'))}</div>
+      </div>`, 364);
+    const first = m.querySelector('select'); if(first) setTimeout(() => first.focus(), 0);
+    m.addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); m.remove(); btn.focus(); } });
+  }
+  /* champ de découpage modifié (fiche ou tableau) */
+  function onShotField(t, live){
+    const host = t.closest('[data-fid], tr[data-id]'); if(!host) return;
+    const f = frameById(host.dataset.fid || host.dataset.id); if(!f) return;
+    const k = t.dataset.shk, v = t.type === 'checkbox' ? t.checked : t.value.trim();
+    setShot(f, k, k === 'lens' ? v.replace(/\s*mm$/i, '') : v);
+    if(host.tagName === 'TR'){ if(k === 'done'){ host.classList.toggle('done', !!v); refreshStats(); } }
+    else if(!live) refresh();
+  }
+  function refreshStats(){
+    const el = document.querySelector('#centerPane .sbt-stats'); if(!el) return;
+    const list = R().sbOrdered(), n = list.length, nd = list.filter(x => shotOf(x.f).done).length;
+    el.firstChild.textContent = plans(n) + ' · ' + seqsTxt(st().seqs.length) + (nd ? ' · ' + nd + '/' + n + ' ' + (nd > 1 ? L('tournés', 'done') : L('tourné', 'done')) : '');
+  }
+  /* le découpage en tableau, pour le tableur de la production */
+  function shotCsv(){
+    const list = R().sbOrdered(), scs = scenesById(), sep = getLang() === 'en' ? ',' : ';';
+    const cell = v => { v = String(v == null ? '' : v); return /["\n\r;,]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const head = [L('Séquence', 'Sequence'), L('Scène', 'Scene'), L('Plan', 'Shot'), L('Description', 'Description'), SHK.size, SHK.angle, SHK.move, SHK.lens, SHK.gear, 'VFX', L('Tourné', 'Done')];
+    const rows = list.map(x => {
+      const q = seqById(x.sq), sc = q && q.sc && scs[q.sc], s = shotOf(x.f);
+      return [q ? R().seqLabel(q, scs) : '', sc && sc.num ? sc.num : '', x.num, x.f.cap || '', optLabel('size', s.size), optLabel('angle', s.angle), optLabel('move', s.move),
+        s.lens ? s.lens + ' mm' : '', s.gear || '', s.vfx ? L('Oui', 'Yes') : '', s.done ? L('Oui', 'Yes') : ''];
+    });
+    const txt = '\ufeff' + [head].concat(rows).map(r => r.map(cell).join(sep)).join('\r\n');
+    // nom de fichier sans accents ni signes : certains navigateurs remplacent sinon le nom par « download »
+    const ascii = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9 _.-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const a = document.createElement('a'), name = ascii(S.project && S.project.title) || 'Storyboard';
+    a.href = URL.createObjectURL(new Blob([txt], { type:'text/csv;charset=utf-8' })); a.download = name + ' - ' + ascii(L('Découpage', 'Shot list')) + '.csv';
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
   }
   /* relier une séquence à une scène (avec recherche) */
   function linkMenu(btn, q){
@@ -234,8 +346,8 @@
     if(!wrap || S.tab !== 'storyboard' || !R()) return;
     const b = e.target.closest('[data-sb]');
     if(!b){
-      const im = e.target.closest('.sbt-img');
-      if(im){ const list = R().sbOrdered(), i = list.findIndex(x => x.f.id === im.closest('.sbt-f').dataset.id); openViewer(Math.max(0, i), false); }
+      const im = e.target.closest('.sbt-img, .sbt-th');
+      if(im){ const list = R().sbOrdered(), i = list.findIndex(x => x.f.id === im.closest('[data-id]').dataset.id); openViewer(Math.max(0, i), false); }
       return;
     }
     const a = b.dataset.sb, fEl = b.closest('.sbt-f'), f = fEl ? frameById(fEl.dataset.id) : null, qEl = b.closest('.sbt-sq'), q = qEl ? seqById(qEl.dataset.sq) : null;
@@ -243,6 +355,8 @@
     else if(a === 'dlall') R().dlOpen();
     else if(a === 'clearsel'){ R().SELS.clear(); refresh(); }
     else if(a === 'size'){ lsSet(SIZE_KEY, b.dataset.v); refresh(); }
+    else if(a === 'view'){ lsSet(VIEW_KEY, b.dataset.v); refresh(); }
+    else if(a === 'csv') shotCsv();
     else if(a === 'newsq'){ const nq = newSeq(); refresh(nq.id); }
     else if(a === 'fromscenes'){ R().sbScenes().forEach(s => newSeq(null, { sc:s.id })); refresh(); }
     else if(!q) return;
@@ -255,17 +369,23 @@
     else if(!f) return;
     else if(a === 'sel'){ if(R().SELS.has(f.id)) R().SELS.delete(f.id); else R().SELS.add(f.id); refresh(); }
     else if(a === 'mv') moveMenu(b, f);
+    else if(a === 'shot') shotMenu(b, f);
     else if(a === 'dl') R().dlOpen(f.id);
     else if(a === 'edit') R().drawOpen(f.pg, f);
     else if(a === 'del') R().delFrame(f.id);
   });
   document.addEventListener('input', e => {
     const t = e.target; if(!t.classList) return;
-    if(t.classList.contains('sbt-cap')){ const f = frameById(t.closest('.sbt-f').dataset.id); if(f){ f.cap = t.value; R().save(); } }
+    if(t.classList.contains('sbt-cap')){ const f = frameById(t.closest('[data-id]').dataset.id); if(f){ f.cap = t.value; R().save(); } }
+    else if(t.dataset && t.dataset.shk && t.type === 'text') onShotField(t, true);
     else if(t.classList.contains('sbt-title')){ const q = seqById(t.closest('.sbt-sq').dataset.sq); if(q){ q.title = t.value; R().save(); } }
+  });
+  document.addEventListener('change', e => {
+    const t = e.target; if(t && t.dataset && t.dataset.shk && t.closest('.sbt-menu, #sbtWrap')) onShotField(t, false);
   });
   document.addEventListener('keydown', e => {
     const t = e.target; if(!t.classList) return;
+    if(e.key === 'Enter' && t.dataset && t.dataset.shk && t.type === 'text'){ e.preventDefault(); t.blur(); return; }
     if(e.key === 'Enter' && (t.classList.contains('sbt-cap') || t.classList.contains('sbt-title'))){ e.preventDefault(); t.blur(); }
   });
 
@@ -612,6 +732,49 @@
   .sbt-menu .m i{display:block; height:1px; margin:5px 4px; background:var(--hair);}
   .sbt-mq{display:block; width:100%; box-sizing:border-box; height:32px; margin:0 0 6px; padding:0 10px; border:1px solid var(--hair); border-radius:8px; background:var(--surface-soft, var(--surface)); color:var(--ink); font:inherit; font-size:13px;}
   .sbt-mq:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(54,153,212,.2);}
+  /* découpage : la ligne sous la légende, la fiche et la vue tableau */
+  .sbt-meta{display:flex; align-items:center; gap:6px; max-width:100%; margin:2px 0 0; padding:3px 7px; border:0; border-radius:7px; background:none; color:var(--ink-soft); font:inherit; font-size:12px; font-weight:500; cursor:pointer; text-align:left; opacity:.75;}
+  .sbt-meta span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .sbt-meta svg{flex:none;}
+  .sbt-meta:hover, .sbt-meta:focus-visible{opacity:1; color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, transparent); outline:none;}
+  .sbt-meta.on{opacity:1; color:var(--ink); font-weight:600;}
+  .sbt-meta.on svg{color:var(--accent);}
+  .sbt-f:not(:hover):not(:focus-within) .sbt-meta:not(.on){opacity:0;}
+  @media (hover:none){ .sbt-f .sbt-meta{opacity:.75 !important;} }
+  .sbt-num svg{margin-right:3px;}
+  .sbt-f.done .sbt-num{background:#2F9E44; display:inline-flex; align-items:center;}
+  .sbt-vfx{position:absolute; bottom:7px; right:7px; height:18px; padding:0 6px; display:grid; place-items:center; border-radius:5px; background:rgba(15,17,21,.78); color:#fff; font-size:10px; font-weight:700; letter-spacing:.06em;}
+  .sbt-form{display:grid; grid-template-columns:1fr 1fr; gap:10px 10px; padding:2px 4px 4px;}
+  .sbt-form label{display:flex; flex-direction:column; gap:4px; min-width:0;}
+  .sbt-form label > span{font-size:11.5px; font-weight:600; color:var(--ink-soft);}
+  .sbt-form .w{grid-column:1 / -1;}
+  .sbt-fi, .sbt-ti{width:100%; box-sizing:border-box; height:32px; padding:0 9px; border:1px solid var(--hair); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-size:13px;}
+  select.sbt-fi, select.sbt-ti{padding-right:4px; cursor:pointer;}
+  .sbt-fi:focus, .sbt-ti:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(54,153,212,.2);}
+  .sbt-ticks{display:flex; gap:8px; flex-wrap:wrap; padding-top:2px;}
+  .sbt-tick{flex:1 1 130px; flex-direction:row !important; align-items:center; gap:8px !important; height:34px; padding:0 10px; border:1px solid var(--hair); border-radius:8px; cursor:pointer; font-size:13px; color:var(--ink);}
+  .sbt-tick:hover{border-color:color-mix(in srgb, var(--accent) 45%, var(--hair));}
+  .sbt-tick input, .sbt-tbl input[type="checkbox"]{width:16px; height:16px; margin:0; accent-color:var(--accent); cursor:pointer;}
+  .sbt-tick:has(input:checked){border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, var(--surface));}
+  .sbt-view button{width:auto; padding:0 10px; gap:6px; display:inline-flex; align-items:center; font:inherit; font-size:12.5px; font-weight:600;}
+  .sbt-tw{overflow-x:auto; margin:0 -4px; padding:0 4px;}
+  .sbt-tbl{width:100%; min-width:900px; border-collapse:collapse; font-size:13px;}
+  .sbt-tbl th{padding:0 6px 8px; text-align:left; font-size:11.5px; font-weight:600; color:var(--ink-soft); white-space:nowrap; border-bottom:1px solid var(--hair);}
+  .sbt-tbl td{padding:6px; border-bottom:1px solid var(--hair); vertical-align:middle;}
+  .sbt-tbl tr:last-child td{border-bottom:0;}
+  .sbt-tbl .p{width:92px;} .sbt-tbl .l{width:84px;} .sbt-tbl .g{width:170px;} .sbt-tbl .c{width:56px; text-align:center;}
+  .sbt-tbl td.p{display:flex; align-items:center; gap:8px;}
+  .sbt-tbl td.p b{font-size:12px; font-weight:700; color:var(--accent); font-variant-numeric:tabular-nums;}
+  .sbt-th{flex:none; display:block; width:56px; aspect-ratio:16/9; border-radius:6px; overflow:hidden; border:1px solid var(--hair); background:#fff; cursor:zoom-in;}
+  .sbt-th img{display:block; width:100%; height:100%; object-fit:cover;}
+  .sbt-tbl .sbt-ti{border-color:transparent; background:transparent;}
+  .sbt-tbl tr:hover .sbt-ti{border-color:var(--hair); background:var(--surface);}
+  .sbt-tbl .sbt-ti:focus{background:var(--surface);}
+  .sbt-tbl select.sbt-ti{min-width:118px;}
+  .sbt-tbl tr.done td.p b{color:#2F9E44;}
+  .sbt-tbl tr.done .sbt-th{outline:2px solid #2F9E44; outline-offset:1px;}
+  .sbt-tadd{margin-top:10px;}
+  .sbt-tadd .sbt-add{aspect-ratio:auto; flex-direction:row; justify-content:flex-start; gap:14px; padding:8px 12px;}
   @media (max-width:760px){ .sbt-wrap{padding:0 16px 60px;} .sbt-sub{padding:6px 16px 12px;} .sbt-cnt{display:none;} .sbt-chip{max-width:170px;} .sbt-grid{--sbt-w:150px !important;}
     .sbt-sh{flex-wrap:wrap; row-gap:8px;} .sbt-title{flex:1 1 calc(100% - 64px);} .sbt-hb{margin-left:auto;} }
 
