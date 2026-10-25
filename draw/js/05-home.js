@@ -179,7 +179,7 @@ async function startFromPhoto(file){
 }
 
 /* ---------- Création ---------- */
-const CR = {fmt:'onesheet', tpl:'thriller', title:''};
+const CR = {fmt:'onesheet', tpl:'taxi', title:''};
 function openCreate(){
   CR.title = '';
   const body = `
@@ -212,7 +212,7 @@ async function doCreate(){
   S.doc = doc;
   await saveDoc();
   openDoc(doc);
-  if(CR.tpl !== 'blank' && CR.tpl !== 'blankw') S.flyout = 'images';
+  if(doc.objects.some(o => o.type === 'image' && !o.asset)) S.flyout = 'images';
   renderFlyout();
 }
 
@@ -245,7 +245,7 @@ function sampleArt(w, h){
 }
 async function openSample(){
   const fmt = formatById('onesheet');
-  const doc = newDoc(L('Exemple · Nuit blanche','Example · Sleepless'), fmt, 'thriller');
+  const doc = newDoc(L('Exemple · Taxi Drawer','Example · Taxi Drawer'), fmt, 'taxi');
   const ph = doc.objects.find(o => o.type === 'image');
   const src = sampleArt(1620, 1360);
   const im = await loadImageMeta(src);

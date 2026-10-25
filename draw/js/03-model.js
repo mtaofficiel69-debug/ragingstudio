@@ -294,83 +294,8 @@ function textPresets(){
 /* ---------- Modèles de départ ---------- */
 const TEMPLATES = [
   {id:'blank', fr:'Toile vierge', en:'Blank canvas', make:(W,H) => ({bg:solid('#0B0B10'), fx:{grain:0, vignette:0}, objects:[]})},
-  {id:'blankw', fr:'Toile blanche', en:'White canvas', make:(W,H) => ({bg:solid('#FFFFFF'), fx:{grain:0, vignette:0}, objects:[]})},
-  {id:'thriller', fr:'Thriller', en:'Thriller', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    o.push(mkImage(null, W/2, H*.42, W, H*.84, W, H*.84, {fade:{top:0, bottom:45, left:0, right:0}}));
-    o.push(mkShape('ellipse', W*.5, H*.36, W*1.2, W*1.2, {fill:radial([stop(0,'#3699D455'), stop(1,'#3699D400')]), blend:'screen'}));
-    o.push(mkText(L('ILS NE SONT JAMAIS REPARTIS.','THEY NEVER LEFT.'), W/2, H*.07, W*.86, {font:'Oswald', size:Math.round(u*.032), letterSpacing:420, fill:solid('#E8EAF2')}));
-    o.push(mkText(L('NUIT\nBLANCHE','SLEEP\nLESS'), W/2, H*.735, W*.94, {font:'Anton', size:Math.round(u*.2), lineHeight:.9, letterSpacing:10, fill:linear(90, [stop(0,'#FFFFFF'), stop(1,'#B7D4EC')]), shadow:{on:true, color:'#000000cc', blur:40, x:0, y:10}}));
-    o.push(textPresets().find(p => p.id === 'billing').make(W, H)[0]);
-    o.push(mkText(L('LE 31 OCTOBRE AU CINÉMA','IN THEATERS OCTOBER 31'), W/2, H*.965, W*.8, {font:'Oswald', size:Math.round(u*.028), weight:700, letterSpacing:160, fill:solid('#5DB6EC')}));
-    return {bg:linear(180, [stop(0,'#0E1A26'), stop(1,'#050508')]), fx:{grain:18, vignette:55}, objects:o};
-  }},
-  {id:'horror', fr:'Horreur', en:'Horror', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    o.push(mkImage(null, W/2, H*.45, W, H*.7, W, H*.7, {filters:{brightness:90, contrast:130, saturate:0, hue:0, blur:0, grayscale:100, sepia:0, invert:0}, fade:{top:30, bottom:40, left:0, right:0}}));
-    const dr = addDecorObj('drips', W, H); dr.fill = solid('#7A0E0E'); o.push(dr);
-    o.push(mkText(L('LA CAVE','THE CELLAR'), W/2, H*.8, W*.92, {font:'Creepster', size:Math.round(u*.18), fill:solid('#C21F1F'), glow:{on:true, color:'#FF2A2A', blur:60}}));
-    o.push(mkText(L('N’ÉTEINS PAS LA LUMIÈRE','DON’T TURN OFF THE LIGHT'), W/2, H*.9, W*.8, {font:'Special Elite', size:Math.round(u*.034), letterSpacing:120, fill:solid('#E8EAF2')}));
-    o.push(mkText(L('PROCHAINEMENT','COMING SOON'), W/2, H*.96, W*.6, {font:'Oswald', size:Math.round(u*.024), letterSpacing:500, fill:solid('#9A99B0')}));
-    return {bg:solid('#050505'), fx:{grain:35, vignette:80}, objects:o};
-  }},
-  {id:'scifi', fr:'Science-fiction', en:'Sci-fi', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    o.push(mkPath(decorStarfield(W, H*.75, 42), W/2, H*.375, W, H*.75, {fill:solid('#FFFFFF'), opacity:.85, name:L('Étoiles','Stars')}));
-    o.push(mkShape('ellipse', W*.5, H*1.02, W*1.9, W*1.9, {fill:radial([stop(0,'#1F6FA0'), stop(.7,'#0E2A3D'), stop(1,'#06121C')], .5, .1), shadow:{on:true, color:'#5DB6ECaa', blur:120, x:0, y:0}}));
-    o.push(mkShape('ellipse', W*.72, H*.28, W*.22, W*.22, {fill:radial([stop(0,'#FFE8A3'), stop(1,'#F2994A')], .35, .35), shadow:{on:true, color:'#F2994Acc', blur:90, x:0, y:0}}));
-    o.push(mkText('ORBITA', W/2, H*.6, W*.94, {font:'Orbitron', size:Math.round(u*.16), weight:700, letterSpacing:200, fill:linear(90, [stop(0,'#FFFFFF'), stop(1,'#5DB6EC')]), glow:{on:true, color:'#3699D4', blur:50}}));
-    o.push(mkText(L('LE SILENCE N’EST QUE LE DÉBUT','SILENCE IS ONLY THE BEGINNING'), W/2, H*.69, W*.8, {font:'Michroma', size:Math.round(u*.024), letterSpacing:200, fill:solid('#B7D4EC')}));
-    const b = textPresets().find(p => p.id === 'billing').make(W, H)[0]; b.y = H*.93; o.push(b);
-    return {bg:linear(180, [stop(0,'#02040A'), stop(1,'#0B1624')]), fx:{grain:10, vignette:40}, objects:o};
-  }},
-  {id:'festival', fr:'Festival · drame', en:'Festival · drama', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    o.push(mkImage(null, W/2, H*.4, W*.84, H*.56, W*.84, H*.56, {filters:{brightness:100, contrast:105, saturate:80, hue:0, blur:0, grayscale:0, sepia:15, invert:0}}));
-    const lw = W*.28, dec = decorLaurel();
-    o.push(mkPath(dec, W*.5, H*.79, lw, lw*dec.vh/dec.vw, {fill:solid('#23262E')}));
-    o.push(mkText(L('SÉLECTION\nOFFICIELLE','OFFICIAL\nSELECTION'), W*.5, H*.79, lw*.5, {font:'Cinzel', size:Math.round(lw*.075), weight:700, lineHeight:1.15, letterSpacing:60, fill:solid('#23262E')}));
-    o.push(mkText(L('L’Été d’après','The Summer After'), W/2, H*.065, W*.9, {font:'Cormorant Garamond', size:Math.round(u*.1), weight:600, italic:true, fill:solid('#23262E')}));
-    o.push(mkText(L('UN FILM DE PRÉNOM NOM','A FILM BY FIRST LAST'), W/2, H*.9, W*.8, {font:'Cinzel', size:Math.round(u*.026), weight:600, letterSpacing:300, fill:solid('#5C6270')}));
-    return {bg:solid('#F4EFE6'), fx:{grain:14, vignette:0}, objects:o};
-  }},
-  {id:'comedy', fr:'Comédie', en:'Comedy', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    const sb = addDecorObj('sunburst', W, H); sb.fill = solid('#FFFFFF'); sb.opacity = .22; sb.y = H*.42; o.push(sb);
-    o.push(mkImage(null, W/2, H*.43, W*.72, W*.72, W*.72, W*.72, {ellipse:true, stroke:{on:true, color:'#FFFFFF', width:Math.round(u*.018)}}));
-    const bu = addDecorObj('burst', W, H); bu.x = W*.8; bu.y = H*.2; bu.w = bu.h = u*.26; bu.fill = solid('#D64545'); bu.rot = 12; o.push(bu);
-    o.push(mkText(L('ENFIN\nLIBRE !','FINALLY\nFREE!'), W*.8, H*.2, u*.2, {font:'Bowlby One', size:Math.round(u*.034), lineHeight:1.05, rot:12}));
-    o.push(mkText(L('Les Vacances\nde Marcel','Marcel’s\nVacation'), W/2, H*.79, W*.94, {font:'Bowlby One', size:Math.round(u*.105), lineHeight:.95, fill:solid('#14425E'), stroke:{on:true, color:'#FFFFFF', width:Math.round(u*.012)}, shadow:{on:true, color:'#14425E66', blur:0, x:Math.round(u*.008), y:Math.round(u*.01)}}));
-    o.push(mkText(L('CET ÉTÉ AU CINÉMA','THIS SUMMER IN THEATERS'), W/2, H*.945, W*.8, {font:'Montserrat', size:Math.round(u*.03), weight:700, letterSpacing:200, fill:solid('#14425E')}));
-    return {bg:linear(180, [stop(0,'#F2C94C'), stop(1,'#F2994A')]), fx:{grain:0, vignette:0}, objects:o};
-  }},
-  {id:'vintage', fr:'Vintage', en:'Vintage', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    const fr = addDecorObj('frame', W, H); fr.w = W*.94; fr.h = H*.95; fr.fill = solid('#7A5230'); o.push(fr);
-    const fr2 = addDecorObj('frame', W, H); fr2.w = W*.9; fr2.h = H*.925; fr2.fill = solid('#7A5230'); fr2.opacity = .6; o.push(fr2);
-    o.push(mkImage(null, W/2, H*.45, W*.74, H*.48, W*.74, H*.48, {filters:{brightness:100, contrast:110, saturate:40, hue:0, blur:0, grayscale:0, sepia:70, invert:0}, radius:u*.02}));
-    o.push(mkText(L('LE DERNIER\nTRAIN','THE LAST\nTRAIN'), W/2, H*.14, W*.86, {font:'Rye', size:Math.round(u*.09), lineHeight:1.05, fill:solid('#8E1B1B')}));
-    o.push(mkText(L('— UNE AVENTURE EN TECHNICOLOR —','— AN ADVENTURE IN TECHNICOLOR —'), W/2, H*.75, W*.8, {font:'Limelight', size:Math.round(u*.028), letterSpacing:60, fill:solid('#7A5230')}));
-    o.push(mkText(L('AVEC PRÉNOM NOM · PRÉNOM NOM','STARRING FIRST LAST · FIRST LAST'), W/2, H*.84, W*.8, {font:'Old Standard TT', size:Math.round(u*.03), weight:700, letterSpacing:100, fill:solid('#23262E')}));
-    o.push(mkText(L('EN SALLE DÈS LE 4 JUILLET','IN THEATERS JULY 4'), W/2, H*.9, W*.7, {font:'Oswald', size:Math.round(u*.026), letterSpacing:260, fill:solid('#8E1B1B')}));
-    return {bg:solid('#EFE3C8'), fx:{grain:30, vignette:35, vignetteColor:'#5A3A1A'}, objects:o};
-  }},
-  {id:'minimal', fr:'Minimaliste', en:'Minimalist', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    o.push(mkShape('ellipse', W/2, H*.42, u*.5, u*.5, {fill:solid('#3699D4')}));
-    o.push(mkShape('rect', W/2, H*.42 + u*.08, W, u*.002 + 2, {fill:solid('#23262E')}));
-    o.push(mkText(L('HORIZON','HORIZON'), W/2, H*.78, W*.9, {font:'Inter', size:Math.round(u*.09), weight:700, letterSpacing:500, fill:solid('#23262E')}));
-    o.push(mkText(L('un film de Prénom Nom','a film by First Last'), W/2, H*.84, W*.8, {font:'Inter', size:Math.round(u*.024), fill:solid('#5C6270')}));
-    return {bg:solid('#FCFDFE'), fx:{grain:6, vignette:0}, objects:o};
-  }},
-  {id:'neon', fr:'Néon', en:'Neon', make:(W,H) => {
-    const u = Math.min(W, H), o = [];
-    o.push(mkImage(null, W/2, H*.4, W, H*.8, W, H*.8, {tint:{on:true, color:'#8E5BD6', amount:55}, fade:{top:0, bottom:50, left:0, right:0}}));
-    o.push(mkText(L('MINUIT','MIDNIGHT'), W/2, H*.72, W*.9, {font:'Monoton', size:Math.round(u*.14), fill:solid('#FFE6FA'), glow:{on:true, color:'#E86FB0', blur:70}}));
-    o.push(mkText(L('LA VILLE NE DORT JAMAIS','THE CITY NEVER SLEEPS'), W/2, H*.81, W*.8, {font:'Audiowide', size:Math.round(u*.03), letterSpacing:200, fill:solid('#A9D8F5'), glow:{on:true, color:'#3699D4', blur:30}}));
-    const b = textPresets().find(p => p.id === 'billing').make(W, H)[0]; b.y = H*.92; o.push(b);
-    return {bg:linear(180, [stop(0,'#120A24'), stop(1,'#05030C')]), fx:{grain:12, vignette:50}, objects:o};
-  }}
+  {id:'blankw', fr:'Toile blanche', en:'White canvas', make:(W,H) => ({bg:solid('#FFFFFF'), fx:{grain:0, vignette:0}, objects:[]})}
+  // les affiches parodiques sont ajoutées par 03b-parodies.js
 ];
 
 function newDoc(title, fmt, templateId){
