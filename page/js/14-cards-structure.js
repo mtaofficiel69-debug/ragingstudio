@@ -15,7 +15,7 @@ function renderCards(){
     const len = lens[b.sceneId];
     return `<div class="card" ${meta.color?`style="--sc-color:${meta.color};"`:''} draggable="true" tabindex="0" data-scene="${b.sceneId}" data-act="focusSceneFromCard" data-id="${b.sceneId}">
       <div class="card-head"><span class="card-num">${numbers[b.sceneId]}</span><span class="card-heading">${esc(headingEl.text)||L('(scène sans titre)','(untitled scene)')}</span>${len?`<span class="scene-len" title="${L('Longueur de la scène, en huitièmes de page','Scene length, in eighths of a page')}">${eighthsLabel(len)}</span>`:''}</div>
-      <div class="card-syn">${esc(synopsis)||`<span style='color:#bbb'>${L('Pas d\u2019outline','No outline')}</span>`}</div>
+      <div class="card-syn">${esc(synopsis)||`<span style='color:#bbb'>${L('Pas de séquencier','No outline')}</span>`}</div>
       ${chars.length?`<div class="card-chars">${esc(chars.join(', '))}</div>`:''}
       ${tagsHtml?`<div class="card-tags">${tagsHtml}</div>`:''}
       <div class="card-foot"><button class="btn btn-sm btn-ghost" data-act="duplicateScene" data-id="${b.sceneId}" data-stop="1">${L('Dupliquer','Duplicate')}</button><button class="btn btn-sm btn-ghost" data-act="deleteScene" data-id="${b.sceneId}" data-stop="1">${L('Supprimer','Delete')}</button></div>
@@ -382,12 +382,12 @@ function renderOutline(){
         ${len?`<span class="scene-len" title="${L('Longueur de la scène, en huitièmes de page','Scene length, in eighths of a page')}">${eighthsLabel(len)}</span>`:''}
         <button class="btn btn-sm btn-ghost" data-act="focusSceneFromCard" data-id="${b.sceneId}">${L('Ouvrir','Open')}</button>
       </div>
-      <textarea placeholder="${L('Outline / synopsis…','Outline / synopsis…')}" data-act="editOutline" data-id="${b.sceneId}">${esc(meta.outline)}</textarea>
+      <textarea placeholder="${L('Séquencier / synopsis…','Outline / synopsis…')}" data-act="editOutline" data-id="${b.sceneId}">${esc(meta.outline)}</textarea>
       <div class="row-tags-edit">${meta.tags.map(t=>`<span class="tag-chip">#${esc(t)}</span>`).join('')}
         <input type="text" style="max-width:200px;" placeholder="${L('tags, séparés, virgule','tags, comma-separated')}" data-act="editSceneTags" data-id="${b.sceneId}" value="${esc(meta.tags.join(', '))}"></div>
     </div>`;
   }).join('');
-  return `<div class="cards-toolbar"><div class="pane-title" style="margin:0;">Outline${paneCount(blocks.length)}</div></div>
+  return `<div class="cards-toolbar"><div class="pane-title" style="margin:0;">${L('Séquencier','Outline')}${paneCount(blocks.length)}</div></div>
     <div class="wh-wrap">
       <p class="wh-lead">${L('Un résumé d’une phrase par scène : la colonne vertébrale de ton scénario.','A one-sentence summary per scene: the backbone of your screenplay.')}</p>
       ${rows ? `<div class="flat-list">${rows}</div>` : whEmpty(L('Aucune scène.','No scene.'), 'list')}

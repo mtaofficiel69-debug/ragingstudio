@@ -150,7 +150,7 @@ function cpActions(){
     tab('editor', 'doc', 'Éditeur', 'Editor', 'editeur ecrire editor write'),
     tab('cards', 'grid', 'Cartes', 'Cards', 'cartes fiches cards'),
     tab('structure', 'layers', 'Structure', 'Structure', 'structure actes beats'),
-    tab('outline', 'list', 'Outline', 'Outline', 'outline sequencier plan resume'),
+    tab('outline', 'list', 'Séquencier', 'Outline', 'outline sequencier plan resume'),
     Object.assign(tab('storyboard', 'frames', 'Storyboard', 'Storyboard', 'storyboard plans dessins images vignettes shots drawings'), { keys:[M, Al, 'B'] }),
     tab('guide', 'book', 'Aide à l’écriture', 'Writing help', 'aide ecriture conseils guide writing help'),
     tab('characters', 'users', 'Personnages', 'Characters', 'personnages roles characters'),

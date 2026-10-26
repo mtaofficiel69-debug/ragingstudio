@@ -64,7 +64,7 @@ function openSeriesExportMenu(seriesId){
       <button class="btn" style="width:100%;margin-bottom:8px;justify-content:flex-start;" data-act="doSeriesExport" data-id="${seriesId}" data-mode="txt">${icon('filetext')} ${L('Texte (.txt), un seul fichier','Text (.txt), one file')}</button>
       <button class="btn" style="width:100%;margin-bottom:8px;justify-content:flex-start;" data-act="doSeriesExport" data-id="${seriesId}" data-mode="fountain">${icon('drop')} ${L('Fountain (.fountain), un seul fichier','Fountain (.fountain), one file')}</button>
       <button class="btn" style="width:100%;margin-bottom:8px;justify-content:flex-start;" data-act="doSeriesExport" data-id="${seriesId}" data-mode="fdx">${icon('film')} ${L('Final Draft (.fdx), un fichier par épisode','Final Draft (.fdx), one file per episode')}</button>
-      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:14px;">${L('Les notes, outlines et tags ne sont jamais inclus dans les exports.','Notes, outlines and tags are never included in exports.')}</p>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:14px;">${L('Les notes, séquenciers et tags ne sont jamais inclus dans les exports.','Notes, outlines and tags are never included in exports.')}</p>
       <div class="modal-actions"><button class="btn" data-act="closeSeriesExportMenu">${L('Fermer','Close')}</button></div>
     </div></div>`;
   document.body.insertAdjacentHTML('beforeend', html);
