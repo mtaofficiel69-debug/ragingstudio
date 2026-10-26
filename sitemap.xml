@@ -21,4 +21,374 @@
   <url><loc>https://ragingstudio.com/draw/</loc><image:image><image:loc>https://ragingstudio.com/assets/shot-draw-light.webp</image:loc></image:image><lastmod>2026-10-25</lastmod><priority>0.9</priority></url>
   <url><loc>https://ragingstudio.com/guide.html</loc><lastmod>2026-10-25</lastmod><priority>0.6</priority></url>
   <url><loc>https://ragingstudio.com/privacy.html</loc><lastmod>2026-10-25</lastmod><priority>0.3</priority></url>
+  <!-- pages de contenu -->
+  <url>
+    <loc>https://ragingstudio.com/free-final-draft-alternative/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/free-final-draft-alternative/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/alternative-final-draft-gratuite/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/free-final-draft-alternative/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/alternative-final-draft-gratuite/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/free-final-draft-alternative/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/alternative-final-draft-gratuite/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/free-final-draft-alternative/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/celtx-alternative/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/celtx-alternative/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/alternative-celtx/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/celtx-alternative/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/alternative-celtx/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/celtx-alternative/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/alternative-celtx/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/celtx-alternative/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fountain-editor/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/fountain-editor/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/editeur-fountain/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/fountain-editor/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/editeur-fountain/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/fountain-editor/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/editeur-fountain/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/fountain-editor/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/storyboard-template/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/storyboard-template/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/modele-storyboard/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/storyboard-template/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/modele-storyboard/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/storyboard-template/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/modele-storyboard/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/storyboard-template/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/shot-list-template/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/shot-list-template/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/modele-decoupage-technique/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/shot-list-template/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/modele-decoupage-technique/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/shot-list-template/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/modele-decoupage-technique/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/shot-list-template/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/french-screenplay-format/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/french-screenplay-format/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/format-scenario-francais/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/french-screenplay-format/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/format-scenario-francais/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/french-screenplay-format/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/format-scenario-francais/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/french-screenplay-format/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/movie-poster-maker/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/movie-poster-maker/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/creer-affiche-de-film/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/movie-poster-maker/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/creer-affiche-de-film/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/movie-poster-maker/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/creer-affiche-de-film/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/movie-poster-maker/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/the-whining/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-whining/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/the-whining/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-whining/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/the-whining/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-whining/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/the-whining/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-whining/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/point-breakfast/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/point-breakfast/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/point-breakfast/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/point-breakfast/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/point-breakfast/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/point-breakfast/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/point-breakfast/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/point-breakfast/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/pulp-friction/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/pulp-friction/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/pulp-friction/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/pulp-friction/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/pulp-friction/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/pulp-friction/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/pulp-friction/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/pulp-friction/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/ralien/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/ralien/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/ralien/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/ralien/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/ralien/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/ralien/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/ralien/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/ralien/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/taxi-drawer/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/taxi-drawer/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/taxi-drawer/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/taxi-drawer/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/taxi-drawer/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/taxi-drawer/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/taxi-drawer/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/taxi-drawer/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/vertirage/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/vertirage/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/vertirage/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/vertirage/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/vertirage/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/vertirage/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/vertirage/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/vertirage/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/scarfface/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/scarfface/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/scarfface/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/scarfface/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/scarfface/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/scarfface/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/scarfface/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/scarfface/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/draws/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/draws/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/draws/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/draws/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/draws/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/draws/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/draws/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/draws/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/the-plotfather/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-plotfather/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/the-plotfather/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-plotfather/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/the-plotfather/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-plotfather/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/the-plotfather/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-plotfather/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/2001-a-space-bar-odyssey/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/2001-a-space-bar-odyssey/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/2001-l-odyssee-de-la-barre-espace/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/2001-a-space-bar-odyssey/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/2001-l-odyssee-de-la-barre-espace/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/2001-a-space-bar-odyssey/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/2001-l-odyssee-de-la-barre-espace/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/2001-a-space-bar-odyssey/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/jurassic-parking/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/jurassic-parking/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/jurassic-parking/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/jurassic-parking/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/jurassic-parking/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/jurassic-parking/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/jurassic-parking/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/jurassic-parking/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/the-good-the-bad-and-the-angry/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-good-the-bad-and-the-angry/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/le-bon-la-brute-et-le-raleur/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-good-the-bad-and-the-angry/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/le-bon-la-brute-et-le-raleur/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-good-the-bad-and-the-angry/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/le-bon-la-brute-et-le-raleur/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-good-the-bad-and-the-angry/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/typanic/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/typanic/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/typanic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/typanic/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/typanic/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/typanic/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/typanic/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/typanic/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/raging-bullet-points/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/raging-bullet-points/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/raging-bullet-points/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/raging-bullet-points/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/raging-bullet-points/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/raging-bullet-points/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/raging-bullet-points/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/raging-bullet-points/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/posters/the-formatrix/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-formatrix/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/the-formatrix/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-formatrix/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/affiches/the-formatrix/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/posters/the-formatrix/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/affiches/the-formatrix/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/posters/the-formatrix/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <!-- /pages de contenu -->
 </urlset>

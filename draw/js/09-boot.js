@@ -235,5 +235,9 @@ if(document.fonts && document.fonts.addEventListener) document.fonts.addEventLis
   await dbOpen();
   await refreshIndex();
   render();
+  // lien direct vers un modèle (pages des affiches du site) : ?tpl=whining ouvre la création sur ce modèle
+  const tq = new URLSearchParams(location.search).get('tpl');
+  if(tq && TEMPLATES.some(t => t.id === tq)){ CR.tpl = tq; history.replaceState(null, '', location.pathname + location.hash); openCreate();
+    setTimeout(() => { const a = document.querySelector('#crTpl .tcard.active'); if(a) a.scrollIntoView({block:'nearest'}); }, 60); }
   if(!Store.available()) toast(L('Ce navigateur ne permet pas d’enregistrer : exporte ton projet avant de fermer.','This browser can’t save: export your project before closing.'), 'warn');
 })();
