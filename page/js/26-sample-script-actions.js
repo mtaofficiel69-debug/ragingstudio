@@ -899,7 +899,7 @@ function openSampleModal(){
       </div>
       <ul class="sm-points">
         <li>${icon('note')}<span><b>${L('Un vrai scénario, écrit pour apprendre en le lisant','A real screenplay, written to be learned from')}</b><small>${L('Des encadrés bleus expliquent chaque étape (image d\u2019ouverture, déclencheur, choix du héros, point médian, climax…) au moment où elle arrive.','Blue boxes explain each step (opening image, inciting incident, the hero\u2019s choice, midpoint, climax\u2026) right where it happens.')}</small></span></li>
-        <li>${icon('layers')}<span><b>${L('Structure et Outline déjà remplis','Structure and Outline already filled in')}</b></span></li>
+        <li>${icon('layers')}<span><b>${L('Structure et séquencier déjà remplis','Structure and Outline already filled in')}</b></span></li>
         <li>${icon('doc')}<span><b>${L('Tu reçois ta propre copie','You get your own copy')}</b><small>${L('Tu peux la modifier librement. Les notes bleues n\u2019apparaissent jamais à l\u2019impression ni à l\u2019export.','Free to edit. The blue notes never appear in print or in exports.')}</small></span></li>
       </ul>
       <div class="sm-lbl">${L('Langue de l\u2019exemple','Example language')}</div>
@@ -965,7 +965,7 @@ function renderWritingHelp(){
   const tiles = [
     ['cards', 'grid', L('Cartes','Cards'), L('Les scènes en fiches, à réordonner.','Scenes as cards, to reorder.')],
     ['structure', 'layers', L('Structure','Structure'), L('Les grandes étapes, avec des gabarits.','The big stages, with templates.')],
-    ['outline', 'list', L('Outline','Outline'), L('Une phrase par scène.','One sentence per scene.')],
+    ['outline', 'list', L('Séquencier','Outline'), L('Une phrase par scène.','One sentence per scene.')],
     ['characters', 'users', L('Personnages','Characters'), L('Qui parle, combien, où.','Who speaks, how much, where.')],
   ];
   const strip = (S.project && S.project.isSample) ? `<div class="sset-status wh-strip"><span class="sset-dot"></span><span class="wh-strip-t">${L('Ce scénario est une copie de l’exemple.','This screenplay is a copy of the example.')}</span><button class="btn btn-sm" data-act="stripSampleNotes">${L('Supprimer les notes bleues de cet exemple','Remove the blue notes from this example')}</button></div>` : '';
@@ -1063,7 +1063,7 @@ function moreMenuHtml(){
     <button class="btn" data-act="openFreePageMenu" title="${L('Dédicace, citation, synopsis, intercalaire, page blanche... : autant que tu veux, où tu veux, sans toucher à la numérotation','Dedication, quote, synopsis, divider, blank page...: as many as you like, wherever you like, without touching the numbering')}">${icon('nonum')} ${L('Page sans numéro…','Unnumbered page…')}</button>
     <button class="btn" data-act="pgiToggle" title="${L('Autant d\u2019images que tu veux, sur n\u2019importe quelle page : déplacer, agrandir, rogner. Le texte ne bouge pas.','As many images as you like, on any page: move, resize, crop. The text doesn\u2019t move.')}">${icon('image')} ${L('Images sur les pages…','Images on pages…')}</button>
     <button class="btn" data-act="openReplace">${icon('findrep')} Rechercher / remplacer</button>
-    <button class="btn" data-act="openSynonyms">${icon('bubbles')} Synonymes</button>
+    <button class="btn" data-act="openSynonyms">${icon('bubbles')} ${L('Synonymes','Synonyms')}</button>
     <button class="btn" data-act="wdOpenRename">${icon('cursor')} ${L('Renommer partout…','Rename everywhere…')}</button>
     <button class="btn" data-act="wdOpenVariants">${icon('copy')} ${L('Variantes de noms…','Name variants…')}</button>
     <button class="btn" data-act="openRevisions" title="Ctrl+Alt+R">${icon('asterisk')} ${L('Révisions colorées','Colour revisions')}</button>

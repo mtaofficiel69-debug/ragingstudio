@@ -226,8 +226,11 @@
       bh.querySelector('.fr').firstChild.nodeValue = 'Retour à l’accueil de ';
       bh.querySelector('.en').firstChild.nodeValue = 'Back to ';
     }
+    // le libellé du bouton de thème suit la langue (lecteurs d'écran)
+    function themeLabel(){ document.getElementById('theme').setAttribute('aria-label', doc.lang === 'fr' ? 'Thème' : 'Theme'); }
+    themeLabel();
     document.querySelectorAll('.lang button').forEach(function(btn){
-      btn.addEventListener('click', function(){ doc.lang = btn.dataset.l; s(keyL, btn.dataset.l); if(from === 'studio') document.getElementById('back').href = btn.dataset.l === 'fr' ? 'fr/' : './'; });
+      btn.addEventListener('click', function(){ doc.lang = btn.dataset.l; s(keyL, btn.dataset.l); themeLabel(); if(from === 'studio') document.getElementById('back').href = btn.dataset.l === 'fr' ? 'fr/' : './'; });
     });
     document.getElementById('theme').addEventListener('click', function(){
       var dark = doc.getAttribute('data-theme') === 'dark';

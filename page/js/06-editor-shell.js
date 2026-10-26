@@ -6,7 +6,7 @@ function railItems(){
     ['editor','doc',L('Éditeur','Editor')],
     ['cards','grid',L('Cartes','Cards')],
     ['structure','layers',L('Structure','Structure')],
-    ['outline','list',L('Outline','Outline')],
+    ['outline','list',L('Séquencier','Outline')],
     ['storyboard','frames',L('Storyboard','Storyboard')],
     ['guide','book',L('Aide à l\u2019écriture','Writing help')],
     ['characters','users',L('Personnages','Characters')],
