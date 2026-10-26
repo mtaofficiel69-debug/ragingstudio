@@ -46,7 +46,10 @@ function partGeo(id){
     case 'pelvis': box(g, 0, -0.01, 0, 0.32, 0.16, 0.2, W); ball(g, 0.095, -0.06, 0, 0.085, 0.085, 0.085, W, 10); ball(g, -0.095, -0.06, 0, 0.085, 0.085, 0.085, W, 10); break;
     case 'spine': box(g, 0, 0.1, 0, 0.29, 0.2, 0.18, W); break;
     case 'chest': box(g, 0, 0.13, 0.005, 0.38, 0.28, 0.22, W); ball(g, 0.2, 0.235, 0, 0.068, 0.068, 0.068, W, 10); ball(g, -0.2, 0.235, 0, 0.068, 0.068, 0.068, W, 10); cyl(g, 0, 0.34, 0, 0.05, 0.055, 0.08, W, 10); break;
-    case 'head': ball(g, 0, 0.12, 0.005, 0.098, 0.12, 0.108, W, 12); box(g, 0, 0.11, 0.1, 0.03, 0.045, 0.04, W); box(g, 0, 0.035, 0.035, 0.12, 0.05, 0.12, W); break;
+    case 'head': ball(g, 0, 0.12, 0.005, 0.098, 0.12, 0.108, W, 12); box(g, 0, 0.035, 0.035, 0.12, 0.05, 0.12, W);
+      // un visage simple mais lisible : nez, arcades, menton et oreilles disent où regarde le personnage
+      box(g, 0, 0.1, 0.118, 0.032, 0.06, 0.05, W); box(g, 0, 0.152, 0.1, 0.15, 0.024, 0.035, W); box(g, 0, 0.035, 0.088, 0.075, 0.04, 0.04, W);
+      ball(g, 0.1, 0.115, -0.005, 0.02, 0.038, 0.028, W, 6); ball(g, -0.1, 0.115, -0.005, 0.02, 0.038, 0.028, W, 6); break;
     case 'armL': case 'armR': limb(0.058, 0.048, 0.28); break;
     case 'foreL': case 'foreR': limb(0.047, 0.038, 0.25, 0.051); break;
     case 'handL': case 'handR': ball(g, 0, 0, 0, 0.036, 0.036, 0.036, W, 6); box(g, 0, -0.085, 0.005, 0.075, 0.13, 0.035, W); box(g, (id === 'handL' ? -1 : 1) * 0.04, -0.06, 0.02, 0.025, 0.06, 0.025, W); break;
@@ -121,6 +124,8 @@ const SET_DEF = {
       floor(g, -4, -4, 4, 4, 0, '#8D9198');
       for(let i = -3; i <= 3; i++) box(g, i * 1.15, 0.002, 0, 0.02, 0.004, 8, '#80848B');
       wall(g, [-4, -4], [4, -4], 3.2, '#C9CCD1'); wall(g, [-4, 4], [-4, -4], 3.2, '#BEC2C8'); wall(g, [4, -4], [4, 4], 3.2, '#BEC2C8');
+      // le 4e mur, pour les contrechamps : une porte et un interrupteur
+      wall(g, [4, 4], [-4, 4], 3.2, '#C4C8CE'); box(g, 1.8, 1.05, 3.98, 0.95, 2.1, 0.04, '#7A7F88'); box(g, 2.15, 1.05, 3.95, 0.06, 0.06, 0.03, '#2C2E33'); box(g, -2.5, 1.4, 3.97, 1.6, 0.9, 0.03, '#8A6A4A');
       floor(g, -4, -4, 4, 4, 3.2, '#A9ADB4', true);
       // porte de garage à lattes
       box(g, 0.6, 1.25, -3.97, 3.4, 2.5, 0.04, '#A8ADB5');
@@ -145,6 +150,9 @@ const SET_DEF = {
     build(g){
       floor(g, -3.5, -3.5, 3.5, 3.5, 0, '#9A8F80');
       wall(g, [-3.5, -3.5], [3.5, -3.5], 2.9, '#E6E2DA'); wall(g, [-3.5, 3.5], [-3.5, -3.5], 2.9, '#DAD5CC'); wall(g, [3.5, -3.5], [3.5, 3.5], 2.9, '#DAD5CC');
+      // le 4e mur, pour les contrechamps : la porte, un tableau, un portemanteau
+      wall(g, [3.5, 3.5], [-3.5, 3.5], 2.9, '#E1DCD3'); box(g, -1.6, 1.03, 3.48, 0.92, 2.06, 0.03, '#8C6B4E'); box(g, -1.25, 1.0, 3.45, 0.08, 0.04, 0.04, '#C9B48F');
+      box(g, 1.2, 1.6, 3.48, 1.1, 0.75, 0.02, '#3D5A80'); box(g, 1.2, 1.6, 3.47, 0.9, 0.55, 0.02, '#A9C9DE'); cyl(g, 2.7, 1.75, 3.25, 0.025, 0.025, 1.75, '#2C2E33', 6);
       floor(g, -3.5, -3.5, 3.5, 3.5, 2.9, '#EEEBE6', true);
       box(g, 0, 0.05, -3.48, 7, 0.1, 0.03, '#BDB6AA');
       // fenêtre
@@ -224,3 +232,77 @@ const SET_DEF = {
   },
 };
 function setGeo(id){ const g = geo(); SET_DEF[id].build(g); return g; }
+
+/* ---------- Le vocabulaire du storyboard (le même que dans Raging Page) ---------- */
+const SHOT = {
+  size:[['tgp','Très gros plan','Extreme close-up','TGP','ECU'], ['gp','Gros plan','Close-up','GP','CU'], ['pr','Plan rapproché','Medium close-up','PR','MCU'],
+    ['pm','Plan moyen','Medium shot','PM','MS'], ['pa','Plan américain','Cowboy shot','PA','Cowboy'], ['pe','Plan d’ensemble','Wide shot','PE','WS'],
+    ['pg','Plan général','Extreme wide shot','PG','EWS'], ['am','Amorce (épaule)','Over the shoulder','Amorce','OTS'], ['ins','Insert','Insert','Insert','Insert'],
+    ['pov','Plan subjectif','Point of view','Subjectif','POV'], ['2p','Plan à deux','Two-shot','Plan à deux','Two-shot']],
+  angle:[['neu','Neutre','Eye level'], ['plo','Plongée','High angle'], ['con','Contre-plongée','Low angle'], ['dess','Vue de dessus','Overhead'], ['deb','Débullé','Dutch angle'], ['sol','Au ras du sol','Ground level']],
+  move:[['fix','Fixe','Static'], ['pan','Panoramique','Pan'], ['tilt','Tilt','Tilt'], ['trav','Travelling','Dolly'], ['zoom','Zoom','Zoom'], ['epa','Caméra épaule','Handheld'], ['stea','Steadicam','Steadicam'], ['grue','Grue','Crane'], ['drone','Drone','Drone']],
+};
+const shotLabel = (k, v, short) => { const o = (SHOT[k] || []).find(x => x[0] === v); return !o ? '' : (short && o[3]) ? L(o[3], o[4]) : L(o[1], o[2]); };
+
+/* ---------- Cadrage automatique ----------
+   Pour chaque valeur de plan : la hauteur de corps à montrer, le point visé
+   (en partant du haut de la tête) et la focale qui va bien. */
+const FRAMES = {
+  tgp:{ span:0.22, from:0.09, lens:85 },
+  gp: { span:0.45, from:0.2, lens:85 },
+  pr: { span:0.72, from:0.34, lens:50 },
+  pm: { span:1.0, from:0.48, lens:35 },
+  pa: { span:1.3, from:0.62, lens:35 },
+  pe: { span:2.25, from:0.9, lens:28 },
+  pg: { span:6.0, from:0.9, lens:24 },
+};
+const ANGLES = { neu:{ pitch:-2, side:22 }, plo:{ pitch:-32, side:22 }, con:{ pitch:24, side:22 }, dess:{ pitch:-84, side:0 }, sol:{ pitch:6, side:22, low:true } };
+/* les repères du corps dans le monde : haut de la tête, yeux, direction du regard */
+function bodyMarks(ch){
+  const M = charMatrices(ch), P = (id, v) => M4.apply(M[id], v);
+  const top = P('head', [0, 0.245, 0]), eyes = P('head', [0, 0.13, 0.06]), nose = P('head', [0, 0.11, 0.3]), feet = Math.min(P('footL', [0, -0.065, 0])[1], P('footR', [0, -0.065, 0])[1]);
+  const fx = nose[0] - eyes[0], fz = nose[2] - eyes[2];
+  return { top, eyes, feet, face:Math.atan2(fx, fz) / D2R, chest:P('chest', [0, 0.18, 0]), shoulderR:P('armR', [0, 0, 0]), shoulderL:P('armL', [0, 0, 0]) };
+}
+/* caméra (cible, angle, recul) qui cadre « size » sur le personnage, vu sous « angle » */
+function frameOn(ch, size, angle, lens, side){
+  const F = FRAMES[size] || FRAMES.pm, A = ANGLES[angle] || ANGLES.neu, b = bodyMarks(ch);
+  const height = b.top[1] - b.feet;
+  const span = size === 'pe' ? Math.max(F.span, height + 0.35) : F.span;
+  const cy = size === 'pe' || size === 'pg' ? b.feet + height * 0.52 : b.top[1] - F.from;
+  const L_ = lens || F.lens, fov = 2 * Math.atan(12 / L_);
+  let dist = (span / 2) / Math.tan(fov / 2) * 1.04;
+  if(angle === 'dess') dist = Math.max(dist, 2.2);
+  const s = side == null ? A.side : side;
+  return { tx:b.eyes[0], ty:cy - (A.low ? 0.25 : 0), tz:b.eyes[2], yaw:b.face + s, pitch:A.pitch, dist:clamp(dist, 0.35, 28), lens:L_ };
+}
+/* amorce : par-dessus l'épaule de « back », on regarde le visage de « front » */
+function frameOTS(front, back, lens){
+  const f = bodyMarks(front), k = bodyMarks(back);
+  const dx = k.eyes[0] - f.eyes[0], dz = k.eyes[2] - f.eyes[2], d = Math.hypot(dx, dz) || 1;
+  const ux = dx / d, uz = dz / d, rx = uz, rz = -ux;           // de « front » vers « back », et le côté
+  const eye = [k.eyes[0] + ux * 0.55 + rx * 0.32, k.eyes[1] + 0.06, k.eyes[2] + uz * 0.55 + rz * 0.32];
+  const tgt = [f.eyes[0] - rx * 0.05, f.eyes[1] - 0.06, f.eyes[2] - rz * 0.05];
+  const vx = eye[0] - tgt[0], vy = eye[1] - tgt[1], vz = eye[2] - tgt[2], dist = Math.hypot(vx, vy, vz);
+  return { tx:tgt[0], ty:tgt[1], tz:tgt[2], yaw:Math.atan2(vx, vz) / D2R, pitch:-Math.asin(vy / dist) / D2R, dist, lens:lens || 50 };
+}
+/* plan à deux : les deux personnages dans le cadre, de profil à trois quarts */
+function frameTwo(a, b2, lens, pref, full){
+  const A = bodyMarks(a), Bm = bodyMarks(b2);
+  const cx = (A.eyes[0] + Bm.eyes[0]) / 2, cz = (A.eyes[2] + Bm.eyes[2]) / 2, gap = Math.hypot(A.eyes[0] - Bm.eyes[0], A.eyes[2] - Bm.eyes[2]);
+  const ang = Math.atan2(Bm.eyes[0] - A.eyes[0], Bm.eyes[2] - A.eyes[2]) / D2R + 90;
+  const L_ = lens || 35, fov = 2 * Math.atan(12 / L_), top = Math.max(A.top[1], Bm.top[1]);
+  // plan large : les deux corps en entier, et assez de largeur pour l'écart entre eux (image 16:9)
+  const span = full ? Math.max(top + 0.4, (gap + 1.1) * 9 / 16) : Math.max(1.3, gap * 0.75 + 0.6);
+  // des deux côtés possibles, on garde celui où se trouve déjà la caméra
+  const diff = y => Math.abs(((y - (pref || 0)) % 360 + 540) % 360 - 180);
+  const yaw = diff(ang) <= diff(ang + 180) ? ang : ang + 180;
+  return { tx:cx, ty:full ? Math.min(top / 2 + 0.1, top - 0.6) : top - 0.6, tz:cz, yaw:yaw + (full ? 18 : 8), pitch:full ? -6 : -3, dist:(span / 2) / Math.tan(fov / 2) * 1.1, lens:L_ };
+}
+/* les deux personnages se tournent l'un vers l'autre */
+function faceEachOther(chars){
+  if(chars.length < 2) return;
+  const [a, b] = chars;
+  a.root.ry = Math.atan2(b.root.x - a.root.x, b.root.z - a.root.z) / D2R;
+  b.root.ry = Math.atan2(a.root.x - b.root.x, a.root.z - b.root.z) / D2R;
+}
