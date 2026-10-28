@@ -101,9 +101,22 @@
   .nav a.l{display:inline-flex; align-items:center; gap:8px; padding:7px 11px; border-radius:6px; text-decoration:none; font-size:14px; font-weight:500; white-space:nowrap;}
   .nav a.l:hover{background:var(--overlay-hover);}
   .nav a.l .lg{width:20px; height:20px; border-radius:5px;}
-  .nav a.l.ic{padding:5px;}
-  .nav a.l.ic .lg{width:26px; height:26px; border-radius:7px;}
-  .nav a.l.ic + a.l:not(.ic){margin-left:6px;}
+  /* les outils : un seul bouton, qui ouvre la liste des trois (le reste de la page les montre déjà en grand) */
+  .tools-m{position:relative;}
+  .tools-m > summary{list-style:none; display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border-radius:6px; font-size:14px; font-weight:500; cursor:pointer; user-select:none;}
+  .tools-m > summary::-webkit-details-marker{display:none;} .tools-m > summary::after{content:none; display:none;}
+  .tools-m > summary:hover, .tools-m[open] > summary{background:var(--overlay-hover);}
+  .tools-m > summary:focus-visible{outline:none; box-shadow:var(--focus-ring);}
+  .tools-m .chev{width:14px; height:14px; color:var(--ink-soft); transition:transform .15s;}
+  .tools-m[open] .chev{transform:rotate(180deg);}
+  .tm-pop{position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); width:280px; padding:6px; border-radius:12px; background:var(--surface); border:1px solid var(--hair); box-shadow:var(--shadow-md); display:flex; flex-direction:column; gap:2px; z-index:40;}
+  .tm-i{display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:8px; text-decoration:none; color:var(--ink);}
+  .tm-i:hover, .tm-i:focus-visible{background:var(--overlay-hover); outline:none;}
+  .tm-i .lg{width:32px; height:32px; border-radius:8px; flex:none;}
+  .tm-i span{display:flex; flex-direction:column; gap:1px; min-width:0;}
+  .tm-i b{font-size:14px; font-weight:600;} .tm-i small{font-size:12.5px; color:var(--ink-soft);}
+  .tm-i.p b{color:var(--blue-h);} .tm-i.b b{color:#1B8A5B;} .tm-i.d b{color:var(--red);}
+  html[data-theme="dark"] .tm-i.p b{color:var(--blue);} html[data-theme="dark"] .tm-i.b b{color:#22A06B;}
   .sup{display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 11px; margin:0 4px 0 6px; border-radius:999px; border:1px solid var(--hair); background:var(--surface); text-decoration:none; font-size:13.5px; font-weight:600; white-space:nowrap; transition:border-color .15s, background .15s;}
   .sup:hover{border-color:var(--red-soft); background:var(--red-tint);}
   .sup svg{width:15px; height:15px; color:var(--red); fill:var(--red);}
@@ -319,7 +332,7 @@
     .band{grid-template-columns:auto 1fr;} .band .btns{grid-column:1 / -1; flex-direction:row;}
     .yours{grid-template-columns:1fr 1fr;}
     .yours > div:nth-child(3){border-left:0;} .yours > div:nth-child(n+3){border-top:1px solid var(--hair);}
-    .nav a.l{display:none;}
+    .nav a.l, .tools-m{display:none;}
     .foot{grid-template-columns:1fr 1fr;}
   }
   @media (max-width:720px){
@@ -371,9 +384,8 @@
 <header class="top">
   <a class="brand" href="./" aria-label="Raging Studio"><svg class="lg lg-hub" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-hub"/></svg><span class="mm-word" role="img" aria-label="Raging Studio"><svg viewBox="0 -1911 13160 2422" style="width:5.434em" aria-hidden="true"><use href="#w-r" class="w1"/><use href="#w-s" class="w2s" transform="translate(7180 0)"/></svg></span></a>
   <nav class="nav" aria-label="Main">
-    <a class="l ic" href="#raging-page" aria-label="Raging Page" title="Raging Page"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rp"/></svg></a>
-    <a class="l ic" href="#raging-board" aria-label="Raging Board" title="Raging Board"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rb"/></svg></a>
-    <a class="l ic" href="#raging-draw" aria-label="Raging Draw" title="Raging Draw"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rd"/></svg></a>
+    <details class="tools-m"><summary class="l" aria-label="The Raging Studio tools">Tools<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg></summary>
+      <div class="tm-pop" role="menu"><a class="tm-i p" href="page/" role="menuitem"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rp"/></svg><span><b>Raging Page</b><small>Write your screenplay</small></span></a><a class="tm-i b" href="board/" role="menuitem"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rb"/></svg><span><b>Raging Board</b><small>Your storyboard in 3D</small></span></a><a class="tm-i d" href="draw/" role="menuitem"><svg class="lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#l-rd"/></svg><span><b>Raging Draw</b><small>Your film poster</small></span></a></div></details>
     <a class="l" href="guide.html?from=studio">Guide</a>
     <a class="sup" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener" title="Raging Studio is free. If it helps you, you can support it on Ko-fi."><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg><span>Support</span></a>
     <span class="dsc-w"><a class="dsc" href="https://discord.gg/j5GXQPg6hb" target="_blank" rel="noopener" title="Join Undergrounders, the Discord server for independent filmmakers (French-speaking only)"><svg viewBox="0 0 127.14 96.36" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/></svg><span>Discord</span><span class="fr">FR</span></a><span class="dsc-card" role="note"><b>Undergrounders</b>Indie filmmakers’ community<span class="only"><i class="flag" aria-hidden="true"></i>French-speaking only</span></span></span>
@@ -414,7 +426,7 @@
             <img class="dk" src="assets/shot-page-dark.webp" width="1920" height="1147" alt="" loading="lazy">
           </div>
           <div id="scr-b" role="tabpanel" aria-labelledby="tab-b" hidden>
-            <img class="lt" src="assets/shot-board-light.webp" width="1920" height="1147" alt="Raging Board: a 3D storyboard, a shot framed over the shoulder in a café, with the strip of shots below" loading="lazy">
+            <img class="lt" src="assets/shot-board-light.webp" width="1920" height="1147" alt="Raging Board: a 3D storyboard in a 50s diner, two characters face to face in a car booth, the pose library on the right and the strip of shots below" loading="lazy">
             <img class="dk" src="assets/shot-board-dark.webp" width="1920" height="1147" alt="" loading="lazy">
           </div>
           <div id="scr-d" role="tabpanel" aria-labelledby="tab-d" hidden>
@@ -575,6 +587,13 @@
       t.addEventListener('click', function(){ pick(t); });
       t.addEventListener('keydown', function(e){ if(e.key === 'ArrowRight' || e.key === 'ArrowLeft'){ var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; pick(n); n.focus(); } });
     });
+  })();
+</script>
+<script>
+  // le menu des outils se referme quand on clique ailleurs, ou avec Échap
+  (function(){ var m = document.querySelector('.tools-m'); if(!m) return;
+    document.addEventListener('click', function(e){ if(m.open && !m.contains(e.target)) m.open = false; });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && m.open){ m.open = false; m.querySelector('summary').focus(); } });
   })();
 </script>
 </body>
