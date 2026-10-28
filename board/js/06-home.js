@@ -96,6 +96,7 @@ function showHome(){
   if(S.docId && S.doc){ clearTimeout(_saveT); persistDoc(docJSON()); clearTimeout(_libThumbT); const u = thumbOf(0), l = libGet(), x = l.find(y => y.id === S.docId); if(u && x){ x.thumb = u; libSet(l); } }
   endEdit(); if(S.play) stopBoard();
   if(document.fullscreenElement) document.exitFullscreen();
+  document.body.classList.remove('fs-fake', 'imm', 'imm-clean');
   document.body.classList.add('on-home'); renderHome(); window.scrollTo(0, 0);
 }
 function showEditor(){
@@ -115,10 +116,11 @@ const RP_LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" he
 const RD_LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#A51F2B"/><path d="M12 7H53V57H12Z" fill="#FCFDFE" stroke="#FCFDFE" stroke-width="3" stroke-linejoin="round"/><path d="M12 7H53V12.6c0 1.7-1 2.7-2.3 2.7s-2.3-1-2.3-2.7V12H43.6v5.2c0 1.9-1.1 3-2.5 3s-2.5-1.1-2.5-3V12H12Z" fill="#F2C4C7" stroke="#F2C4C7" stroke-width="3" stroke-linejoin="round"/><path d="M16 25L31 30M50 27L35 30" stroke="#5E1418" stroke-width="6" stroke-linecap="round"/><circle cx="25" cy="38" r="6.6" fill="#5E1418"/><circle cx="41" cy="38" r="6.6" fill="#5E1418"/><circle cx="27.2" cy="35.8" r="1.9" fill="#FCFDFE"/><circle cx="43.2" cy="35.8" r="1.9" fill="#FCFDFE"/><path d="M20 51H37" stroke="#5E1418" stroke-width="5.6" stroke-linecap="round"/></svg>';
 const HUB_LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#262535"/><path d="M12 7H38L53 22V57H12Z" fill="#FCFDFE" stroke="#FCFDFE" stroke-width="3" stroke-linejoin="round"/><path d="M38 7V22H43Z" fill="#3699D4"/><path d="M38 7L43 22H48Z" fill="#22A06B"/><path d="M38 7L48 22H53Z" fill="#D9363E"/><path d="M16 25L31 30M50 27L35 30" stroke="#262535" stroke-width="6" stroke-linecap="round"/><circle cx="25" cy="38" r="6.6" fill="#262535"/><circle cx="41" cy="38" r="6.6" fill="#262535"/><circle cx="27.2" cy="35.8" r="1.9" fill="#FCFDFE"/><circle cx="43.2" cy="35.8" r="1.9" fill="#FCFDFE"/><path d="M24 51H42" stroke="#262535" stroke-width="5.6" stroke-linecap="round"/></svg>';
 const HOME_TIPS = [
-  ['Un dialogue ? Fais le premier plan, puis « Contrechamp » : l’angle inverse est prêt.', 'A dialogue? Make the first shot, then “Reverse shot”: the opposite angle is ready.'],
-  ['Touche N : un nouveau plan qui reprend le plan actuel. Tu ne changes que ce qui bouge.', 'N key: a new shot that starts from the current one. You only change what moves.'],
-  ['Dans la maison de campagne, le plan en bas à gauche te téléporte dans chaque pièce.', 'In the country house, the plan at the bottom left teleports you to every room.'],
-  ['Choisis le format du film (2.39, 9:16…) dans « Rendu et format » avant de cadrer.', 'Pick the film format (2.39, 9:16…) in “Look & format” before framing.'],
+  ['Un dialogue ? « Contrechamp » prépare l’angle inverse.', 'A dialogue? “Reverse shot” sets up the opposite angle.'],
+  ['Touche N : un nouveau plan qui reprend l’actuel.', 'N key: a new shot that starts from the current one.'],
+  ['Maison de campagne : le plan en bas à gauche te téléporte.', 'Country house: the plan at the bottom left teleports you.'],
+  ['Touche P : tout le storyboard en plein écran, en immersion.', 'P key: the whole storyboard in immersive full screen.'],
+  ['Choisis le format (2.39, 9:16…) avant de cadrer.', 'Pick the format (2.39, 9:16…) before framing.'],
 ];
 function renderHome(){
   let el = document.getElementById('home');
@@ -157,7 +159,7 @@ function renderHome(){
           <a class="bh-nav dsc" href="${DISCORD_URL}" target="_blank" rel="noopener">${discordSvg()}<span>${L('La communauté Discord', 'The Discord community')}<small>${L('Undergrounders · 100 % francophone', 'Undergrounders · French only')}</small></span></a>
           <input type="file" id="hFile" accept=".rboard,.json,application/json" hidden>
         </div>
-        <p class="bh-tip">${icon('bulb')}<span>${esc(L(tip[0], tip[1]))}</span></p>
+        <p class="bh-tip" title="${esc(L(tip[0], tip[1]))}">${icon('bulb')}<span><span class="tip-k">${L('Astuce', 'Tip')}</span>${esc(L(tip[0], tip[1]))}</span></p>
         <div class="bh-about">${r3Wordmark()}<p>${L('Ton storyboard en 3D, sans savoir dessiner. Gratuit, sans compte.', 'Your storyboard in 3D, no drawing skills needed. Free, no account.')}</p></div>
       </aside>
       <main class="bh-main">

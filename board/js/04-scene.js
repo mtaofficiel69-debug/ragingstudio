@@ -133,6 +133,10 @@ function addChar(look){
   const s = shot(); if(s.chars.length >= MAX_CHARS) return;
   edit(() => { const i = s.chars.length; s.chars.push(charFromSpawn(i, SET_DEF[s.set], look)); S.sel = { c:i, j:'pelvis' }; S.target = i; });
 }
+function setOutfit(id){
+  const s = shot(), t = S.sel ? S.sel.c : S.target, ch = s.chars[t]; if(!ch) return;
+  edit(() => { if(id && id !== 'base') ch.outfit = id; else delete ch.outfit; });
+}
 function removeChar(c){
   const s = shot(); if(s.chars.length < 2 || !s.chars[c]) return;
   edit(() => { s.chars.splice(c, 1); S.sel = null; S.target = 0; });
@@ -141,7 +145,7 @@ function setPlace(id){ S.room = null;
   const s = shot(); if(!SET_DEF[id] || id === s.set) return;
   endEdit();
   const before = clone(s.cam);
-  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => charFromSpawn(i, def, ch.look)); s.cam = clone(def.cam); s.info.size = 'pe'; s.info.move = 'fix'; delete s.camEnd; s.crowds = []; s.vehicles = []; s.chars.forEach(ch => delete ch.on); });
+  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => Object.assign(charFromSpawn(i, def, ch.look), ch.outfit ? { outfit:ch.outfit } : {})); s.cam = clone(def.cam); s.info.size = 'pe'; s.info.move = 'fix'; delete s.camEnd; s.crowds = []; s.vehicles = []; s.chars.forEach(ch => delete ch.on); });
   startTween(before);
   clearTimeout(R.benchT); R.benchT = setTimeout(benchmark, 600);   // un grand espace est plus lourd : on revérifie
 }
@@ -412,31 +416,75 @@ function camEyeRaw(c){
    visé et l'objectif, l'objectif s'arrête juste devant (comme une perche qui se replie). Le taxi garde
    ses prises de vue à travers les vitres. */
 let CAM_SET = null;
-/* pendant qu'on manipule la caméra, sa distance réelle glisse doucement vers la bonne valeur au lieu de sauter */
-const CAM_SMOOTH = { cam:null, d:0, t:0, set:'' };
+/* ---------- La caméra dans les lieux ----------
+   Dedans (un lieu fait de pièces : maison, chambre d'hôtel, parking…), l'objectif reste toujours dans la
+   pièce où se trouve le point visé : on ne traverse plus les murs, on ne sort plus dehors, on ne voit jamais
+   le vide. Le rester-dans-la-pièce est continu (pas de saut) ; quand le point visé passe d'une pièce à
+   l'autre, l'objectif glisse en un clin d'œil jusqu'à la nouvelle pièce.
+   Dehors, seuls les murs et les gros volumes arrêtent l'objectif (pas les poteaux ni les troncs), et la
+   distance revient en douceur. */
+const CAM_SMOOTH = { cam:null, d:0, t:0, set:'', room:null, blend:null, last:null };
 const _eyeCache = new Map();
+const camSetId = () => CAM_SET || (S.doc && S.doc.shots[S.i] && S.doc.shots[S.i].set);
+/* la pièce qui contient le point visé (ou la plus proche, si on vise une porte) */
+function roomOf(id, x, y, z){
+  const d = SET_DEF[id]; if(!d || !d.rooms) return null;
+  let best = null, bd = d.levels ? 3 : 0.7;   // dans une maison, l'escalier compte pour la pièce la plus proche
+  for(const r of d.rooms){
+    const y0 = d.levels ? d.levels[r[2]] : 0, y1 = y0 + (d.roomH || 3);
+    if(y < y0 - 0.4 || y > y1 + 0.4) continue;
+    const [x0, z0, x1, z1] = r[3], dd = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
+    if(dd < bd){ bd = dd; best = r; }
+  }
+  return best;
+}
+/* ramener un point dans le volume d'une pièce (sous le toit en pente pour un grenier) */
+function inRoom(id, r, e){
+  const d = SET_DEF[id], y0 = d.levels ? d.levels[r[2]] : 0, m = 0.2, [x0, z0, x1, z1] = r[3];
+  const x = clamp(e[0], x0 + m, x1 - m), z = clamp(e[2], z0 + m, z1 - m);
+  let top = y0 + (d.roomH || 3) - 0.15;
+  if(r[5] === 'roof') top = y0 + 2.4 - 0.56 * Math.abs(z);
+  return [x, clamp(e[1], y0 + 0.25, Math.max(y0 + 0.4, top)), z];
+}
+/* l'endroit où l'objectif doit être, sans adoucissement */
+function camEyeWant(c){
+  const id = camSetId(), key = id + '|' + c.tx + '|' + c.ty + '|' + c.tz + '|' + c.yaw + '|' + c.pitch + '|' + c.dist;
+  const hit = _eyeCache.get(key); if(hit) return hit;
+  const raw = camEyeRaw(c), r = id && roomOf(id, c.tx, c.ty, c.tz);
+  let e;
+  if(r){ e = inRoom(id, r, raw); e[1] += furnLift(e); e = inRoom(id, r, e); }
+  else { const d = camDist(c), k = d >= c.dist - 1e-6 ? 1 : d / c.dist; e = [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k]; e[1] += furnLift(e); }
+  if(_eyeCache.size > 600) _eyeCache.clear(); _eyeCache.set(key, e);
+  return e;
+}
 function camEye(c){
-  const raw = camEyeRaw(c), d = camDist(c);
-  const ds = CAM_SMOOTH.cam === c ? Math.min(c.dist, CAM_SMOOTH.d) : d;
-  const k = ds >= c.dist - 1e-6 ? 1 : ds / c.dist;
-  const e = [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k];
-  e[1] += furnLift(e);
+  const S0 = CAM_SMOOTH; if(S0.cam !== c) return camEyeWant(c);
+  let e;
+  if(S0.room){ e = camEyeWant(c); }
+  else {   // dehors : la distance adoucie
+    const raw = camEyeRaw(c), k = Math.min(c.dist, S0.d) / c.dist;
+    e = [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k]; e[1] += furnLift(e);
+  }
+  if(S0.blend){ const k = clamp((performance.now() - S0.blend.t0) / 220, 0, 1), q = k * k * (3 - 2 * k);
+    if(k >= 1) S0.blend = null; else e = [0, 1, 2].map(i => S0.blend.from[i] + (e[i] - S0.blend.from[i]) * q); }
   return e;
 }
 /* près d'un meuble bas (canapé, table, lit…), l'objectif monte doucement par-dessus au lieu de rentrer
-   dedans : la montée commence 20 cm avant le meuble, elle ne fait donc jamais de saut */
+   dedans : la montée commence 45 cm avant le meuble, elle ne fait donc jamais de saut */
 const _liftCache = new Map();
 function furnLift(e){
   const id = CAM_SET || (S.doc && S.doc.shots[S.i] && S.doc.shots[S.i].set), C = id && id !== 'taxi' && SET_COLL[id]; if(!C) return 0;
   const key = id + '|' + e[0].toFixed(3) + '|' + e[1].toFixed(3) + '|' + e[2].toFixed(3), hit = _liftCache.get(key); if(hit != null) return hit;
   const lists = [C.main.b].concat(C.levels.map(l => l.b));
+  const lv = (SET_DEF[id] || {}).levels, fl = lv ? lv.reduce((m, y) => e[1] >= y - 0.1 ? y : m, 0) : 0;
   let up = 0;
   for(const list of lists) for(const b of list){
     if(b[4] >= 0.9) continue;                                   // les grands meubles et les murs : réglés par la distance
-    const top = b[1] + b[4], bot = b[1] - b[4]; if(e[1] > top + 0.2 || e[1] < bot - 0.6) continue;
+    const top = b[1] + b[4], bot = b[1] - b[4]; if(e[1] > top + 0.2 || e[1] < bot - 0.6 || bot - fl > 0.8) continue;   // seulement les meubles posés au sol
     const cs = Math.cos(b[6]), sn = Math.sin(b[6]), px = e[0] - b[0], pz = e[2] - b[2], lx = px * cs - pz * sn, lz = px * sn + pz * cs;
-    const dd = Math.hypot(Math.max(Math.abs(lx) - b[3], 0), Math.max(Math.abs(lz) - b[5], 0)); if(dd > 0.2) continue;
-    const s = 1 - dd / 0.2, want = (top + 0.2 - e[1]) * s * s * (3 - 2 * s); if(want > up && want < 1.3) up = want;
+    if(Math.min(b[3], b[5]) < 0.08) continue;   // rampes, pieds : trop fins pour gêner
+    const dd = Math.hypot(Math.max(Math.abs(lx) - b[3], 0), Math.max(Math.abs(lz) - b[5], 0)); if(dd > 0.45) continue;
+    const s = 1 - dd / 0.45, want = (top + 0.2 - e[1]) * s * s * (3 - 2 * s); if(want > up && want < 1.3) up = want;
   }
   if(_liftCache.size > 600) _liftCache.clear(); _liftCache.set(key, up);
   return up;
@@ -460,7 +508,7 @@ function camDist(c){
     if(u >= 0 && u <= len && py >= w[4] && py <= w[5]) t = tt;
   } };
   const testBoxes = list => { for(const b of list){
-    if(b[4] < 0.9) continue;   // moins de 1,80 m de haut : un meuble, on passe à travers
+    if(b[4] < 0.9 || Math.min(b[3], b[5]) < 0.25) continue;   // un meuble bas, un poteau, un tronc : on passe à travers (pas de saut)
     // le rayon dans le repère du pavé (qui peut être tourné autour de la verticale)
     const cs = Math.cos(b[6]), sn = Math.sin(b[6]), px = o[0] - b[0], pz = o[2] - b[2];
     const P = [px * cs - pz * sn, o[1] - b[1], px * sn + pz * cs], D = [dir[0] * cs - dir[2] * sn, dir[1], dir[0] * sn + dir[2] * cs];
@@ -482,11 +530,15 @@ function camDist(c){
 /* une fois par image de travail : on rapproche en douceur la distance affichée de la bonne distance
    (vite quand un mur arrive, plus lentement quand on se dégage) */
 function camSmoothStep(sh, cam){
-  const now = performance.now(), want = camDist(cam), S0 = CAM_SMOOTH;
-  if(S0.set !== sh.set || now - S0.t > 400 || S0.cam !== cam){ S0.d = want; }
-  else { const dt = now - S0.t, tau = want < S0.d ? 70 : 160; S0.d += (want - S0.d) * (1 - Math.exp(-dt / tau)); if(Math.abs(S0.d - want) < 0.01) S0.d = want; }
-  S0.t = now; S0.set = sh.set; S0.cam = cam;
-  if(S0.d !== want) requestRender();
+  const now = performance.now(), S0 = CAM_SMOOTH, fresh = S0.set !== sh.set || now - S0.t > 400 || S0.cam !== cam;
+  const r = roomOf(sh.set, cam.tx, cam.ty, cam.tz), want = r ? cam.dist : camDist(cam);
+  // on change de pièce : on part de là où était l'objectif
+  if(!fresh && r !== S0.room && S0.last) S0.blend = { from:S0.last.slice(), t0:now };
+  if(fresh){ S0.d = want; S0.blend = null; }
+  else if(!r){ const dt = now - S0.t, tau = want < S0.d ? 70 : 160; S0.d += (want - S0.d) * (1 - Math.exp(-dt / tau)); if(Math.abs(S0.d - want) < 0.01) S0.d = want; }
+  S0.t = now; S0.set = sh.set; S0.cam = cam; S0.room = r;
+  S0.last = camEye(cam);
+  if((!r && S0.d !== want) || S0.blend) requestRender();
 }
 function viewProj(c, aspect){
   const e = camEye(c), r = (c.roll || 0) * D2R;
@@ -514,6 +566,12 @@ const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new
 function setMesh(id){
   if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), gl:GL.mesh(edgeLines(o.g)), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)), levelsL:o.levels.map(l => GL.mesh(edgeLines(l))) }; }
   return R.sets[id];
+}
+/* les formes d'un personnage (et de son contour), fabriquées une fois, à la demande pour les tenues */
+function lookMesh(lk){
+  if(!R.parts[lk.id]){ R.parts[lk.id] = {}; R.out[lk.id] = {};
+    JOINTS.forEach(J => { GEO_K = 0.8; R.parts[lk.id][J.id] = GL.mesh(partGeo(J.id, lk)); GEO_K = 0.55; R.out[lk.id][J.id] = GL.mesh(smoothNormals(partGeo(J.id, lk, true))); GEO_K = 1; }); }
+  return { parts:R.parts[lk.id], out:R.out[lk.id] };
 }
 function initMeshes(){
   CHAR_LOOK.forEach(lk => {
@@ -615,19 +673,19 @@ function drawFrame(sh, w, h, clean, o){
   // avant les personnages, pour qu'elles n'apparaissent que là où le décor passe devant
   if(!final && !fast){
     gl.enable(gl.BLEND); gl.depthMask(false); gl.depthFunc(gl.GREATER);
-    chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.5 : 0.34, col:on ? GREEN : GHOST_C }); });
+    chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = lookMesh(lookOf(ch, c)).out; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.5 : 0.34, col:on ? GREEN : GHOST_C }); });
     gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
   }
   const tintOf = (c, id) => final ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id && (id !== 'pelvis' || S.sel.pick)) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
   // le contour des personnages : comme un trait de crayon, d'épaisseur constante à l'écran
   const px = 2 * Math.tan(fovOf(cam.lens) / 2) / h * clamp(h / 320, 1.4, 3);
   if(!fast) gl.cullFace(gl.FRONT);
-  if(!fast) chars.forEach((ch, c) => { const P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, col:INK, out:px });
+  if(!fast) chars.forEach((ch, c) => { const P = lookMesh(lookOf(ch, c)).out; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, col:INK, out:px });
     if(ch.prop && R.propsOut[ch.prop]) GL.draw(R.propsOut[ch.prop], { m:mats[c].handR, flat:true, col:INK, out:px }); });
   gl.cullFace(gl.BACK);
   chars.forEach((ch, c) => { if(ch.prop && R.props[ch.prop]) GL.draw(R.props[ch.prop], { m:mats[c].handR, col:[1, 1, 1], mul:true, char:true }); });
   chars.forEach((ch, c) => {
-    const P = R.parts[lookOf(ch, c).id];
+    const P = lookMesh(lookOf(ch, c)).parts;
     for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col:[1, 1, 1], tint, tintK:k, mul:true, char:true }); }
   });
   // les vitres, transparentes (des deux côtés)
@@ -722,7 +780,7 @@ function checkHidden(){
   drawSet(setMesh(sh.set), sh, cam, { raw:true, col:[0, 0, 0] });
   (sh.vehicles || []).forEach(v => GL.draw(vehMesh(v), { m:vehMat(v), raw:true, col:[0, 0, 0] }));
   const mats = sh.chars.map(ch => charMatrices(ch));
-  sh.chars.forEach((ch, c) => { const P = R.parts[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], raw:true, col:[(c * 32 + J.idx + 1) / 255, 0, 0] }); });
+  sh.chars.forEach((ch, c) => { const P = lookMesh(lookOf(ch, c)).parts; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], raw:true, col:[(c * 32 + J.idx + 1) / 255, 0, 0] }); });
   const out = [];
   sh.chars.forEach((ch, c) => {
     const pts = [['head', M4.apply(mats[c].head, [0, 0.12, 0.05])], ['body', M4.apply(mats[c].chest, [0, 0.12, 0.08])]];
@@ -848,7 +906,7 @@ function pickAt(px, py){
   GL.beginPick(w, h, viewProj(viewCam(), R.canvas.width / R.canvas.height));
   sh.chars.forEach((ch, c) => {
     const M = charMatrices(ch);
-    const P = R.parts[lookOf(ch, c).id];
+    const P = lookMesh(lookOf(ch, c)).parts;
     for(const J of JOINTS){ const id = c * 32 + J.idx + 1; GL.draw(P[J.id], { m:M[J.id], raw:true, col:[id / 255, 0, 0] }); }
   });
   const id = GL.readPick(Math.floor(px * sc), Math.floor(h - 1 - py * sc));
@@ -903,7 +961,7 @@ function zoomBy(c, f){
     c.dist = Math.max(DIST_MIN, Math.min(c.dist, DIST_MIN));
   } else {
     // reculer contre un mur : on repart de la distance réellement vue (pas de molette « dans le vide »)
-    const eff = camDist(c);
+    const w = camEyeWant(c), eff = Math.hypot(w[0] - c.tx, w[1] - c.ty, w[2] - c.tz);
     c.dist = Math.min(DIST_MAX, f > 1 && eff < c.dist - 0.05 ? Math.max(DIST_MIN, eff * f) : want);
   }
   keepCam(c);
