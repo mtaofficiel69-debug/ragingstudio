@@ -43,7 +43,7 @@ function newDoc(setId){ return { v:2, title:L('Mon storyboard', 'My storyboard')
 
 /* ---------- Sauvegarde automatique (dans le navigateur) ---------- */
 let _saveT = 0;
-function save(){ clearTimeout(_saveT); _saveT = setTimeout(() => { lsSet(LS_SCENE, docJSON()); if(typeof renderSaved === 'function') renderSaved(); }, 250); }
+function save(){ clearTimeout(_saveT); _saveT = setTimeout(() => { const j = docJSON(); if(S.docId && typeof persistDoc === 'function') persistDoc(j); else lsSet(LS_SCENE, j); if(typeof renderSaved === 'function') renderSaved(); }, 250); }
 /* le projet tel qu'on l'enregistre : si on règle le cadre de fin d'un mouvement, on remet chaque cadre à sa place */
 function docJSON(){ const sw = S.endEd && shot(); if(sw) swapEnd(sw); const t = JSON.stringify({ doc:S.doc, i:S.i }); if(sw) swapEnd(sw); return t; }
 /* les plans d'avant gardent tout : on complète seulement ce qui manque */
@@ -412,12 +412,23 @@ function camEyeRaw(c){
    visé et l'objectif, l'objectif s'arrête juste devant (comme une perche qui se replie). Le taxi garde
    ses prises de vue à travers les vitres. */
 let CAM_SET = null;
+/* pendant qu'on manipule la caméra, sa distance réelle glisse doucement vers la bonne valeur au lieu de sauter */
+const CAM_SMOOTH = { cam:null, d:0, t:0, set:'' };
 const _eyeCache = new Map();
 function camEye(c){
+  const raw = camEyeRaw(c), d = camDist(c);
+  const ds = CAM_SMOOTH.cam === c ? Math.min(c.dist, CAM_SMOOTH.d) : d;
+  if(ds >= c.dist - 1e-6) return raw;
+  const k = ds / c.dist;
+  return [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k];
+}
+/* la distance à laquelle l'objectif peut vraiment se placer : seuls les murs et les cloisons l'arrêtent
+   (pas les meubles, qui faisaient sauter l'image à chaque fauteuil) */
+function camDist(c){
   const raw = camEyeRaw(c), id = CAM_SET || (S.doc && S.doc.shots[S.i] && S.doc.shots[S.i].set);
-  const C = id && id !== 'taxi' && SET_COLL[id]; if(!C) return raw;
+  const C = id && id !== 'taxi' && SET_COLL[id]; if(!C) return c.dist;
   const key = id + '|' + c.tx + '|' + c.ty + '|' + c.tz + '|' + c.yaw + '|' + c.pitch + '|' + c.dist;
-  const hit = _eyeCache.get(key); if(hit) return hit;
+  const hit = _eyeCache.get(key); if(hit != null) return hit;
   const o = [c.tx, c.ty, c.tz], dir = [(raw[0] - o[0]) / c.dist, (raw[1] - o[1]) / c.dist, (raw[2] - o[2]) / c.dist];
   let t = c.dist;
   const test = L => { testWalls(L.w); testBoxes(L.b); };
@@ -430,6 +441,7 @@ function camEye(c){
     if(u >= 0 && u <= len && py >= w[4] && py <= w[5]) t = tt;
   } };
   const testBoxes = list => { for(const b of list){
+    if(b[4] < 0.9) continue;   // moins de 1,80 m de haut : un meuble, on passe à travers
     // le rayon dans le repère du pavé (qui peut être tourné autour de la verticale)
     const cs = Math.cos(b[6]), sn = Math.sin(b[6]), px = o[0] - b[0], pz = o[2] - b[2];
     const P = [px * cs - pz * sn, o[1] - b[1], px * sn + pz * cs], D = [dir[0] * cs - dir[2] * sn, dir[1], dir[0] * sn + dir[2] * cs];
@@ -444,10 +456,18 @@ function camEye(c){
   } };
   test(C.main);
   if(C.levels.length){ const show = levelsShown({ set:id }, c); C.levels.forEach((l, i) => { if(show[i]) test(l); }); }
-  const d = t < c.dist ? Math.max(Math.min(0.3, c.dist), t - 0.12) : c.dist;
-  const e = d === c.dist ? raw : [o[0] + dir[0] * d, o[1] + dir[1] * d, o[2] + dir[2] * d];
-  if(_eyeCache.size > 400) _eyeCache.clear(); _eyeCache.set(key, e);
-  return e;
+  const d = t < c.dist ? Math.max(Math.min(0.3, c.dist), t - 0.15) : c.dist;
+  if(_eyeCache.size > 400) _eyeCache.clear(); _eyeCache.set(key, d);
+  return d;
+}
+/* une fois par image de travail : on rapproche en douceur la distance affichée de la bonne distance
+   (vite quand un mur arrive, plus lentement quand on se dégage) */
+function camSmoothStep(sh, cam){
+  const now = performance.now(), want = camDist(cam), S0 = CAM_SMOOTH;
+  if(S0.set !== sh.set || now - S0.t > 400 || S0.cam !== cam){ S0.d = want; }
+  else { const dt = now - S0.t, tau = want < S0.d ? 70 : 160; S0.d += (want - S0.d) * (1 - Math.exp(-dt / tau)); if(Math.abs(S0.d - want) < 0.01) S0.d = want; }
+  S0.t = now; S0.set = sh.set; S0.cam = cam;
+  if(S0.d !== want) requestRender();
 }
 function viewProj(c, aspect){
   const e = camEye(c), r = (c.roll || 0) * D2R;
@@ -546,7 +566,9 @@ function drawFrame(sh, w, h, clean, o){
   // on mesure le temps entre deux images quand on bouge : si l'ordinateur peine, on passe en image simplifiée
   if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true; } }
   const fast = moving && R.slow;
-  const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh)), vp = viewProj(cam, w / h), eye = camEye(cam);
+  const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh));
+  if(!clean && !o && w === R.canvas.width) camSmoothStep(sh, cam);
+  const vp = viewProj(cam, w / h), eye = camEye(cam);
   const E = envOf(sh);
   GL.begin(w, h, vp, E.bg, E);
   if(E.sky) GL.drawSky(vp, hexRGB(E.sky.top), hexRGB(E.sky.hor), hexRGB(E.sky.low), 0, w / h);
@@ -606,7 +628,7 @@ function drawFrame(sh, w, h, clean, o){
   if(fb){ gl.enable(gl.SCISSOR_TEST); gl.clearColor(0.07, 0.075, 0.085, 1);
     (fb.x > 0 ? [[0, 0, fb.x, h], [fb.x + fb.w, 0, w - fb.x - fb.w, h]] : [[0, 0, w, fb.y], [0, fb.y + fb.h, w, h - fb.y - fb.h]]).forEach(([x, y, bw, bh]) => { gl.scissor(Math.floor(x), Math.floor(y), Math.ceil(bw), Math.ceil(bh)); gl.clear(gl.COLOR_BUFFER_BIT); });
     gl.disable(gl.SCISSOR_TEST); }
-  if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); }
+  if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); if(typeof planMarker === 'function') planMarker(); }
   CAM_SET = null;
 }
 /* les petits ordinateurs : on mesure une fois le temps d'une image ; si c'est lent, l'image de travail
@@ -861,7 +883,7 @@ function zoomBy(c, f){
     c.dist = Math.max(DIST_MIN, Math.min(c.dist, DIST_MIN));
   } else {
     // reculer contre un mur : on repart de la distance réellement vue (pas de molette « dans le vide »)
-    const e = camEye(c), eff = Math.hypot(e[0] - c.tx, e[1] - c.ty, e[2] - c.tz);
+    const eff = camDist(c);
     c.dist = Math.min(DIST_MAX, f > 1 && eff < c.dist - 0.05 ? Math.max(DIST_MIN, eff * f) : want);
   }
   keepCam(c);
@@ -989,8 +1011,9 @@ function navEnd(){
 /* ---------- Les petites images des poses (dans le volet) ----------
    Chaque pose est dessinée une fois, avec le personnage choisi, puis gardée. */
 const POSE_PREV = new Map();
+const poseKey = (look, pid) => look + ':' + pid + ':' + (S.doc.style || '') + (document.documentElement.dataset.theme === 'dark' ? ':d' : '');
 function posePreview(look, pid){
-  const key = look + ':' + pid + ':' + (S.doc.style || '');
+  const dk = document.documentElement.dataset.theme === 'dark', key = poseKey(look, pid);
   if(POSE_PREV.has(key)) return POSE_PREV.get(key);
   const gl = GL.gl; if(!gl || S.rec) return '';
   const ch = newChar(0, { x:0, z:0, ry:0 }, look); applyPose(ch, pid);
@@ -1000,8 +1023,8 @@ function posePreview(look, pid){
   const lens = 50, dist = size / 2 / Math.tan(fovOf(lens) / 2) * 1.12, y = 28 * D2R, p = -8 * D2R;
   const cam = camLook([c[0] + Math.sin(y) * Math.cos(p) * dist, c[1] - Math.sin(p) * dist, c[2] + Math.cos(y) * Math.cos(p) * dist], c, lens);
   const url = offscreenURL(96, 120, (w, h) => {
-    const vp = viewProj(cam, w / h), eye = camEye(cam);
-    GL.begin(w, h, vp, hexRGB('#E7EBF0'), { bw:S.doc.style === 'bw' }); GL.view(eye, []);
+    const vp = M4.mul(M4.persp(fovOf(cam.lens), w / h, 0.06, 320), M4.lookAt(camEyeRaw(cam), [cam.tx, cam.ty, cam.tz], [0, 1, 0])), eye = camEyeRaw(cam);
+    GL.begin(w, h, vp, hexRGB(dk ? '#262930' : '#E7EBF0'), { bw:S.doc.style === 'bw' }); GL.view(eye, []);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     const fy = Math.min(M4.apply(M.footL, [0, -0.065, 0])[1], M4.apply(M.footR, [0, -0.065, 0])[1]), pc = M4.apply(M.pelvis, [0, 0, 0]);
     GL.draw(R.blob, { m:M4.mul(M4.trans(pc[0], fy + 0.004, pc[2]), [1.1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1.1, 0, 0, 0, 0, 1]), flat:true, a:0.16, col:[0.06, 0.07, 0.09] });
@@ -1031,8 +1054,20 @@ function placePreview(id){
 
 /* ---------- La maison : aller dans une pièce ----------
    La caméra glisse jusqu'à la pièce ; les étages du dessus s'effacent tout seuls. */
+/* aller n'importe où dans la maison : on clique sur le plan, la caméra s'y pose à hauteur d'yeux */
+function goSpot(level, x, z){
+  const s = shot(), d = SET_DEF[s.set]; if(!d.levels) return; const y0 = d.levels[level] || 0;
+  camEdit(() => { const c = s.cam; c.tx = x; c.tz = z; c.ty = y0 + 1.1; c.dist = clamp(c.dist, 1.2, 3.2); c.pitch = clamp(c.pitch, -30, -4); c.lens = Math.min(c.lens, 28); });
+  S.room = null; S.planLevel = level;
+}
+/* amener le personnage choisi là où vise la caméra (pratique pour changer d'étage) */
+function bringHere(){
+  const s = shot(), d = SET_DEF[s.set], c = s.cam, k = S.sel ? S.sel.c : S.target, ch = s.chars[k]; if(!ch) return;
+  const lv = d.levels ? d.levels.reduce((b, y, i) => c.ty >= y - 0.2 ? i : b, 0) : 0, y0 = d.levels ? d.levels[lv] : 0;
+  edit(() => { if(ch.on) delete ch.on; ch.root.x = round(c.tx, 2); ch.root.z = round(c.tz, 2); const pose = ch.pose && SEATED[ch.pose] ? 'stand' : null; if(pose) applyPose(ch, pose); ch.root.y -= ch.gy || 0; ch.gy = 0; putOnSpot(ch, null, y0 || null); });
+}
 function goRoom(k){
   const s = shot(), f = (SET_DEF[s.set].floors || [])[k]; if(!f) return;
   camEdit(() => { s.cam = camLook(f[3], f[4], f[2] < 0 ? 28 : 22); s.info.size = 'pe'; s.info.angle = 'neu'; });
-  S.room = k;
+  S.room = k; S.planLevel = f[2];
 }

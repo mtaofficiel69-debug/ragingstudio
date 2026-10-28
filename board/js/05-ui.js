@@ -41,7 +41,8 @@ function setPanel(id, keep){
 }
 
 /* ---------- La charpente de la page ---------- */
-function theme(){ const t = lsGet(LS_THEME) || lsGet('ragingdraw_theme') || lsGet('scriptmm_theme'); return t === 'dark' ? 'dark' : 'light'; }
+// Raging Board est d'abord pensé en sombre (la 3D y ressort mieux) : le mode clair reste au choix
+function theme(){ return lsGet(LS_THEME) === 'light' ? 'light' : 'dark'; }
 function renderUI(){
   const app = document.getElementById('app');
   document.documentElement.lang = getLang(); document.documentElement.dataset.theme = theme();
@@ -55,7 +56,7 @@ function renderUI(){
             <div class="stage-area" id="stageArea">
               <div class="shot-head" id="shotHead"></div>
               <div class="stage-wrap" id="stageWrap">
-                <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
+                <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="hplan hidden" id="hplan"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
               </div>
               <div class="under" id="under"><div class="dock" id="nav"></div><div class="hint" id="hint"></div></div>
             </div>
@@ -72,7 +73,7 @@ function renderRail(){
   const el = document.getElementById('rail'); if(!el) return;
   const s = shot(), n = S.doc.shots.length;
   const badge = id => id === 'chars' ? s.chars.length : id === 'crowd' ? (s.crowds.length || '') : id === 'car' ? ((s.vehicles || []).length || '') : '';
-  el.innerHTML = `<a class="rail-brand" href="${HUB()}" title="${esc(L('Retour à l’accueil de Raging Studio', 'Back to Raging Studio home'))}">${r3Logo(34, 'rail-logo')}${r3Wordmark()}</a>
+  el.innerHTML = `<a class="rail-brand" href="./" data-act="toHome" title="${esc(L('Mes storyboards', 'My storyboards'))}">${r3Logo(34, 'rail-logo')}${r3Wordmark()}</a>
     <div class="rail-project" data-label="${esc(L('Storyboard', 'Storyboard'))}">${esc(S.doc.title || L('Sans titre', 'Untitled'))}</div>
     <nav class="rail-nav">${PANELS.map(g => `<div class="rail-group">${esc(L(g.g[0], g.g[1]))}</div>` + g.items.map(p => {
       const b = badge(p.id), off = false;
@@ -84,7 +85,7 @@ function renderTop(){
   const el = document.getElementById('topbar'); if(!el) return;
   if(!el.firstChild){
     el.innerHTML = `<div class="topbar-left">
-        <a class="ib" id="tbBack" href="${HUB()}">${icon('back')}</a>
+        <button class="ib" id="tbBack" data-act="toHome">${icon('back')}</button>
         <span class="tb-div"></span>
         <input class="tb-title" id="tbTitle" spellcheck="false" maxlength="80">
         <span class="tb-div"></span>
@@ -104,7 +105,7 @@ function renderTop(){
   }
   const t = document.getElementById('tbTitle'); if(document.activeElement !== t) t.value = S.doc.title;
   t.placeholder = L('Titre du storyboard', 'Storyboard title');
-  const back = document.getElementById('tbBack'); back.href = HUB(); back.title = L('Retour à l’accueil de Raging Studio', 'Back to Raging Studio home');
+  const back = document.getElementById('tbBack'); back.title = L('Mes storyboards', 'My storyboards');
   document.getElementById('tbUndo').title = L('Annuler (Ctrl+Z)', 'Undo (Ctrl+Z)'); document.getElementById('tbRedo').title = L('Rétablir (Ctrl+Y)', 'Redo (Ctrl+Y)');
   document.getElementById('tbUndo').disabled = !S.undo.length; document.getElementById('tbRedo').disabled = !S.redo.length;
   document.querySelectorAll('.lang-flag').forEach(b => b.classList.toggle('active', b.dataset.l === getLang()));
@@ -119,7 +120,8 @@ function renderSaved(){ const el = document.getElementById('saveStatus'); if(el)
 const exportList = () => `<button data-act="exportPdf" data-per="6">${icon('board')}<span><b>${L('Planche PDF · 6 plans par page', 'PDF board · 6 shots per page')}</b><small>${L('Tout le film d’un coup d’œil, avec les flèches des mouvements', 'The whole film at a glance, with camera-move arrows')}</small></span></button>
      <button data-act="exportPdf" data-per="3">${icon('text')}<span><b>${L('Planche PDF · 3 grands plans par page', 'PDF board · 3 large shots per page')}</b><small>${L('Avec l’action, le dialogue et de la place pour écrire : pour le tournage', 'With action, dialogue and room to write: for the shoot')}</small></span></button>
      <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
-     <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, avec leurs mouvements de caméra', 'The shots one after another, with their camera moves')}</small></span></button>`;
+     <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, avec leurs mouvements de caméra', 'The shots one after another, with their camera moves')}</small></span></button>
+     <button data-act="hExportCur">${icon('save')}<span><b>${L('Fichier du projet (.rboard)', 'Project file (.rboard)')}</b><small>${L('Pour le garder ou l’ouvrir sur un autre ordinateur', 'To keep it or open it on another computer')}</small></span></button>`;
 
 /* ---------- Le plein écran : l'image, la barre du plan et les boutons de déplacement, rien d'autre ----------
    Quand le navigateur ne sait pas (iPhone), on remplit simplement la fenêtre. */
@@ -155,7 +157,61 @@ function renderHead(){
       <button class="ib" data-act="prevShot" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Plan précédent (←)', 'Previous shot (←)'))}">${icon('left')}</button>
       <button class="ib" data-act="nextShot" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Plan suivant (→)', 'Next shot (→)'))}">${icon('right')}</button>
     </div>`;
-  renderWarn();
+  renderWarn(); renderPlan();
+}
+/* ---------- Le plan de la maison, posé sur l'image ----------
+   Les étages en onglets, le plan de l'étage : on clique une pièce (ou n'importe quel point) et la caméra
+   s'y téléporte. Les personnages de l'étage y sont marqués, et la caméra aussi. */
+const PLAN = { x0:-5, z0:-4, k:21, pad:8 };
+const planXY = (x, z) => [PLAN.pad + (x - PLAN.x0) * PLAN.k, PLAN.pad + (z - PLAN.z0) * PLAN.k];
+const levelOfY = (d, y) => d.levels.reduce((b, l, i) => y >= l - 0.2 ? i : b, 0);
+function renderPlan(){
+  const el = document.getElementById('hplan'); if(!el) return;
+  const s = shot(), d = SET_DEF[s.set], C = SET_COLL[s.set];
+  if(!d.floors || !d.levels || !C || S.final){ el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.classList.remove('hidden');
+  const open = lsGet('raging3d_plan') !== '0', lv = S.planLevel != null ? S.planLevel : levelOfY(d, s.cam.ty);
+  const names = [L('Rez-de-chaussée', 'Ground floor'), L('1er étage', '1st floor'), L('2e étage', '2nd floor'), L('Grenier', 'Attic')];
+  const short = [L('RDC', 'GF'), L('1er', '1st'), L('2e', '2nd'), L('Grenier', 'Attic')];
+  const garden = d.floors.findIndex(f => f[2] < 0);
+  const W = PLAN.pad * 2 + 10 * PLAN.k, H = PLAN.pad * 2 + 8 * PLAN.k;
+  let svg = '';
+  if(open){
+    const [ax, ay] = planXY(-5, -4), [bx, by] = planXY(5, 4);
+    svg += `<rect class="hp-floor" x="${ax}" y="${ay}" width="${bx - ax}" height="${by - ay}" rx="2"/>`;
+    // l'escalier ou la trappe de l'étage
+    const holes = [[-4.9, -0.45, -3.7, 3.75], [-3.62, -0.45, -2.42, 3.75], [-4.7, -3.2, -3.9, -2.4], [-4.7, -3.2, -3.9, -2.4]];
+    const hs = lv === 1 ? [holes[0], holes[1]] : lv === 2 ? [holes[1], holes[2]] : lv === 3 ? [holes[3]] : [holes[0]];
+    hs.forEach(([x0, z0, x1, z1]) => { const [p, q] = planXY(x0, z0), [r, t] = planXY(x1, z1); svg += `<rect class="hp-stair" x="${p}" y="${q}" width="${r - p}" height="${t - q}"/>`; for(let z = z0 + 0.3; z < z1; z += 0.3){ const [u, v] = planXY(x0, z), [w] = planXY(x1, z); svg += `<line class="hp-step" x1="${u}" y1="${v}" x2="${w}" y2="${v}"/>`; } });
+    // les cloisons, avec leurs portes
+    (C.levels[lv] ? C.levels[lv].p : []).forEach(([a, b, gaps]) => {
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len;
+      const cuts = [[0, 0]].concat(gaps, [[len, len]]);
+      for(let i = 0; i < cuts.length - 1; i++){ const s0 = cuts[i][1], s1 = cuts[i + 1][0]; if(s1 - s0 < 0.02) continue;
+        const [p, q] = planXY(a[0] + ux * s0, a[1] + uz * s0), [r, t] = planXY(a[0] + ux * s1, a[1] + uz * s1); svg += `<line class="hp-wall" x1="${p}" y1="${q}" x2="${r}" y2="${t}"/>`; }
+    });
+    // les personnages de cet étage
+    s.chars.forEach((ch, c) => { if(levelOfY(d, ch.root.y + 0.5) !== lv) return; const [p, q] = planXY(ch.root.x, ch.root.z); if(p < 0 || p > W || q < 0 || q > H) return;
+      svg += `<circle class="hp-char" cx="${p}" cy="${q}" r="4.2" style="--c:${lookOf(ch, c).top || '#888'}"><title>${esc(L(lookOf(ch, c).fr, lookOf(ch, c).en))}</title></circle>`; });
+    // les pièces : un point à cliquer
+    d.floors.forEach((f, k) => { if(f[2] !== lv) return; const [p, q] = planXY(f[4][0], f[4][2]);
+      const nm = L(f[0], f[1]).replace(/^(1er|2e|1st|2nd)\s*:\s*/, '');
+      svg += `<g class="hp-room ${S.room === k ? 'on' : ''}" data-k="${k}"><circle cx="${p}" cy="${q}" r="9"/><text x="${p}" y="${q + 19}">${esc(nm)}</text></g>`; });
+    svg += `<g class="hp-cam" id="hpCam"><path d="M0 0 L-7 -12 L7 -12 Z"/><circle r="3.4"/></g>`;
+  }
+  el.innerHTML = `<div class="hp-h"><button class="hp-tog" data-act="planTog" title="${esc(open ? L('Replier le plan', 'Fold the plan') : L('Ouvrir le plan de la maison', 'Open the house plan'))}">${icon('stairs')}<b>${L('Plan', 'Plan')}</b>${open ? '' : `<span>${esc(names[lv] || '')}</span>`}</button>
+      ${open ? `<div class="hp-tabs">${short.map((t, i) => `<button class="${i === lv && S.room !== garden ? 'on' : ''}" data-act="planLv" data-l="${i}" title="${esc(names[i])}">${esc(t)}</button>`).join('')}${garden >= 0 ? `<button class="${S.room === garden ? 'on' : ''}" data-act="floor" data-k="${garden}">${L('Jardin', 'Garden')}</button>` : ''}</div>` : ''}</div>
+    ${open ? `<svg class="hp-svg" id="hpSvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" data-l="${lv}">${svg}</svg>
+    <div class="hp-f"><span>${L('Clique une pièce, ou n’importe où sur le plan', 'Click a room, or anywhere on the plan')}</span><button class="hp-bring" data-act="bringHere" title="${esc(L('Amener le personnage choisi là où vise la caméra', 'Bring the chosen character where the camera aims'))}">${icon('users')}${L('Amener ', 'Bring ') + charName(S.sel ? S.sel.c : S.target) + L(' ici', ' here')}</button></div>` : ''}`;
+  planMarker();
+}
+/* la caméra sur le plan : sa position et la direction où elle regarde (mis à jour à chaque image) */
+function planMarker(){
+  const g = document.getElementById('hpCam'); if(!g) return;
+  const s = shot(), d = SET_DEF[s.set], c = viewCam(s), lv = +document.getElementById('hpSvg').dataset.l;
+  const e = camEye(c), [p, q] = planXY(e[0], e[2]), a = Math.atan2(c.tx - e[0], c.tz - e[2]);
+  g.style.display = levelOfY(d, e[1]) === lv || levelOfY(d, c.ty) === lv ? '' : 'none';
+  g.setAttribute('transform', `translate(${p.toFixed(1)} ${q.toFixed(1)}) rotate(${(-a * 180 / Math.PI + 180).toFixed(1)})`);
 }
 /* le décor cache quelqu'un dans l'image finale : on le dit, et on propose de regarder */
 function renderWarn(){
@@ -305,7 +361,7 @@ const PANEL_HTML = {
   pose(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, ch = chars[t], look = ch ? ch.look : 0, sel = S.sel;
     const who = chars.length > 1 ? `<div class="seg wide">${chars.map((c, i) => `<button class="${t === i ? 'on' : ''}" data-act="pickChar" data-c="${i}" title="${esc(L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}</button>`).join('')}</div>` : '';
-    const tile = p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img ${POSE_PREV.has(look + ':' + p.id + ':' + (S.doc.style || '')) ? `src="${POSE_PREV.get(look + ':' + p.id + ':' + (S.doc.style || ''))}"` : `data-pv="${look}:${p.id}"`} alt=""><span>${esc(L(p.fr, p.en))}</span></button>`;
+    const tile = p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img ${POSE_PREV.has(poseKey(look, p.id)) ? `src="${POSE_PREV.get(poseKey(look, p.id))}"` : `data-pv="${look}:${p.id}"`} alt=""><span>${esc(L(p.fr, p.en))}</span></button>`;
     const tiles = POSE_GROUPS.map(([g, fr, en]) => `<div class="pose-g" id="g-${g}">${esc(L(fr, en))}</div><div class="poses">${POSES.filter(p => p.g === g).map(tile).join('')}</div>`).join('');
     const prop = ch ? `${lbl(L('Dans la main', 'In hand'))}<div class="seg wide"><button class="${!ch.prop ? 'on' : ''}" data-act="prop" data-id="">${L('Rien', 'Nothing')}</button>${PROPS.map(([id, fr, en]) => `<button class="${ch.prop === id ? 'on' : ''}" data-act="prop" data-id="${id}">${id === 'gun' ? icon('gun') : ''}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
     const gun = ch && ch.prop === 'gun' ? lbl(L('Prises de vue avec l’arme', 'Shots with the gun')) + `<div class="cars">${GUN_SHOTS.map(P => `<button class="car-t" data-act="gunShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
@@ -791,7 +847,7 @@ const ACT = {
   stageShot:b => { S.view = 'stage'; goShot(+b.dataset.i); renderUI(); },
   stageView:() => { S.view = 'stage'; renderUI(); },
   sheetView:() => { S.view = 'sheet'; renderUI(); },
-  addShot, addReverse, dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
+  addShot, addReverse, dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '0' ? '1' : '0'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
   addShotEnd:() => { goShot(S.doc.shots.length - 1); addShot(); },
   moveShot:b => moveShot(+b.dataset.d),
   info:b => { const k = b.dataset.k, v = b.dataset.v; if(k === 'move' && v !== 'end') endEdit(); edit(() => { shot().info[k] = v; }); renderStrip(); },
@@ -818,6 +874,15 @@ const ACT = {
 function closeMenus(){ const m = document.getElementById('exportMenu'); if(m) m.classList.add('hidden'); }
 
 function bindEvents(){
+  // le plan de la maison : une pièce, ou n'importe quel point de l'étage
+  document.addEventListener('click', e => {
+    const svg = e.target.closest('#hpSvg'); if(!svg) return;
+    const room = e.target.closest('.hp-room');
+    if(room){ goRoom(+room.dataset.k); }
+    else { const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) * vb.width / r.width, y = (e.clientY - r.top) * vb.height / r.height;
+      const wx = clamp(PLAN.x0 + (x - PLAN.pad) / PLAN.k, -4.8, 4.8), wz = clamp(PLAN.z0 + (y - PLAN.pad) / PLAN.k, -3.8, 3.8); goSpot(+svg.dataset.l, wx, wz); }
+    renderHead(); renderPanel();
+  });
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-act]');
     if(!e.target.closest('.menu-wrap')) closeMenus();
@@ -896,6 +961,7 @@ function bindEvents(){
   document.addEventListener('keydown', e => {
     const tag = (e.target.tagName || '').toLowerCase();
     if((tag === 'input' && e.target.type !== 'range' && e.target.type !== 'checkbox') || tag === 'textarea' || tag === 'select') return;
+    if(document.body.classList.contains('on-home')) return;   // sur l'accueil, les raccourcis de l'atelier dorment
     if(document.querySelector('.modal-bd')){ if(e.key === 'Escape'){ const i = document.querySelector('.intro'); if(i) ACT.introOk(); } return; }
     const mod = e.ctrlKey || e.metaKey;
     if(mod && e.key.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
@@ -917,7 +983,8 @@ function bindEvents(){
 }
 
 /* ---------- Démarrage ---------- */
-(function boot(){
+/* le démarrage : l'atelier se prépare derrière l'accueil (voir 06-home.js) */
+function bootEditor(){
   document.documentElement.lang = getLang();
   if(!load()){ S.doc = newDoc('garage'); S.i = 0; }
   renderUI();
@@ -926,5 +993,6 @@ function bindEvents(){
     document.getElementById('stage').innerHTML = `<div class="nogl"><b>${L('La 3D n’est pas disponible dans ce navigateur.', '3D isn’t available in this browser.')}</b>${L('Raging Board a besoin de WebGL. Essaie avec une version récente de Chrome, Edge ou Firefox, ou active l’accélération matérielle dans les réglages du navigateur.', 'Raging Board needs WebGL. Try a recent Chrome, Edge or Firefox, or turn on hardware acceleration in your browser settings.')}</div>`;
     return;
   }
-  initMeshes(); bindEvents(); renderUI(); fitStage(); benchmark(); showIntro();
-})();
+  initMeshes(); bindEvents(); renderUI(); fitStage(); benchmark();
+  return true;
+}

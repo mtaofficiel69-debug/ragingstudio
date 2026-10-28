@@ -738,3 +738,8 @@ html[data-theme="dark"] .app-home .ah-logo{box-shadow:0 0 0 1.25px #FCFDFE;}
 .rd-cropbar .cb-t .icon{width:15px; height:15px; color:var(--accent);}
 .rd-cropbar .cb-h{color:var(--ink-soft);}
 @media (max-width:720px){ .rd-cropbar{top:auto; left:50%; transform:translateX(-50%); bottom:84px; padding:5px 5px 5px 12px;} .rd-cropbar .cb-h{display:none;} }
+
+/* Raging Board dans les passerelles */
+.app-switch .as-word.rb .w2{fill:#1F8A5B;}
+.app-switch.app-rb:hover{border-color:#B9E2CC; box-shadow:var(--shadow-sm), 0 0 0 3px rgba(31,138,91,.13);}
+[data-theme="dark"] .app-switch .as-word.rb .w2{fill:#3FB57F;}
