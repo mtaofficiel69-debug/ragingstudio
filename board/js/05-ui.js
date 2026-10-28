@@ -41,7 +41,8 @@ function setPanel(id, keep){
 }
 
 /* ---------- La charpente de la page ---------- */
-function theme(){ return lsGet(LS_THEME) === 'dark' ? 'dark' : 'light'; }
+/* en immersion, l'atelier passe en sombre, comme une salle de cinéma (sans toucher au choix enregistré) */
+function theme(){ return lsGet(LS_THEME) === 'dark' || (document.body.classList.contains('imm') && !document.body.classList.contains('on-home')) ? 'dark' : 'light'; }
 function renderUI(){
   const app = document.getElementById('app');
   document.documentElement.lang = getLang(); document.documentElement.dataset.theme = theme();
@@ -84,12 +85,17 @@ function renderTop(){
   const el = document.getElementById('topbar'); if(!el) return;
   if(!el.firstChild){
     el.innerHTML = `<div class="topbar-left">
-        <button class="ib" id="tbBack" data-act="toHome">${icon('back')}</button>
+        <button class="btn tb-back" id="tbBack" data-act="toHome">${icon('back')}<span class="tb-lbl" id="tbBackLbl"></span></button>
         <span class="tb-div"></span>
         <input class="tb-title" id="tbTitle" spellcheck="false" maxlength="80">
         <span class="tb-div"></span>
-        <button class="ib" data-act="undo" id="tbUndo">${icon('undo')}</button>
-        <button class="ib" data-act="redo" id="tbRedo">${icon('redo')}</button>
+        <button class="btn tb-box" data-act="addShot" id="tbShot">${icon('plus')}<span class="tb-lbl" id="tbShotLbl"></span></button>
+        <button class="btn tb-box" data-act="tbChar" id="tbChar">${icon('users')} + <span class="tb-lbl" id="tbCharLbl"></span></button>
+        <button class="btn" data-act="full" id="tbFull">${icon('full')}<span class="tb-lbl" id="tbFullLbl"></span></button>
+        <span class="tb-div"></span>
+        <button class="btn tb-ic" data-act="undo" id="tbUndo">${icon('undo')}</button>
+        <button class="btn tb-ic" data-act="redo" id="tbRedo">${icon('redo')}</button>
+        <span class="tb-div"></span>
         <span class="save-status" id="saveStatus"><i></i><span></span></span>
       </div>
       <div class="topbar-right">
@@ -104,6 +110,10 @@ function renderTop(){
   const t = document.getElementById('tbTitle'); if(document.activeElement !== t) t.value = S.doc.title;
   t.placeholder = L('Titre du storyboard', 'Storyboard title');
   const back = document.getElementById('tbBack'); back.title = L('Mes storyboards', 'My storyboards');
+  document.getElementById('tbBackLbl').textContent = L('Mes storyboards', 'My storyboards');
+  document.getElementById('tbShotLbl').textContent = L('Plan', 'Shot'); document.getElementById('tbShot').title = L('Nouveau plan, qui reprend le plan actuel (N)', 'New shot, starting from the current one (N)');
+  document.getElementById('tbCharLbl').textContent = L('Personnage', 'Character'); document.getElementById('tbChar').title = L('Ajouter un personnage dans ce plan', 'Add a character to this shot');
+  document.getElementById('tbFullLbl').textContent = L('Immersion', 'Immersion'); document.getElementById('tbFull').title = L('Tout le storyboard en plein écran (P)', 'The whole storyboard in full screen (P)');
   document.getElementById('tbUndo').title = L('Annuler (Ctrl+Z)', 'Undo (Ctrl+Z)'); document.getElementById('tbRedo').title = L('Rétablir (Ctrl+Y)', 'Redo (Ctrl+Y)');
   document.getElementById('tbUndo').disabled = !S.undo.length; document.getElementById('tbRedo').disabled = !S.redo.length;
   document.querySelectorAll('.lang-flag').forEach(b => b.classList.toggle('active', b.dataset.l === getLang()));
@@ -112,25 +122,32 @@ function renderTop(){
   document.getElementById('exportMenu').innerHTML = exportList();
   renderSaved();
 }
-function renderSaved(){ const el = document.getElementById('saveStatus'); if(el) el.lastChild.textContent = L('Enregistré dans ce navigateur', 'Saved in this browser'); }
+function renderSaved(){ const el = document.getElementById('saveStatus'); if(el) { el.lastChild.textContent = L('Enregistré', 'Saved'); el.title = L('Enregistré dans ce navigateur', 'Saved in this browser'); } }
 const exportList = () => `<button data-act="exportPdf" data-per="6">${icon('board')}<span><b>${L('Planche PDF · 6 plans par page', 'PDF board · 6 shots per page')}</b><small>${L('Tout le film d’un coup d’œil, avec les flèches des mouvements', 'The whole film at a glance, with camera-move arrows')}</small></span></button>
      <button data-act="exportPdf" data-per="3">${icon('text')}<span><b>${L('Planche PDF · 3 grands plans par page', 'PDF board · 3 large shots per page')}</b><small>${L('Avec l’action, le dialogue et de la place pour écrire : pour le tournage', 'With action, dialogue and room to write: for the shoot')}</small></span></button>
      <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
      <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, avec leurs mouvements de caméra', 'The shots one after another, with their camera moves')}</small></span></button>
      <button data-act="hExportCur">${icon('save')}<span><b>${L('Fichier du projet (.rboard)', 'Project file (.rboard)')}</b><small>${L('Pour le garder ou l’ouvrir sur un autre ordinateur', 'To keep it or open it on another computer')}</small></span></button>`;
 
-/* ---------- Le plein écran : l'image, la barre du plan et les boutons de déplacement, rien d'autre ----------
+/* ---------- Le plein écran, en immersion : tout l'atelier passe en plein écran, sur fond sombre ----------
+   La barre du haut s'efface, le menu de gauche ne garde que ses icônes : l'image prend toute la place,
+   et on continue tout le storyboard sans en sortir. « Masquer les outils » (H) ne laisse que l'image.
    Quand le navigateur ne sait pas (iPhone), on remplit simplement la fenêtre. */
 const isFull = () => !!(document.fullscreenElement || document.body.classList.contains('fs-fake'));
 function toggleFull(){
-  const el = document.getElementById('stageArea'); if(!el) return;
+  const el = document.getElementById('app'); if(!el) return;
   if(document.fullscreenElement){ document.exitFullscreen(); return; }
-  if(document.body.classList.contains('fs-fake')){ document.body.classList.remove('fs-fake'); el.classList.remove('fs'); afterFull(); return; }
+  if(document.body.classList.contains('fs-fake')){ document.body.classList.remove('fs-fake'); afterFull(); return; }
   const req = el.requestFullscreen || el.webkitRequestFullscreen;
-  const fake = () => { document.body.classList.add('fs-fake'); el.classList.add('fs'); afterFull(); };
+  const fake = () => { document.body.classList.add('fs-fake'); afterFull(); };
   if(req){ try { const r = req.call(el); if(r && r.catch) r.catch(fake); } catch(e){ fake(); } } else fake();
 }
-function afterFull(){ const el = document.getElementById('stageArea'); if(el) el.classList.toggle('fs', isFull()); renderHead(); setTimeout(fitStage, 30); }
+function afterFull(){
+  const on = isFull(), b = document.body; b.classList.toggle('imm', on); if(!on) b.classList.remove('imm-clean');
+  if(!b.classList.contains('on-home')){ renderUI(); requestRender(); }
+  renderHead(); setTimeout(fitStage, 30);
+}
+function immTools(){ if(!isFull()) return; document.body.classList.toggle('imm-clean'); renderHead(); setTimeout(fitStage, 30); }
 document.addEventListener('fullscreenchange', afterFull);
 
 /* ---------- Au-dessus de l'image : quel plan, et ce qu'on voit ---------- */
@@ -147,7 +164,8 @@ function renderHead(){
     <div class="sh-r">
       <div class="seg" role="group"><button class="${S.final ? '' : 'on'}" data-act="final" data-v="0" title="${esc(L('Les meubles qui cachent un personnage deviennent transparents', 'Furniture hiding a character turns see-through'))}">${icon('eye')}${L('Vue de travail', 'Work view')}</button><button class="${S.final ? 'on' : ''}" data-act="final" data-v="1" title="${esc(L('Exactement l’image qui sera enregistrée', 'Exactly the image that will be saved'))}">${icon('image')}${L('Image finale', 'Final image')}</button></div>
       <button class="ib ${S.grid ? 'on' : ''}" data-act="grid" title="${esc(L('Grille des tiers', 'Rule of thirds'))}">${icon('grid')}</button>
-      <button class="ib ${isFull() ? 'on' : ''}" data-act="full" title="${esc(isFull() ? L('Quitter le plein écran (P ou Échap)', 'Exit full screen (P or Esc)') : L('Plein écran (P)', 'Full screen (P)'))}">${icon(isFull() ? 'unfull' : 'full')}</button>
+      ${isFull() ? `<button class="ib ${document.body.classList.contains('imm-clean') ? 'on' : ''}" data-act="immTools" title="${esc(document.body.classList.contains('imm-clean') ? L('Afficher les outils (H)', 'Show the tools (H)') : L('Masquer les outils : l’image seule (H)', 'Hide the tools: the picture only (H)'))}">${icon('eye')}</button>` : ''}
+      <button class="ib ${isFull() ? 'on' : ''}" data-act="full" title="${esc(isFull() ? L('Quitter l’immersion (P ou Échap)', 'Exit immersion (P or Esc)') : L('Plein écran, en immersion (P)', 'Immersive full screen (P)'))}">${icon(isFull() ? 'unfull' : 'full')}</button>
       <span class="tb-div"></span>
       <button class="ib" data-act="prevShot" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Plan précédent (←)', 'Previous shot (←)'))}">${icon('left')}</button>
       <button class="ib" data-act="nextShot" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Plan suivant (→)', 'Next shot (→)'))}">${icon('right')}</button>
@@ -336,7 +354,7 @@ const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-
 
 const PANEL_HTML = {
   place(){
-    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
+    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
     const fl = SET_DEF[sh.set].floors ? lblId(L('Aller dans une pièce', 'Go to a room'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
     const gid = ['in', 'out', 'wide'];
     return ph('place', L('Le lieu', 'The place'), L('Les personnages s’y placent tout seuls.', 'Characters go to ready-made spots by themselves.'), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
@@ -346,10 +364,13 @@ const PANEL_HTML = {
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
     const rows = chars.map((c, i) => `<div class="crow ${t === i ? 'on' : ''}"><button class="crow-main" data-act="pickChar" data-c="${i}" title="${esc(L('La caméra va vers ', 'The camera goes to ') + L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}<span>${charName(i)}</span>${t === i ? `<em>${L('cadré', 'framed')}</em>` : ''}</button>${chars.length > 1 ? `<button class="ib sm danger" data-act="removeChar" data-c="${i}" title="${esc(L('Retirer du plan', 'Remove from the shot'))}">${icon('close')}</button>` : ''}</div>`).join('');
     const add = `<div class="figs">${CHAR_LOOK.map((lk, k) => `<button class="fig-t" data-act="addChar" data-look="${k}" ${used.includes(k) || chars.length >= MAX_CHARS ? 'disabled' : ''} title="${esc(L(lk.fr, lk.en))}">${figure(lk)}<small>${esc(L(lk.fr, lk.en))}</small></button>`).join('')}</div>`;
+    const base = chars[t] && CHAR_LOOK[chars[t].look != null ? chars[t].look : t % 2] || CHAR_LOOK[0], cur = chars[t] && chars[t].outfit || 'base';
+    const outfits = `<div class="figs">${OUTFITS.filter(o => !o.body || o.body === base.body).map(o => `<button class="fig-t ${cur === o.id ? 'on' : ''}" data-act="outfit" data-id="${o.id}" title="${esc(L(o.fr, o.en))}">${figure(outfitLook(base, o.id))}<small>${esc(L(o.fr, o.en))}</small></button>`).join('')}</div>`;
     const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
     return ph('users', L('Les personnages', 'The characters'), L('Clique un nom : la caméra va vers lui. L’épingle verte le déplace.', 'Click a name: the camera goes to them. The green pin moves them.')) +
       `<div class="pb">${lbl(L('Dans ce plan', 'In this shot'))}${rows}
       ${lbl(L('Ajouter', 'Add') + ` <span class="cnt">${chars.length} / ${MAX_CHARS}</span>`)}${add}
+      ${chars[t] ? lbl(L('La tenue de ', 'Outfit for ') + charName(t)) + outfits : ''}
       ${lbl(L('Placer ', 'Place ') + charName(t))}<div class="chips">${spots}</div>
       ${chars.length > 1 ? lbl(L('À plusieurs', 'Together')) + `<div class="chips"><button class="chip" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>` : ''}</div>`;
   },
@@ -823,7 +844,7 @@ const ACT = {
   cancelRec:() => { if(S.rec) S.rec.cancel = true; },
   place:b => { setPlace(b.dataset.id); if(S.panel === 'car' && b.dataset.id === 'taxi') renderPanel(); },
   pickChar:b => focusChar(+b.dataset.c),
-  addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), faceThem, lookAt:lookAtOther,
+  addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), outfit:b => setOutfit(b.dataset.id), faceThem, lookAt:lookAtOther,
   spot:b => placeAt(+b.dataset.k), side:b => frameSide(b.dataset.v),
   playBoard:() => playBoard(), stopBoard, previewShot:() => playBoard(S.i),
   introOk:() => { lsSet('raging3d_intro', '1'); const i = document.querySelector('.intro'); if(i) i.remove(); },
@@ -847,7 +868,7 @@ const ACT = {
   info:b => { const k = b.dataset.k, v = b.dataset.v; if(k === 'move' && v !== 'end') endEdit(); edit(() => { shot().info[k] = v; }); renderStrip(); },
   dur:b => { edit(() => { shot().info.dur = +b.dataset.v; }); renderStrip(); },
   editEnd:b => editEnd(b.dataset.v === '1'),
-  full:() => toggleFull(), style:b => setStyle(b.dataset.v), ratio:b => setRatio(b.dataset.v),
+  full:() => toggleFull(), tbChar:() => { const s = shot(), used = s.chars.map(c => c.look), k = CHAR_LOOK.findIndex((x, i) => !used.includes(i)); if(k >= 0) addChar(k); setPanel('chars'); }, immTools:() => immTools(), style:b => setStyle(b.dataset.v), ratio:b => setRatio(b.dataset.v),
   carSetup, carShot:b => carShot(b.dataset.id),
   floor:b => { goRoom(+b.dataset.k); renderHead(); renderPanel(); },
   addVeh:b => addVehicle(b.dataset.kind || 'moto'), removeVeh:b => removeVehicle(+b.dataset.k), pickVeh:b => { S.veh = +b.dataset.k; renderPanel(); requestRender(); },
@@ -968,6 +989,7 @@ function bindEvents(){
     else if(e.key === 'ArrowLeft'){ e.preventDefault(); goShot(S.i - 1); }
     else if(e.key.toLowerCase() === 'n'){ e.preventDefault(); addShot(); }
     else if(e.key.toLowerCase() === 'p'){ e.preventDefault(); toggleFull(); }
+    else if(e.key.toLowerCase() === 'h' && isFull()){ e.preventDefault(); immTools(); }
     else if((e.key === 'Delete' || e.key === 'Backspace') && !S.sel){ e.preventDefault(); delShot(); }
     else if(e.key === 'Escape' && document.body.classList.contains('fs-fake')){ toggleFull(); }
     else if(e.key === 'Escape' && S.play){ stopBoard(); }

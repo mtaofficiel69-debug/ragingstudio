@@ -199,7 +199,7 @@ function homeTipIndex(){
 function homeTipInner(){
   const k = homeTipIndex(), t = HOME_TIPS[k];
   return `<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5.6 10.6C4.5 9.8 3.8 8.6 3.8 7.2a4.2 4.2 0 0 1 8.4 0c0 1.4-.7 2.6-1.8 3.4v1.4H5.6z"/><path d="M6.2 14h3.6"/></svg>
-<small><span class="sr">${L('Astuce','Tip')} : </span>${esc(L(t[0], t[1]))}</small>`;
+<small><span class="tip-k">${L('Astuce','Tip')}</span>${esc(L(t[0], t[1]))}</small>`;
 }
 function homeTipHtml(){ return `<button type="button" class="btn wd-nav wd-tip" id="wdTip" data-act="homeTipStep" data-id="1" title="${L('Astuce suivante','Next tip')}" aria-live="polite">${homeTipInner()}</button>`; }
 function homeTipStep(d){
