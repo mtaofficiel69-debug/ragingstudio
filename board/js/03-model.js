@@ -96,6 +96,8 @@ function partGeo(id, look, bare){
   const IN = H(lk.inner || lk.top), SOLE = H(lk.sole || '#2A2C31'), SOCK = H(lk.socks || lk.bottom);
   const dark = (c, k) => c.map(v => v * k);
   const sleeveLong = !(lk.wear === 'tee' || lk.wear === 'dress');
+  const tie = (lk.wear === 'suit' || lk.wear === 'coat') && lk.tie;   // la cravate ne va qu'avec une veste (pas sur un pull ni un t-shirt)
+  const metal = [0.72, 0.66, 0.5];
   const sx = f ? 0.178 : 0.2, hx = f ? 0.102 : 0.095;
   // un membre en deux couleurs : le haut (habit) puis le bas (peau ou autre habit)
   const limb2 = (r1, r2, len, cut, cTop, cBot, ball0, ballCol) => {
@@ -110,9 +112,14 @@ function partGeo(id, look, bare){
       const c = lk.skirt ? H(lk.bottom) : BOT;
       box(g, 0, -0.01, 0, f ? 0.35 : 0.32, f ? 0.17 : 0.16, f ? 0.21 : 0.2, c);
       ball(g, hx, -0.06, 0, f ? 0.09 : 0.085, f ? 0.09 : 0.085, f ? 0.09 : 0.085, c, 10); ball(g, -hx, -0.06, 0, f ? 0.09 : 0.085, f ? 0.09 : 0.085, f ? 0.09 : 0.085, c, 10);
-      if(lk.skirt){ const old = lk.age === 'old', len = old ? 0.5 : lk.wear === 'dress' ? 0.3 : 0.32; cyl(g, 0, 0.07, 0, f ? 0.18 : 0.172, old ? 0.255 : 0.245, len, c, 14); }
-      else if(!bare) box(g, 0, 0.065, 0, (f ? 0.35 : 0.32) + 0.008, 0.03, (f ? 0.21 : 0.2) + 0.008, dark(BOT, 0.55));   // la ceinture
-      if(lk.wear === 'coat' || lk.wear === 'cardigan') cyl(g, 0, 0.075, 0, f ? 0.186 : 0.178, f ? 0.2 : 0.19, lk.wear === 'coat' ? 0.2 : 0.1, TOP, 14);
+      // la jupe : la taille, puis deux pans qui suivent les cuisses (assise, à genoux, en courant, elle ne se fait plus traverser)
+      if(lk.skirt){ const len = lk.age === 'old' ? 0.335 : lk.wear === 'dress' ? 0.27 : 0.25;
+        cyl(g, 0, 0.075, 0, f ? 0.182 : 0.174, f ? 0.2 : 0.19, 0.15, c, 14); box(g, 0, 0.068, 0, (f ? 0.35 : 0.32) + 0.012, 0.022, (f ? 0.21 : 0.2) + 0.012, dark(c, 0.78));
+        box(g, 0, -0.06 - len * 0.21, -0.004, 0.17, len * 0.42, f ? 0.16 : 0.15, c); }   // le tissu entre les deux pans : la jupe reste fermée
+      else if(!bare){ box(g, 0, 0.065, 0, (f ? 0.35 : 0.32) + 0.008, 0.03, (f ? 0.21 : 0.2) + 0.008, dark(BOT, 0.55));   // la ceinture
+        if(lk.wear !== 'sweater' && lk.wear !== 'coat') box(g, 0, 0.065, (f ? 0.105 : 0.1) + 0.006, 0.034, 0.026, 0.006, metal); }   // et sa boucle
+      if(lk.wear === 'suit' && !bare) box(g, 0, 0.05, 0, (f ? 0.35 : 0.32) + 0.02, 0.06, (f ? 0.21 : 0.2) + 0.02, TOP);   // le bas de la veste, sur les hanches
+      if(lk.wear === 'coat' || lk.wear === 'cardigan') cyl(g, 0, 0.075, 0, f ? 0.19 : 0.182, f ? 0.215 : 0.205, lk.wear === 'coat' ? 0.16 : 0.1, TOP, 14);
       break;
     }
     case 'spine': {
@@ -121,7 +128,18 @@ function partGeo(id, look, bare){
         { const z = (f ? 0.085 : 0.09) + 0.0006; quad(g, [-0.035, 0.0, z], [0.035, 0.0, z], [0.035, 0.2, z], [-0.035, 0.2, z], IN); }         // le devant de la chemise
         if(lk.wear === 'cardigan') [0.04, 0.12].forEach(y => box(g, 0.05, y, f ? 0.086 : 0.091, 0.014, 0.014, 0.006, dark(TOP, 0.6)));
       }
-      if(!bare && lk.tie) quad(g, [-0.018, 0.0, 0.0912], [0.018, 0.0, 0.0912], [0.012, 0.2, 0.0912], [-0.012, 0.2, 0.0912], H(lk.tie));
+      if(!bare){
+        const zf = (f ? 0.085 : 0.09) + 0.002, d = f ? 0.17 : 0.18, wb = f ? 0.24 : 0.28;
+        // la veste : deux boutons ; le pull : la bande côtelée ; la robe : une fine ceinture ; le trench : sa ceinture et sa boucle
+        if(lk.wear === 'suit') [0.035, 0.105].forEach(y => ball(g, 0.042, y, zf, 0.011, 0.011, 0.005, dark(TOP, 0.5), 6));
+        if(lk.wear === 'sweater') box(g, 0, 0.022, 0, wb + 0.014, 0.044, d + 0.014, dark(TOP, 0.82));
+        if(lk.wear === 'tee' || lk.wear === 'blouse') box(g, 0, 0.012, 0, wb + 0.01, 0.024, d + 0.01, dark(TOP, 0.9));
+        if(lk.wear === 'dress') box(g, 0, 0.03, 0, wb + 0.012, 0.03, d + 0.012, dark(TOP, 0.6));
+        if(lk.wear === 'coat'){ box(g, 0, 0.03, 0, wb + 0.018, 0.04, d + 0.018, dark(TOP, 0.78)); box(g, 0, 0.03, zf + 0.008, 0.05, 0.05, 0.008, metal); box(g, 0, 0.03, zf + 0.011, 0.03, 0.026, 0.006, dark(TOP, 0.78)); }
+        if(lk.wear === 'blouse') [0.05, 0.13].forEach(y => ball(g, 0, y, zf, 0.009, 0.009, 0.004, [0.95, 0.94, 0.9], 6));
+        if(lk.wear === 'cardigan') [1, -1].forEach(sd => box(g, sd * 0.07, 0.04, zf + 0.002, 0.07, 0.055, 0.006, dark(TOP, 0.82)));   // les poches
+      }
+      if(!bare && tie) quad(g, [-0.018, 0.0, 0.0912], [0.018, 0.0, 0.0912], [0.012, 0.2, 0.0912], [-0.012, 0.2, 0.0912], H(lk.tie));
       break;
     }
     case 'chest': {
@@ -135,11 +153,14 @@ function partGeo(id, look, bare){
         if(lk.wear === 'suit' || lk.wear === 'coat' || lk.wear === 'cardigan'){
           // l'encolure en V : la chemise, la cravate, les revers de la veste
           tri(g, [-0.075, 0.27, zf], [0, 0.04, zf], [0.075, 0.27, zf], IN);
-          if(lk.tie){ tri(g, [-0.02, 0.255, zf + 0.001], [0, 0.03, zf + 0.001], [0.02, 0.255, zf + 0.001], H(lk.tie)); box(g, 0, 0.255, zf, 0.032, 0.025, 0.006, H(lk.tie)); }
+          if(tie){ tri(g, [-0.02, 0.255, zf + 0.001], [0, 0.03, zf + 0.001], [0.02, 0.255, zf + 0.001], H(lk.tie)); box(g, 0, 0.255, zf, 0.032, 0.025, 0.006, H(lk.tie)); }
           const lap = dark(TOP, 0.72);
           tri(g, [-0.075, 0.27, zf + 0.0015], [-0.03, 0.12, zf + 0.0015], [-0.0, 0.04, zf + 0.0015], lap); tri(g, [0.075, 0.27, zf + 0.0015], [0, 0.04, zf + 0.0015], [0.03, 0.12, zf + 0.0015], lap);
         }
         if(lk.wear === 'sweater' || lk.wear === 'tee' || lk.wear === 'dress' || lk.wear === 'blouse') cyl(g, 0, 0.305, 0, f ? 0.058 : 0.064, f ? 0.06 : 0.066, 0.025, dark(TOP, 0.82), 12);   // le col
+        if(lk.wear === 'suit' && !lk.cap) box(g, -0.095, 0.17, zf + 0.002, 0.04, 0.016, 0.006, IN);   // la pochette
+        if(lk.wear === 'coat') [0.06, 0.12].forEach(y => [0.05, -0.05].forEach(x => ball(g, x, y, zf + 0.002, 0.011, 0.011, 0.005, dark(TOP, 0.55), 6)));   // la double rangée de boutons
+        if(lk.wear === 'blouse') [1, -1].forEach(sd => tri(g, [sd * 0.002, 0.27, zf + 0.004], [sd * 0.06, 0.29, zf - 0.01], [sd * 0.035, 0.225, zf + 0.004], [0.96, 0.95, 0.92]));   // le col de chemisier
       }
       break;
     }
@@ -210,16 +231,24 @@ function partGeo(id, look, bare){
     }
     case 'thighL': case 'thighR': {
       const r1 = f ? 0.09 : 0.085, r2 = f ? 0.06 : 0.062;
-      if(lk.skirt) limb2(r1, r2, 0.42, lk.wear === 'dress' ? 0.2 : lk.age === 'old' ? 0.42 : 0.24, BOT, lk.age === 'old' ? BOT : SK);
+      if(lk.skirt){
+        const old = lk.age === 'old', len = old ? 0.335 : lk.wear === 'dress' ? 0.27 : 0.25, sg = id === 'thighL' ? 1 : -1;
+        limb2(r1, r2, 0.42, old ? 0.42 : 0.04, BOT, SK);
+        // le pan : évasé vers l'ourlet, un peu décalé vers l'extérieur (les deux pans se rejoignent au milieu)
+        cyl(g, sg * (old ? -0.01 : 0.0), 0.075, -0.004, r1 + 0.026, r1 + (old ? 0.075 : 0.052), len + 0.075, BOT, 12);
+        cyl(g, sg * (old ? -0.01 : 0.0), -len + 0.012, -0.004, r1 + (old ? 0.076 : 0.053), r1 + (old ? 0.076 : 0.053), 0.012, dark(BOT, 0.8), 12);   // l'ourlet
+      }
       else if(lk.shorts) limb2(r1, r2, 0.42, 0.22, BOT, SK);
-      else if(lk.wear === 'coat') limb2(r1, r2, 0.42, 0.24, TOP, BOT);
+      else if(lk.wear === 'coat'){   // le manteau : deux pans qui tombent sur les cuisses, comme la jupe
+        const sg = id === 'thighL' ? 1 : -1; limb2(r1, r2, 0.42, 0.42, BOT, BOT);
+        cyl(g, sg * 0.006, 0.075, -0.006, r1 + 0.034, r1 + 0.05, 0.36, TOP, 10); cyl(g, sg * 0.006, -0.272, -0.006, r1 + 0.051, r1 + 0.051, 0.012, dark(TOP, 0.8), 10); }
       else limb2(r1, r2, 0.42, 0.42, BOT, BOT);
       break;
     }
     case 'shinL': case 'shinR': {
       const r1 = f ? 0.056 : 0.06, r2 = f ? 0.04 : 0.045, b0 = f ? 0.06 : 0.064;
       const leg = (lk.skirt || lk.shorts) ? SK : BOT;
-      limb2(r1, r2, 0.4, lk.skirt && lk.age === 'old' ? 0.06 : 0, lk.skirt ? BOT : leg, leg, b0, lk.age === 'old' && lk.skirt ? BOT : (lk.skirt || lk.shorts) ? SK : BOT);
+      limb2(r1, r2, 0.4, lk.skirt && lk.age === 'old' ? 0.1 : 0, lk.skirt ? BOT : leg, leg, b0, lk.age === 'old' && lk.skirt ? BOT : (lk.skirt || lk.shorts) ? SK : BOT);
       if(lk.socks && !bare) cyl(g, 0, -0.32, 0, r2 + 0.006, r2 + 0.005, 0.08, SOCK, 10);
       break;
     }
@@ -228,6 +257,7 @@ function partGeo(id, look, bare){
       box(g, 0, -0.03, 0.055, f ? 0.085 : 0.095, 0.055, f ? 0.22 : 0.24, SHO);
       ball(g, 0, -0.03, 0.15, (f ? 0.085 : 0.095) / 2, 0.026, 0.045, SHO, 8);
       box(g, 0, -0.061, 0.06, (f ? 0.085 : 0.095) + 0.006, 0.014, (f ? 0.22 : 0.24) + 0.03, SOLE);
+      if(lk.sole && !bare) box(g, 0, -0.03, 0.15, (f ? 0.085 : 0.095) * 0.6, 0.01, 0.03, SOLE);   // le bout clair des baskets
       break;
     }
   }
@@ -275,8 +305,8 @@ const POSES = [
   { id:'hips', g:'move', fr:'Mains sur les hanches', en:'Hands on hips', y:0, j:{ armR:[-35, 0, 90], foreR:[70, 0], armL:[-35, 0, -90], foreL:[70, 0], chest:[-4, 0, 0] } },
   { id:'point', g:'gest', fr:'Pointer', en:'Pointing', y:0, j:{ armR:[88, 8, 0], foreR:[4, 0], head:[0, -12, 0], chest:[0, -10, 0], handR:[-8, 0] } },
   { id:'wave', g:'gest', fr:'Saluer', en:'Waving', y:0, j:{ armR:[105, -10, -90], foreR:[80, 0], handR:[-10, 0], head:[-4, -6, 0] } },
-  { id:'think', g:'gest', fr:'Réfléchir', en:'Thinking', y:0, j:{ armR:[35, 20, 60], foreR:[130, 0], armL:[15, 50, -90], foreL:[90, 0], head:[10, 0, 4] } },
-  { id:'phone', g:'gest', prop:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ head:[6,  0,  -10], armR:[125,  135,  90], foreR:[150,  41], handR:[-55,  -30] } },
+  { id:'think', g:'gest', fr:'Réfléchir', en:'Thinking', y:0, j:{ armR:[25, 2, 60], foreR:[132, 0], armL:[15, 50, -90], foreL:[90, 0], head:[10, 0, 4], handR:[0, 0] } },
+  { id:'phone', g:'gest', prop:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ head:[6, 0, -10], armR:[57, 180, 87], foreR:[138, 7], handR:[0, 0] } },
   { id:'up', g:'gest', fr:'Mains en l’air', en:'Hands up', y:0, j:{ armL:[150, 28, 0], foreL:[38, 0], armR:[150, 28, 0], foreR:[38, 0], head:[-8, 0, 0] } },
   { id:'sitground', g:'seat', fr:'Assis par terre', en:'Sitting on the ground', y:-0.83, j:{ thighL:[120,  10,  0], shinL:[55], footL:[-20], thighR:[120,  10,  0], shinR:[55], footR:[-20], spine:[10,  0,  0], armL:[55,  12,  0], foreL:[25,  0], armR:[55,  12,  0], foreR:[25,  0] } },
   { id:'lie', g:'seat', fr:'Allongé', en:'Lying down', y:-0.83, j:{ pelvis:[-90, 0], head:[10, 0, 0], armL:[0, 10, 0], armR:[0, 10, 0] } },
@@ -309,7 +339,7 @@ const POSES = [
   { id:'jump', fr:'Sauter', en:'Jumping', g:'move', y:0.35, j:{ thighL:[40,  4,  0], shinL:[80], thighR:[20,  4,  0], shinR:[60], spine:[6,  0,  0], armL:[125,  9,  35], foreL:[76,  0], handL:[0,  0], armR:[125,  9,  -35], foreR:[76,  0], handR:[0,  0] } },
   { id:'leanWall', fr:'Adossé au mur', en:'Leaning on the wall', g:'move', y:0.01, j:{ pelvis:[-6,  0], thighR:[30,  0,  0], shinR:[60], spine:[-4,  0,  0], head:[0,  18,  0], armL:[15,  50,  -90], foreL:[90,  0], handL:[0,  0], armR:[10,  40,  90], foreR:[90,  0], handR:[0,  0] } },
   { id:'clap', fr:'Applaudir', en:'Clapping', g:'gest', y:0, j:{ armL:[60,  24,  0], foreL:[94,  -79], handL:[0,  0], armR:[60,  24,  0], foreR:[94,  79], handR:[0,  0] } },
-  { id:'facepalm', fr:'La main sur le visage', en:'Facepalm', g:'gest', y:0, j:{ head:[18,  0,  0], armR:[48,  33,  34], foreR:[127,  26], handR:[0,  0] } },
+  { id:'facepalm', fr:'La main sur le visage', en:'Facepalm', g:'gest', y:0, j:{ head:[18, 0, 0], armR:[77, 20, 34], foreR:[109, 25], handR:[0, 0] } },
   { id:'pray', fr:'Mains jointes', en:'Hands together', g:'gest', y:0, j:{ head:[16, 0, 0], armL:[7, 9, 16], foreL:[100, -80], handL:[70, 0], armR:[7, 9, -16], foreR:[100, 80], handR:[70, 0] } },
   { id:'carry', fr:'Porter un carton', en:'Carrying a box', g:'gest', y:0, j:{ spine:[-6,  0,  0], armL:[0,  22,  6], foreL:[81,  -30], handL:[0,  0], armR:[0,  22,  -6], foreR:[81,  30], handR:[0,  0] } },
   { id:'stop', fr:'Faire signe de s’arrêter', en:'Signalling stop', g:'gest', y:0, j:{ armR:[73,  -15,  -19], foreR:[45,  22], handR:[0,  0] } },
@@ -322,6 +352,56 @@ function applyPose(ch, pid){
   ch.prop = P.prop || (pid === 'phone' || pid === 'readPhone' ? 'phone' : ch.propUser ? ch.prop : null);
   for(const k in P.j) ch.j[k] = P.j[k].slice();
   ch.root.y = (P.y || 0) * bodyScale(lookOf(ch));    // un enfant plus petit descend moins pour s'asseoir
+  retargetHands(ch, P);
+}
+/* ---------- Les mains à leur place, pour toutes les silhouettes ----------
+   Les poses sont réglées sur l'homme adulte. Une femme a les épaules plus étroites, un enfant une plus
+   grosse tête et des bras plus courts, un aîné le dos voûté : sans rien faire, le téléphone n'arrive plus
+   à l'oreille et la main qui réfléchit tombe sur le nez. On note donc, sur l'homme adulte, où chaque main
+   touche le corps (la tête, la poitrine, les hanches ou l'autre main), et on replie les bras de chaque
+   silhouette pour que ses mains retrouvent ce même endroit sur son propre corps. */
+const GRIP_PT = [0, -0.075, 0.012];
+const _touch = new Map();
+function touchRef(P){
+  if(_touch.has(P.id)) return _touch.get(P.id);
+  const ch = newChar(0, { x:0, z:0, ry:0 }, 0); ch.j = blankPose(); for(const k in P.j) ch.j[k] = P.j[k].slice(); ch.root.y = P.y || 0; ch.pose = P.id;
+  const M = charMatrices(ch), loc = (m, p) => M4.apply(M4.invert(m), p), out = [];
+  const g = { L:M4.apply(M.handL, GRIP_PT), R:M4.apply(M.handR, GRIP_PT) }, hc = M4.apply(M.head, [0, 0.12, 0.02]);
+  ['R', 'L'].forEach(s => {
+    const p = g[s], o = g[s === 'R' ? 'L' : 'R'], c = loc(M.chest, p), v = loc(M.pelvis, p);
+    let a = null;
+    if(Math.hypot(p[0] - hc[0], p[1] - hc[1], p[2] - hc[2]) < 0.27 && p[1] > hc[1] - 0.24) a = 'head';
+    else if(P.prop && s === 'L' && Math.hypot(p[0] - o[0], p[1] - o[1], p[2] - o[2]) < 0.5) a = 'handR';   // la main qui tient le fusil ou soutient le pistolet
+    else if(Math.abs(c[0]) < 0.3 && c[1] > -0.1 && c[1] < 0.45 && c[2] > -0.2 && c[2] < 0.45) a = 'chest';
+    else if(Math.abs(v[0]) < 0.22 && v[1] > -0.2 && v[1] < 0.15 && Math.abs(v[2]) < 0.2) a = 'pelvis';
+    if(a) out.push({ s, a, p:loc(M[a], p) });
+  });
+  _touch.set(P.id, out);
+  return out;
+}
+function retargetHands(ch, P){
+  const lk = lookOf(ch); if(lk.body !== 'f' && !lk.age) return;   // l'homme adulte : la pose est faite pour lui
+  const T = touchRef(P); if(!T.length) return;
+  const sides = T.map(t => t.s), free = [];
+  sides.forEach(s => free.push(['arm' + s, [0, 1, 2]], ['fore' + s, [0, 1]], ['hand' + s, [0, 1]]));
+  const orig = {}; free.forEach(([id]) => orig[id] = ch.j[id].slice());
+  const err = () => {
+    const M = charMatrices(ch); let e = 0;
+    for(const t of T){ const q = M4.apply(M['hand' + t.s], GRIP_PT), w = M4.apply(M[t.a], t.p); e += (q[0] - w[0]) ** 2 + (q[1] - w[1]) ** 2 + (q[2] - w[2]) ** 2; }
+    for(const [id] of free) e += 0.000002 * ch.j[id].reduce((a, v, i) => a + (v - orig[id][i]) ** 2, 0);
+    return e;
+  };
+  let best = err(), step = 12;
+  if(best < 0.00015) return;   // déjà en place
+  for(let it = 0; it < 400 && step > 0.4; it++){
+    let better = false;
+    for(const [id, ax] of free){ const J = JOINT[id];
+      for(const i of ax){ const lim = J.ax[i];
+        for(const d of [step, -step]){ const old = ch.j[id][i]; ch.j[id][i] = Math.max(lim[2], Math.min(lim[3], old + d));
+          const e = err(); if(e < best - 1e-10){ best = e; better = true; } else ch.j[id][i] = old; } } }
+    if(!better) step /= 2;
+  }
+  free.forEach(([id]) => ch.j[id] = ch.j[id].map(v => Math.round(v)));
 }
 /* assis sur un vrai siège (canapé, banc, voiture) : le bassin reste à la hauteur du siège, quelle que soit la taille */
 const SEATED = { sit:1, drive:1, headInHands:1, pilot:1, typing:1, sitCross:1 };
@@ -354,8 +434,127 @@ const SETS = [
   { id:'diner', fr:'Diner 50’s', en:'50s diner' },
   { id:'bank', fr:'Banque', en:'Bank' },
   { id:'police', fr:'Commissariat', en:'Police station' },
+  { id:'hospital', fr:'Hôpital', en:'Hospital' },
+  { id:'metro', fr:'Métro', en:'Subway car' },
+  { id:'bar', fr:'Bar', en:'Bar' },
 ];
 const SET_DEF = {
+  // l'hôpital : une chambre (le lit médicalisé, la perfusion, le moniteur) et son couloir
+  hospital:{
+    cam:{ tx:-1.6, ty:0.95, tz:0.4, yaw:-125, pitch:-12, dist:3.6, lens:24 },
+    roomH:2.8,
+    rooms:[['La chambre', 'The room', 0, [-4, -3.5, 2, 3.5]], ['Le couloir', 'The corridor', 0, [2, -3.5, 5, 3.5]]],
+    build(g, gl){
+      const X0 = -4, X1 = 5, Z0 = -3.5, Z1 = 3.5, H = 2.8, WL = '#DCE6E3', MET = '#B9C0C8';
+      floor(g, X0, Z0, X1, Z1, 0, '#BFC8C7'); floor(g, X0, Z0, X1, Z1, H, '#F2F4F3', true);
+      for(let x = X0 + 0.6; x < X1; x += 0.6) box(g, x, 0.004, 0, 0.012, 0.004, Z1 - Z0, '#AEB8B7');
+      wall(g, [X0, Z0], [X1, Z0], H, WL); wall(g, [X0, Z1], [X0, Z0], H, '#D3DEDB'); wall(g, [X1, Z0], [X1, Z1], H, '#D3DEDB'); wall(g, [X1, Z1], [X0, Z1], H, WL);
+      partition(g, [2, Z0], [2, Z1], 0, H, WL, [[1.1, 2.4]]);
+      // la plinthe et la main courante du couloir
+      [[X0, Z0, X1, Z0], [X1, Z1, X0, Z1]].forEach(([a, b, c, d]) => box(g, (a + c) / 2, 0.06, b + (b < 0 ? 0.02 : -0.02), Math.abs(c - a), 0.12, 0.02, '#8FA7A2'));
+      box(g, X1 - 0.05, 0.95, 0, 0.05, 0.05, 6.8, '#C9CDD3');
+      // le lit médicalisé : le cadre en métal, le matelas, le dossier relevé, les barrières, les roulettes
+      const bx = -2.3, bz = 0.4;
+      box(g, bx, 0.45, bz, 1.0, 0.12, 2.1, MET); box(g, bx, 0.58, bz, 0.92, 0.16, 2.0, '#F4F6F6');
+      box(g, bx, 0.62, bz + 0.35, 0.94, 0.08, 1.3, '#9FC3D6');   // le drap bleu clair
+      box(g, bx, 0.82, bz - 0.85, 0.92, 0.5, 0.12, '#F4F6F6'); box(g, bx, 0.75, bz - 0.78, 0.55, 0.14, 0.3, '#FFFFFF');
+      box(g, bx, 0.7, bz - 1.07, 1.0, 0.7, 0.05, '#A7B0B8'); box(g, bx, 0.62, bz + 1.07, 1.0, 0.45, 0.05, '#A7B0B8');
+      [-1, 1].forEach(sd => { box(g, bx + sd * 0.52, 0.8, bz - 0.2, 0.03, 0.04, 1.0, MET); box(g, bx + sd * 0.52, 0.7, bz - 0.2, 0.02, 0.2, 0.03, MET); });
+      [[-0.4, -0.95], [0.4, -0.95], [-0.4, 0.95], [0.4, 0.95]].forEach(([x, z]) => { box(g, bx + x, 0.22, bz + z, 0.04, 0.36, 0.04, MET); cyl(g, bx + x, 0.06, bz + z, 0.05, 0.05, 0.03, '#2C2E33', 8, 'x'); });
+      // la perfusion, le moniteur, la table de chevet, la chaise des visiteurs
+      cyl(g, -1.45, 1.9, -0.6, 0.015, 0.015, 1.9, MET, 6); cyl(g, -1.45, 0.04, -0.6, 0.22, 0.22, 0.04, '#7E858C', 8);
+      box(g, -1.45, 1.72, -0.6, 0.14, 0.22, 0.05, '#CFE6F0'); cyl(g, -1.45, 1.6, -0.6, 0.005, 0.005, 0.55, '#E3EEF2', 4);
+      box(g, -3.15, 0.5, -0.9, 0.05, 1.0, 0.05, '#7E858C'); box(g, -3.15, 1.2, -0.9, 0.08, 0.38, 0.5, '#2C2E33'); box(g, -3.105, 1.2, -0.9, 0.005, 0.3, 0.42, '#16302A');
+      box(g, -3.1, 1.22, -0.9, 0.003, 0.02, 0.36, '#4ED38A');
+      box(g, -3.45, 0.38, 0.8, 0.45, 0.76, 0.45, '#E6E8E8'); box(g, -3.45, 0.79, 0.8, 0.48, 0.04, 0.48, '#C9CFCF');
+      box(g, -0.9, 0.45, 1.6, 0.48, 0.06, 0.48, '#4E8C83'); box(g, -0.9, 0.75, 1.82, 0.48, 0.55, 0.05, '#4E8C83'); [[-1.1, 1.4], [-0.7, 1.4], [-1.1, 1.8], [-0.7, 1.8]].forEach(([x, z]) => box(g, x, 0.21, z, 0.03, 0.42, 0.03, MET));
+      // la fenêtre et ses stores, le rideau de séparation sur son rail, le lavabo
+      wall(g, [X0 + 0.01, 2.6], [X0 + 0.01, 0.6], 1.4, '#A9C6D6', 0.85); for(let y = 0.95; y < 2.25; y += 0.12) box(g, X0 + 0.04, y, 1.6, 0.01, 0.03, 2.0, '#EEF0F0');
+      box(g, -0.6, 2.6, 0, 0.03, 0.03, 4.0, '#C9CDD3'); box(g, -0.6, 1.6, -1.6, 0.04, 1.9, 0.9, '#B7D2D6');
+      box(g, 1.75, 0.85, -2.9, 0.4, 0.12, 0.35, '#F4F6F6'); wall(g, [1.98, -3.15], [1.98, -2.65], 0.6, '#B9D3E1', 1.15);
+      // le couloir : les portes, le fauteuil roulant, les sièges d'attente, le panneau
+      [-2.2, 2.4].forEach(z => wall(g, [X1 - 0.01, z - 0.55], [X1 - 0.01, z + 0.55], 2.1, '#8FB5AD'));
+      box(g, 3.4, 0.5, 2.6, 0.5, 0.06, 0.5, '#2C2E33'); box(g, 3.4, 0.8, 2.83, 0.5, 0.5, 0.04, '#2C2E33');
+      [-1, 1].forEach(sd => { cyl(g, 3.4 + sd * 0.28, 0.32, 2.65, 0.3, 0.3, 0.03, '#3A3D44', 14, 'x'); cyl(g, 3.4 + sd * 0.22, 0.08, 2.35, 0.07, 0.07, 0.03, '#3A3D44', 8, 'x'); });
+      [-2.9, -2.35, -1.8].forEach(z => { box(g, 2.35, 0.45, z, 0.45, 0.06, 0.45, '#5E8FA8'); box(g, 2.15, 0.72, z, 0.05, 0.5, 0.45, '#5E8FA8'); box(g, 2.35, 0.22, z, 0.04, 0.44, 0.04, MET); });
+      box(g, 3.5, 2.45, Z0 + 0.02, 1.3, 0.3, 0.04, '#2F6E8F'); pixText(g, 'HOPITAL', 3.5, 2.45, Z0 + 0.045, 1, 0.026, '#F4F6F6');
+      [-1.5, 1.5].forEach(z => box(g, 3.5, 2.77, z, 0.4, 0.04, 1.2, '#FFFFFF'));
+      box(g, -1, 2.77, 0.4, 0.5, 0.04, 1.4, '#FFFFFF');
+    },
+  },
+  // le métro : l'intérieur d'une rame (les banquettes, les barres, les portes, les fenêtres sur le tunnel)
+  metro:{
+    cam:{ tx:0, ty:1.1, tz:0.5, yaw:180, pitch:-5, dist:4.2, lens:24 },
+    roomH:2.3,
+    rooms:[['La rame', 'The car', 0, [-1.4, -7, 1.4, 7]]],
+    build(g, gl){
+      const X0 = -1.4, X1 = 1.4, Z0 = -7, Z1 = 7, H = 2.3, BAR = '#E0B33A';
+      floor(g, X0, Z0, X1, Z1, 0, '#4A4E55'); for(let z = Z0 + 0.5; z < Z1; z += 0.5) box(g, 0, 0.004, z, 2.6, 0.004, 0.015, '#3E4248');
+      floor(g, X0, Z0, X1, Z1, H, '#E9ECEE', true);
+      wall(g, [X0, Z0], [X1, Z0], H, '#B9C1C8'); wall(g, [X1, Z1], [X0, Z1], H, '#B9C1C8');
+      [-1, 1].forEach(sd => {
+        const x = sd > 0 ? X1 : X0, A = (z0, z1) => sd > 0 ? [[x, z0], [x, z1]] : [[x, z1], [x, z0]];
+        const W = (z0, z1, h, col, y) => { const [a, b] = A(z0, z1); wall(g, a, b, h, col, y); };
+        W(Z0, Z1, 0.85, '#C9CED3'); W(Z0, Z1, 0.45, '#C9CED3', 1.85);
+        // les fenêtres sur le noir du tunnel, entre les portes
+        [[-6.8, -3.9], [-2.1, 2.1], [3.9, 6.8]].forEach(([z0, z1]) => { W(z0, z1, 1.0, '#1A1E25', 0.85); for(let z = z0; z <= z1 + 0.01; z += (z1 - z0) / 2) box(g, x - sd * 0.02, 1.35, z, 0.04, 1.0, 0.05, '#9AA3AB'); });
+        // les portes, avec leurs vitres
+        [-3, 3].forEach(z => { W(z - 0.9, z + 0.9, 1.85, '#8E979F'); W(z - 0.75, z - 0.05, 1.0, '#2A3038', 0.75); W(z + 0.05, z + 0.75, 1.0, '#2A3038', 0.75); box(g, x - sd * 0.03, 0.95, z, 0.03, 1.9, 0.03, '#2C2E33'); });
+        // les banquettes, dos aux fenêtres
+        [[-6.7, -4.0], [-2.0, 2.0], [4.0, 6.7]].forEach(([z0, z1]) => { const z = (z0 + z1) / 2, L_ = z1 - z0;
+          box(g, x - sd * 0.25, 0.4, z, 0.48, 0.12, L_, '#2E5A8C'); box(g, x - sd * 0.06, 0.75, z, 0.1, 0.6, L_, '#2E5A8C'); box(g, x - sd * 0.25, 0.18, z, 0.42, 0.34, L_, '#3E4248');
+          for(let k = z0 + 0.5; k < z1; k += 0.5) box(g, x - sd * 0.25, 0.47, k, 0.47, 0.02, 0.02, '#244A74'); });
+        // le plan de la ligne, au-dessus des fenêtres
+        box(g, x - sd * 0.01, 1.95, 0, 0.01, 0.16, 3.6, '#F4F2EE'); box(g, x - sd * 0.015, 1.95, 0, 0.01, 0.025, 3.4, '#B4232C');
+        for(let z = -1.6; z <= 1.6; z += 0.4) ball(g, x - sd * 0.02, 1.95, z, 0.02, 0.035, 0.035, '#F4F2EE', 6);
+      });
+      // les barres : debout au milieu et le long du plafond
+      [-4.8, -1.2, 1.2, 4.8].forEach(z => cyl(g, 0, H, z, 0.025, 0.025, H, BAR, 8));
+      [-0.7, 0.7].forEach(x => { cyl(g, x, 1.95, Z0, 0.02, 0.02, Z1 - Z0, BAR, 8, 'z'); for(let z = -6.5; z <= 6.5; z += 1.3) { cyl(g, x, 1.95, z, 0.008, 0.008, 0.18, '#2C2E33', 4); cyl(g, x, 1.79, z, 0.045, 0.045, 0.012, '#2C2E33', 8, 'z'); cyl(g, x, 1.79, z + 0.002, 0.03, 0.03, 0.014, '#E9ECEE', 8, 'z'); } });
+      // les néons du plafond, les portes du bout de la rame
+      for(let z = -6.5; z <= 6.5; z += 1.0) [-0.45, 0.45].forEach(x => box(g, x, H - 0.03, z, 0.14, 0.04, 0.55, '#F7F3DC'));
+      [Z0, Z1].forEach(z => { const sd = z < 0 ? 1 : -1; box(g, 0, 1.0, z + sd * 0.02, 0.9, 2.0, 0.03, '#8E979F'); box(g, 0, 1.4, z + sd * 0.04, 0.5, 0.6, 0.02, '#1A1E25'); });
+    },
+  },
+  // le bar : le long comptoir et ses tabourets, les bouteilles, l'enseigne au néon, le billard, les box
+  bar:{
+    cam:{ tx:0.5, ty:1.1, tz:0.6, yaw:-160, pitch:-8, dist:5.2, lens:24 },
+    roomH:3.2,
+    rooms:[['Le bar', 'The bar', 0, [-6, -5, 6, 5]]],
+    build(g, gl){
+      const X0 = -6, X1 = 6, Z0 = -5, Z1 = 5, H = 3.2, WOOD = '#5A3A26', DK = '#2E1F17';
+      floor(g, X0, Z0, X1, Z1, 0, '#5E4232'); for(let x = X0 + 0.3; x < X1; x += 0.3) box(g, x, 0.004, 0, 0.012, 0.004, Z1 - Z0, '#4E3628');
+      floor(g, X0, Z0, X1, Z1, H, '#2A2422', true);
+      wall(g, [X0, Z0], [X1, Z0], H, '#6E3A2E'); wall(g, [X0, Z1], [X0, Z0], H, '#4A3A34'); wall(g, [X1, Z0], [X1, Z1], H, '#4A3A34'); wall(g, [X1, Z1], [X0, Z1], H, '#3E302B');
+      for(let y = 0.15; y < H; y += 0.3) for(let x = X0 + (Math.round(y / 0.3) % 2) * 0.3; x < X1; x += 0.6) box(g, x, y, Z0 + 0.012, 0.56, 0.26, 0.01, '#7A4234');   // les briques
+      // le comptoir et son repose-pieds, les tabourets
+      box(g, -0.5, 0.55, 2.9, 7.0, 1.1, 0.7, WOOD); box(g, -0.5, 1.12, 2.85, 7.2, 0.06, 0.9, DK); box(g, -0.5, 0.18, 2.5, 7.0, 0.04, 0.04, '#C9A64B');
+      for(let x = -3.6; x <= 2.6; x += 0.8){ cyl(g, x, 0.76, 2.15, 0.19, 0.19, 0.07, '#8C1F2A', 12); cyl(g, x, 0.7, 2.15, 0.03, 0.03, 0.7, '#2C2E33', 6); cyl(g, x, 0.03, 2.15, 0.16, 0.16, 0.03, '#2C2E33', 10); }
+      // derrière le comptoir : les étagères de bouteilles, le miroir, la tireuse, le néon BAR
+      box(g, -0.5, 1.6, 4.85, 7.0, 0.04, 0.3, DK); box(g, -0.5, 2.05, 4.85, 7.0, 0.04, 0.3, DK); box(g, -0.5, 1.1, 4.8, 7.0, 0.9, 0.35, WOOD);
+      wall(g, [3.0, Z1 - 0.01], [-4.0, Z1 - 0.01], 0.9, '#6F7F88', 1.65);
+      const BC = ['#2F6E4F', '#8C5A2A', '#C9A64B', '#7A2E3A', '#3D5A80', '#E3E6EA'];
+      for(let x = -3.8; x <= 2.8; x += 0.22) [1.62, 2.07].forEach((y, k) => { const c = BC[((Math.round(x * 7 + k * 3) % BC.length) + BC.length) % BC.length]; cyl(g, x, y + 0.24, 4.85, 0.035, 0.035, 0.22, c, 6); cyl(g, x, y + 0.32, 4.85, 0.012, 0.012, 0.08, c, 4); });
+      [-1.0, -0.6, -0.2].forEach(x => { cyl(g, x, 1.45, 2.65, 0.03, 0.03, 0.3, '#C9CDD3', 6); box(g, x, 1.45, 2.62, 0.04, 0.12, 0.03, '#2C2E33'); });
+      box(g, -0.5, 2.75, Z1 - 0.05, 1.5, 0.45, 0.04, '#141414'); pixText(g, 'BAR', -0.5, 2.75, Z1 - 0.075, -1, 0.06, '#FF3D5A');
+      // le billard et les queues au mur
+      box(g, -3.6, 0.73, -2.4, 1.6, 0.12, 2.7, WOOD); box(g, -3.6, 0.8, -2.4, 1.36, 0.02, 2.46, '#2F7A4A');
+      [[-0.65, -1.2], [0.65, -1.2], [-0.65, 1.2], [0.65, 1.2]].forEach(([x, z]) => box(g, -3.6 + x, 0.33, -2.4 + z, 0.14, 0.66, 0.14, DK));
+      [[-3.4, -2.1, '#E8B923'], [-3.8, -2.6, '#B4232C'], [-3.5, -2.9, '#F4F2EE'], [-3.9, -2.0, '#3D5A80']].forEach(([x, z, c]) => ball(g, x, 0.84, z, 0.03, 0.03, 0.03, c, 6));
+      cyl(g, -3.6, H, -2.4, 0.01, 0.01, 0.9, '#2C2E33', 4); box(g, -3.6, 2.25, -2.4, 0.3, 0.12, 1.2, '#2F6E4F'); box(g, -3.6, 2.18, -2.4, 0.24, 0.02, 1.1, '#F2D98A');
+      for(let z = -3.6; z <= -1.8; z += 0.2) box(g, X0 + 0.03, 1.1, z, 0.03, 1.4, 0.025, '#B08A5A');
+      // les box le long du mur, leurs tables et leurs lampes
+      [-3.6, -0.8].forEach(x => { [-1, 1].forEach(sd => { box(g, x + sd * 0.75, 0.25, -4.25, 0.5, 0.5, 1.3, '#7A1E2A'); box(g, x + sd * 0.95, 0.8, -4.25, 0.12, 0.7, 1.3, '#7A1E2A'); });
+        box(g, x, 0.74, -4.3, 0.8, 0.05, 1.1, DK); box(g, x, 0.36, -4.3, 0.12, 0.72, 0.12, DK);
+        cyl(g, x, H, -4.3, 0.008, 0.008, 1.3, '#2C2E33', 4); cyl(g, x, 1.95, -4.3, 0.06, 0.2, 0.18, '#C9A64B', 10); ball(g, x, 1.75, -4.3, 0.05, 0.04, 0.05, '#F7E3A0', 6); });
+      // les petites tables rondes, la porte, le juke-box
+      [[2.0, -1.5], [3.8, -0.2], [2.4, 0.9]].forEach(([x, z]) => { cyl(g, x, 0.74, z, 0.38, 0.38, 0.04, DK, 14); cyl(g, x, 0.7, z, 0.04, 0.04, 0.68, '#2C2E33', 6); cyl(g, x, 0.03, z, 0.25, 0.25, 0.03, '#2C2E33', 10);
+        [[0.55, 0], [-0.55, 0]].forEach(([dx, dz]) => { box(g, x + dx, 0.45, z + dz, 0.4, 0.05, 0.4, '#3A2A20'); box(g, x + dx * 1.35, 0.72, z + dz, 0.04, 0.5, 0.4, '#3A2A20'); box(g, x + dx, 0.22, z + dz, 0.04, 0.44, 0.04, '#2C2E33'); }); });
+      wall(g, [X1 - 0.01, -4.3], [X1 - 0.01, -3.1], 2.2, '#3A2416');
+      box(g, 5.6, 0.75, 2.5, 0.6, 1.5, 0.55, '#8C1F2A'); box(g, 5.31, 1.2, 2.5, 0.02, 0.45, 0.4, '#F2D98A'); cyl(g, 5.6, 1.5, 2.5, 0.3, 0.3, 0.01, '#C9A64B', 12, 'x');
+      [-4.2, -1.4, 1.4, 4.2].forEach(x => { cyl(g, x, H, 0.4, 0.008, 0.008, 0.9, '#2C2E33', 4); cyl(g, x, 2.3, 0.4, 0.05, 0.16, 0.14, '#C9A64B', 10); ball(g, x, 2.14, 0.4, 0.045, 0.04, 0.045, '#F7E3A0', 6); });
+    },
+  },
   garage:{
     spawn:[{ x:-0.7, z:0.4, ry:20 }, { x:0.9, z:0.2, ry:-25 }],
     cam:{ tx:0, ty:1.05, tz:0, yaw:12, pitch:-6, dist:5.6, lens:28 },
@@ -659,7 +858,7 @@ function facade(g, x, z0, z1, h, col, faceX, shop){
   const off = x + faceX * 0.012, len = Math.abs(z1 - z0), zs = Math.min(z0, z1);   // fenêtres et vitrines juste devant la façade (côté rue)
   for(let y = 3.6; y < h - 1.4; y += 3.0) for(let k = 0.9; k < len - 0.9; k += 2.2){
     const a = zs + k, b = zs + k + 1.1;
-    if(faceX < 0) wall(g, [off, a], [off, b], 1.5, '#4F6275', y); else wall(g, [off, b], [off, a], 1.5, '#4F6275', y);
+    MAT = 6; if(faceX < 0) wall(g, [off, a], [off, b], 1.5, '#4F6275', y); else wall(g, [off, b], [off, a], 1.5, '#4F6275', y); MAT = 0;   // (la nuit, certaines s'éclairent)
     const o2 = off + faceX * 0.004;   // le rebord clair sous la fenêtre, et la croisée
     if(faceX < 0){ wall(g, [o2, a - 0.06], [o2, b + 0.06], 0.08, '#E4E0D8', y - 0.08); wall(g, [o2, (a + b) / 2 - 0.025], [o2, (a + b) / 2 + 0.025], 1.5, '#D9D5CC', y); }
     else { wall(g, [o2, b + 0.06], [o2, a - 0.06], 0.08, '#E4E0D8', y - 0.08); wall(g, [o2, (a + b) / 2 + 0.025], [o2, (a + b) / 2 - 0.025], 1.5, '#D9D5CC', y); }
@@ -1398,6 +1597,9 @@ const SPOTS = {
   parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
   diner:[ ['Dans la voiture, côté malle', 'In the car booth, back seat', -5.55, -4.02, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.55, -2.48, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
   bank:[ ['Au guichet', 'At the counter', -1.2, 2.3, 0], ['Derrière le guichet', 'Behind the counter', -1.2, 4.2, 180], ['Dans la file', 'In the queue', 0, -0.4, 0], ['À l’entrée', 'At the entrance', 0.6, -6.0, 0], ['Devant la chambre forte', 'In front of the vault', 5.8, 5.2, 180], ['Assis sur le banc', 'Sitting on the bench', -6.5, -5.75, 0, 'sit', 0.04] ],
+  hospital:[ ['Allongé dans le lit', 'Lying in the bed', -2.3, 0.15, 0, 'lie', 0.7], ['À son chevet, assis', 'At the bedside, seated', -0.9, 1.55, 180, 'sit'], ['Le médecin, debout', 'The doctor, standing', -1.2, -0.4, -90], ['Dans le couloir', 'In the corridor', 3.5, 0, 0], ['En salle d’attente', 'In the waiting area', 2.38, -2.35, 90, 'sit'], ['Devant la fenêtre', 'At the window', -3.5, 1.6, -90] ],
+  metro:[ ['Assis sur la banquette', 'Seated on the bench', 1.1, 0, -90, 'sit', -0.37], ['Assis en face', 'Seated opposite', -1.1, 0.6, 90, 'sit', -0.37], ['Debout à la barre', 'Standing at the pole', 0.25, 1.2, 0], ['Devant la porte', 'By the door', 0.9, 3, -90], ['Au bout de la rame', 'At the end of the car', 0, -6.2, 0] ],
+  bar:[ ['Au comptoir', 'At the counter', -1.2, 2.15, 0, 'sit', -0.06], ['Le barman', 'The bartender', -0.8, 3.9, 180], ['Au billard', 'At the pool table', -2.7, -2.4, -90], ['Dans le box', 'In the booth', -3.6, -4.45, 0, 'sit', -0.35], ['À une table', 'At a table', 2.55, -1.5, -90, 'sit'], ['Près du juke-box', 'By the jukebox', 4.8, 2.2, 90] ],
   police:[ ['À l’accueil', 'At the front desk', -1, -3.0, 0], ['Derrière le comptoir', 'Behind the desk', -1, -1.5, 180], ['Dans la salle d’attente', 'In the waiting room', 4.4, -5.4, 0, 'sit'], ['À son bureau', 'At a desk', -3.6, 0.55, 0, 'sit'], ['Le suspect, à la table', 'The suspect, at the table', 5, 1.6, 0, 'sit'], ['L’inspecteur, en face', 'The detective, facing', 5, 3.6, 180, 'sit'], ['Dans la cellule', 'In the cell', -6.6, 5.4, 180] ],
 };
 // les lieux fermés d'une seule pièce : la caméra y reste aussi (même système que la maison)
@@ -1495,6 +1697,13 @@ function frameOn(ch, size, angle, lens, side){
   let dist = (span / 2) / Math.tan(fov / 2) * 1.04;
   if(angle === 'dess') dist = Math.max(dist, 2.2);
   const s = side == null ? A.side : side;
+  // allongé (au sol, sur un lit) : le corps est à plat, on le cadre d'un peu au-dessus, centré sur le buste
+  // (sinon le point visé tombait sous le lit, et la caméra avec lui)
+  if(height < 0.75){
+    const M = charMatrices(ch), c = M4.apply(M.chest, [0, 0.05, 0]), close = size === 'gp' || size === 'tgp' || size === 'pr';
+    const t = close ? b.eyes : [(c[0] + ch.root.x) / 2, c[1], (c[2] + ch.root.z) / 2];
+    return { tx:t[0], ty:t[1] + 0.05, tz:t[2], yaw:b.face + s, pitch:Math.min(A.pitch, 0) - 34, dist:clamp(dist * 0.9, 0.35, 28), lens:L_ };
+  }
   return { tx:b.eyes[0], ty:cy - (A.low ? 0.25 : 0), tz:b.eyes[2], yaw:b.face + s, pitch:A.pitch, dist:clamp(dist, 0.35, 28), lens:L_ };
 }
 /* amorce : par-dessus l'épaule de « back », on regarde le visage de « front » */

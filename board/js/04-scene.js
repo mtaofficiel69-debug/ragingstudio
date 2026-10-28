@@ -35,7 +35,7 @@ function putOnSpot(ch, pose, y){
   if(pose && SEATED[pose]) ch.root.y = seatY(ch, y != null ? y : (POSES.find(p => p.id === pose) || {}).y || 0);
   else if(y != null){ ch.gy = y; ch.root.y += y; }
 }
-const newInfo = () => ({ cap:'', dial:'', scene:'', size:'pe', angle:'neu', side:'tq', move:'fix', dur:2, walk:false });
+const newInfo = () => ({ cap:'', dial:'', scene:'', size:'pe', angle:'neu', side:'tq', move:'fix', dur:2, walk:false, time:'day', trans:'cut' });
 function newShot(setId){
   const def = SET_DEF[setId];
   return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:camSafe(clone(def.cam), setId, true), crowds:[], vehicles:[], info:newInfo() };
@@ -90,7 +90,7 @@ function edit(fn){ pushUndo(); fn(); changed(); }
 function goShot(i){ if(i === S.i || !S.doc.shots[i]) return; endEdit(); S.room = null; S.i = i; S.hidden = []; S.sel = null; S.hover = null; S.target = 0; S.tween = null; save(); renderUI(); requestRender(); }
 function addShot(){
   endEdit(); pushUndo();
-  const n = clone(shot()); n.id = uidS(); n.info.cap = ''; n.info.dial = ''; n.info.move = 'fix'; delete n.camEnd;
+  const n = clone(shot()); n.id = uidS(); n.info.cap = ''; n.info.dial = ''; n.info.move = 'fix'; n.info.trans = 'cut'; delete n.camEnd;
   S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.sel = null; changed(true);
   toast(L('Plan ', 'Shot ') + (S.i + 1) + L(' créé : il reprend le plan d’avant. Change le cadrage ou la pose.', ' created: it starts from the previous one. Change the framing or the pose.'));
 }
@@ -431,6 +431,18 @@ function camAt(sh, k, t){
   }
   return c;
 }
+/* les transitions : comment on entre dans un plan (le cut, un fondu enchaîné depuis le plan d'avant,
+   un fondu au noir, un flash blanc). fxAt dit, à l'instant t du plan i, ce qu'il faut poser par-dessus l'image. */
+const TRANS = [['cut', 'Cut (coupe franche)', 'Cut'], ['fade', 'Fondu enchaîné', 'Cross-fade'], ['black', 'Fondu au noir', 'Fade to black'], ['white', 'Flash blanc', 'Flash to white']];
+const FX_T = { fade:0.6, black:0.45, white:0.3 };
+function fxAt(shots, i, t){
+  const s = shots[i], n = shots[i + 1], d = s.info.dur || 2, tr = s.info.trans, nt = n && n.info.trans;
+  const col = k => k === 'white' ? [1, 1, 1] : [0, 0, 0];
+  if(tr === 'fade' && i > 0 && t < FX_T.fade) return { prev:true, a:1 - t / FX_T.fade };
+  if((tr === 'black' || tr === 'white') && t < FX_T[tr]) return { col:col(tr), a:1 - t / FX_T[tr] };
+  if((nt === 'black' || nt === 'white') && t > d - FX_T[nt]) return { col:col(nt), a:(t - (d - FX_T[nt])) / FX_T[nt] };
+  return null;
+}
 /* les personnages qui marchent ou courent avancent pendant le plan, en balançant bras et jambes */
 const MIRROR = { thighL:'thighR', thighR:'thighL', shinL:'shinR', shinR:'shinL', footL:'footR', footR:'footL', armL:'armR', armR:'armL', foreL:'foreR', foreR:'foreL', handL:'handR', handR:'handL' };
 function animChars(sh, t){
@@ -738,12 +750,12 @@ function vehMesh(v){ const k = v.kind + v.col; if(!R.veh[k]){ const G = geo(), g
 function vehGlass(v){ vehMesh(v); return R.veh[v.kind + v.col + ':g']; }
 function vehLines(v){ vehMesh(v); return R.veh[v.kind + v.col + ':l']; }
 const vehMat = v => M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R));
-/* les étages qu'on dessine : vue du dehors, toute la maison ; de l'intérieur (ou de juste au-dessus),
-   seulement l'étage visé et ceux du dessous, comme une maison de poupée ouverte */
+/* les étages qu'on dessine : tous, toujours (la caméra ne passe plus à travers les plafonds) */
 function levelsShown(sh, cam){
   const d = SET_DEF[sh.set]; if(!d.levels) return [];
-  const e = camEyeRaw(cam), b = d.box, inside = e[0] > b[0] && e[0] < b[2] && e[2] > b[1] && e[2] < b[3];
-  return d.levels.map(y0 => !inside || y0 <= cam.ty + 0.4);
+  // la caméra reste toujours sous le plafond de sa pièce : les étages du dessus restent en place
+  // (sinon, en regardant l'escalier depuis le rez-de-chaussée, on voyait le vide à la place de l'étage)
+  return d.levels.map(() => true);
 }
 function drawSet(SM, sh, cam, o, lines){
   const gl = GL.gl, show = SM.levels.length ? levelsShown(sh, cam) : [];
@@ -776,9 +788,19 @@ function requestRender(){
 }
 const GHOST_C = hexRGB('#5B8FD6'), BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552'), INK = hexRGB('#1B1E24');
 /* l'ambiance du lieu : le fond, le ciel, la brume, et le noir et blanc du film */
+/* le moment de la journée, plan par plan : le ciel change, la lumière se teinte (chaude au couchant, bleue la nuit) ;
+   dedans, la nuit, ce sont les lampes : plus chaud et un peu plus sombre. Les personnages restent toujours lisibles. */
+const TIMES = {
+  day:{ fr:'Jour', en:'Day' },
+  dusk:{ fr:'Fin de journée', en:'Golden hour', sky:{ top:'#41507E', hor:'#F2AA6C', low:'#5E5050' }, out:[1.07, 0.86, 0.7], in:[1.03, 0.92, 0.8], ch:[1.05, 0.93, 0.84] },
+  night:{ fr:'Nuit', en:'Night', sky:{ top:'#060A15', hor:'#1B2740', low:'#0D1017' }, out:[0.36, 0.44, 0.66], in:[0.8, 0.72, 0.58], ch:[0.66, 0.72, 0.9], chIn:[0.92, 0.85, 0.74] },
+};
 function envOf(sh){
-  const d = SET_DEF[sh.set], bg = d.bg ? hexRGB(d.bg) : BG;
-  return { bg, sky:d.sky, fogC:d.sky ? hexRGB(d.sky.hor) : bg, fog:d.fog || [400, 500], bw:S.doc && S.doc.style === 'bw' };
+  const d = SET_DEF[sh.set], T = TIMES[sh.info && sh.info.time] || TIMES.day, sky = d.sky && T.sky ? T.sky : d.sky;
+  let bg = d.bg ? hexRGB(d.bg) : BG;
+  if(T.out && !d.sky) bg = bg.map((v, i) => v * T.in[i]);
+  return { bg, sky, fogC:sky ? hexRGB(sky.hor) : bg, fog:d.fog || [400, 500], bw:S.doc && S.doc.style === 'bw',
+    grade:T.out ? (d.sky ? T.out : T.in) : null, gradeC:T.ch ? (d.sky ? T.ch : (T.chIn || T.ch)) : null };
 }
 /* dessine un plan ; « clean » : l'image du film, sans aide (exports, vignettes).
    « o » (lecture, animatique) : { cam, chars } pour une image en mouvement. */
@@ -821,6 +843,10 @@ function drawFrame(sh, w, h, clean, o){
     const p = M4.apply(M.pelvis, [0, 0, 0]);
     [[1.25, 0.08], [0.9, 0.11], [0.55, 0.14]].forEach(([r, a]) => GL.draw(R.blob, { m:M4.mul(M4.trans(p[0], Math.max(0, fy) + 0.008, p[2]), [r * k, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * k, 0, 0, 0, 0, 1]), flat:true, a, col:[0.06, 0.07, 0.09] }));
   });
+  // et sous chaque véhicule (sous un hélicoptère en vol, l'ombre pâlit avec l'altitude)
+  const VSH = { moto:[0.4, 1.05], car:[1.1, 2.6], police:[1.1, 2.6], heli:[1.3, 3.0], plane:[1.2, 3.6] };
+  (sh.vehicles || []).forEach(v => { const e = VSH[v.kind] || VSH.car, alt = v.y || 0, f = 1 / (1 + alt * 0.25);
+    [[1.12, 0.07], [0.9, 0.12]].forEach(([r, a]) => GL.draw(R.blob, { m:M4.mul(M4.mul(M4.trans(v.x, 0.01, v.z), M4.ry((v.ry || 0) * D2R)), [e[0] / 0.36 * r, 0, 0, 0, 0, 1, 0, 0, 0, 0, e[1] / 0.36 * r, 0, 0, 0, 0, 1]), flat:true, a:a * f, col:[0.06, 0.07, 0.09] })); });
   gl.depthMask(true); gl.disable(gl.BLEND);
   GL.drawCrowds(crowdMeshes(sh), vp, eye, [Math.cos(cam.yaw * D2R), 0, -Math.sin(cam.yaw * D2R)]);
   // en travaillant : les parties cachées par le décor (mur, voiture) sont dessinées en filigrane,
