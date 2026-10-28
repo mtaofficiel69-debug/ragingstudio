@@ -86,7 +86,7 @@ function changed(all){
 function edit(fn){ pushUndo(); fn(); changed(); }
 
 /* ---------- Les plans ---------- */
-function goShot(i){ if(i === S.i || !S.doc.shots[i]) return; endEdit(); S.i = i; S.hidden = []; S.sel = null; S.hover = null; S.target = 0; S.tween = null; save(); renderUI(); requestRender(); }
+function goShot(i){ if(i === S.i || !S.doc.shots[i]) return; endEdit(); S.room = null; S.i = i; S.hidden = []; S.sel = null; S.hover = null; S.target = 0; S.tween = null; save(); renderUI(); requestRender(); }
 function addShot(){
   endEdit(); pushUndo();
   const n = clone(shot()); n.id = uidS(); n.info.cap = ''; n.info.dial = ''; n.info.move = 'fix'; delete n.camEnd;
@@ -133,7 +133,7 @@ function removeChar(c){
   const s = shot(); if(s.chars.length < 2 || !s.chars[c]) return;
   edit(() => { s.chars.splice(c, 1); S.sel = null; S.target = 0; });
 }
-function setPlace(id){
+function setPlace(id){ S.room = null;
   const s = shot(); if(!SET_DEF[id] || id === s.set) return;
   endEdit();
   const before = clone(s.cam);
@@ -273,25 +273,28 @@ function removeCrowd(k){ const s = shot(); if(!s.crowds[k]) return; edit(() => {
 function addVehicle(kind){
   const s = shot(), c = viewCam(), y = c.yaw * D2R, d = clamp(c.dist * 0.5 + 1.5, 2, 10);
   edit(() => {
-    s.vehicles.push({ id:uidS(), kind:kind || 'moto', col:MOTO_COLS[s.vehicles.length % MOTO_COLS.length], x:round(c.tx - Math.sin(y) * d, 2), y:0, z:round(c.tz - Math.cos(y) * d, 2), ry:round(c.yaw + 90, 0) });
+    const K = VEH_DEF[kind] ? kind : 'moto', D = VEH_DEF[K], dd = K === 'moto' ? d : Math.max(d, 6);
+    s.vehicles.push({ id:uidS(), kind:K, col:D.cols[s.vehicles.filter(o => o.kind === K).length % D.cols.length], x:round(c.tx - Math.sin(y) * dd, 2), y:0, z:round(c.tz - Math.cos(y) * dd, 2), ry:round(c.yaw + 90, 0) });
     S.veh = s.vehicles.length - 1;
   });
 }
 function removeVehicle(k){ const s = shot(), v = s.vehicles[k]; if(!v) return; edit(() => { s.chars.forEach(ch => { if(ch.on && ch.on.v === v.id){ delete ch.on; applyPose(ch, 'stand'); } }); s.vehicles.splice(k, 1); S.veh = s.vehicles.length ? Math.min(k, s.vehicles.length - 1) : -1; }); }
 /* les personnages montés suivent leur véhicule */
+const vehSeat = (v, i) => { const D = VEH_DEF[v.kind] || VEH_DEF.moto; return D.seats[i] || D.seats[0]; };
 function syncRiders(sh){
   (sh.chars || []).forEach(ch => {
     const v = ch.on && sh.vehicles.find(x => x.id === ch.on.v); if(!v) return;
-    const z = ch.on.seat ? -0.55 : -0.2, a = (v.ry || 0) * D2R;
-    ch.root.x = v.x + Math.sin(a) * z; ch.root.z = v.z + Math.cos(a) * z; ch.root.ry = v.ry || 0;
-    ch.root.y = (v.y || 0) + (POSES.find(p => p.id === (ch.on.seat ? 'rideBack' : 'ride')).y || 0);
+    const st = vehSeat(v, ch.on.seat), a = (v.ry || 0) * D2R, py = (POSES.find(p => p.id === st.pose) || {}).y || 0;
+    ch.root.x = v.x + Math.cos(a) * st.x + Math.sin(a) * st.z; ch.root.z = v.z - Math.sin(a) * st.x + Math.cos(a) * st.z; ch.root.ry = v.ry || 0;
+    ch.root.y = (v.y || 0) + (st.py != null ? seatY(ch, py) + st.py : py);
   });
 }
 function mountVehicle(k, seat){
   const s = shot(), v = s.vehicles[k], c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!v || !ch) return;
+  seat = seat | 0;
   edit(() => {
-    s.chars.forEach(o => { if(o !== ch && o.on && o.on.v === v.id && o.on.seat === seat){ delete o.on; applyPose(o, 'stand'); o.root.x += 1.2; } });
-    applyPose(ch, seat ? 'rideBack' : 'ride'); ch.on = { v:v.id, seat:seat ? 1 : 0 }; syncRiders(s);
+    s.chars.forEach(o => { if(o !== ch && o.on && o.on.v === v.id && o.on.seat === seat){ delete o.on; applyPose(o, 'stand'); o.root.x += 1.2; o.root.y = 0; } });
+    applyPose(ch, vehSeat(v, seat).pose); ch.on = { v:v.id, seat }; syncRiders(s);
   });
 }
 /* une prise de vue donnée dans le repère d'un objet (véhicule ou personnage) : on la ramène dans le monde */
@@ -300,7 +303,7 @@ function localCam(o, ry, e, t, lens){
   return camLook(W(e), W(t), lens);
 }
 function vehShot(k, id){
-  const s = shot(), v = s.vehicles[k], P = MOTO_SHOTS.find(x => x[0] === id); if(!v || !P) return;
+  const s = shot(), v = s.vehicles[k], P = (VEH_DEF[v && v.kind] || VEH_DEF.moto).shots.find(x => x[0] === id); if(!v || !P) return;
   camEdit(() => { s.cam = localCam(v, v.ry, P[3], P[4], P[5]); s.info.size = P[6]; s.info.angle = P[7] || 'neu'; });
 }
 /* les prises de vue autour d'un personnage armé */
@@ -319,6 +322,7 @@ function setProp(id){ const s = shot(), c = S.sel ? S.sel.c : S.target, ch = s.c
 
 /* ---------- Le noir et blanc (pour tout le film) ---------- */
 function setStyle(st){ if(S.doc.style === st) return; edit(() => { S.doc.style = st; }); THUMBS.clear(); renderStrip(); }
+function setRatio(r){ if((S.doc.ratio || '16:9') === r) return; edit(() => { if(r === '16:9') delete S.doc.ratio; else S.doc.ratio = r; }); THUMBS.clear(); renderStrip(); renderView(); }
 
 /* ---------- Le mouvement de caméra : on le voit à la lecture et dans l'animatique ----------
    Le cadre du plan est le point de départ ; le mouvement en part. « Vers un cadre de fin » :
@@ -424,7 +428,7 @@ function camEdit(fn){ const before = clone(shot().cam); edit(fn); startTween(bef
 /* ---------- Rendu ---------- */
 const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new Map(), scale:1 };
 function setMesh(id){
-  if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)) }; }
+  if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), gl:GL.mesh(edgeLines(o.g)), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)), levelsL:o.levels.map(l => GL.mesh(edgeLines(l))) }; }
   return R.sets[id];
 }
 function initMeshes(){
@@ -440,7 +444,9 @@ function initMeshes(){
 }
 /* un véhicule (forme et couleur), fabriqué une fois */
 R.veh = {};
-function vehMesh(v){ const k = v.kind + v.col; if(!R.veh[k]) R.veh[k] = GL.mesh(vehicleGeo(v.kind, v.col)); return R.veh[k]; }
+function vehMesh(v){ const k = v.kind + v.col; if(!R.veh[k]){ const G = geo(), g = vehicleGeo(v.kind, v.col, G); R.veh[k] = GL.mesh(g); R.veh[k + ':l'] = GL.mesh(edgeLines(g)); R.veh[k + ':g'] = G.p.length ? GL.mesh(G) : null; } return R.veh[k]; }
+function vehGlass(v){ vehMesh(v); return R.veh[v.kind + v.col + ':g']; }
+function vehLines(v){ vehMesh(v); return R.veh[v.kind + v.col + ':l']; }
 const vehMat = v => M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R));
 /* les étages qu'on dessine : vue du dehors, toute la maison ; de l'intérieur (ou de juste au-dessus),
    seulement l'étage visé et ceux du dessous, comme une maison de poupée ouverte */
@@ -449,9 +455,17 @@ function levelsShown(sh, cam){
   const e = camEye(cam), b = d.box, inside = e[0] > b[0] && e[0] < b[2] && e[2] > b[1] && e[2] < b[3];
   return d.levels.map(y0 => !inside || y0 <= cam.ty + 0.4);
 }
-function drawSet(SM, sh, cam, o){
-  GL.draw(SM.g, o);
-  if(SM.levels.length){ const show = levelsShown(sh, cam); SM.levels.forEach((m, i) => { if(show[i]) GL.draw(m, o); }); }
+function drawSet(SM, sh, cam, o, lines){
+  const gl = GL.gl, show = SM.levels.length ? levelsShown(sh, cam) : [];
+  // les faces un peu repoussées : le trait des arêtes passe toujours devant
+  if(lines){ gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
+  GL.draw(SM.g, o); SM.levels.forEach((m, i) => { if(show[i]) GL.draw(m, o); });
+  if(lines){
+    gl.disable(gl.POLYGON_OFFSET_FILL); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    const L = { flat:true, lines:true, col:INK, a:0.3 };
+    GL.draw(SM.gl, L); SM.levelsL.forEach((m, i) => { if(show[i]) GL.draw(m, L); });
+    gl.depthMask(true); gl.disable(gl.BLEND);
+  }
 }
 /* les foules d'un plan : celle du lieu (les tribunes du stade) et celles qu'on a posées */
 function crowdMeshes(sh){
@@ -469,7 +483,7 @@ function requestRender(){
   if(R.raf || S.rec || S.play) return;
   R.raf = requestAnimationFrame(() => { R.raf = 0; drawFrame(); if(S.tween || NAV.held) requestRender(); });
 }
-const BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552'), INK = hexRGB('#1B1E24');
+const GHOST_C = hexRGB('#5B8FD6'), BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552'), INK = hexRGB('#1B1E24');
 /* l'ambiance du lieu : le fond, le ciel, la brume, et le noir et blanc du film */
 function envOf(sh){
   const d = SET_DEF[sh.set], bg = d.bg ? hexRGB(d.bg) : BG;
@@ -495,11 +509,12 @@ function drawFrame(sh, w, h, clean, o){
   const chars = (o && o.chars) || sh.chars, mats = chars.map(ch => charMatrices(ch));
   // on ne perce le décor que pour ceux qu'il cache vraiment (vérifié à l'arrêt), et pour celui qu'on déplace :
   // sur un petit ordinateur, c'est autant de calcul en moins
-  const tube = final || o ? [] : chars.map((_, c) => c).filter(c => (S.hidden || []).includes(c) || (HDRAG.c === c && !HDRAG.crowd) || (DRAG.mode === 'move' && S.sel && S.sel.c === c));
+  // le décor ne se perce plus (plus de trou rond) : qui est caché se voit en silhouette claire, par-dessus
+  const tube = [];
   GL.view(eye, tube.map(c => M4.apply(mats[c].chest, [0, 0.12, 0])));
   const SM = setMesh(sh.set);
-  drawSet(SM, sh, cam, { vc:true, x:tube.length ? 1 : 0 });
-  (sh.vehicles || []).forEach(v => GL.draw(vehMesh(v), { m:vehMat(v), vc:true, x:tube.length ? 1 : 0 }));
+  drawSet(SM, sh, cam, { vc:true }, !fast);
+  (sh.vehicles || []).forEach(v => { const M = vehMat(v); GL.draw(vehMesh(v), { m:M, vc:true }); if(!fast){ gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(vehLines(v), { m:M, flat:true, lines:true, col:INK, a:0.3 }); gl.depthMask(true); gl.disable(gl.BLEND); } });
   // une ombre douce sous chaque personnage (trois disques très légers, pas de calcul d'ombre)
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   chars.forEach((ch, c) => {
@@ -513,7 +528,7 @@ function drawFrame(sh, w, h, clean, o){
   // avant les personnages, pour qu'elles n'apparaissent que là où le décor passe devant
   if(!final && !fast){
     gl.enable(gl.BLEND); gl.depthMask(false); gl.depthFunc(gl.GREATER);
-    chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.42 : 0.2, col:on ? GREEN : GHOST }); });
+    chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.5 : 0.34, col:on ? GREEN : GHOST_C }); });
     gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
   }
   const tintOf = (c, id) => final ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id && (id !== 'pelvis' || S.sel.pick)) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
@@ -529,7 +544,11 @@ function drawFrame(sh, w, h, clean, o){
     for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col:[1, 1, 1], tint, tintK:k, mul:true, char:true }); }
   });
   // les vitres, transparentes (des deux côtés)
-  if(SM.glass){ gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(SM.glass, { vc:true, glass:true, a:0.2 }); gl.depthMask(true); gl.disable(gl.BLEND); gl.enable(gl.CULL_FACE); }
+  const vg = (sh.vehicles || []).filter(v => vehGlass(v));
+  if(SM.glass || vg.length){ gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.depthMask(false);
+    if(SM.glass) GL.draw(SM.glass, { vc:true, glass:true, a:0.2 });
+    vg.forEach(v => GL.draw(vehGlass(v), { m:vehMat(v), vc:true, glass:true, a:0.2 }));
+    gl.depthMask(true); gl.disable(gl.BLEND); gl.enable(gl.CULL_FACE); }
   if(tube.length && !fast){
     gl.enable(gl.BLEND); gl.depthMask(false);
     // le décor coupé autour des personnages, remis en transparence par-dessus
@@ -537,6 +556,11 @@ function drawFrame(sh, w, h, clean, o){
     gl.depthMask(true); gl.disable(gl.BLEND);
   }
   if(clean) GL.drawSky(vp, [0, 0, 0], [0, 0, 0], [0, 0, 0], 1, w / h);   // dans les images exportées : un léger vignettage, comme une vraie optique
+  // le format du film (2.39, 4:3, 9:16…) : des bandes noires autour du cadre, partout (écran, vignettes, planche, animatique)
+  const fb = S.doc.shots.indexOf(sh) >= 0 && frameBox(w, h);
+  if(fb){ gl.enable(gl.SCISSOR_TEST); gl.clearColor(0.07, 0.075, 0.085, 1);
+    (fb.x > 0 ? [[0, 0, fb.x, h], [fb.x + fb.w, 0, w - fb.x - fb.w, h]] : [[0, 0, w, fb.y], [0, fb.y + fb.h, w, h - fb.y - fb.h]]).forEach(([x, y, bw, bh]) => { gl.scissor(Math.floor(x), Math.floor(y), Math.ceil(bw), Math.ceil(bh)); gl.clear(gl.COLOR_BUFFER_BIT); });
+    gl.disable(gl.SCISSOR_TEST); }
   if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); }
 }
 /* les petits ordinateurs : on mesure une fois le temps d'une image ; si c'est lent, l'image de travail
@@ -552,6 +576,14 @@ function benchmark(){
   const scale = ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
   if(scale !== R.scale){ R.scale = scale; fitStage(); }
   R.bench = ms;
+}
+/* les formats d'image : le cadre reste en 16:9, le format se voit par des bandes (comme sur un moniteur de tournage) */
+const RATIOS = [['16:9', 16 / 9, '16:9 · TV, web'], ['1.85', 1.85, '1.85 · cinéma'], ['2.39', 2.39, '2.39 · scope'], ['4:3', 4 / 3, '4:3'], ['1:1', 1, '1:1 · carré'], ['9:16', 9 / 16, '9:16 · vertical']];
+const ratioOf = () => (RATIOS.find(r => r[0] === (S.doc && S.doc.ratio)) || RATIOS[0])[1];
+function frameBox(w, h){
+  const r = ratioOf(), a = w / h; if(Math.abs(r - a) < 0.02) return null;
+  if(r > a){ const hh = w / r; return { x:0, y:(h - hh) / 2, w, h:hh }; }
+  const ww = h * r; return { x:(w - ww) / 2, y:0, w:ww, h };
 }
 /* une petite image dessinée hors de l'écran, deux fois plus grande puis réduite (les bords restent doux) */
 const _offC = {};
@@ -570,7 +602,7 @@ function offscreenURL(w, h, draw, q){
 const THUMBS = new Map();
 function thumbOf(i){
   const sh = S.doc.shots[i]; if(!sh || !GL.gl) return '';
-  const key = sh.id + '|' + JSON.stringify([sh.set, sh.chars, camStart(sh), sh.crowds, sh.vehicles, S.doc.style]);
+  const key = sh.id + '|' + JSON.stringify([sh.set, sh.chars, camStart(sh), sh.crowds, sh.vehicles, S.doc.style, S.doc.ratio]);
   const t = THUMBS.get(sh.id); if(t && (t.key === key || S.play || S.rec)) return t.url;
   if(S.rec) return '';
   const url = offscreenURL(320, 180, (w, h) => drawFrame(sh, w, h, true));
@@ -626,7 +658,7 @@ function checkHidden(){
 function placeHandles(sh, vp, w, h, mats){
   const host = document.getElementById('handles'); if(!host) return;
   const crowds = sh.crowds || [], vehs = sh.vehicles || [];
-  const sig = sh.chars.map(ch => ch.look).join(',') + '|' + crowds.length + '|' + vehs.length + getLang();
+  const sig = sh.chars.map(ch => ch.look).join(',') + '|' + crowds.length + '|' + vehs.map(v => v.kind).join(',') + getLang();
   if(host.dataset.sig !== sig){
     host.dataset.sig = sig;
     host.innerHTML = sh.chars.map((_, c) => `<div class="hd" data-c="${c}">
@@ -637,7 +669,7 @@ function placeHandles(sh, vp, w, h, mats){
       <button class="hd-move" data-hd="cmove" data-k="${k}" aria-label="${esc(L('Déplacer la foule', 'Move the crowd'))}">${icon('crowd')}<span>${L('Foule', 'Crowd')}</span></button>
       <button class="hd-turn" data-hd="cturn" data-k="${k}" aria-label="${esc(L('Tourner la foule', 'Turn the crowd'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
     </div>`).join('') + vehs.map((v, k) => `<div class="hd hd-crowd hd-veh" data-k="${k}">
-      <button class="hd-move" data-hd="vmove" data-k="${k}" aria-label="${esc(L('Déplacer le véhicule', 'Move the vehicle'))}">${icon('moto')}<span>${L('Moto', 'Bike')}</span></button>
+      <button class="hd-move" data-hd="vmove" data-k="${k}" aria-label="${esc(L('Déplacer le véhicule', 'Move the vehicle'))}">${icon((VEH_DEF[v.kind] || VEH_DEF.moto).ic)}<span>${esc(L((VEH_DEF[v.kind] || VEH_DEF.moto).fr, (VEH_DEF[v.kind] || VEH_DEF.moto).en))}</span></button>
       <button class="hd-turn" data-hd="vturn" data-k="${k}" aria-label="${esc(L('Tourner le véhicule', 'Turn the vehicle'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
     </div>`).join('');
   }
@@ -663,7 +695,7 @@ function placeHandles(sh, vp, w, h, mats){
   });
   vehs.forEach((v, i) => {
     const el = host.children[sh.chars.length + crowds.length + i]; if(!el) return;
-    put(el, [v.x, (v.y || 0) + 1.9, v.z], 18);
+    put(el, [v.x, (v.y || 0) + (VEH_DEF[v.kind] || VEH_DEF.moto).label, v.z], 18);
     el.classList.toggle('on', S.veh === i);
   });
 }
@@ -939,9 +971,17 @@ function placePreview(id){
   const key = id + ':' + (S.doc.style || '');
   if(PLACE_PREV.has(key)) return PLACE_PREV.get(key);
   if(!GL.gl || S.rec) return '';
-  const sh = { id:'prev', set:id, chars:[], crowds:[], vehicles:[], cam:clone(SET_DEF[id].cam), info:newInfo() };
-  sh.cam.dist *= 1.15;
+  const sh = { id:'prev', set:id, chars:[], crowds:[], vehicles:[], cam:clone(SET_DEF[id].prev || SET_DEF[id].cam), info:newInfo() };
+  if(!SET_DEF[id].prev) sh.cam.dist *= 1.15;
   const url = offscreenURL(160, 90, (w, h) => drawFrame(sh, w, h, true), 0.8);
   PLACE_PREV.set(key, url);
   return url;
+}
+
+/* ---------- La maison : aller dans une pièce ----------
+   La caméra glisse jusqu'à la pièce ; les étages du dessus s'effacent tout seuls. */
+function goRoom(k){
+  const s = shot(), f = (SET_DEF[s.set].floors || [])[k]; if(!f) return;
+  camEdit(() => { s.cam = camLook(f[3], f[4], f[2] < 0 ? 28 : 22); s.info.size = 'pe'; s.info.angle = 'neu'; });
+  S.room = k;
 }
