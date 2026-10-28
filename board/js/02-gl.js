@@ -48,7 +48,11 @@ const hexRGB = h => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 
 
 /* ---------- Géométrie : quelques formes simples, faces à plat ----------
    Une géométrie = { p:[...], n:[...], c:[...] } (positions, normales, couleurs par sommet). */
-function geo(){ return { p:[], n:[], c:[], e:[] }; }
+function geo(){ return { p:[], n:[], c:[], e:[], m:[] }; }
+/* MAT : la matière de ce qu'on construit (le rendu les distingue au premier coup d'œil, pour presque rien) :
+   0 objet, meuble · 1 architecture (sols, murs) · 2 feuillage · 3 métal (armes) · 4 carrosserie */
+let MAT = 0;
+const isGreen = C => C[1] > C[0] * 1.08 && C[1] > C[2] * 1.02;
 /* EDGE_ON : les arêtes de cette forme seront-elles tracées (meubles, murs) ? Pas pour les formes rondes. */
 let EDGE_ON = 1;
 function tri(g, a, b, c, col){
@@ -56,6 +60,7 @@ function tri(g, a, b, c, col){
   let nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
   for(const v of [a, b, c]){ g.p.push(v[0], v[1], v[2]); g.n.push(nx, ny, nz); g.c.push(col[0], col[1], col[2]); }
   if(g.e) g.e.push(EDGE_ON);
+  if(g.m) g.m.push(MAT, MAT, MAT);
 }
 const quad = (g, a, b, c, d, col) => { tri(g, a, b, c, col); tri(g, a, c, d, col); };
 /* pavé centré en (x,y,z), tourné de ry autour de la verticale ; faces tournées vers l'extérieur */
@@ -64,7 +69,8 @@ let COLL = null;
 const collOf = g => { let a = COLL.get(g); if(!a) COLL.set(g, a = { b:[], w:[], p:[] }); return a; };
 function box(g, x, y, z, w, h, d, col, ry){
   if(COLL && Math.max(w, h, d) >= 0.4 && h >= 0.03 && !(h < 0.25 && w > 2 && d > 2)) collOf(g).b.push([x, y, z, w / 2, h / 2, d / 2, ry || 0]);
-  const e0 = EDGE_ON; if(Math.min(w, h, d) < 0.012) EDGE_ON = 0;   // les bandes peintes au sol : pas de trait
+  const e0 = EDGE_ON, m0 = MAT; if(Math.min(w, h, d) < 0.012) EDGE_ON = 0;   // les bandes peintes au sol : pas de trait
+  if(MAT === 0 && ((h < 0.25 && w > 2 && d > 2) || Math.max(w, h, d) > 3.2)) MAT = 1;   // une dalle, un grand volume : de l'architecture
   const hx = w/2, hy = h/2, hz = d/2, c = Math.cos(ry || 0), s = Math.sin(ry || 0);
   const P = (a, b, e) => [x + a*c + e*s, y + b, z - a*s + e*c];
   const v = [P(-hx,-hy,-hz), P(hx,-hy,-hz), P(hx,hy,-hz), P(-hx,hy,-hz), P(-hx,-hy,hz), P(hx,-hy,hz), P(hx,hy,hz), P(-hx,hy,hz)];
@@ -72,19 +78,20 @@ function box(g, x, y, z, w, h, d, col, ry){
   quad(g, v[4], v[5], v[6], v[7], C); quad(g, v[1], v[0], v[3], v[2], C);
   quad(g, v[5], v[1], v[2], v[6], C); quad(g, v[0], v[4], v[7], v[3], C);
   quad(g, v[7], v[6], v[2], v[3], C); quad(g, v[0], v[1], v[5], v[4], C);
-  EDGE_ON = e0;
+  EDGE_ON = e0; MAT = m0;
 }
 /* mur d'un seul côté : on le voit de face, il disparaît vu de dos (la caméra peut passer derrière) */
 function wall(g, a, b, h, col, y0){
   if(COLL && h >= 0.4 && Math.hypot(b[0] - a[0], b[1] - a[1]) >= 0.4) collOf(g).w.push([a[0], a[1], b[0], b[1], y0 || 0, (y0 || 0) + h]);
-  const C = typeof col === 'string' ? hexRGB(col) : col, y = y0 || 0;
-  quad(g, [a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], C);
+  const C = typeof col === 'string' ? hexRGB(col) : col, y = y0 || 0, m0 = MAT; if(MAT === 0) MAT = 1;
+  quad(g, [a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], C); MAT = m0;
 }
 /* sol ou plafond, vu du dessus (sol) ou du dessous (plafond) */
 function floor(g, x0, z0, x1, z1, y, col, down){
-  const C = typeof col === 'string' ? hexRGB(col) : col;
+  const C = typeof col === 'string' ? hexRGB(col) : col, m0 = MAT; if(MAT === 0) MAT = 1;
   if(down) quad(g, [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], C);
   else quad(g, [x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], C);
+  MAT = m0;
 }
 /* cylindre le long d'un axe ('y' vers le bas pour les membres, 'x' pour les roues) */
 /* GEO_K : le niveau de détail des formes rondes (plus bas pour les contours, plus légers à dessiner) */
@@ -93,7 +100,8 @@ function cyl(g, x, y, z, r1, r2, len, col, seg, axis){
   // les cylindres assez grands (tables rondes, colonnes, roues, troncs) sont aussi des obstacles pour la caméra
   if(COLL && Math.max(2 * Math.max(r1, r2), len) >= 0.4){ const r = Math.max(r1, r2);
     collOf(g).b.push(axis === 'x' ? [x + len / 2, y, z, len / 2, r, r, 0] : axis === 'z' ? [x, y, z + len / 2, r, r, len / 2, 0] : [x, y - len / 2, z, r, len / 2, r, 0]); }
-  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON; EDGE_ON = 0;
+  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON, m0 = MAT; EDGE_ON = 0;
+  if(MAT === 0 && isGreen(C)) MAT = 2;
   const pt = (r, t, k) => { const a = Math.cos(t)*r, b = Math.sin(t)*r;
     if(axis === 'x') return [x + k, y + a, z + b];
     if(axis === 'z') return [x + a, y + b, z + k];
@@ -103,17 +111,18 @@ function cyl(g, x, y, z, r1, r2, len, col, seg, axis){
     const a0 = pt(r1, t0, 0), a1 = pt(r1, t1, 0), b0 = pt(r2, t0, len), b1 = pt(r2, t1, len);
     quad(g, a0, a1, b1, b0, C); tri(g, pt(0, 0, 0), a1, a0, C); tri(g, pt(0, 0, len), b0, b1, C);
   }
-  EDGE_ON = e0;
+  EDGE_ON = e0; MAT = m0;
 }
 /* ellipsoïde bas en polygones */
 function ball(g, x, y, z, rx, ry, rz, col, seg){
-  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const st = Math.max(4, Math.round(seg * .7)); const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON; EDGE_ON = 0;
+  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const st = Math.max(4, Math.round(seg * .7)); const C = typeof col === 'string' ? hexRGB(col) : col, m0 = MAT, e0 = EDGE_ON; EDGE_ON = 0;
   const P = (i, j) => { const th = i / seg * Math.PI * 2, ph = j / st * Math.PI; return [x + Math.sin(ph)*Math.cos(th)*rx, y + Math.cos(ph)*ry, z + Math.sin(ph)*Math.sin(th)*rz]; };
+  if(MAT === 0 && isGreen(C)) MAT = 2;
   for(let j = 0; j < st; j++) for(let i = 0; i < seg; i++){
     const a = P(i, j), b = P(i + 1, j), c = P(i + 1, j + 1), d = P(i, j + 1);
     if(j === 0) tri(g, a, c, d, C); else if(j === st - 1) tri(g, a, b, c, C); else quad(g, a, b, c, d, C);
   }
-  EDGE_ON = e0;
+  EDGE_ON = e0; MAT = m0;
 }
 
 /* normales lissées (moyenne des faces qui se touchent) : elles servent au contour
@@ -136,11 +145,11 @@ const GL = {
     const gl = canvas.getContext('webgl', { antialias:true, alpha:false, preserveDrawingBuffer:false, powerPreference:'low-power' }) || canvas.getContext('experimental-webgl');
     if(!gl) return false;
     this.gl = gl;
-    const vs = `attribute vec3 aP; attribute vec3 aN; attribute vec3 aC; attribute vec3 aS;
+    const vs = `attribute vec3 aP; attribute vec3 aN; attribute vec3 aC; attribute vec3 aS; attribute float aM;
       uniform mat4 uVP; uniform mat4 uM; uniform vec3 uCol; uniform float uVC; uniform float uOut; uniform mediump vec3 uEye;
-      varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2;
+      varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2; varying float vM;
       void main(){
-        vN = mat3(uM) * aN; vN2 = mat3(uM) * aC; vC = uVC > 1.5 ? uCol * aC : mix(uCol, aC, uVC);
+        vM = aM; vN = mat3(uM) * aN; vN2 = mat3(uM) * aC; vC = uVC > 1.5 ? uCol * aC : mix(uCol, aC, uVC);
         vec4 w = uM * vec4(aP, 1.0);
         // le contour : la forme regonflée un tout petit peu, d'une épaisseur constante à l'écran
         if(uOut > 0.0) w.xyz += normalize(mat3(uM) * aS) * uOut * distance(w.xyz, uEye);
@@ -150,7 +159,7 @@ const GL = {
       uniform vec3 uL; uniform float uFlat; uniform float uA; uniform vec3 uTint; uniform float uTintK;
       uniform vec3 uEye; uniform vec3 uT[6]; uniform float uNT; uniform float uX; uniform float uChar;
       uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass; uniform float uLine; uniform float uFloor;
-      varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2;
+      varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2; varying float vM;
       /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
       bool inTube(vec3 t){ vec3 d = t - uEye; float k = dot(vW - uEye, d) / dot(d, d); return k > 0.0 && k < 0.9 && distance(vW, uEye + d * k) < 0.42; }
       vec3 bw(vec3 c, float lift){ float l = dot(c, vec3(0.299, 0.587, 0.114)); return vec3(l * (1.0 + lift) + lift * 0.4); }
@@ -185,7 +194,18 @@ const GL = {
           if(abs(n.y) < 0.5) c *= mix(0.66, 1.0, smoothstep(0.0, 0.6, vW.y - uFloor));
           c = mix(c, c * c * (3.0 - 2.0 * c), 0.22);   // un peu plus de relief dans les valeurs
           // le décor reste un peu en retrait (couleurs un peu plus douces, un voile très léger au loin) : les personnages ressortent
-          float ls = dot(c, vec3(0.299, 0.587, 0.114)); c = mix(c, vec3(ls), 0.3); c = mix(c, vec3(0.5, 0.51, 0.53), 0.07);
+          // chaque matière a sa lumière : l'architecture reste en retrait, les meubles et objets ressortent un peu,
+          // le feuillage vit, le métal brille, les carrosseries ont un vernis (quelques calculs, sans texture ni ombre)
+          float mt = floor(vM + 0.5), ls = dot(c, vec3(0.299, 0.587, 0.114));
+          vec3 hv = normalize(uL + normalize(uEye - vW)); float nh = max(dot(n, hv), 0.0);
+          if(mt < 0.5){ c = mix(c, vec3(ls), 0.14); c += vec3(0.07) * pow(nh, 24.0); }                          // objets, meubles
+          else if(mt < 1.5){ c = mix(c, vec3(ls), 0.32); c = mix(c, vec3(0.5, 0.51, 0.53), 0.09); }             // architecture
+          else if(mt < 2.5){                                                                                     // feuillage
+            float v = sin(vW.x * 1.9 + vW.y * 0.7) * sin(vW.z * 1.6 - vW.y * 0.9);
+            c = base * (amb * 1.08 + 0.62 * w * vec3(1.02, 1.04, 0.86)) * (1.0 + 0.1 * v); c = mix(vec3(ls), c, 1.12);
+          }
+          else if(mt < 3.5){ c = base * (0.45 + 0.35 * d) + vec3(0.6) * pow(nh, 40.0) + vec3(0.16) * pow(1.0 - f, 3.0); }   // métal
+          else { c = mix(c, vec3(ls), 0.06); c += vec3(0.42) * pow(nh, 60.0); c = mix(c, vec3(0.78, 0.84, 0.9) * (0.65 + 0.35 * n.y), pow(1.0 - f, 4.0) * 0.32); }   // carrosserie
           if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
         }
         float a = uA;
@@ -202,7 +222,7 @@ const GL = {
     };
     const p = prog(vs, fs); if(!p) return false;
     gl.useProgram(p); this.prog = p;
-    ['aP', 'aN', 'aC', 'aS'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
+    ['aP', 'aN', 'aC', 'aS', 'aM'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
     ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine', 'uFloor'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
@@ -256,18 +276,19 @@ const GL = {
   },
   mesh(g){
     const gl = this.gl, mk = a => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(a), gl.STATIC_DRAW); return b; };
-    const m = { p:mk(g.p), n:mk(g.n), c:mk(g.c), s:g.s ? mk(g.s) : null, count:g.p.length / 3 };
+    const m = { p:mk(g.p), n:mk(g.n), c:mk(g.c), s:g.s ? mk(g.s) : null, m:g.m && g.m.length * 3 === g.p.length && g.m.some(v => v) ? mk(g.m) : null, count:g.p.length / 3 };
     this.meshes.push(m); return m;
   },
   /* avant de passer à un autre programme : on débranche les tableaux de la scène */
-  off(){ const gl = this.gl, L = this.loc; ['aP', 'aN', 'aC', 'aS'].forEach(k => L[k] >= 0 && gl.disableVertexAttribArray(L[k])); },
-  free(m){ if(!m) return; const gl = this.gl; [m.p, m.n, m.c, m.s].forEach(b => b && gl.deleteBuffer(b)); this.meshes = this.meshes.filter(x => x !== m); },
+  off(){ const gl = this.gl, L = this.loc; ['aP', 'aN', 'aC', 'aS', 'aM'].forEach(k => L[k] >= 0 && gl.disableVertexAttribArray(L[k])); },
+  free(m){ if(!m) return; const gl = this.gl; [m.p, m.n, m.c, m.s, m.m].forEach(b => b && gl.deleteBuffer(b)); this.meshes = this.meshes.filter(x => x !== m); },
   bind(m){
     const gl = this.gl, L = this.loc;
     gl.bindBuffer(gl.ARRAY_BUFFER, m.p); gl.enableVertexAttribArray(L.aP); gl.vertexAttribPointer(L.aP, 3, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, m.n); gl.enableVertexAttribArray(L.aN); gl.vertexAttribPointer(L.aN, 3, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, m.c); gl.enableVertexAttribArray(L.aC); gl.vertexAttribPointer(L.aC, 3, gl.FLOAT, false, 0, 0);
     if(L.aS >= 0){ gl.bindBuffer(gl.ARRAY_BUFFER, m.s || m.n); gl.enableVertexAttribArray(L.aS); gl.vertexAttribPointer(L.aS, 3, gl.FLOAT, false, 0, 0); }
+    if(L.aM >= 0){ if(m.m){ gl.bindBuffer(gl.ARRAY_BUFFER, m.m); gl.enableVertexAttribArray(L.aM); gl.vertexAttribPointer(L.aM, 1, gl.FLOAT, false, 0, 0); } else { gl.disableVertexAttribArray(L.aM); gl.vertexAttrib1f(L.aM, 0); } }
   },
   /* o : { m:matrice, col:[r,g,b], vc:utiliser les couleurs des sommets, flat, a:opacité, tint, tintK,
            out:épaisseur du contour, glass:vitre, raw:couleur exacte (sélection) } */

@@ -56,7 +56,7 @@ function renderUI(){
             <div class="stage-area" id="stageArea">
               <div class="shot-head" id="shotHead"></div>
               <div class="stage-wrap" id="stageWrap">
-                <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="hplan hidden" id="hplan"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
+                <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="tech hidden" id="tech"><i class="safe sa"></i><i class="safe st"></i><i class="ctr"></i><i class="hz" id="techHz"></i><div class="hud" id="techHud"></div></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="hplan hidden" id="hplan"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
               </div>
               <div class="under" id="under"><div class="dock" id="nav"></div><div class="hint" id="hint"></div></div>
             </div>
@@ -164,6 +164,7 @@ function renderHead(){
     <div class="sh-r">
       <div class="seg" role="group"><button class="${S.final ? '' : 'on'}" data-act="final" data-v="0" title="${esc(L('Les meubles qui cachent un personnage deviennent transparents', 'Furniture hiding a character turns see-through'))}">${icon('eye')}${L('Vue de travail', 'Work view')}</button><button class="${S.final ? 'on' : ''}" data-act="final" data-v="1" title="${esc(L('Exactement l’image qui sera enregistrée', 'Exactly the image that will be saved'))}">${icon('image')}${L('Image finale', 'Final image')}</button></div>
       <button class="ib ${S.grid ? 'on' : ''}" data-act="grid" title="${esc(L('Grille des tiers', 'Rule of thirds'))}">${icon('grid')}</button>
+      <button class="ib ${S.pro ? 'on' : ''}" data-act="pro" title="${esc(L('Repères pro : zones de sécurité, centre, horizon, focale, hauteur et inclinaison de la caméra', 'Pro guides: safe areas, centre, horizon, lens, camera height and tilt'))}">${icon('target')}</button>
       ${isFull() ? `<button class="ib ${document.body.classList.contains('imm-clean') ? 'on' : ''}" data-act="immTools" title="${esc(document.body.classList.contains('imm-clean') ? L('Afficher les outils (H)', 'Show the tools (H)') : L('Masquer les outils : l’image seule (H)', 'Hide the tools: the picture only (H)'))}">${icon('eye')}</button>` : ''}
       <button class="ib ${isFull() ? 'on' : ''}" data-act="full" title="${esc(isFull() ? L('Quitter l’immersion (P ou Échap)', 'Exit immersion (P or Esc)') : L('Plein écran, en immersion (P)', 'Immersive full screen (P)'))}">${icon(isFull() ? 'unfull' : 'full')}</button>
       <span class="tb-div"></span>
@@ -181,9 +182,18 @@ const levelOfY = (d, y) => d.levels.reduce((b, l, i) => y >= l - 0.2 ? i : b, 0)
 function renderPlan(){
   const el = document.getElementById('hplan'); if(!el) return;
   const s = shot(), d = SET_DEF[s.set], C = SET_COLL[s.set];
-  if(!d.floors || !d.levels || !C || S.final){ el.classList.add('hidden'); el.innerHTML = ''; return; }
+  if(!d.floors || !C || S.final){ el.classList.add('hidden'); el.innerHTML = ''; return; }
   el.classList.remove('hidden');
-  const open = lsGet('raging3d_plan') === '1',   // replié par défaut : une petite pastille, l'image reste libre
+  // un lieu de plain-pied à plusieurs pièces (chambre d'hôtel, banque, commissariat) : les pièces, toujours en vue
+  const tip = lsGet('raging3d_roomtip') !== '1' ? `<div class="hp-tip"><span>${L('Pour changer de pièce, clique sur son nom', 'To change rooms, click its name')}</span><button data-act="roomTip" title="${esc(L('Compris', 'Got it'))}">${icon('close')}</button></div>` : '';
+  // la pièce où l'on est : celle qu'on a choisie, sinon celle où se trouve la caméra
+  const e = camEyeRaw(s.cam), cur = S.room != null ? S.room : d.floors.findIndex(f => f[5] && e[0] >= f[5][3][0] && e[0] <= f[5][3][2] && e[2] >= f[5][3][1] && e[2] <= f[5][3][3] && (!d.levels || levelOfY(d, e[1]) === f[2]));
+  const chip = (f, k, nm) => `<button class="hp-chip ${cur === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(nm)}</button>`;
+  if(!d.levels){
+    el.innerHTML = `<div class="hp-h"><span class="hp-lbl">${icon('place')}<b>${L('Pièces', 'Rooms')}</b></span></div><div class="hp-rooms">${d.floors.map((f, k) => chip(f, k, L(f[0], f[1]))).join('')}</div>${tip}`;
+    return;
+  }
+  const open = lsGet('raging3d_plan') === '1',   // replié par défaut : les étages et les pièces en pastilles, l'image reste libre
    lv = S.planLevel != null ? S.planLevel : levelOfY(d, s.cam.ty);
   const names = [L('Rez-de-chaussée', 'Ground floor'), L('1er étage', '1st floor'), L('2e étage', '2nd floor'), L('Grenier', 'Attic')];
   const short = [L('RDC', 'GF'), L('1er', '1st'), L('2e', '2nd'), L('Grenier', 'Attic')];
@@ -213,11 +223,23 @@ function renderPlan(){
       svg += `<g class="hp-room ${S.room === k ? 'on' : ''}" data-k="${k}"><rect x="${p + 1.5}" y="${q + 1.5}" width="${r - p - 3}" height="${t - q - 3}" rx="3"/><text x="${(p + r) / 2}" y="${(q + t) / 2 + 3.5}">${esc(nm)}</text></g>`; });
     svg += `<g class="hp-cam" id="hpCam"><path d="M0 0 L-7 -12 L7 -12 Z"/><circle r="3.4"/></g>`;
   }
-  el.innerHTML = `<div class="hp-h"><button class="hp-tog" data-act="planTog" title="${esc(open ? L('Replier le plan', 'Fold the plan') : L('Ouvrir le plan de la maison', 'Open the house plan'))}">${icon('stairs')}<b>${L('Plan', 'Plan')}</b>${open ? '' : `<span>${esc(names[lv] || '')}</span>`}</button>
-      ${open ? `<div class="hp-tabs">${short.map((t, i) => `<button class="${i === lv && S.room !== garden ? 'on' : ''}" data-act="planLv" data-l="${i}" title="${esc(names[i])}">${esc(t)}</button>`).join('')}${garden >= 0 ? `<button class="${S.room === garden ? 'on' : ''}" data-act="floor" data-k="${garden}">${L('Jardin', 'Garden')}</button>` : ''}</div>` : ''}</div>
+  // replié comme ouvert : les étages en onglets, et les pièces de l'étage en pastilles (on voit tout de suite où aller)
+  const rooms = open ? '' : `<div class="hp-rooms">${d.floors.map((f, k) => f[2] === lv && f[5] ? chip(f, k, L(f[0], f[1]).replace(/^(1er|2e|1st|2nd)\s*:\s*/, '')) : '').join('')}</div>`;
+  el.innerHTML = `<div class="hp-h"><button class="hp-tog" data-act="planTog" title="${esc(open ? L('Replier le plan', 'Fold the plan') : L('Ouvrir le plan de la maison', 'Open the house plan'))}">${icon('stairs')}<b>${L('Plan', 'Plan')}</b><i class="hp-chev ${open ? 'up' : ''}"></i></button>
+      <div class="hp-tabs">${short.map((t, i) => `<button class="${i === lv && S.room !== garden ? 'on' : ''}" data-act="planLv" data-l="${i}" title="${esc(names[i])}">${esc(t)}</button>`).join('')}${garden >= 0 ? `<button class="${S.room === garden ? 'on' : ''}" data-act="floor" data-k="${garden}">${L('Jardin', 'Garden')}</button>` : ''}</div></div>${rooms}${open ? '' : tip}
     ${open ? `<svg class="hp-svg" id="hpSvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" data-l="${lv}">${svg}</svg>
     <div class="hp-f"><span>${L('Clique dans une pièce : la caméra s’y pose, tournée vers ce point', 'Click inside a room: the camera goes there, facing that spot')}</span><button class="hp-bring" data-act="bringHere" title="${esc(L('Amener le personnage choisi là où vise la caméra', 'Bring the chosen character where the camera aims'))}">${icon('users')}${L('Amener ', 'Bring ') + charName(S.sel ? S.sel.c : S.target) + L(' ici', ' here')}</button></div>` : ''}`;
   planMarker();
+}
+/* les repères pro : l'horizon (selon l'inclinaison, la focale et le débullé) et les chiffres de la caméra, à chaque image */
+function techMarker(){
+  const hz = document.getElementById('techHz'); if(!hz || !S.pro) return;
+  const s = shot(), c = viewCam(s), e = camEye(c), fov = fovOf(c.lens), p = c.pitch * D2R;
+  const y = 50 + 50 * Math.tan(p) / Math.tan(fov / 2);
+  hz.style.display = y > -20 && y < 120 ? '' : 'none';
+  hz.style.top = y.toFixed(2) + '%'; hz.style.transform = `rotate(${(-(c.roll || 0)).toFixed(1)}deg)`;
+  const d = SET_DEF[s.set], y0 = d.levels ? d.levels[levelOfY(d, e[1])] : 0, f1 = v => (Math.round(v * 10) / 10).toLocaleString(getLang() === 'en' ? 'en' : 'fr');
+  document.getElementById('techHud').innerHTML = `<b>${Math.round(c.lens)} mm</b><span>${L('Haut.', 'Height')} ${f1(e[1] - y0)} m</span><span>${L('Incl.', 'Tilt')} ${Math.round(c.pitch)}°</span>${c.roll ? `<span>${L('Débullé', 'Dutch')} ${Math.round(c.roll)}°</span>` : ''}<span>${L('Dist.', 'Dist.')} ${f1(c.dist)} m</span>`;
 }
 /* la caméra sur le plan : sa position et la direction où elle regarde (mis à jour à chaque image) */
 function planMarker(){
@@ -242,6 +264,7 @@ function renderView(){
   const th = document.getElementById('thirds'), fb = frameBox(1000, 562.5);
   th.classList.toggle('hidden', !S.grid || !!S.final);
   th.style.inset = fb ? `${fb.y / 5.625}% ${fb.x / 10}%` : '';
+  const tc = document.getElementById('tech'); tc.classList.toggle('hidden', !S.pro || !!S.final); tc.style.inset = th.style.inset; techMarker();
   const sheet = S.view === 'sheet';
   document.getElementById('stageArea').classList.toggle('hidden', sheet);
   document.getElementById('sheetView').classList.toggle('hidden', !sheet);
@@ -280,7 +303,8 @@ const figure = lk => {
   const body = lk.skirt ? `M${T(5.3, 8)}L${T(10.7, 8)}L${T(12.6, 15)}L${T(3.4, 15)}Z` : `M${T(4.3, 8)}L${T(11.7, 8)}L${T(11.4, 13.5)}L${T(4.6, 13.5)}Z`;
   const legs = `M${T(5.4, 13)}L${T(7.6, 13)}L${T(7.4, 19.5)}L${T(5.4, 19.5)}ZM${T(8.4, 13)}L${T(10.6, 13)}L${T(10.6, 19.5)}L${T(8.6, 19.5)}Z`;
   const hair = lk.hairStyle === 'bald' ? '' : `<path d="M${T(4.6, 4.3)}A${(3.4 * k).toFixed(2)} ${(3.4 * k).toFixed(2)} 0 0 1 ${T(11.4, 4.3)}L${T(11.4, f && lk.hairStyle === 'long' ? 7.6 : 4.6)}L${T(4.6, f && lk.hairStyle === 'long' ? 7.6 : 4.6)}Z" fill="${lk.hair}"/>`;
-  return `<svg class="fig" viewBox="0 0 16 20" aria-hidden="true"><path d="${legs}" fill="${lk.skirt || lk.shorts ? lk.skin : lk.bottom}"/><path d="${body}" fill="${lk.top}"/><circle cx="8" cy="${(4.6 * k + oy).toFixed(2)}" r="${(3.2 * k).toFixed(2)}" fill="${lk.skin}"/>${hair}${lk.hairStyle === 'bun' ? `<circle cx="8" cy="${(1.2 * k + oy).toFixed(2)}" r="${(1.3 * k).toFixed(2)}" fill="${lk.hair}"/>` : ''}</svg>`;
+  const acc = (lk.cap ? `<path d="M${T(4.4, 2.6)}L${T(11.6, 2.6)}L${T(12.6, 3.9)}L${T(3.4, 3.9)}Z" fill="${lk.cap}"/>` : '') + (lk.mask ? `<path d="M${T(4.8, 2.0)}A${(3.3 * k).toFixed(2)} ${(3.3 * k).toFixed(2)} 0 0 1 ${T(11.2, 2.0)}L${T(11.2, 7.6)}L${T(4.8, 7.6)}Z" fill="${lk.mask}"/><rect x="${T(5.4, 4.1).split(' ')[0]}" y="${T(5.4, 4.1).split(' ')[1]}" width="${(5.2 * k).toFixed(2)}" height="${(1.2 * k).toFixed(2)}" fill="${lk.skin}"/>` : '');
+  return `<svg class="fig" viewBox="0 0 16 20" aria-hidden="true"><path d="${legs}" fill="${lk.skirt || lk.shorts ? lk.skin : lk.bottom}"/><path d="${body}" fill="${lk.top}"/><circle cx="8" cy="${(4.6 * k + oy).toFixed(2)}" r="${(3.2 * k).toFixed(2)}" fill="${lk.skin}"/>${hair}${lk.hairStyle === 'bun' ? `<circle cx="8" cy="${(1.2 * k + oy).toFixed(2)}" r="${(1.3 * k).toFixed(2)}" fill="${lk.hair}"/>` : ''}${acc}</svg>`;
 };
 const ph = (ic, title, sub, nav) => `<div class="ph"><div class="ph-ico">${icon(ic)}</div><div class="ph-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}${nav || ''}</div></div>`;
 /* dans les volets longs (lieux, poses) : une barre pour sauter directement à une catégorie */
@@ -350,12 +374,16 @@ const ANGLE_G = { neu:'M3 11h14M13 7.5l4 3.5-4 3.5', plo:'M3 4l13 9M11.5 13.6h4.
 const MOVE_G = { fix:'M6 6h8v8H6z', in:'M3 10h10M10 6.5l3.5 3.5-3.5 3.5M16 4v12', out:'M17 10H7M10 6.5 6.5 10l3.5 3.5M3 4v12', panR:'M3 13a9 9 0 0 1 14-3M14 6.5l3 3.5-4 1', panL:'M17 13a9 9 0 0 0-14-3M6 6.5 3 10l4 1',
   tiltU:'M7 17a9 9 0 0 1 3-14M6.5 6 10 3l3 3.5', tiltD:'M7 3a9 9 0 0 0 3 14M6.5 14 10 17l3-3.5', travR:'M2 15h16M3 10h11M11 6.5l3.5 3.5-3.5 3.5', travL:'M2 15h16M17 10H6M9 6.5 5.5 10 9 13.5',
   zoomIn:'M3 3l4 4M17 3l-4 4M3 17l4-4M17 17l-4-4M7 4v3H4M13 4v3h3M7 16v-3H4M13 16v-3h3', zoomOut:'M7 7 3 3M13 7l4-4M7 13l-4 4M13 13l4 4M3 6V3h3M17 6V3h-3M3 14v3h3M17 14v3h-3', orbit:'M3 12c0-3 3-5 7-5s7 2 7 5-3 5-7 5M6 16.5 10 17l-1.5 3',
-  grue:'M10 17V5M6.5 8.5 10 5l3.5 3.5M5 17h10', grueD:'M10 3v12M6.5 11.5 10 15l3.5-3.5M5 3h10', drone:'M4 15l10-9M10 6h4v4M3 18h6', epa:'M2 10c2-3 3 3 5 0s3 3 5 0 3 3 6 0', end:'M3 10h11M10 6.5l3.5 3.5-3.5 3.5M16.5 6v8' };
+  grue:'M10 17V5M6.5 8.5 10 5l3.5 3.5M5 17h10', grueD:'M10 3v12M6.5 11.5 10 15l3.5-3.5M5 3h10', drone:'M4 15l10-9M10 6h4v4M3 18h6', epa:'M2 10c2-3 3 3 5 0s3 3 5 0 3 3 6 0', end:'M3 10h11M10 6.5l3.5 3.5-3.5 3.5M16.5 6v8',
+  orbitL:'M17 12c0-3-3-5-7-5s-7 2-7 5 3 5 7 5M14 16.5 10 17l1.5 3', arc360:'M10 3a7 7 0 1 1-6.5 4.4M3.5 3v4.4h4.4', pedU:'M6 4h8v6H6zM10 17v-4M7.5 14.5 10 12l2.5 2.5', pedD:'M6 10h8v6H6zM10 3v4M7.5 5.5 10 8l2.5-2.5',
+  vertigo:'M3 10h5M5.5 7.5 3 10l2.5 2.5M12 6l5-3M12 14l5 3M12 6v8', vertigoIn:'M3 10h5M5.5 7.5 8 10l-2.5 2.5M12 6l5-3M12 14l5 3M12 6v8', crash:'M2 10h7M9 6v8M13 3l4 4M13 17l4-4M12 10h6',
+  whipR:'M2 7h12M2 10h15M2 13h12M14 4l4 6-4 6', whipL:'M18 7H6M18 10H3M18 13H6M6 4l-4 6 4 6', follow:'M4 16l3-6 3 6M13 11h5M15.5 8.5 18 11l-2.5 2.5M7 7a1.5 1.5 0 1 0 0-.1',
+  shake:'M10 3v3M10 14v3M3 10h3M14 10h3M6 6l1.5 1.5M14 6l-1.5 1.5M6 14l1.5-1.5M14 14l-1.5-1.5', rollIn:'M4 6l12 2-1.5 8L2.5 14zM16 3a6 6 0 0 1 2 4' };
 const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-hidden="true"><path d="${d}"/></svg>`;
 
 const PANEL_HTML = {
   place(){
-    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
+    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
     const fl = SET_DEF[sh.set].floors ? lblId(L('Aller dans une pièce', 'Go to a room'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
     const gid = ['in', 'out', 'wide'];
     return ph('place', L('Le lieu', 'The place'), L('Les personnages s’y placent tout seuls.', 'Characters go to ready-made spots by themselves.'), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
@@ -364,13 +392,16 @@ const PANEL_HTML = {
   chars(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
     const rows = chars.map((c, i) => `<div class="crow ${t === i ? 'on' : ''}"><button class="crow-main" data-act="pickChar" data-c="${i}" title="${esc(L('La caméra va vers ', 'The camera goes to ') + L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}<span>${charName(i)}</span>${t === i ? `<em>${L('cadré', 'framed')}</em>` : ''}</button>${chars.length > 1 ? `<button class="ib sm danger" data-act="removeChar" data-c="${i}" title="${esc(L('Retirer du plan', 'Remove from the shot'))}">${icon('close')}</button>` : ''}</div>`).join('');
-    const add = `<div class="figs">${CHAR_LOOK.map((lk, k) => `<button class="fig-t" data-act="addChar" data-look="${k}" ${used.includes(k) || chars.length >= MAX_CHARS ? 'disabled' : ''} title="${esc(L(lk.fr, lk.en))}">${figure(lk)}<small>${esc(L(lk.fr, lk.en))}</small></button>`).join('')}</div>`;
+    const tileOf = (lk, k) => `<button class="fig-t" data-act="addChar" data-look="${k}" ${used.includes(k) || chars.length >= MAX_CHARS ? 'disabled' : ''} title="${esc(L(lk.fr, lk.en))}">${figure(lk)}<small>${esc(L(lk.fr, lk.en))}</small></button>`;
+    const add = `<div class="figs">${CHAR_LOOK.map((lk, k) => lk.npc ? '' : tileOf(lk, k)).join('')}</div>`;
+    const npc = `<div class="figs">${CHAR_LOOK.map((lk, k) => lk.npc ? tileOf(lk, k) : '').join('')}</div>`;
     const base = chars[t] && CHAR_LOOK[chars[t].look != null ? chars[t].look : t % 2] || CHAR_LOOK[0], cur = chars[t] && chars[t].outfit || 'base';
     const outfits = `<div class="figs">${OUTFITS.filter(o => !o.body || o.body === base.body).map(o => `<button class="fig-t ${cur === o.id ? 'on' : ''}" data-act="outfit" data-id="${o.id}" title="${esc(L(o.fr, o.en))}">${figure(outfitLook(base, o.id))}<small>${esc(L(o.fr, o.en))}</small></button>`).join('')}</div>`;
     const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
     return ph('users', L('Les personnages', 'The characters'), L('Clique un nom : la caméra va vers lui. L’épingle verte le déplace.', 'Click a name: the camera goes to them. The green pin moves them.')) +
       `<div class="pb">${lbl(L('Dans ce plan', 'In this shot'))}${rows}
       ${lbl(L('Ajouter', 'Add') + ` <span class="cnt">${chars.length} / ${MAX_CHARS}</span>`)}${add}
+      ${lbl(L('Rôles secondaires : police et truands', 'Supporting roles: police and crooks'))}${npc}
       ${chars[t] ? lbl(L('La tenue de ', 'Outfit for ') + charName(t)) + outfits : ''}
       ${lbl(L('Placer ', 'Place ') + charName(t))}<div class="chips">${spots}</div>
       ${chars.length > 1 ? lbl(L('À plusieurs', 'Together')) + `<div class="chips"><button class="chip" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>` : ''}</div>`;
@@ -381,6 +412,7 @@ const PANEL_HTML = {
     const tile = p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img ${POSE_PREV.has(poseKey(look, p.id)) ? `src="${POSE_PREV.get(poseKey(look, p.id))}"` : `data-pv="${look}:${p.id}"`} alt=""><span>${esc(L(p.fr, p.en))}</span></button>`;
     const tiles = POSE_GROUPS.map(([g, fr, en]) => `<div class="pose-g" id="g-${g}">${esc(L(fr, en))}</div><div class="poses">${POSES.filter(p => p.g === g).map(tile).join('')}</div>`).join('');
     const prop = ch ? `${lbl(L('Dans la main', 'In hand'))}<div class="seg wide"><button class="${!ch.prop ? 'on' : ''}" data-act="prop" data-id="">${L('Rien', 'Nothing')}</button>${PROPS.map(([id, fr, en]) => `<button class="${ch.prop === id ? 'on' : ''}" data-act="prop" data-id="${id}">${id === 'gun' ? icon('gun') : ''}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
+    const gear = ch ? lbl(L('Sur lui', 'Carried')) + `<div class="seg wide">${GEAR.map(([id, fr, en]) => `<button class="${ch.gear && ch.gear[id] ? 'on' : ''}" data-act="gear" data-id="${id}">${icon('gun')}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
     const gun = ch && ch.prop === 'gun' ? lbl(L('Prises de vue avec l’arme', 'Shots with the gun')) + `<div class="cars">${GUN_SHOTS.map(P => `<button class="car-t" data-act="gunShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
     let part;
     if(sel && chars[sel.c]){
@@ -391,7 +423,7 @@ const PANEL_HTML = {
         <button class="btn btn-sm" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
     } else part = `<p class="fly-note">${L('Pour un geste précis : clique sur une partie du corps dans l’image (un bras, la tête…) et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture (an arm, the head…) and drag. Its settings show up here.')}</p>`;
     return ph('pose', L('Les poses de ', 'Poses for ') + charName(t), L('Une pose en un clic, puis les retouches à la main si besoin.', 'One click for a pose, then hand touch-ups if needed.'), sel ? '' : jumpBar(POSE_GROUPS.map(([g]) => [g, { move:L('Debout', 'Standing'), seat:L('Assis, au sol', 'Seated, floor'), gest:L('Gestes', 'Gestures'), gun:L('Pistolet', 'Handgun'), moto:L('Moto', 'Motorbike') }[g] || g]))) +
-      `<div class="pb">${who}${tiles}${prop}${gun}${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
+      `<div class="pb">${who}${tiles}${prop}${gear}${gun}${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
   },
   crowd(){
     const sh = shot(), cr = sh.crowds, k = cr[S.crowd] ? S.crowd : -1, c = cr[k];
@@ -414,6 +446,7 @@ const PANEL_HTML = {
     const an = ['neu', 'plo', 'con', 'dess', 'sol', 'deb'].map(k => `<button class="ang-t ${inf.angle === k ? 'on' : ''}" data-act="angle" data-v="${k}">${glyph(ANGLE_G[k])}<span>${esc(shotLabel('angle', k))}</span></button>`).join('');
     return ph('frame', L('Le cadrage', 'Framing'), L('Sur qui, puis la valeur de plan : la caméra se place seule.', 'Who, then the shot size: the camera places itself.')) +
       `<div class="pb">${lbl(L('Sur qui', 'On whom'))}${who}
+      ${lbl(L('Des plans tout prêts', 'Ready-made shots'))}<div class="recipes">${SHOT_RECIPES.filter(r => !r[5].two || two).map(r => `<button class="rcp" data-act="recipe" data-id="${r[0]}" title="${esc(L(r[3], r[4]))}">${sizeGlyph(r[5].size)}<span><b>${esc(L(r[1], r[2]))}</b><small>${esc(L(r[3], r[4]))}</small></span></button>`).join('')}</div>
       ${lbl(L('La valeur du plan', 'Shot size'))}<div class="sizes">${st}</div>
       ${lbl(L('L’angle', 'Angle'))}<div class="angs">${an}</div>
       ${lbl(L('Le côté', 'Side'))}<div class="seg wide wrap">${SIDES.map(x => `<button class="${inf.side === x[0] ? 'on' : ''}" data-act="side" data-v="${x[0]}">${esc(L(x[1], x[2]))}</button>`).join('')}</div>
@@ -423,11 +456,13 @@ const PANEL_HTML = {
   },
   move(){
     const sh = shot(), inf = sh.info, m = inf.move, walk = sh.chars.some(c => c.pose === 'walk' || c.pose === 'run');
-    const tiles = SHOT.move.map(o => `<button class="ang-t ${m === o[0] ? 'on' : ''}" data-act="info" data-k="move" data-v="${o[0]}">${glyph(MOVE_G[o[0]] || MOVE_G.fix)}<span>${esc(L(o[1], o[2]))}</span></button>`).join('');
+    const tile = id => { const o = SHOT.move.find(x => x[0] === id), tip = MOVE_TIP[id]; return o ? `<button class="ang-t ${m === o[0] ? 'on' : ''}" data-act="info" data-k="move" data-v="${o[0]}" title="${esc(tip ? L(tip[0], tip[1]) : '')}">${glyph(MOVE_G[o[0]] || MOVE_G.fix)}<span>${esc(L(o[1], o[2]))}</span></button>` : ''; };
+    const tiles = MOVE_GROUPS.map(([fr, en, ids]) => `<div class="mv-g">${esc(L(fr, en))}</div>` + ids.map(tile).join('')).join('');
+    const tipNow = MOVE_TIP[m] ? `<p class="fly-note mv-tip">${icon('bulb')}<span>${esc(L(MOVE_TIP[m][0], MOVE_TIP[m][1]))}</span></p>` : '';
     const end = m === 'end' ? lbl(L('Le cadre de fin', 'The end frame')) + `<div class="seg wide"><button class="${S.endEd ? '' : 'on'}" data-act="editEnd" data-v="0">${L('Début', 'Start')}</button><button class="${S.endEd ? 'on' : ''}" data-act="editEnd" data-v="1">${L('Fin', 'End')}</button></div>
       <p class="fly-note">${L('Choisis « Fin », cadre l’image d’arrivée avec les outils habituels, puis reviens sur « Début ». La caméra ira de l’une à l’autre.', 'Pick “End”, frame the final image with the usual tools, then go back to “Start”. The camera will travel from one to the other.')}</p>` : '';
     return ph('move', L('Le mouvement de caméra', 'Camera move'), L('Il part du cadre du plan ; on le voit à la lecture et sur le PDF.', 'It starts from the shot’s frame; it shows in playback and on the PDF.')) +
-      `<div class="pb"><div class="angs moves">${tiles}</div>${end}
+      `<div class="pb">${tipNow}<div class="angs moves">${tiles}</div>${end}
       ${lbl(L('Les personnages', 'Characters'))}<label class="ftog"><span>${L('Ceux qui marchent ou courent avancent pendant le plan', 'Walking or running characters move forward during the shot')}</span><input type="checkbox" data-act="walk" ${inf.walk ? 'checked' : ''}><i class="tg"></i></label>
       ${!walk ? `<p class="fly-note">${L('Donne la pose « Marche » ou « Course » à un personnage pour l’animer.', 'Give a character the “Walking” or “Running” pose to animate them.')}</p>` : ''}
       ${lbl(L('Durée du plan', 'Shot length'))}<div class="seg wide">${[1, 2, 3, 4, 5, 8].map(d => `<button class="${d === inf.dur ? 'on' : ''}" data-act="dur" data-v="${d}">${fmtTime(d)}</button>`).join('')}</div>
@@ -437,7 +472,7 @@ const PANEL_HTML = {
     const sh = shot(), vs = sh.vehicles || [], k = vs[S.veh] ? S.veh : vs.length ? 0 : -1, v = vs[k], t = S.sel ? S.sel.c : S.target;
     const taxi = sh.set === 'taxi'
       ? lbl(L('Le taxi', 'The taxi')) + `<div class="pbtns"><button class="btn btn-sm" data-act="carSetup">${icon('users')}${L('Installer : conducteur et passager', 'Seat the driver and the passenger')}</button></div><div class="cars">${CAR_SHOTS.map(p => `<button class="car-t" data-act="carShot" data-id="${p[0]}">${sizeGlyph(p[6])}<span>${esc(L(p[1], p[2]))}</span></button>`).join('')}</div>`
-      : lbl(L('Le taxi', 'The taxi')) + `<p class="fly-note">${L('Le taxi est un lieu à part : ses vitres sont transparentes et dix prises de vue sont prêtes à l’intérieur.', 'The taxi is a place of its own: see-through windows and ten ready-made shots inside.')}</p><div class="pbtns"><button class="btn btn-sm" data-act="place" data-id="taxi">${icon('car')}${L('Aller dans le taxi', 'Go to the taxi')}</button></div>`;
+      : lbl(L('Le taxi', 'The taxi')) + `<p class="fly-note">${L('Le taxi est un lieu à part : ses vitres sont transparentes et ' + CAR_SHOTS.length + ' prises de vue sont prêtes, dedans et autour.', 'The taxi is a place of its own: see-through windows and ' + CAR_SHOTS.length + ' ready-made shots, inside and around.')}</p><div class="pbtns"><button class="btn btn-sm" data-act="place" data-id="taxi">${icon('car')}${L('Aller dans le taxi', 'Go to the taxi')}</button></div>`;
     const VD = x => VEH_DEF[x.kind] || VEH_DEF.moto, on = x => sh.chars.filter(c => c.on && c.on.v === x.id);
     const list = vs.map((x, i) => `<div class="crow ${i === k ? 'on' : ''}"><button class="crow-main" data-act="pickVeh" data-k="${i}">${icon(VD(x).ic)}<span>${esc(L(VD(x).fr, VD(x).en))} ${vs.filter((o, j) => j <= i && o.kind === x.kind).length}</span><em>${esc(on(x).map(c => L(lookOf(c).fr, lookOf(c).en)).join(', '))}</em></button><button class="ib sm danger" data-act="removeVeh" data-k="${i}" title="${esc(L('Retirer', 'Remove'))}">${icon('close')}</button></div>`).join('');
     const D = v && VD(v), who = v && (si => { const c = on(v).find(c => c.on.seat === si); return c ? L(lookOf(c).fr, lookOf(c).en) : ''; });
@@ -468,6 +503,7 @@ const PANEL_HTML = {
       ${lbl(L('Le format de l’image', 'Picture format'))}<div class="seg wide ratios">${RATIOS.map(r => `<button class="${(S.doc.ratio || '16:9') === r[0] ? 'on' : ''}" data-act="ratio" data-v="${r[0]}" title="${esc(r[2])}"><i class="rbox" style="width:${Math.round(Math.min(22, 11 * r[1]))}px;height:${Math.round(Math.min(11, 22 / r[1]))}px"></i>${r[0]}</button>`).join('')}</div>
       <p class="fly-note">${L('Le format vaut pour tout le film : l’écran, la planche PDF, l’animatique et les images PNG (recadrées au bon format).', 'The format applies to the whole film: the screen, the PDF board, the animatic and PNG images (cropped to the right format).')}</p>
       ${lbl(L('Aides à l’image', 'Picture aids'))}<label class="ftog"><span>${L('Grille des tiers', 'Rule of thirds')}</span><input type="checkbox" data-act="gridTog" ${S.grid ? 'checked' : ''}><i class="tg"></i></label>
+      <label class="ftog"><span>${L('Repères pro (zones de sécurité, horizon, focale, hauteur)', 'Pro guides (safe areas, horizon, lens, height)')}</span><input type="checkbox" data-act="proTog" ${S.pro ? 'checked' : ''}><i class="tg"></i></label>
       <label class="ftog"><span>${L('Image finale (sans transparence ni poignées)', 'Final image (no see-through, no handles)')}</span><input type="checkbox" data-act="finalTog" ${S.final ? 'checked' : ''}><i class="tg"></i></label></div>`;
   },
   export(){
@@ -574,6 +610,15 @@ function moveArrow(x, w, h, m){
   else if(m === 'orbit'){ stroke(() => { x.beginPath(); x.ellipse(cx, h * 0.84, w * 0.26, h * 0.07, 0, Math.PI * 0.1, Math.PI * 0.95); }); stroke(head(cx - w * 0.255, h * 0.852, Math.PI * 0.55)); }
   else if(m === 'epa') stroke(() => { x.beginPath(); for(let i = 0; i <= 40; i++){ const t = i / 40; x.lineTo(w * (0.3 + 0.4 * t), h * 0.86 + Math.sin(t * 18) * 7 * k); } });
   else if(m === 'end') line(w * 0.32, h * 0.86, w * 0.68, h * 0.86);
+  else if(m === 'orbitL'){ stroke(() => { x.beginPath(); x.ellipse(cx, h * 0.84, w * 0.26, h * 0.07, 0, Math.PI * 0.05, Math.PI * 0.9); }); stroke(head(cx + w * 0.255, h * 0.852, Math.PI * 0.45)); }
+  else if(m === 'arc360'){ stroke(() => { x.beginPath(); x.ellipse(cx, h * 0.84, w * 0.3, h * 0.08, 0, -Math.PI * 0.85, Math.PI * 0.95); }); stroke(head(cx - w * 0.3, h * 0.83, Math.PI * 0.62)); }
+  else if(m === 'pedU' || m === 'pedD'){ const a = m === 'pedU' ? 0.72 : 0.28, b = 1 - a; line(w * 0.08, h * a, w * 0.08, h * b); line(w * 0.92, h * a, w * 0.92, h * b); }
+  else if(m === 'vertigo' || m === 'vertigoIn'){ const o = m === 'vertigo'; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => line(cx + a * w * (o ? 0.44 : 0.3), cy + b * h * (o ? 0.4 : 0.24), cx + a * w * (o ? 0.3 : 0.44), cy + b * h * (o ? 0.24 : 0.4))); line(w * 0.38, h * 0.9, w * 0.62, h * 0.9); }
+  else if(m === 'crash') [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => { line(cx + a * w * 0.46, cy + b * h * 0.44, cx + a * w * 0.2, cy + b * h * 0.14); });
+  else if(m === 'whipR' || m === 'whipL'){ const r = m === 'whipR'; [0.12, 0.18, 0.24].forEach((y, i) => stroke(() => { x.beginPath(); x.moveTo(w * (r ? 0.2 + i * 0.04 : 0.8 - i * 0.04), h * y); x.lineTo(w * (r ? 0.78 : 0.22), h * y); })); stroke(head(w * (r ? 0.8 : 0.2), h * 0.18, r ? 0 : Math.PI)); }
+  else if(m === 'follow'){ line(w * 0.3, h * 0.86, w * 0.7, h * 0.86); stroke(() => { x.beginPath(); for(let i = 0; i <= 30; i++){ const t = i / 30; x.lineTo(w * (0.3 + 0.4 * t), h * 0.8 + Math.sin(t * 6) * 4 * k); } }); }
+  else if(m === 'shake') [[0.08, 0.1], [0.92, 0.1], [0.08, 0.9], [0.92, 0.9]].forEach(([a, b]) => stroke(() => { x.beginPath(); for(let i = 0; i <= 6; i++) x.lineTo(w * a + (i % 2 ? 10 : -10) * k, h * b + (i - 3) * 6 * k * (b < 0.5 ? 1 : -1)); }));
+  else if(m === 'rollIn'){ stroke(() => { x.beginPath(); x.arc(cx, cy, h * 0.42, -Math.PI * 0.75, -Math.PI * 0.35); }); stroke(head(cx + Math.cos(-Math.PI * 0.35) * h * 0.42, cy + Math.sin(-Math.PI * 0.35) * h * 0.42, Math.PI * 0.15)); }
   x.restore();
 }
 function exportImage(){
@@ -846,7 +891,7 @@ const ACT = {
   cancelRec:() => { if(S.rec) S.rec.cancel = true; },
   place:b => { setPlace(b.dataset.id); if(S.panel === 'car' && b.dataset.id === 'taxi') renderPanel(); },
   pickChar:b => focusChar(+b.dataset.c),
-  addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), outfit:b => setOutfit(b.dataset.id), faceThem, lookAt:lookAtOther,
+  addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), gear:b => setGear(b.dataset.id), outfit:b => setOutfit(b.dataset.id), faceThem, lookAt:lookAtOther,
   spot:b => placeAt(+b.dataset.k), side:b => frameSide(b.dataset.v),
   playBoard:() => playBoard(), stopBoard, previewShot:() => playBoard(S.i),
   introOk:() => { lsSet('raging3d_intro', '1'); const i = document.querySelector('.intro'); if(i) i.remove(); },
@@ -854,17 +899,18 @@ const ACT = {
   pose:b => setPose(b.dataset.id),
   resetPart,
   target:b => focusChar(+b.dataset.c),
-  size:b => frameSize(b.dataset.v),
+  size:b => frameSize(b.dataset.v), recipe:b => { shotRecipe(b.dataset.id); renderPanel(); renderHead(); renderStrip(); },
   angle:b => frameAngle(b.dataset.v),
   lens:b => setLens(+b.dataset.l),
   grid:() => { S.grid = !S.grid; renderHead(); renderView(); if(S.panel === 'look') renderPanel(); },
+  pro:() => { S.pro = !S.pro; lsSet('raging3d_pro', S.pro ? '1' : '0'); renderHead(); renderView(); if(S.panel === 'look') renderPanel(); },
   final:b => setFinal(b.dataset.v === '1'),
   goShot:b => goShot(+b.dataset.i),
   prevShot:() => goShot(S.i - 1), nextShot:() => goShot(S.i + 1),
   stageShot:b => { S.view = 'stage'; goShot(+b.dataset.i); renderUI(); },
   stageView:() => { S.view = 'stage'; renderUI(); },
   sheetView:() => { S.view = 'sheet'; renderUI(); },
-  addShot, addReverse, dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '1' ? '0' : '1'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
+  addShot, addReverse, dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), roomTip:() => { lsSet('raging3d_roomtip', '1'); renderPlan(); }, planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '1' ? '0' : '1'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
   addShotEnd:() => { goShot(S.doc.shots.length - 1); addShot(); },
   moveShot:b => moveShot(+b.dataset.d),
   info:b => { const k = b.dataset.k, v = b.dataset.v; if(k === 'move' && v !== 'end') endEdit(); edit(() => { shot().info[k] = v; }); renderStrip(); },
@@ -872,7 +918,7 @@ const ACT = {
   editEnd:b => editEnd(b.dataset.v === '1'),
   full:() => toggleFull(), tbChar:() => { const s = shot(), used = s.chars.map(c => c.look), k = CHAR_LOOK.findIndex((x, i) => !used.includes(i)); if(k >= 0) addChar(k); setPanel('chars'); }, immTools:() => immTools(), style:b => setStyle(b.dataset.v), ratio:b => setRatio(b.dataset.v),
   carSetup, carShot:b => carShot(b.dataset.id),
-  floor:b => { goRoom(+b.dataset.k); renderHead(); renderPanel(); },
+  floor:b => { lsSet('raging3d_roomtip', '1'); goRoom(+b.dataset.k); renderHead(); renderPanel(); },
   addVeh:b => addVehicle(b.dataset.kind || 'moto'), removeVeh:b => removeVehicle(+b.dataset.k), pickVeh:b => { S.veh = +b.dataset.k; renderPanel(); requestRender(); },
   vehCol:b => { const v = shot().vehicles[S.veh]; if(v) edit(() => { v.col = b.dataset.c; }); },
   mount:b => mountVehicle(S.veh < 0 ? 0 : S.veh, +b.dataset.seat), vehShot:b => vehShot(S.veh < 0 ? 0 : S.veh, b.dataset.id),
@@ -944,6 +990,7 @@ function bindEvents(){
     if(t.dataset.act === 'room' && t.value !== ''){ goRoom(+t.value); renderHead(); renderPanel(); }
     if(t.dataset.act === 'walk') edit(() => { shot().info.walk = t.checked; });
     if(t.dataset.act === 'gridTog'){ S.grid = t.checked; renderHead(); renderView(); }
+    if(t.dataset.act === 'proTog'){ S.pro = t.checked; lsSet('raging3d_pro', S.pro ? '1' : '0'); renderHead(); renderView(); }
     if(t.dataset.act === 'finalTog') setFinal(t.checked);
   });
   const c = R.canvas;

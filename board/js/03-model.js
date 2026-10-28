@@ -50,9 +50,14 @@ const CHAR_LOOK = [
   { id:'k2', body:'f', age:'kid', fr:'Fille', en:'Girl', skin:'#F0D3BE', hair:'#C9973E', hairStyle:'pigtails', top:'#D9707A', bottom:'#D9707A', shoes:'#3A3D44', socks:'#F4F2EE', wear:'dress', skirt:true, lips:'#C27A78' },
   { id:'o1', body:'m', age:'old', fr:'Grand-père', en:'Grandpa', skin:'#E3C2AA', hair:'#E4E2DE', hairStyle:'bald', top:'#8A7356', inner:'#C9D3DC', bottom:'#5E636C', shoes:'#3A2A20', wear:'cardigan', glasses:true, stache:true },
   { id:'o2', body:'f', age:'old', fr:'Grand-mère', en:'Grandma', skin:'#E8C8B4', hair:'#DAD8D4', hairStyle:'bun', top:'#7C6A8E', inner:'#EDEBE6', bottom:'#4A4458', shoes:'#3A2A20', wear:'cardigan', skirt:true, glasses:true, lips:'#B07C7A' },
+  // les rôles secondaires : la police et les truands
+  { id:'cop', body:'m', npc:true, fr:'Policier', en:'Police officer', skin:'#D9B092', hair:'#2A211B', hairStyle:'short', top:'#243046', inner:'#A9C4D2', tie:'#141A28', bottom:'#243046', shoes:'#141518', wear:'suit', cap:'#1D2433' },
+  { id:'copf', body:'f', npc:true, fr:'Policière', en:'Policewoman', skin:'#EAC7AE', hair:'#5A3A24', hairStyle:'bun', top:'#243046', inner:'#A9C4D2', tie:'#141A28', bottom:'#243046', shoes:'#141518', wear:'suit', cap:'#1D2433', lips:'#A86A66' },
+  { id:'robber', body:'m', npc:true, fr:'Braqueur', en:'Robber', skin:'#D9B092', hair:'#1E1A18', hairStyle:'short', top:'#1E1F23', bottom:'#2A2C31', shoes:'#141518', wear:'sweater', mask:'#1A1B1F' },
+  { id:'thug', body:'m', npc:true, fr:'Truand', en:'Gangster', skin:'#B98466', hair:'#1E1A18', hairStyle:'short', top:'#1E1F23', inner:'#F1EFEA', bottom:'#1E1F23', shoes:'#141518', wear:'cardigan', shades:true },
 ];
 CHAR_LOOK.forEach(lk => { lk.col = lk.top; });
-const MAX_CHARS = 6;
+const MAX_CHARS = 8;
 /* les tenues : chaque personnage garde son visage, sa coiffure et sa silhouette, seuls les habits changent */
 const OUTFITS = [
   { id:'base', fr:'Tenue d’origine', en:'Own outfit' },
@@ -165,16 +170,23 @@ function partGeo(id, look, bare){
       if(hs === 'short' || hs === 'messy' || hs === 'curly'){
         const puff = hs === 'curly' ? 0.018 : hs === 'messy' ? 0.01 : 0;
         ball(g, 0, 0.16 + puff * 0.6, -0.012, 0.103 + puff, 0.094 + puff, 0.104 + puff, HAIR, 12);
-        box(g, 0, 0.12, -0.075, 0.18 + puff, 0.1, 0.06, HAIR);
+        ball(g, 0, 0.115, -0.045, 0.098 + puff * 0.8, 0.075, 0.085 + puff * 0.6, HAIR, 12);   // la nuque, arrondie (plus de pavé carré derrière la tête)
         if(hs === 'messy') [[0.03, 0.25, 0.04], [-0.04, 0.245, 0.02], [0.0, 0.255, -0.02]].forEach(([x, y, z]) => ball(g, x, y, z, 0.03, 0.022, 0.03, HAIR, 6));
       } else if(hs === 'bald'){
         ball(g, 0, 0.115, -0.03, 0.102, 0.06, 0.09, HAIR, 12);             // une couronne de cheveux blancs, sur les côtés et derrière
       } else {
         ball(g, 0, 0.162, -0.02, 0.105, 0.101, 0.103, HAIR, 12);
         if(hs === 'bun') ball(g, 0, 0.2, -0.112, 0.055, 0.055, 0.05, HAIR, 10);
-        if(hs === 'long'){ box(g, 0, 0.03, -0.07, 0.19, 0.25, 0.07, HAIR); box(g, 0.087, 0.07, 0.0, 0.028, 0.17, 0.09, HAIR); box(g, -0.087, 0.07, 0.0, 0.028, 0.17, 0.09, HAIR); }
+        if(hs === 'long'){   // les cheveux longs : une masse arrondie qui tombe dans le dos, et deux mèches de côté
+          ball(g, 0, 0.09, -0.055, 0.1, 0.13, 0.075, HAIR, 12); ball(g, 0, -0.03, -0.07, 0.09, 0.1, 0.05, HAIR, 10);
+          [0.085, -0.085].forEach(x => ball(g, x, 0.06, 0.0, 0.03, 0.13, 0.06, HAIR, 8)); }
         if(hs === 'pigtails') [0.1, -0.1].forEach(x => { ball(g, x, 0.15, -0.05, 0.03, 0.03, 0.03, H('#D9707A'), 6); ball(g, x * 1.15, 0.08, -0.06, 0.04, 0.07, 0.04, HAIR, 8); });
       }
+      // la casquette de police (visière, insigne), la cagoule, les lunettes noires
+      if(lk.cap){ const CP = H(lk.cap); ball(g, 0, 0.215, -0.004, 0.112, 0.05, 0.118, CP, 12); cyl(g, 0, 0.2, -0.004, 0.106, 0.106, 0.035, CP, 12);
+        box(g, 0, 0.17, 0.112, 0.17, 0.012, 0.075, [0.06, 0.06, 0.07], -0.0); box(g, 0, 0.212, 0.113, 0.026, 0.028, 0.006, H('#E8B923')); }
+      if(lk.mask){ const MK = H(lk.mask); ball(g, 0, 0.172, -0.006, 0.108, 0.07, 0.112, MK, 12); ball(g, 0, 0.06, 0.02, 0.09, 0.07, 0.094, MK, 12); ball(g, 0, 0.118, -0.03, 0.104, 0.05, 0.1, MK, 12); ball(g, 0, 0.088, 0.014, 0.103, 0.032, 0.112, MK, 12); ball(g, 0, 0.088, 0.112, 0.022, 0.03, 0.022, MK, 8); ball(g, 0, 0.054, 0.098, 0.042, 0.026, 0.028, MK, 8); }   // la cagoule : seule une fente laisse voir les yeux
+      if(lk.shades && !bare){ const K = [0.05, 0.05, 0.06]; [0.037, -0.037].forEach(x => box(g, x, 0.128, 0.114, 0.044, 0.026, 0.008, K)); box(g, 0, 0.134, 0.115, 0.03, 0.006, 0.006, K); }
       break;
     }
     case 'armL': case 'armR': {
@@ -243,6 +255,8 @@ function charMatrices(ch){
   }
   // les enfants : une tête un peu plus grosse que le corps
   if(A.head !== 1){ const h = A.head; out.head = M4.mul(out.head, [h,0,0,0, 0,h,0,0, 0,0,h,0, 0,0,0,1]); }
+  // les mains dans les poches : elles sont dedans, on ne voit que les poignets à l'ouverture
+  if(ch.pose === 'pocket'){ const z = [0.02,0,0,0, 0,0.02,0,0, 0,0,0.02,0, 0,0,0,1]; out.handL = M4.mul(out.handL, z); out.handR = M4.mul(out.handR, z); }
   return out;
 }
 
@@ -271,6 +285,8 @@ const POSES = [
   { id:'gunDown', fr:'Arme baissée', en:'Gun lowered', g:'gun', prop:'gun', y:0, j:{ head:[10,  0,  0], armL:[7,  -7,  15], foreL:[56,  -44], handL:[0,  0], armR:[10,  -15,  -1], foreR:[55,  8], handR:[0,  0] } },
   { id:'crouchAim', fr:'Accroupi, en joue', en:'Crouched, aiming', g:'gun', prop:'gun', y:-0.62, j:{ thighL:[115,  10,  0], shinL:[135], footL:[-25], thighR:[115,  10,  0], shinR:[135], footR:[-25], spine:[12,  0,  0], chest:[0,  0,  0], head:[-14,  0,  0], armL:[68,  -15,  -22], foreL:[75,  19], armR:[76,  -3,  23], foreR:[60,  -6], handL:[0,  0], handR:[0,  0] } },
   { id:'kneel', fr:'À genoux', en:'Kneeling', g:'seat', y:-0.38, j:{ thighL:[0,  6,  0], shinL:[96], footL:[40], thighR:[0,  6,  0], shinR:[96], footR:[40], armL:[0,  -12,  55], foreL:[1,  79], handL:[-1,  0], armR:[0,  -12,  -55], foreR:[1,  -79], handR:[-1,  0] } },
+  { id:'rifleAim', fr:'Fusil épaulé', en:'Rifle, shouldered', g:'gun', prop:'rifle', y:0, j:{ head:[4, 0, 0], armR:[13, 3, 8], foreR:[139, -2], handR:[-62, 5], armL:[76, -11, -28], foreL:[30, -22], handL:[-56, 12] } },
+  { id:'rifleLow', fr:'Fusil, arme basse', en:'Rifle, low ready', g:'gun', prop:'rifle', y:0, j:{ head:[8, 0, 0], armR:[3, -1, -20], foreR:[94, 25], handR:[-26, 4], armL:[51, 46, -90], foreL:[0, 38], handL:[-10, 0] } },
   { id:'kneelHands', fr:'À genoux, mains sur la tête', en:'Kneeling, hands on head', g:'gun', y:-0.38, j:{ thighL:[0, 6, 0], shinL:[96], footL:[40], thighR:[0, 6, 0], shinR:[96], footR:[40], head:[16, 0, 0], armL:[127, 45, 36], foreL:[126, -30], handL:[0, 0], armR:[127, 45, -36], foreR:[126, 30], handR:[0, 0] } },
   { id:'oneKnee', fr:'Un genou à terre', en:'One knee down', g:'seat', y:-0.39, j:{ thighL:[0,  4,  0], shinL:[96], footL:[40], thighR:[88,  4,  0], shinR:[88], footR:[-5], armL:[0,  -14,  50], foreL:[0,  76], handL:[-1,  0], armR:[32,  -15,  -15], foreR:[2,  21], handR:[0,  0] } },
   { id:'handshake', fr:'Serrer la main', en:'Handshake', g:'gest', y:0, j:{ armR:[34,  -15,  0], foreR:[18,  -13], handR:[0,  0] } },
@@ -278,7 +294,7 @@ const POSES = [
   { id:'drink', fr:'Boire', en:'Drinking', g:'gest', prop:'glass', y:0, j:{ head:[-14, 0, 0], armR:[73, 6, -11], foreR:[122, 47], handR:[2, -30] } },
   { id:'shout', fr:'Crier (mains en porte-voix)', en:'Shouting', g:'gest', y:0, j:{ head:[-14,  0,  0], chest:[-4,  0,  0], armL:[92,  28,  0], foreL:[132,  -49], handL:[-1,  0], armR:[92,  28,  0], foreR:[132,  49], handR:[-1,  0] } },
   { id:'readPhone', fr:'Regarder son téléphone', en:'Looking at the phone', g:'gest', y:0, j:{ head:[32,  0,  0], armL:[1,  2,  30], foreL:[93,  -60], handL:[0,  0], armR:[-2,  -10,  -7], foreR:[90,  30], handR:[15,  -30] } },
-  { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[0,  -13,  25], foreL:[0,  79], handL:[-1,  0], armR:[0,  -13,  -25], foreR:[0,  -79], handR:[-1,  0] } },
+  { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[-4, 20, 29], foreL:[47, -76], handL:[-1, 0], armR:[-4, 20, -29], foreR:[47, 76], handR:[-1, 0] } },
   { id:'punch', fr:'Coup de poing', en:'Punching', g:'gest', y:0, j:{ spine:[4,  -14,  0], chest:[4,  -10,  0], thighR:[-10,  0,  0], thighL:[14,  0,  0], shinL:[10], armL:[45,  5,  -15], foreL:[140,  0], handL:[0,  0], armR:[96,  -15,  16], foreR:[5,  41], handR:[0,  0] } },
   { id:'guard', fr:'En garde', en:'On guard', g:'gest', y:0, j:{ thighL:[16,  4,  0], thighR:[-12,  4,  0], shinR:[12], spine:[6,  0,  0], head:[6,  0,  0], armL:[57,  -8,  0], foreL:[101,  -15], handL:[0,  0], armR:[49,  -12,  15], foreR:[111,  0], handR:[0,  0] } },
   { id:'headInHands', fr:'La tête dans les mains', en:'Head in hands', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[42,  7,  -45], foreL:[133,  0], armR:[42,  7,  45], foreR:[133,  0], spine:[24,  0,  0], chest:[14,  0,  0], head:[28,  0,  0], handL:[0,  0], handR:[0,  0] } },
@@ -294,7 +310,7 @@ const POSES = [
   { id:'leanWall', fr:'Adossé au mur', en:'Leaning on the wall', g:'move', y:0.01, j:{ pelvis:[-6,  0], thighR:[30,  0,  0], shinR:[60], spine:[-4,  0,  0], head:[0,  18,  0], armL:[15,  50,  -90], foreL:[90,  0], handL:[0,  0], armR:[10,  40,  90], foreR:[90,  0], handR:[0,  0] } },
   { id:'clap', fr:'Applaudir', en:'Clapping', g:'gest', y:0, j:{ armL:[60,  24,  0], foreL:[94,  -79], handL:[0,  0], armR:[60,  24,  0], foreR:[94,  79], handR:[0,  0] } },
   { id:'facepalm', fr:'La main sur le visage', en:'Facepalm', g:'gest', y:0, j:{ head:[18,  0,  0], armR:[48,  33,  34], foreR:[127,  26], handR:[0,  0] } },
-  { id:'pray', fr:'Mains jointes', en:'Hands together', g:'gest', y:0, j:{ head:[16,  0,  0], armL:[3,  9,  15], foreL:[105,  -60], handL:[0,  0], armR:[3,  9,  -15], foreR:[105,  60], handR:[0,  0] } },
+  { id:'pray', fr:'Mains jointes', en:'Hands together', g:'gest', y:0, j:{ head:[16, 0, 0], armL:[7, 9, 16], foreL:[100, -80], handL:[70, 0], armR:[7, 9, -16], foreR:[100, 80], handR:[70, 0] } },
   { id:'carry', fr:'Porter un carton', en:'Carrying a box', g:'gest', y:0, j:{ spine:[-6,  0,  0], armL:[0,  22,  6], foreL:[81,  -30], handL:[0,  0], armR:[0,  22,  -6], foreR:[81,  30], handR:[0,  0] } },
   { id:'stop', fr:'Faire signe de s’arrêter', en:'Signalling stop', g:'gest', y:0, j:{ armR:[73,  -15,  -19], foreR:[45,  22], handR:[0,  0] } },
   { id:'scared', fr:'Avoir peur', en:'Scared', g:'gest', y:0.03, j:{ spine:[-10,  0,  0], head:[-6,  0,  0], thighR:[-6,  0,  0], shinL:[10], armL:[33,  -9,  0], foreL:[114,  -7], handL:[0,  0], armR:[26,  3,  15], foreR:[112,  0], handR:[0,  0] } },
@@ -335,7 +351,9 @@ const SETS = [
   { id:'forest', fr:'Forêt', en:'Forest', big:true },
   { id:'hotel', fr:'Chambre d’hôtel', en:'Hotel room' },
   { id:'parking', fr:'Parking souterrain', en:'Underground car park' },
-  { id:'diner', fr:'Diner 50’s (Pulp Fiction)', en:'50s diner (Pulp Fiction)' },
+  { id:'diner', fr:'Diner 50’s', en:'50s diner' },
+  { id:'bank', fr:'Banque', en:'Bank' },
+  { id:'police', fr:'Commissariat', en:'Police station' },
 ];
 const SET_DEF = {
   garage:{
@@ -432,7 +450,8 @@ const SET_DEF = {
       for(let z = -15; z < 16; z += 1.2) box(g, -5, 0.142, z, 3.9, 0.004, 0.02, '#7C8087');
       wall(g, [-7, 16], [-7, -16], 7, '#9A8B7E');
       [[-9.5, '#2F6E4F'], [-4.5, '#9B3B33'], [0.5, '#3D5A80'], [5.5, '#C99E2A'], [10.5, '#2F6E4F']].forEach(([z, c]) => {
-        wall(g, [-6.99, z + 2], [-6.99, z - 2], 2.4, '#2E3340', 0.15); wall(g, [-6.98, z + 0.4], [-6.98, z - 0.5], 2.1, '#1E2129', 0.15);
+        wall(g, [-6.99, z + 2], [-6.99, z - 2], 2.4, '#7F98A8', 0.15); wall(g, [-6.98, z + 0.4], [-6.98, z - 0.5], 2.1, '#3A3024', 0.15);   // la vitrine (verre) et sa porte
+        [z + 1.9, z + 1.0, z - 1.0, z - 1.9].forEach(m => wall(g, [-6.985, m + 0.05], [-6.985, m - 0.05], 2.4, '#2C2E33', 0.15));
         prism(g, [[z + 2.1, 3.0], [z - 2.1, 3.0], [z - 2.1, 3.12], [z + 2.1, 3.12]], -7, -6.1, c);
         prism(g, [[z + 2.1, 3.0], [z - 2.1, 3.0], [z - 2.1, 2.7], [z + 2.1, 2.7]], -6.1, -6.0, c);
         for(let k = 0; k < 2; k++) wall(g, [-6.99, z + 1.6 - k * 2.4], [-6.99, z + 0.8 - k * 2.4], 1.1, '#3E4552', 4.2);
@@ -462,8 +481,10 @@ const SET_DEF = {
         });
       }
       // enseigne TAXI, posée sur le toit
-      prism(g, [[0.05, 1.56], [-0.55, 1.56], [-0.5, 1.75], [0, 1.75]], -0.28, 0.28, '#F4EFD8'); box(g, 0, 1.756, -0.25, 0.56, 0.012, 0.5, Yd);
-      [[0.282], [-0.282]].forEach(([x]) => { const sd = x > 0 ? 1 : -1; [0, 1, 2, 3].forEach(k => wall(g, sd > 0 ? [x, -0.05 - k * 0.11] : [x, -0.13 - k * 0.11], sd > 0 ? [x, -0.13 - k * 0.11] : [x, -0.05 - k * 0.11], 0.09, K, 1.61)); });
+      // l'enseigne TAXI sur le toit, en travers, lisible de devant et de derrière (comme les vrais)
+      box(g, 0, 1.585, -0.3, 0.16, 0.05, 0.12, K);
+      prism(g, [[-0.19, 1.61], [-0.41, 1.61], [-0.39, 1.83], [-0.21, 1.83]], -0.36, 0.36, '#F4EFD8'); box(g, 0, 1.835, -0.3, 0.72, 0.012, 0.2, Yd);
+      pixText(g, 'TAXI', 0, 1.72, -0.186, 1, 0.022, K); pixText(g, 'TAXI', 0, 1.72, -0.414, -1, 0.022, K);
       // damier sur les portières (un seul côté de chaque carré : on ne le voit que de dehors)
       for(let i = 0; i < 24; i++){ const z = 1.05 - i * 0.12; for(let r = 0; r < 2; r++) if((i + r) % 2 === 0){
         wall(g, [W + 0.002, z], [W + 0.002, z - 0.12], 0.06, K, 0.68 + r * 0.06); wall(g, [-W - 0.002, z - 0.12], [-W - 0.002, z], 0.06, K, 0.68 + r * 0.06); } }
@@ -583,6 +604,7 @@ const SET_DEF = {
    immense sans rien coûter de plus à dessiner. */
 /* une voiture simple (garée), orientée le long de la rue ; les vitres vont dans « gl » */
 function car(g, gl, x, z, col, flip){
+  const m0 = MAT; MAT = 4;   // une carrosserie vernie
   const K = '#24262B', CH = '#A9AEB6', W = 0.88, s = flip ? -1 : 1, Z = v => z + v * s;
   const P = pts => pts.map(([a, b]) => [Z(a), b]);
   prism(g, P([[2.2, 0.3], [2.24, 0.62], [2.1, 0.8], [1.0, 0.88], [1.0, 0.3]]), x - W, x + W, col);
@@ -594,6 +616,7 @@ function car(g, gl, x, z, col, flip){
   [1.4, -1.45].forEach(v => [x + W - 0.18, x - W - 0.04].forEach(x0 => { cyl(g, x0, 0.32, Z(v), 0.32, 0.32, 0.22, '#17181B', 12, 'x'); }));
   box(g, x, 0.36, Z(2.26), 1.7, 0.1, 0.08, CH); box(g, x, 0.36, Z(-2.28), 1.7, 0.1, 0.08, CH);
   [0.6, -0.6].forEach(dx => { box(g, x + dx, 0.6, Z(2.22), 0.24, 0.1, 0.04, '#FBF6DF'); box(g, x + dx, 0.66, Z(-2.24), 0.22, 0.1, 0.04, '#C2453B'); });
+  MAT = m0;
 }
 /* un arbre : un tronc et deux boules de feuillage */
 function tree(g, x, z, k, c1, c2){ cyl(g, x, 1.6 * k, z, 0.14 * k, 0.2 * k, 1.6 * k, '#6B4E37', 8); ball(g, x, 2.6 * k, z, 1.3 * k, 1.1 * k, 1.3 * k, c1 || '#4E7C58', 9); ball(g, x + 0.5 * k, 2.2 * k, z + 0.3 * k, 0.8 * k, 0.7 * k, 0.8 * k, c2 || '#5A8A60', 8); }
@@ -618,17 +641,36 @@ function rotY(g, from, t, x, y, z){
   }
 }
 /* une façade d'immeuble, vue de la rue : sa couleur, ses fenêtres, sa vitrine en bas */
+/* des lettres en petits carrés (police 3 × 5), posées sur un plan vertical z, tournées vers +z (dir 1) ou -z (dir -1) */
+const PIX = { T:['111', '010', '010', '010', '010'], A:['010', '101', '111', '101', '101'], X:['101', '101', '010', '101', '101'], I:['111', '010', '010', '010', '111'],
+  P:['110', '101', '110', '100', '100'], O:['111', '101', '101', '101', '111'], L:['100', '100', '100', '100', '111'], C:['111', '100', '100', '100', '111'], E:['111', '100', '110', '100', '111'],
+  B:['110', '101', '110', '101', '110'], N:['101', '111', '111', '111', '101'], Q:['111', '101', '101', '111', '001'], U:['101', '101', '101', '101', '111'], K:['101', '110', '100', '110', '101'], S:['111', '100', '111', '001', '111'], H:['101', '101', '111', '101', '101'], R:['110', '101', '110', '101', '101'], F:['111', '100', '110', '100', '100'], D:['110', '101', '101', '101', '110'], M:['101', '111', '111', '101', '101'], G:['111', '100', '101', '101', '111'], V:['101', '101', '101', '101', '010'], ' ':['000', '000', '000', '000', '000'] };
+function pixText(g, text, cx, cy, z, dir, px, col, axisX){
+  const w = text.length * 4 - 1, e0 = EDGE_ON; EDGE_ON = 0;
+  [...text].forEach((ch, i) => (PIX[ch] || PIX[' ']).forEach((row, r) => [...row].forEach((b, c) => { if(b !== '1') return;
+    const u = (i * 4 + c - (w - 1) / 2) * px * dir, v = cy + (2 - r) * px;
+    if(axisX) box(g, z, v, cx - u, 0.006, px * 0.92, px * 0.92, col); else box(g, cx + u, v, z, px * 0.92, px * 0.92, 0.006, col); })));
+  EDGE_ON = e0;
+}
 function facade(g, x, z0, z1, h, col, faceX, shop){
   const A = faceX > 0 ? [x, z0] : [x, z1], B = faceX > 0 ? [x, z1] : [x, z0];
   // le mur est vu de la rue (il regarde vers faceX)
   if(faceX < 0) wall(g, [x, z0], [x, z1], h, col); else wall(g, [x, z1], [x, z0], h, col);
-  const off = x - faceX * 0.01, len = Math.abs(z1 - z0), zs = Math.min(z0, z1);
+  const off = x + faceX * 0.012, len = Math.abs(z1 - z0), zs = Math.min(z0, z1);   // fenêtres et vitrines juste devant la façade (côté rue)
   for(let y = 3.6; y < h - 1.4; y += 3.0) for(let k = 0.9; k < len - 0.9; k += 2.2){
     const a = zs + k, b = zs + k + 1.1;
-    if(faceX < 0) wall(g, [off, a], [off, b], 1.5, '#3E4552', y); else wall(g, [off, b], [off, a], 1.5, '#3E4552', y);
+    if(faceX < 0) wall(g, [off, a], [off, b], 1.5, '#4F6275', y); else wall(g, [off, b], [off, a], 1.5, '#4F6275', y);
+    const o2 = off + faceX * 0.004;   // le rebord clair sous la fenêtre, et la croisée
+    if(faceX < 0){ wall(g, [o2, a - 0.06], [o2, b + 0.06], 0.08, '#E4E0D8', y - 0.08); wall(g, [o2, (a + b) / 2 - 0.025], [o2, (a + b) / 2 + 0.025], 1.5, '#D9D5CC', y); }
+    else { wall(g, [o2, b + 0.06], [o2, a - 0.06], 0.08, '#E4E0D8', y - 0.08); wall(g, [o2, (a + b) / 2 + 0.025], [o2, (a + b) / 2 - 0.025], 1.5, '#D9D5CC', y); }
   }
   if(shop){
-    if(faceX < 0) wall(g, [off, zs + 0.6], [off, zs + len - 0.6], 2.3, '#2E3340', 0.2); else wall(g, [off, zs + len - 0.6], [off, zs + 0.6], 2.3, '#2E3340', 0.2);
+    // la vitrine : du verre bleuté, éclairé de l'intérieur, des montants sombres et une porte
+    if(faceX < 0) wall(g, [off, zs + 0.6], [off, zs + len - 0.6], 2.3, '#7F98A8', 0.2); else wall(g, [off, zs + len - 0.6], [off, zs + 0.6], 2.3, '#7F98A8', 0.2);
+    const o2 = off + faceX * 0.004;
+    for(let m = zs + 0.6; m <= zs + len - 0.6 + 0.01; m += (len - 1.2) / 4){ if(faceX < 0) wall(g, [o2, m - 0.05], [o2, m + 0.05], 2.3, '#2C2E33', 0.2); else wall(g, [o2, m + 0.05], [o2, m - 0.05], 2.3, '#2C2E33', 0.2); }
+    if(faceX < 0) wall(g, [o2, zs + 0.6], [o2, zs + len - 0.6], 0.1, '#2C2E33', 2.4); else wall(g, [o2, zs + len - 0.6], [o2, zs + 0.6], 0.1, '#2C2E33', 2.4);
+    const dz = zs + len / 2; if(faceX < 0) wall(g, [o2, dz - 0.55], [o2, dz + 0.55], 2.15, '#3A3024', 0.2); else wall(g, [o2, dz + 0.55], [o2, dz - 0.55], 2.15, '#3A3024', 0.2);
     // trois stores, un par vitrine
     for(let k = 0; k < 3; k++){ const a = zs + 0.6 + k * (len - 1.2) / 3 + 0.2, b = a + (len - 1.2) / 3 - 0.4;
       prismXY(g, [[x, 3.02], [x + faceX * 1.05, 2.62], [x + faceX * 1.05, 2.54], [x, 2.94]], a, b, shop); }
@@ -865,7 +907,7 @@ Object.assign(SET_DEF, {
       floor(g, X0, Z0, X1, Z1, 0, '#6F6158'); floor(g, X0, Z0, X1, Z1, H, '#F1EEE8', true);
       wall(g, [X0, Z0], [X1, Z0], H, WL); wall(g, [X0, Z1], [X0, Z0], H, '#DDD4C6'); wall(g, [X1, Z0], [X1, Z1], H, '#DDD4C6'); wall(g, [X1, Z1], [X0, Z1], H, WL);
       partition(g, [1.6, Z0], [1.6, Z1], 0, H, WL, [[0.5, 1.3]]);
-      partition(g, [1.6, 0], [X1, 0], 0, H, WL, [[0.4, 1.2]]);
+      partition(g, [1.6, 0], [X1, 0], 0, H, WL, [[0.3, 1.25]]);
       // la porte de la chambre et son numéro, la penderie
       wall(g, [2.2, Z0 + 0.01], [3.2, Z0 + 0.01], 2.1, '#5E4532'); wall(g, [2.55, Z0 + 0.015], [2.85, Z0 + 0.015], 0.12, '#C9A64B', 1.55);
       box(g, 3.2, 1.1, -1.4, 0.55, 2.2, 1.3, '#7A5C42'); box(g, 2.93, 1.1, -1.4, 0.01, 2.0, 0.02, '#4A3626');
@@ -885,7 +927,7 @@ Object.assign(SET_DEF, {
       box(g, 1.52, 1.45, 0.9, 0.05, 0.6, 1.0, '#1E1F23'); box(g, 1.495, 1.45, 0.9, 0.01, 0.52, 0.92, '#2E3846');
       box(g, -2.9, 0.22, -2.3, 0.8, 0.44, 0.8, '#7C6A8E'); box(g, -3.25, 0.62, -2.3, 0.14, 0.5, 0.8, '#7C6A8E'); [-2.62, -3.18].forEach(z => box(g, -2.9, 0.52, z, 0.8, 0.2, 0.12, '#6E5C80'));
       cyl(g, -2.6, 0.55, -1.5, 0.3, 0.3, 0.03, '#5E4532', 12); cyl(g, -2.6, 0.53, -1.5, 0.03, 0.03, 0.53, '#2C2E33', 6);
-      box(g, 2.6, 0.33, -0.55, 0.75, 0.5, 0.28, '#B4232C'); box(g, 2.6, 0.62, -0.55, 0.3, 0.08, 0.04, '#2C2E33');
+      box(g, 0.95, 0.33, -2.6, 0.75, 0.5, 0.28, '#B4232C'); box(g, 0.95, 0.62, -2.6, 0.3, 0.08, 0.04, '#2C2E33');   // la valise, rangée dans la chambre (la porte de la salle de bain reste libre)
       floor(g, -2.6, -1.1, 0.6, 0.85, 0.006, '#9A7B67');
       cyl(g, -0.9, 2.66, 0, 0.25, 0.3, 0.06, '#F4F2EE', 12);
       // la salle de bain : carrelage, baignoire, lavabo et miroir, toilettes
@@ -985,6 +1027,80 @@ Object.assign(SET_DEF, {
     },
   },
 });
+/* ---------- La banque et le commissariat ---------- */
+Object.assign(SET_DEF, {
+  bank:{
+    cam:{ tx:0, ty:1.3, tz:0.5, yaw:180, pitch:-6, dist:7.5, lens:24 },
+    roomH:4.2,
+    rooms:[['Le hall', 'The hall', 0, [-9, -7, 9, 3.2]], ['Derrière les guichets', 'Behind the counter', 0, [-9, 3.2, 9, 7]]],
+    build(g, gl){
+      const X = 9, Z = 7, H = 4.2, WL = '#E8E1D3';
+      floor(g, -X, -Z, X, Z, 0, '#E3DDD1'); floor(g, -X, -Z, X, Z, H, '#F2EEE7', true);
+      for(let x = -X + 1.5; x < X; x += 1.5) box(g, x, 0.004, 0, 0.03, 0.006, 2 * Z, '#CFC6B6');            // le marbre, en dalles
+      for(let z = -Z + 1.5; z < Z; z += 1.5) box(g, 0, 0.004, z, 2 * X, 0.006, 0.03, '#CFC6B6');
+      floor(g, -2, -Z, 2, 2.2, 0.008, '#7A2E3A');                                                           // le tapis jusqu'aux guichets
+      wall(g, [-X, -Z], [X, -Z], H, WL); wall(g, [-X, Z], [-X, -Z], H, '#E1D9C9'); wall(g, [X, -Z], [X, Z], H, '#E1D9C9'); wall(g, [X, Z], [-X, Z], H, WL);
+      wall(g, [-X, -Z + 0.02], [X, -Z + 0.02], 0.25, '#B8AE9C'); wall(g, [X, Z - 0.02], [-X, Z - 0.02], 0.25, '#B8AE9C');   // les plinthes
+      // l'entrée vitrée (portes tournantes en façade)
+      wall(g, [-2.2, -Z + 0.015], [2.2, -Z + 0.015], 2.8, '#9FB6C4', 0); [-2.2, 0, 2.2].forEach(x => wall(g, [x - 0.06, -Z + 0.02], [x + 0.06, -Z + 0.02], 2.8, '#2C2E33', 0));
+      // les colonnes
+      [-4.8, 4.8].forEach(x => [-3.6, 0.2].forEach(z => { cyl(g, x, H, z, 0.34, 0.34, H, '#F1ECE3', 14); box(g, x, 0.12, z, 0.85, 0.24, 0.85, '#D8D0C2'); box(g, x, H - 0.12, z, 0.85, 0.24, 0.85, '#D8D0C2'); }));
+      // les guichets : le comptoir en bois, les vitres de sécurité, les petits panneaux numérotés
+      box(g, -1.0, 0.55, 3.2, 15.8, 1.1, 0.7, '#6E4A32'); box(g, -1.0, 1.13, 3.15, 16.0, 0.06, 0.85, '#D8D0C2');
+      for(let x = -8.4; x <= 6.4; x += 2.45){ box(g, x, 1.85, 3.25, 0.06, 1.4, 0.06, '#3A3D44'); if(x < 6) box(g, x + 1.22, 2.62, 3.25, 0.5, 0.16, 0.03, '#2F6E4F'); }
+      if(gl) wall(gl, [-8.9, 3.27], [6.9, 3.27], 1.4, '#A9C4D2', 1.16);
+      // la file d'attente : poteaux et cordons rouges
+      [-3, -1, 1, 3].forEach(x => { cyl(g, x, 0.95, 0.6, 0.035, 0.035, 0.95, '#C9A64B', 8); cyl(g, x, 0.03, 0.6, 0.16, 0.16, 0.03, '#C9A64B', 10); });
+      [-2, 0, 2].forEach(x => box(g, x, 0.86, 0.6, 1.9, 0.04, 0.04, '#9B1C2E'));
+      // les bancs d'attente, les distributeurs de billets, l'horloge
+      [-6.5, 6.5].forEach(x => { box(g, x, 0.45, -5.6, 2.2, 0.08, 0.55, '#6E4A32'); [-0.9, 0.9].forEach(dx => box(g, x + dx, 0.22, -5.6, 0.08, 0.44, 0.5, '#3A3D44')); });
+      [-1.5, 1.5].forEach(z => { box(g, -X + 0.3, 0.85, z, 0.6, 1.7, 0.8, '#5E636C'); box(g, -X + 0.61, 1.25, z, 0.02, 0.3, 0.4, '#3E7DA8'); box(g, -X + 0.61, 0.95, z, 0.02, 0.1, 0.3, '#2C2E33'); });
+      cyl(g, 0, 3.4, Z - 0.02, 0.35, 0.35, 0.04, '#F4F2EE', 16, 'z'); box(g, 0, 3.48, Z - 0.05, 0.03, 0.2, 0.01, '#24262B'); box(g, 0.07, 3.4, Z - 0.05, 0.14, 0.025, 0.01, '#24262B');
+      box(g, 0, 2.7, -Z + 0.04, 3.2, 0.5, 0.05, '#2E3A4E'); pixText(g, 'BANK', 0, 2.68, -Z + 0.07, 1, 0.07, [0.91, 0.73, 0.14]);
+      // derrière les guichets : les bureaux, les coffres, la porte ronde de la chambre forte
+      [-6, -2.5, 1].forEach(x => { box(g, x, 0.74, 5.0, 1.5, 0.05, 0.7, '#5E4532'); box(g, x, 0.36, 5.0, 1.4, 0.7, 0.05, '#4A3626'); box(g, x, 1.0, 5.15, 0.5, 0.32, 0.04, '#1E1F23'); box(g, x, 0.48, 4.4, 0.45, 0.06, 0.45, '#3A3D44'); });
+      cyl(g, 5.8, 1.6, Z - 0.02, 1.25, 1.25, 0.3, '#9AA0A8', 22, 'z'); cyl(g, 5.8, 1.6, Z - 0.34, 1.05, 1.05, 0.08, '#B8BEC6', 22, 'z');
+      cyl(g, 5.8, 1.6, Z - 0.44, 0.22, 0.22, 0.1, '#5E636C', 12, 'z'); [0, 1, 2].forEach(k => box(g, 5.8, 1.6, Z - 0.42, 0.9, 0.05, 0.05, '#5E636C', k * Math.PI / 3));
+      for(let x = 7.9; x <= 8.6; x += 0.7) box(g, x, 1.1, 5.6, 0.6, 2.2, 1.4, '#7E838B');
+    },
+  },
+  police:{
+    cam:{ tx:0, ty:1.2, tz:-3.2, yaw:160, pitch:-6, dist:5.6, lens:24 },
+    roomH:3.0,
+    rooms:[['L’accueil', 'Front desk', 0, [-8, -6, 8, -1]], ['Les bureaux', 'The offices', 0, [-8, -1, 2, 6]], ['Salle d’interrogatoire', 'Interrogation room', 0, [2, -1, 8, 6]]],
+    build(g, gl){
+      const X = 8, Z = 6, H = 3.0, WL = '#D9DDE2';
+      floor(g, -X, -Z, X, Z, 0, '#8E949C'); floor(g, -X, -Z, X, Z, H, '#ECEEF0', true);
+      for(let x = -X + 0.6; x < X; x += 0.6) box(g, x, 0.004, 0, 0.012, 0.004, 2 * Z, '#81878F');
+      wall(g, [-X, -Z], [X, -Z], H, WL); wall(g, [-X, Z], [-X, -Z], H, '#CDD2D8'); wall(g, [X, -Z], [X, Z], H, '#CDD2D8'); wall(g, [X, Z], [-X, Z], H, WL);
+      wall(g, [-X, -Z + 0.02], [X, -Z + 0.02], 1.0, '#3A4A62'); wall(g, [X, Z - 0.02], [-X, Z - 0.02], 1.0, '#3A4A62');   // le bas des murs, bleu police
+      partition(g, [-X, -1], [X, -1], 0, H, WL, [[6.9, 8.1], [12.3, 13.3]]);                                 // l'accueil, et ses deux portes
+      partition(g, [2, -1], [2, Z], 0, H, '#C3C8CF', [[0.6, 1.5]]);                                          // la salle d'interrogatoire
+      // l'accueil : le haut comptoir, la vitre, le drapeau, le panneau d'affichage, les chaises d'attente
+      box(g, -1, 0.6, -2.2, 5.2, 1.2, 0.8, '#3A4A62'); box(g, -1, 1.23, -2.25, 5.4, 0.06, 0.95, '#C9CDD3');
+      if(gl) wall(gl, [-3.6, -2.55], [1.6, -2.55], 0.9, '#A9C4D2', 1.26);
+      box(g, -1, 2.45, -Z + 0.04, 3.2, 0.5, 0.05, '#243046'); pixText(g, 'POLICE', -1, 2.43, -Z + 0.07, 1, 0.06, [0.95, 0.95, 0.95]);
+      cyl(g, 5.6, 2.2, -5.5, 0.025, 0.025, 2.2, '#C9CDD3', 6); box(g, 5.95, 1.9, -5.5, 0.66, 0.44, 0.01, '#2F6FE0'); box(g, 5.95, 1.9, -5.49, 0.22, 0.44, 0.012, '#F4F2EE');
+      box(g, -6.5, 1.6, -Z + 0.03, 2.0, 1.1, 0.03, '#B39A6B'); [[-7.1, 1.8], [-6.5, 1.5], [-5.9, 1.75], [-6.8, 1.35]].forEach(([x, y]) => box(g, x, y, -Z + 0.05, 0.36, 0.42, 0.01, '#F4F2EE'));
+      for(let x = 2.6; x <= 6.2; x += 0.9){ box(g, x, 0.46, -5.4, 0.5, 0.06, 0.5, '#2F6E9B'); box(g, x, 0.75, -5.62, 0.5, 0.55, 0.05, '#2F6E9B'); box(g, x, 0.22, -5.4, 0.06, 0.44, 0.06, '#5E636C'); }
+      // les bureaux : postes de travail, écrans, classeurs, tableau de l'enquête
+      [[-6.4, 1.2], [-3.6, 1.2], [-6.4, 3.8], [-3.6, 3.8], [-0.8, 2.5]].forEach(([x, z]) => {
+        box(g, x, 0.74, z, 1.5, 0.05, 0.8, '#C9B48F'); [[-0.68, -0.33], [0.68, -0.33], [-0.68, 0.33], [0.68, 0.33]].forEach(([dx, dz]) => box(g, x + dx, 0.36, z + dz, 0.05, 0.72, 0.05, '#5E636C'));
+        box(g, x, 1.0, z + 0.25, 0.55, 0.36, 0.04, '#1E1F23'); box(g, x, 0.78, z - 0.05, 0.45, 0.02, 0.16, '#2C2E33'); box(g, x, 0.46, z - 0.65, 0.45, 0.06, 0.45, '#2C2E33'); box(g, x, 0.72, z - 0.88, 0.45, 0.5, 0.05, '#2C2E33'); });
+      [-7.7, -7.2].forEach(x => box(g, x, 0.65, -0.4, 0.45, 1.3, 0.55, '#7E838B'));
+      box(g, -X + 0.04, 1.6, 2.5, 0.03, 1.1, 2.2, '#F4F2EE'); [[2.0, 1.8], [2.6, 1.5], [3.0, 1.85], [2.3, 1.3]].forEach(([z, y]) => box(g, -X + 0.06, y, z, 0.01, 0.2, 0.26, '#E8D9A8'));
+      // la cellule de garde à vue : des barreaux, un banc
+      for(let x = -7.9; x <= -5.2; x += 0.18) box(g, x, H / 2, 4.6, 0.035, H, 0.035, '#5E636C');
+      for(let z = 4.7; z <= 5.95; z += 0.18) box(g, -5.2, H / 2, z, 0.035, H, 0.035, '#5E636C');
+      box(g, -6.6, 0.42, 5.7, 2.4, 0.08, 0.5, '#7E838B');
+      // la salle d'interrogatoire : la table, deux chaises, la lampe, la glace sans tain
+      box(g, 5, 0.74, 2.6, 1.6, 0.05, 0.9, '#B8BEC6'); [[-0.75, -0.4], [0.75, -0.4], [-0.75, 0.4], [0.75, 0.4]].forEach(([dx, dz]) => box(g, 5 + dx, 0.36, 2.6 + dz, 0.05, 0.72, 0.05, '#5E636C'));
+      [1.6, 3.6].forEach((z, k) => { box(g, 5, 0.46, z, 0.45, 0.06, 0.45, '#3A3D44'); box(g, 5, 0.75, z + (k ? 0.22 : -0.22), 0.45, 0.55, 0.05, '#3A3D44'); });
+      cyl(g, 5, H, 2.6, 0.01, 0.01, 0.9, '#2C2E33', 4); cyl(g, 5, H - 0.9, 2.6, 0.08, 0.3, 0.22, '#3A3D44', 12);
+      wall(g, [X - 0.02, 0.8], [X - 0.02, 4.4], 1.3, '#1E2633', 0.9);
+    },
+  },
+});
 /* ---------- La maison de campagne, avec tous ses étages ----------
    Rez-de-chaussée (salon, cuisine, entrée, escalier), premier étage (deux chambres, salle de bain),
    grenier sous le toit, et le jardin autour. Chaque étage est dessiné à part : quand la caméra
@@ -992,6 +1108,7 @@ Object.assign(SET_DEF, {
 const HOUSE = { x0:-5, x1:5, z0:-4, z1:4, h:2.9 };
 /* un mur intérieur épais (visible des deux côtés), avec des ouvertures [début, fin] le long du mur */
 function partition(g, a, b, y0, h, col, gaps){
+  const m0 = MAT; MAT = 1;   // un mur, c'est de l'architecture
   if(COLL) collOf(g).p.push([a, b, gaps || []]);   // pour le plan de la maison
   const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), ry = Math.atan2(dx, dz);
   const cuts = [[0, 0]].concat((gaps || []).map(([s, e]) => [s, e]), [[len, len]]);
@@ -1000,6 +1117,7 @@ function partition(g, a, b, y0, h, col, gaps){
     const m = (s + e) / 2; box(g, a[0] + dx / len * m, y0 + h / 2, a[1] + dz / len * m, 0.1, h, e - s, col, ry);
   }
   (gaps || []).forEach(([s, e]) => { const m = (s + e) / 2; box(g, a[0] + dx / len * m, y0 + h - 0.35, a[1] + dz / len * m, 0.1, 0.7, e - s, col, ry); });   // le linteau au-dessus des portes
+  MAT = m0;
 }
 /* un plancher percé (la trémie d'un escalier) : des bandes autour du trou */
 function floorHole(g, x0, z0, x1, z1, y, col, hole, down){
@@ -1279,6 +1397,8 @@ const SPOTS = {
   hotel:[ ['Assis sur le lit', 'Sitting on the bed', -0.6, 0.75, 180, 'sit', -0.25], ['Debout, en face', 'Standing, facing', -0.8, -0.7, 0], ['À la fenêtre', 'At the window', -3.0, -0.2, -90], ['Au bureau', 'At the desk', 0.75, 0.9, 90, 'sit'], ['Allongé sur le lit', 'Lying on the bed', -1.0, 1.9, 180, 'lie', 0.66], ['Dans la salle de bain', 'In the bathroom', 2.5, 1.2, 90], ['À la porte', 'At the door', 2.7, -2.4, 0] ],
   parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
   diner:[ ['Dans la voiture, côté malle', 'In the car booth, back seat', -5.55, -4.02, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.55, -2.48, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
+  bank:[ ['Au guichet', 'At the counter', -1.2, 2.3, 0], ['Derrière le guichet', 'Behind the counter', -1.2, 4.2, 180], ['Dans la file', 'In the queue', 0, -0.4, 0], ['À l’entrée', 'At the entrance', 0.6, -6.0, 0], ['Devant la chambre forte', 'In front of the vault', 5.8, 5.2, 180], ['Assis sur le banc', 'Sitting on the bench', -6.5, -5.75, 0, 'sit', 0.04] ],
+  police:[ ['À l’accueil', 'At the front desk', -1, -3.0, 0], ['Derrière le comptoir', 'Behind the desk', -1, -1.5, 180], ['Dans la salle d’attente', 'In the waiting room', 4.4, -5.4, 0, 'sit'], ['À son bureau', 'At a desk', -3.6, 0.55, 0, 'sit'], ['Le suspect, à la table', 'The suspect, at the table', 5, 1.6, 0, 'sit'], ['L’inspecteur, en face', 'The detective, facing', 5, 3.6, 180, 'sit'], ['Dans la cellule', 'In the cell', -6.6, 5.4, 180] ],
 };
 // les lieux fermés d'une seule pièce : la caméra y reste aussi (même système que la maison)
 [['garage', [-4, -4, 4, 4], 3.2], ['office', [-3.5, -3.5, 3.5, 3.5], 2.9], ['living', [-3.8, -3.2, 3.8, 3.2], 2.7], ['cafe', [-4.5, -3.5, 4.5, 3.5], 3.0], ['hall', [-1.6, -9, 1.6, 4], 2.6], ['warehouse', [-12, -8, 12, 8], 8]]
@@ -1307,7 +1427,41 @@ const SHOT = {
   move:[['fix','Fixe','Static'], ['in','Travelling avant','Dolly in'], ['out','Travelling arrière','Dolly out'], ['panR','Panoramique vers la droite','Pan right'], ['panL','Panoramique vers la gauche','Pan left'],
     ['tiltU','Tilt vers le haut','Tilt up'], ['tiltD','Tilt vers le bas','Tilt down'], ['travR','Travelling latéral vers la droite','Truck right'], ['travL','Travelling latéral vers la gauche','Truck left'],
     ['zoomIn','Zoom avant','Zoom in'], ['zoomOut','Zoom arrière','Zoom out'], ['orbit','Travelling circulaire','Arc shot'], ['grue','Grue qui monte','Crane up'], ['grueD','Grue qui descend','Crane down'],
-    ['drone','Drone qui s’élève','Drone rising'], ['epa','Caméra épaule','Handheld'], ['end','Vers un cadre de fin','To an end frame']],
+    ['drone','Drone qui s’élève','Drone rising'], ['epa','Caméra épaule','Handheld'], ['end','Vers un cadre de fin','To an end frame'],
+    ['orbitL','Travelling circulaire vers la gauche','Arc shot left'], ['arc360','Tour complet (360°)','360° orbit'], ['pedU','La caméra monte (pied)','Pedestal up'], ['pedD','La caméra descend (pied)','Pedestal down'],
+    ['vertigo','Effet Vertigo (recule et zoome)','Dolly zoom (Vertigo)'], ['vertigoIn','Effet Vertigo inversé','Reverse dolly zoom'], ['crash','Zoom brutal','Crash zoom'],
+    ['whipR','Panoramique filé à droite','Whip pan right'], ['whipL','Panoramique filé à gauche','Whip pan left'], ['follow','Steadicam qui suit','Steadicam follow'],
+    ['shake','Secousse (choc, explosion)','Camera shake (impact)'], ['rollIn','Bascule progressive','Dutch roll']],
+};
+/* les mouvements rangés par famille, avec ce qu'ils racontent (pour l'amateur) et un film qui les a rendus célèbres (pour le pro) */
+const MOVE_GROUPS = [
+  ['Les classiques', 'The basics', ['fix', 'in', 'out', 'panR', 'panL', 'tiltU', 'tiltD', 'travR', 'travL']],
+  ['L’objectif', 'The lens', ['zoomIn', 'zoomOut', 'crash', 'vertigo', 'vertigoIn']],
+  ['Autour et en hauteur', 'Around and up', ['orbit', 'orbitL', 'arc360', 'grue', 'grueD', 'pedU', 'pedD', 'drone']],
+  ['Le style', 'Style', ['epa', 'follow', 'whipR', 'whipL', 'shake', 'rollIn', 'end']],
+];
+const MOVE_TIP = {
+  fix:['La caméra ne bouge pas : on regarde la scène.', 'The camera stays still: we watch the scene.'],
+  in:['On s’approche : la tension monte, on entre dans la tête du personnage.', 'Moving closer: tension rises, we get into the character’s head.'],
+  out:['On s’éloigne : on révèle le lieu, ou on laisse le personnage seul.', 'Moving away: reveals the place, or leaves the character alone.'],
+  panR:['La caméra pivote sur place vers la droite.', 'The camera turns on the spot to the right.'], panL:['La caméra pivote sur place vers la gauche.', 'The camera turns on the spot to the left.'],
+  tiltU:['La caméra lève les yeux.', 'The camera looks up.'], tiltD:['La caméra baisse les yeux.', 'The camera looks down.'],
+  travR:['La caméra glisse sur le côté, comme sur des rails.', 'The camera slides sideways, as if on rails.'], travL:['La caméra glisse sur le côté, comme sur des rails.', 'The camera slides sideways, as if on rails.'],
+  zoomIn:['L’objectif grossit l’image sans que la caméra bouge.', 'The lens magnifies without moving the camera.'], zoomOut:['L’objectif élargit l’image sans que la caméra bouge.', 'The lens widens without moving the camera.'],
+  crash:['Un zoom très rapide sur un détail : effet choc (Tarantino, les westerns de Leone).', 'A very fast zoom onto a detail: a jolt (Tarantino, Leone westerns).'],
+  vertigo:['La caméra recule en zoomant : le sujet garde sa taille, le décor se déforme (Vertigo, Les Dents de la mer).', 'The camera pulls back while zooming in: the subject stays the same size, the background warps (Vertigo, Jaws).'],
+  vertigoIn:['La caméra avance en dézoomant : le décor s’ouvre derrière le sujet.', 'The camera pushes in while zooming out: the background opens up behind the subject.'],
+  orbit:['La caméra tourne autour du sujet.', 'The camera circles the subject.'], orbitL:['La caméra tourne autour du sujet, dans l’autre sens.', 'The camera circles the subject, the other way.'],
+  arc360:['Un tour complet autour des personnages (les baisers de cinéma, Michael Bay).', 'A full circle around the characters (movie kisses, Michael Bay).'],
+  grue:['La caméra s’élève et regarde vers le bas : on prend de la hauteur.', 'The camera rises and looks down: we gain height.'], grueD:['La caméra descend vers la scène.', 'The camera comes down to the scene.'],
+  pedU:['Toute la caméra monte droit, sans changer d’angle.', 'The whole camera rises straight up, same angle.'], pedD:['Toute la caméra descend droit, sans changer d’angle.', 'The whole camera goes straight down, same angle.'],
+  drone:['On s’envole très haut au-dessus du lieu (fin de film).', 'We fly high above the place (ending shot).'],
+  epa:['Caméra tenue à l’épaule : vivant, nerveux, documentaire.', 'Handheld camera: alive, nervous, documentary.'],
+  follow:['La caméra accompagne le personnage qui marche (Les Affranchis).', 'The camera travels with the walking character (Goodfellas).'],
+  whipR:['La caméra pivote si vite que l’image file : une transition énergique.', 'The camera turns so fast the picture blurs: an energetic transition.'], whipL:['La caméra pivote si vite que l’image file : une transition énergique.', 'The camera turns so fast the picture blurs: an energetic transition.'],
+  shake:['Une secousse qui s’éteint : un choc, une explosion, un coup de feu.', 'A shake that dies down: an impact, an explosion, a gunshot.'],
+  rollIn:['L’image penche peu à peu : le malaise s’installe.', 'The picture slowly tilts: unease sets in.'],
+  end:['Tu cadres l’image de départ et celle d’arrivée : la caméra va de l’une à l’autre.', 'You frame the start and end images: the camera travels between them.'],
 };
 const shotLabel = (k, v, short) => { const o = (SHOT[k] || []).find(x => x[0] === v); return !o ? '' : (short && o[3]) ? L(o[3], o[4]) : L(o[1], o[2]); };
 
@@ -1387,7 +1541,16 @@ const CAR_SHOTS = [
   ['retro', 'Les yeux dans le rétroviseur', 'Eyes in the rear-view mirror', [0.0, 1.42, 0.6], [0.37, 1.32, 0.3], 35, 'gp'],
   ['portiere', 'À la portière (on monte)', 'At the door (getting in)', [-2.6, 1.25, -0.5], [-0.4, 1.05, -0.8], 35, 'pm'],
   ['arrive', 'Le taxi arrive (plan large)', 'The taxi pulls up (wide)', [-2.2, 0.45, 10.5], [0, 0.8, 0.3], 28, 'pe'],
-  ['dessus', 'Vue du dessus', 'From above', [0.2, 9, 0.6], [0, 0.5, -0.2], 24, 'pg'],
+  ['dessus', 'Vue du dessus', 'From above', [0.2, 9, 0.6], [0, 0.5, -0.2], 24, 'pg', 'dess'],
+  // les prises de vue de film de voiture (Pulp Fiction, Drive…)
+  ['coffre', 'Vu du coffre (Pulp Fiction)', 'Trunk shot (Pulp Fiction)', [0, 0.9, -2.72], [0, 1.6, -4.4], 18, 'pm', 'con'],
+  ['dos2', 'Les deux de dos, depuis la banquette', 'Both from behind, from the back seat', [0, 1.47, -1.4], [0, 1.3, 1.2], 24, '2p'],
+  ['tableau', 'Depuis le tableau de bord', 'From the dashboard', [0.02, 1.13, 1.0], [0.37, 1.4, 0.25], 28, 'gp', 'con'],
+  ['capot', 'Sur le capot, les deux', 'On the hood, both', [0, 1.13, 2.15], [0, 1.28, -0.2], 22, '2p'],
+  ['passager', 'Le conducteur vu du passager', 'The driver from the passenger seat', [-0.1, 1.33, 0.75], [0.45, 1.32, 0.22], 28, 'pr'],
+  ['roue', 'Au ras de la roue', 'Down by the wheel', [1.55, 0.28, 2.9], [0.4, 0.55, -1.2], 22, 'pe', 'sol'],
+  ['suivre', 'On suit la voiture (¾ arrière)', 'Following the car (¾ rear)', [-2.4, 1.7, -7.0], [0, 0.9, 0], 35, 'pe'],
+  ['cote', 'Travelling à hauteur de vitre', 'Tracking alongside at window height', [3.9, 1.25, 0.1], [0.2, 1.15, 0.1], 35, 'pa'],
 ];
 /* une caméra à partir de l'endroit où elle est (e) et de ce qu'elle regarde (t) */
 /* la caméra dans une pièce, pour voir le point T : dans le coin opposé, à hauteur d'yeux */
@@ -1407,7 +1570,9 @@ function camLook(e, t, lens){
 /* ---------- Les accessoires, tenus dans la main droite ----------
    Dans le repère de la main, les doigts vont vers le bas (-y) : le canon prolonge la main,
    la crosse descend dans la paume. */
-const PROPS = [['gun', 'Pistolet', 'Handgun'], ['phone', 'Téléphone', 'Phone'], ['glass', 'Verre d’eau', 'Glass of water']];
+const PROPS = [['gun', 'Pistolet', 'Handgun'], ['rifle', 'Fusil', 'Rifle'], ['phone', 'Téléphone', 'Phone'], ['glass', 'Verre d’eau', 'Glass of water']];
+/* ce qu'un personnage porte sur lui, quelle que soit sa pose : un pistolet à la ceinture, un fusil dans le dos */
+const GEAR = [['holster', 'Pistolet à la ceinture', 'Holstered handgun'], ['sling', 'Fusil dans le dos', 'Rifle on the back']];
 /* tourner une partie d'une forme (à partir du sommet « from ») pour que son axe x devienne la direction u, puis la poser en c */
 function alignX(g, from, u, c){
   const l = Math.hypot(...u), a = u.map(v => v / l), k = [0, -a[2], a[1]], s = Math.hypot(...k), co = a[0];   // de x vers a : axe k, angle (cos co, sin s)
@@ -1424,10 +1589,31 @@ function alignX(g, from, u, c){
 function propGeo(id){
   const g = geo(), K = '#23252B', Kl = '#3A3D44';
   if(id === 'gun'){
-    box(g, 0, -0.1, 0.034, 0.028, 0.19, 0.034, K);           // la culasse et le canon
-    box(g, 0, -0.04, -0.012, 0.025, 0.04, 0.085, Kl);         // la crosse, dans la paume
-    box(g, 0, -0.072, 0.0, 0.006, 0.035, 0.03, K);            // le pontet
-    box(g, 0, -0.192, 0.034, 0.012, 0.006, 0.012, '#111214');  // la bouche du canon
+    MAT = 3;   // le métal de l'arme
+    // un pistolet semi-automatique : culasse biseautée et rainurée, carcasse, crosse inclinée, pontet, détente, organes de visée
+    const SL = '#33363D', FR = '#1C1D21', GR = '#2A2420';
+    prism(g, [[0.02, -0.006], [0.052, -0.006], [0.056, -0.012], [0.056, -0.2], [0.02, -0.2]].map(([z, y]) => [z, y]), -0.0135, 0.0135, SL);   // la culasse
+    for(let k = 0; k < 5; k++) [0.0137, -0.0137].forEach(x => box(g, x, -0.02 - k * 0.008, 0.038, 0.002, 0.003, 0.028, FR));               // les rainures
+    box(g, 0, -0.117, 0.012, 0.024, 0.17, 0.018, FR);                                                    // la carcasse, sous la culasse
+    prism(g, [[0.006, -0.062], [0.006, -0.018], [-0.074, 0.006], [-0.08, -0.034]], -0.0125, 0.0125, GR);     // la crosse, inclinée dans la paume
+    box(g, 0, -0.064, -0.016, 0.008, 0.003, 0.04, FR); box(g, 0, -0.084, -0.034, 0.008, 0.04, 0.003, FR);  // le pontet
+    box(g, 0, -0.106, -0.016, 0.008, 0.003, 0.04, FR); box(g, 0, -0.08, -0.012, 0.004, 0.012, 0.012, '#111214');   // la détente
+    box(g, 0, -0.194, 0.06, 0.004, 0.006, 0.008, FR); box(g, 0, -0.02, 0.06, 0.016, 0.006, 0.008, FR);   // guidon et hausse
+    box(g, 0, -0.2015, 0.038, 0.012, 0.004, 0.012, '#0B0C0E');                                          // la bouche du canon
+  } else if(id === 'rifle'){
+    // un fusil d'assaut tenu par la poignée : le canon vers l'avant (-y), la crosse vers l'épaule (+y), le dessus vers +z
+    MAT = 3; const B = '#2B2D33', D = '#1C1D21', W = '#3A3D44';
+    prism(g, [[0.006, -0.062], [0.006, -0.018], [-0.07, 0.004], [-0.076, -0.034]], -0.013, 0.013, D);                      // la poignée pistolet
+    box(g, 0, -0.06, 0.05, 0.034, 0.3, 0.07, B);                                                                         // la carcasse
+    box(g, 0, -0.33, 0.055, 0.044, 0.26, 0.06, W);                                                                       // le garde-main
+    cyl(g, 0, -0.46, 0.06, 0.011, 0.011, 0.24, D, 8, 'y');                                                                // le canon
+    box(g, 0, -0.69, 0.06, 0.026, 0.04, 0.026, D);                                                                        // le cache-flamme
+    prism(g, [[0.03, -0.12], [0.03, -0.06], [-0.11, -0.03], [-0.13, -0.08]], -0.013, 0.013, D);                           // le chargeur
+    box(g, 0, 0.17, 0.035, 0.036, 0.16, 0.06, B); box(g, 0, 0.29, 0.02, 0.04, 0.1, 0.11, W);                              // la crosse
+    box(g, 0, -0.06, 0.1, 0.02, 0.12, 0.022, D); box(g, 0, -0.42, 0.095, 0.006, 0.02, 0.03, D);                           // la lunette de visée, le guidon
+    MAT = 0;
+  } else if(id === 'holster'){
+    MAT = 0; box(g, 0, -0.12, 0.034, 0.036, 0.15, 0.05, '#2A2420'); box(g, 0, -0.05, 0.034, 0.04, 0.02, 0.054, '#1C1D21');   // l'étui de cuir sur la hanche
   } else if(id === 'phone'){
     box(g, 0, -0.085, 0.03, 0.07, 0.14, 0.012, '#1E2026');
     box(g, 0, -0.085, 0.0365, 0.062, 0.128, 0.002, '#2E3846');
@@ -1441,6 +1627,7 @@ function propGeo(id){
     cyl(g, -0.064, 0, 0, 0.037, 0.037, 0.012, '#C7D3DC', 12, 'x');
     alignX(g, st, U, C);
   }
+  MAT = 0;
   return g;
 }
 
@@ -1450,6 +1637,7 @@ const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['car', 'Voiture', 'Car'], ['po
 const MOTO_COLS = ['#B4232C', '#24262B', '#3D5A80', '#E8B923'];
 function vehicleGeo(kind, col, glass){
   const g = geo(), K = '#1E2025', M = '#9AA0A8', C = col || MOTO_COLS[0];
+  MAT = 4; try {
   if(kind === 'heli') return heliGeo(col, glass);
   if(kind === 'plane') return planeGeo(col, glass);
   if(kind === 'car' || kind === 'police') return carGeo(col, glass, kind === 'police');
@@ -1471,6 +1659,7 @@ function vehicleGeo(kind, col, glass){
     [0.17, -0.17].forEach(x => box(g, x, 0.38, 0.17, 0.08, 0.02, 0.04, K));                           // les repose-pieds
   }
   return g;
+  } finally { MAT = 0; }
 }
 /* les prises de vue de la moto, dans son repère : [id, fr, en, œil, cible, focale, valeur, angle] */
 const MOTO_SHOTS = [
@@ -1506,7 +1695,7 @@ function heliGeo(col, glass){
     [[-0.79, -0.77], [0.77, 0.79]].forEach(([a, b]) => { prism(G, [[1.55, 1.25], [0.95, 2.3], [0.15, 2.3], [0.15, 1.25]], a, b, '#A9C4D2'); prism(G, [[0.05, 1.25], [0.05, 2.3], [-1.05, 2.3], [-1.05, 1.25]], a, b, '#A9C4D2'); }); }
   cyl(g, 0, 1.85, -5.4, 0.1, 0.34, 4.3, C, 10, 'z');                                                // la poutre de queue
   prism(g, [[-4.9, 1.85], [-5.35, 2.75], [-5.6, 2.75], [-5.5, 1.75]], -0.04, 0.04, C);                   // la dérive
-  box(g, -5.2, 1.85, 0, 1.0, 0.04, 0.4, C, Math.PI / 2);
+  box(g, 0, 1.85, -5.2, 1.0, 0.04, 0.4, C);                                                          // le stabilisateur, en travers de la poutre
   cyl(g, 0.12, 2.35, -5.4, 0.04, 0.04, 0.08, K, 6, 'x'); box(g, 0.18, 2.35, -5.4, 0.02, 1.1, 0.1, K);   // le rotor de queue
   cyl(g, 0, 2.75, -0.1, 0.07, 0.07, 0.35, M, 8); box(g, 0, 2.78, -0.1, 0.3, 0.12, 0.3, K);            // le mât
   box(g, 0, 2.82, -0.1, 9.6, 0.03, 0.26, K, 0.35); box(g, 0, 2.82, -0.1, 9.6, 0.03, 0.26, K, 0.35 + Math.PI / 2);   // les pales

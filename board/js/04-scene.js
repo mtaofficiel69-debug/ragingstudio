@@ -11,6 +11,7 @@ const S = {
   sel:null, hover:null, // { c:personnage, j:articulation }
   target:0,           // le personnage visé par le cadrage rapide
   grid:true,          // grille des tiers
+  pro:lsGet('raging3d_pro') === '1',   // repères pro : zones de sécurité, horizon, chiffres de la caméra
   rec:null, undo:[], redo:[],
 };
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -37,7 +38,7 @@ function putOnSpot(ch, pose, y){
 const newInfo = () => ({ cap:'', dial:'', scene:'', size:'pe', angle:'neu', side:'tq', move:'fix', dur:2, walk:false });
 function newShot(setId){
   const def = SET_DEF[setId];
-  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:clone(def.cam), crowds:[], vehicles:[], info:newInfo() };
+  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:camSafe(clone(def.cam), setId, true), crowds:[], vehicles:[], info:newInfo() };
 }
 function newDoc(setId){ return { v:2, title:L('Mon storyboard', 'My storyboard'), style:'color', shots:[newShot(setId || 'garage')] }; }
 
@@ -207,6 +208,33 @@ function frameSize(size){
     if(size === 'am' || size === '2p' || size === 'pov'){ s.info.angle = 'neu'; s.cam.roll = 0; }
   });
 }
+/* les recettes de plans : un clic, et la valeur, l'angle, le côté et le mouvement vont ensemble (pour bien démarrer) */
+const SHOT_RECIPES = [
+  ['establish', 'Plan d’ouverture', 'Establishing shot', 'On découvre le lieu, de loin, en reculant.', 'We discover the place from afar, pulling back.', { size:'pg', angle:'plo', move:'out' }],
+  ['hero', 'Le héros, puissant', 'The hero, powerful', 'Vu d’en bas : il domine.', 'Seen from below: they dominate.', { size:'pa', angle:'con', side:'tq' }],
+  ['weak', 'Écrasé, vulnérable', 'Crushed, vulnerable', 'Vu d’en haut : il est petit.', 'Seen from above: they look small.', { size:'pm', angle:'plo', side:'tq' }],
+  ['emotion', 'L’émotion', 'The emotion', 'Un gros plan où l’on s’approche doucement.', 'A close-up slowly pushing in.', { size:'gp', angle:'neu', side:'tq', move:'in' }],
+  ['tension', 'La tension', 'The tension', 'Les yeux, de face, immobiles (Sergio Leone).', 'The eyes, from the front, still (Sergio Leone).', { size:'tgp', angle:'neu', side:'face' }],
+  ['unease', 'Le malaise', 'The unease', 'L’image penche : quelque chose ne va pas.', 'The picture tilts: something is wrong.', { size:'pr', angle:'deb', side:'tq' }],
+  ['dialog', 'Dialogue en amorce', 'Over-the-shoulder dialogue', 'Par-dessus l’épaule de l’autre ; fais ensuite le contrechamp.', 'Over the other one’s shoulder; then make the reverse shot.', { size:'am', two:true }],
+  ['two', 'Les deux ensemble', 'Both together', 'Les deux personnages dans le même cadre.', 'Both characters in the same frame.', { size:'2p', two:true }],
+  ['pov', 'Ce qu’il voit', 'What they see', 'La caméra à la place de ses yeux.', 'The camera in place of their eyes.', { size:'pov' }],
+  ['reveal', 'La révélation', 'The reveal', 'La caméra s’élève et dévoile la scène.', 'The camera rises and unveils the scene.', { size:'pe', angle:'neu', side:'tq', move:'grue' }],
+  ['shock', 'Le choc', 'The shock', 'Effet Vertigo : le monde bascule autour de lui.', 'Dolly zoom: the world lurches around them.', { size:'pr', angle:'neu', side:'face', move:'vertigo' }],
+  ['trunk', 'Vu du coffre (Tarantino)', 'Trunk shot (Tarantino)', 'Très bas, vers le haut, les personnages penchés sur nous.', 'Very low, looking up, the characters leaning over us.', { size:'pa', angle:'sol', side:'face', pitch:24 }],
+];
+function shotRecipe(id){
+  const r = SHOT_RECIPES.find(x => x[0] === id), s = shot(); if(!r) return;
+  const o = r[5], before = clone(s.cam);
+  edit(() => {
+    s.info.size = o.size; s.info.angle = o.angle || 'neu'; if(o.side) s.info.side = o.side; s.info.move = o.move || 'fix';
+    frameNow(s, o.size, s.info.angle === 'deb' ? 'neu' : s.info.angle);
+    s.cam.roll = s.info.angle === 'deb' ? 14 : 0;
+    if(o.pitch) s.cam.pitch = o.pitch;
+    camSafe(s.cam, s.set, true); CAM_WANT.cam = null;
+  });
+  startTween(before);
+}
 function frameAngle(angle){
   const s = shot();
   camEdit(() => {
@@ -255,7 +283,7 @@ function carSetup(){
 }
 function carShot(id){
   const s = shot(), P = CAR_SHOTS.find(x => x[0] === id); if(!P || s.set !== 'taxi') return;
-  camEdit(() => { s.cam = camLook(P[3], P[4], P[5]); s.info.size = P[6]; s.info.angle = id === 'dessus' ? 'dess' : 'neu'; });
+  camEdit(() => { s.cam = camLook(P[3], P[4], P[5]); s.info.size = P[6]; s.info.angle = P[7] || 'neu'; });
 }
 
 /* ---------- La foule ----------
@@ -326,6 +354,7 @@ function gunShot(id){
     s.info.size = P[6]; s.info.angle = P[7] || 'neu';
   });
 }
+function setGear(id){ const s = shot(), c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!ch) return; edit(() => { ch.gear = Object.assign({}, ch.gear); ch.gear[id] = !ch.gear[id]; }); }
 function setProp(id){ const s = shot(), c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!ch) return; edit(() => { ch.prop = id || null; ch.propUser = true; }); }
 
 /* ---------- Le noir et blanc (pour tout le film) ---------- */
@@ -376,6 +405,25 @@ function camAt(sh, k, t){
   else if(m === 'grueD') c.pitch = clamp(a.pitch + 16 * e, -88, 85);
   else if(m === 'drone'){ c.dist = a.dist * (1 + 1.2 * e); c.pitch = clamp(a.pitch - 25 * e, -88, 85); }
   else if(m === 'epa'){ const s = t || 0; c.yaw += Math.sin(s * 4.1) * 0.7 + Math.sin(s * 9.3) * 0.25; c.pitch += Math.sin(s * 5.3 + 1) * 0.5; c.roll = (a.roll || 0) + Math.sin(s * 3.1) * 0.6; }
+  else if(m === 'orbitL') c.yaw = a.yaw - 35 * e;
+  else if(m === 'arc360') c.yaw = a.yaw + 360 * clamp(k, 0, 1);
+  else if(m === 'pedU' || m === 'pedD') c.ty = a.ty + (m === 'pedU' ? 0.9 : -Math.min(0.9, Math.max(0, a.ty - 0.25))) * e;
+  else if(m === 'vertigo' || m === 'vertigoIn'){
+    // le sujet garde sa taille : le recul et la focale changent ensemble
+    const f = m === 'vertigo' ? 1 + 1.1 * e : 1 / (1 + 0.6 * e);
+    c.dist = a.dist * f; c.lens = clamp(a.lens * f, 12, 200);
+  }
+  else if(m === 'crash'){ const q = clamp(k * 2.4 - 0.3, 0, 1), f = q * q * (3 - 2 * q); c.lens = clamp(a.lens * (1 + 2.6 * f), 12, 200); }
+  else if(m === 'whipR' || m === 'whipL'){ const q = clamp((k - 0.35) / 0.3, 0, 1), f = q * q * (3 - 2 * q); pivot((m === 'whipR' ? -1 : 1) * 80 * f, 0); }
+  else if(m === 'follow'){
+    // la caméra avance avec le premier personnage qui marche ; sinon, une lente avancée flottante
+    const s = t || 0, w = sh.info.walk && sh.chars.find(ch => ch.pose === 'walk' || ch.pose === 'run');
+    if(w){ const d = s * (w.pose === 'run' ? 3.2 : 1.25) * bodyScale(lookOf(w)), y = w.root.ry * D2R; c.tx = a.tx + Math.sin(y) * d; c.tz = a.tz + Math.cos(y) * d; }
+    else c.dist = Math.max(0.45, a.dist * (1 - 0.2 * e));
+    c.ty = c.ty + Math.sin(s * 2.2) * 0.012; c.roll = (a.roll || 0) + Math.sin(s * 1.3) * 0.35;
+  }
+  else if(m === 'shake'){ const s = t || 0, f = Math.exp(-s * 2.2) * 2.2; c.yaw += Math.sin(s * 37) * f; c.pitch += Math.sin(s * 29 + 1) * f * 0.8; c.roll = (a.roll || 0) + Math.sin(s * 23) * f * 0.6; }
+  else if(m === 'rollIn') c.roll = (a.roll || 0) + 16 * e;
   else if(m === 'end'){
     const b = camFinish(sh); if(!b) return c;
     for(const f of ['tx', 'ty', 'tz', 'pitch', 'dist', 'lens', 'roll']) c[f] = (a[f] || 0) + ((b[f] || 0) - (a[f] || 0)) * e;
@@ -441,7 +489,39 @@ function physOf(id){
     L.w.forEach(w => walls.push(w));
   });
   const rooms = (d.rooms || []).map(r => { const y0 = d.levels ? d.levels[r[2]] : 0; return { r:r[3], y0, y1:y0 + (d.roomH || 3), roof:r[5] === 'roof' }; });
-  return PHYS[id] = { boxes, walls, rooms };
+  // les limites du lieu : un lieu fermé (hôtel, banque…), c'est l'intérieur de ses pièces ; dehors, un peu au-delà du décor
+  const closed = !!(d.rooms && !d.levels && !d.garden);
+  let lim = null;
+  if(!closed){ let x0 = -30, z0 = -30, x1 = 30, z1 = 30;
+    boxes.forEach(b => { const r = Math.hypot(b[3], b[5]); x0 = Math.min(x0, b[0] - r - 10); x1 = Math.max(x1, b[0] + r + 10); z0 = Math.min(z0, b[2] - r - 10); z1 = Math.max(z1, b[2] + r + 10); });
+    walls.forEach(w => { x0 = Math.min(x0, w[0] - 10, w[2] - 10); x1 = Math.max(x1, w[0] + 10, w[2] + 10); z0 = Math.min(z0, w[1] - 10, w[3] - 10); z1 = Math.max(z1, w[1] + 10, w[3] + 10); });
+    lim = [x0, z0, x1, z1, 40]; }
+  return PHYS[id] = { boxes, walls, rooms, closed, lim };
+}
+/* la caméra est-elle dans le lieu ? (dans une de ses pièces pour un lieu fermé, dans ses limites dehors) */
+function physIn(P, p){
+  if(P.closed) return P.rooms.some(R0 => p[0] >= R0.r[0] && p[0] <= R0.r[2] && p[2] >= R0.r[1] && p[2] <= R0.r[3] && p[1] >= R0.y0 && p[1] <= R0.y1);
+  const l = P.lim; return !l || (p[0] >= l[0] && p[0] <= l[2] && p[2] >= l[1] && p[2] <= l[3] && p[1] <= l[4]);
+}
+/* à quelle profondeur le point est entré dans l'obstacle (négatif : dehors) */
+function physDepth(b, p){
+  const px = p[0] - b[0], pz = p[2] - b[2], lx = px * b[6] - pz * b[7], lz = px * b[7] + pz * b[6];
+  return Math.min(b[3] - Math.abs(lx), b[4] - Math.abs(p[1] - b[1]), b[5] - Math.abs(lz));
+}
+/* le gabarit des véhicules posés dans le plan : la caméra en fait le tour au lieu de passer à travers la carrosserie
+   (les prises de vue toutes prêtes, elles, se placent à l'intérieur, et l'on peut en ressortir) */
+const VEH_HULL = { moto:[[0, 0.55, 0, 0.3, 0.45, 0.95]], car:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]],
+  police:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], heli:[[0, 1.35, 0.4, 0.95, 0.95, 1.9]], plane:[[0, 1.15, -1.0, 0.75, 0.75, 3.6]] };
+const _physV = { key:'', P:null };
+function physScene(id, sh){
+  const P = physOf(id), vs = ((sh || (S.doc && S.doc.shots[S.i]) || {}).vehicles) || []; if(!P || !vs.length) return P;
+  const key = id + JSON.stringify(vs.map(v => [v.kind, v.x, v.y, v.z, v.ry]));
+  if(_physV.key === key && _physV.base === P) return _physV.P;
+  const boxes = P.boxes.slice();
+  vs.forEach(v => (VEH_HULL[v.kind] || []).forEach(h => { const a = (v.ry || 0) * D2R, c = Math.cos(a), s = Math.sin(a);
+    boxes.push([v.x + h[0] * c + h[2] * s, (v.y || 0) + h[1], v.z - h[0] * s + h[2] * c, h[3] + CAM_R, h[4] + CAM_R, h[5] + CAM_R, Math.cos(a), Math.sin(a)]); }));
+  _physV.key = key; _physV.base = P; _physV.P = Object.assign({}, P, { boxes });
+  return _physV.P;
 }
 /* l'obstacle (son numéro) qui contient le point, en sautant ceux de la liste « skip » */
 function physHit(P, p, skip){
@@ -476,7 +556,7 @@ function physY(P, p){
   let lo = 0.12, hi = 60, best = null, bd = 1e9;
   for(const R0 of P.rooms){
     const [x0, z0, x1, z1] = R0.r; if(p[0] < x0 || p[0] > x1 || p[2] < z0 || p[2] > z1) continue;
-    const dd = p[1] < R0.y0 ? R0.y0 - p[1] : p[1] > R0.y1 ? p[1] - R0.y1 : 0; if(dd < 0.05 && dd < bd){ bd = dd; best = R0; }   // seulement la pièce où l'on est (pas celle de l'étage d'en dessus)
+    const dd = p[1] < R0.y0 ? R0.y0 - p[1] : p[1] > R0.y1 ? p[1] - R0.y1 : 0; if((dd < 0.05 || P.closed) && dd < bd){ bd = dd; best = R0; }   // seulement la pièce où l'on est (pas celle de l'étage d'en dessus)
   }
   if(best){ lo = best.y0 + 0.15; hi = best.roof ? best.y0 + 2.4 - 0.56 * Math.abs(p[2]) - 0.12 : best.y1 - 0.12; hi = Math.max(hi, lo + 0.1); }
   return clamp(p[1], lo, hi);
@@ -484,72 +564,117 @@ function physY(P, p){
 /* déplacer l'objectif de « from » vers « to » : par petits pas, en glissant le long de ce qu'il touche */
 function physMove(P, from, to){
   let p = from.slice(); p[1] = physY(P, p);
-  const skip = new Set(); for(let i = physHit(P, p); i >= 0; i = physHit(P, p, skip)) skip.add(i);   // ce qui contient déjà l'objectif ne le retient pas
+  // ce qui contient déjà l'objectif ne le retient pas… mais il ne peut que s'en dégager, jamais s'y enfoncer
+  const skip = new Set(); for(let i = physHit(P, p); i >= 0; i = physHit(P, p, skip)) skip.add(i);
+  const deep = [...skip].map(i => [P.boxes[i], physDepth(P.boxes[i], p)]);
+  // hors du lieu (un ancien plan, une prise de vue toute prête) : on peut y revenir, pas s'en éloigner
+  let out = !physIn(P, p);
   const D = [to[0] - p[0], to[1] - p[1], to[2] - p[2]], L = Math.hypot(...D); if(L < 1e-7) return p;
   const n = Math.min(400, Math.ceil(L / 0.04)), st = D.map(v => v / n);
-  const ok = q => Math.abs(physY(P, q) - q[1]) < 1e-9 && physHit(P, q, skip) < 0 && !physWall(P, p, q);   // le sol, le plafond et le toit sont des obstacles comme les autres
+  const ok = q => {
+    if(Math.abs(physY(P, q) - q[1]) > 1e-9 || physHit(P, q, skip) >= 0) return false;   // le sol, le plafond et le toit sont des obstacles comme les autres
+    for(const k of deep){ const d = physDepth(k[0], q); if(d > 0 && d > k[1] + 1e-6) return false; k[2] = d; }
+    if(out) return physIn(P, q) || physLim(P, q) <= physLim(P, p) + 1e-6;
+    return physIn(P, q) && !physWall(P, p, q);
+  };
   for(let k = 0; k < n; k++){
-    // tout droit, sinon en glissant le long de l'obstacle, sinon en montant par-dessus (un tonneau, une table)
+    // tout droit, sinon en glissant le long de l'obstacle, sinon en montant par-dessus un obstacle bas (un tonneau, une table)
     const up = Math.hypot(st[0], st[2]);
     const tries = [st, [st[0], 0, st[2]], [st[0], st[1], 0], [0, st[1], st[2]], [st[0], 0, 0], [0, 0, st[2]], [st[0], up, st[2]], [0, up, 0], [0, st[1], 0]];
     let moved = false;
-    for(const m of tries){
+    for(let t = 0; t < tries.length; t++){
+      const m = tries[t];
       if(!m[0] && !m[1] && !m[2]) continue;
-      if(up > 1e-4 && m[1] !== up && Math.hypot(m[0], m[2]) < up * 0.1 && m !== tries[8]) continue;   // on avançait : glisser sur place ne compte pas
+      if(up > 1e-4 && m[1] !== up && Math.hypot(m[0], m[2]) < up * 0.1 && t !== 8) continue;   // on avançait : glisser sur place ne compte pas
+      // monter : seulement par-dessus ce qui est bas (pas le long d'un mur ou d'une armoire, sinon la caméra grimpe et sort du lieu)
+      if((t === 6 || t === 7) && !ok([p[0] + st[0] * 2, p[1] + 0.45, p[2] + st[2] * 2])) continue;
       const q = [p[0] + m[0], p[1] + m[1], p[2] + m[2]];
-      if(ok(q)){ p = q; moved = true; break; }
+      if(ok(q)){ deep.forEach(k => { if(k[2] != null) k[1] = Math.min(k[1], k[2]); }); p = q; moved = true; if(out && physIn(P, p)) out = false; break; }
     }
     if(!moved) break;
   }
   return p;
 }
+/* la distance qui sépare un point du lieu (0 dedans) */
+function physLim(P, p){
+  if(P.closed){ let best = 1e9; P.rooms.forEach(R0 => { const r = R0.r; best = Math.min(best, Math.hypot(Math.max(r[0] - p[0], 0, p[0] - r[2]), Math.max(r[1] - p[2], 0, p[2] - r[3]), Math.max(R0.y0 - p[1], 0, p[1] - R0.y1))); }); return best; }
+  const l = P.lim; return l ? Math.hypot(Math.max(l[0] - p[0], 0, p[0] - l[2]), Math.max(l[1] - p[2], 0, p[2] - l[3]), Math.max(0, p[1] - l[4])) : 0;
+}
 /* après chaque geste de caméra : l'objectif part d'où il était (e0) et va où on le demande, physiquement.
    S'il se décale avec le point visé (avancer, se décaler), tout le « pied » de caméra s'arrête ensemble ;
    s'il tourne ou recule autour du point visé, la caméra garde ce qu'elle a pu faire. */
 const CAM_WANT = { cam:null, dist:0 };
-function camSettle(c, e0, t0, restore){
-  const id = shot().set, P = physOf(id); if(!P) return;
+function camSettle(c, e0, t0, restore, zoom){
+  const id = shot().set, P = physScene(id); if(!P) return;
   const t = [c.tx, c.ty, c.tz], rig = Math.hypot(t[0] - t0[0], t[1] - t0[1], t[2] - t0[2]) > 1e-9;
   if(restore && !rig && CAM_WANT.cam === c && CAM_WANT.dist > c.dist + 0.01) c.dist = Math.min(CAM_WANT.dist, c.dist + 0.12);   // le recul voulu revient peu à peu quand la place se libère
   const want = camEyeRaw(c), e = physMove(P, e0, want);
   if(Math.hypot(e[0] - want[0], e[1] - want[1], e[2] - want[2]) < 1e-6) return;
   if(rig){ c.tx += e[0] - want[0]; c.ty += e[1] - want[1]; c.tz += e[2] - want[2]; return; }
+  // on tourne autour du point visé : la caméra garde exactement l'angle demandé et se rapproche le long de la ligne
+  // de visée, juste devant ce qui la gêne (elle ne glisse plus de travers, donc elle ne sautille plus)
+  if(physIn(P, t)){
+    const y = c.yaw * D2R, pp = c.pitch * D2R, dir = [Math.cos(pp) * Math.sin(y), -Math.sin(pp), Math.cos(pp) * Math.cos(y)];
+    const f = physRay(P, t, dir, c.dist);
+    const nd = Math.max(0.05, Math.min(c.dist, f)), q = [t[0] + dir[0] * nd, t[1] + dir[1] * nd, t[2] + dir[2] * nd];
+    // (sauf si cet endroit est dans un meuble qui contient aussi le point visé : alors on reste physique)
+    // (et seulement si ce n'est pas un grand saut : loin dehors, mieux vaut glisser le long du décor que bondir à travers)
+    const pd = Math.hypot(e[0] - t[0], e[1] - t[1], e[2] - t[2]);
+    // zoomer (molette, pincement) : on recule ou on avance sur la ligne de visée, sans jamais tourner ; bloqué, on reste
+    if(zoom){
+      const d0 = Math.hypot(e0[0] - t[0], e0[1] - t[1], e0[2] - t[2]), at = k => [t[0] + dir[0] * k, t[1] + dir[1] * k, t[2] + dir[2] * k], h0 = physHit(P, e0);
+      let k = Math.max(0.05, Math.min(c.dist, Math.max(f, d0)));
+      // en avançant, on s'arrête devant un meuble qui se trouve entre la caméra et le sujet (on ne rentre pas dedans)
+      const bad = k => { const q = at(k), h = physHit(P, q); return (h >= 0 && h !== h0) || physWall(P, e0, q); };
+      if(k < d0) for(let a = d0; a > k; a -= 0.04){ if(bad(Math.max(k, a - 0.04))){ k = a; break; } }
+      c.dist = k; return;
+    }
+    if(f >= Math.min(c.dist, 0.3) && nd > pd - 0.6 && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
+  }
   const v = [e[0] - c.tx, e[1] - c.ty, e[2] - c.tz], d = Math.hypot(...v); if(d < 0.05) return;
   const yaw = Math.atan2(v[0], v[2]) / D2R;
   c.yaw = yaw + Math.round((c.yaw - yaw) / 360) * 360; c.pitch = clamp(-Math.asin(clamp(v[1] / d, -1, 1)) / D2R, -89, 89); c.dist = d;
+}
+/* jusqu'où l'objectif peut reculer depuis le point visé t, dans la direction dir (sans traverser ni sortir du lieu) */
+function physRay(P, t, dir, maxd){
+  const skip = new Set(); for(let i = physHit(P, t); i >= 0; i = physHit(P, t, skip)) skip.add(i);
+  const inT = physIn(P, t);
+  let p = t, d = 0;
+  while(d < maxd){
+    const nd = Math.min(maxd, d + 0.04), q = [t[0] + dir[0] * nd, t[1] + dir[1] * nd, t[2] + dir[2] * nd];
+    if(Math.abs(physY(P, q) - q[1]) > 1e-6 || physHit(P, q, skip) >= 0 || physWall(P, p, q) || (inT && !physIn(P, q))) return Math.max(0, d - 0.02);
+    p = q; d = nd;
+  }
+  return d;
 }
 /* le recul que l'on a demandé (molette, pincement) : la caméra y revient d'elle-même, doucement, dès qu'il y a la place */
 function camWant(c){ CAM_WANT.cam = c; CAM_WANT.dist = c.dist; }
 /* une caméra posée d'un coup (un cadrage, une pièce) : si quelque chose se trouve entre le point visé et
    l'objectif, l'objectif se pose juste devant ; la focale s'élargit pour garder la même taille de sujet */
 function camSafe(c, id, fit){
-  const P = id !== 'taxi' && physOf(id); if(!P) return c;   // les prises de vue du taxi sont faites pour passer par les vitres
-  const t = [c.tx, c.ty, c.tz], skip = new Set(); for(let i = physHit(P, t); i >= 0; i = physHit(P, t, skip)) skip.add(i);
+  const P = id !== 'taxi' && physOf(id); if(!P) return c;   // les prises de vue du taxi (et des véhicules) sont faites pour passer par les vitres
+  const t = [c.tx, c.ty, c.tz];
   // jusqu'où l'objectif peut reculer depuis le point visé, dans la direction (yaw, pitch)
-  const free = (yaw, pitch) => {
-    const y = yaw * D2R, pp = pitch * D2R, dir = [Math.cos(pp) * Math.sin(y), -Math.sin(pp), Math.cos(pp) * Math.cos(y)];
-    let p = t, d = 0;
-    while(d < c.dist){
-      const nd = Math.min(c.dist, d + 0.04), q = [t[0] + dir[0] * nd, t[1] + dir[1] * nd, t[2] + dir[2] * nd];
-      if(Math.abs(physY(P, q) - q[1]) > 1e-6 || physHit(P, q, skip) >= 0 || physWall(P, p, q)) break;
-      p = q; d = nd;
-    }
-    return d;
-  };
+  const free = (yaw, pitch) => { const y = yaw * D2R, pp = pitch * D2R; return physRay(P, t, [Math.cos(pp) * Math.sin(y), -Math.sin(pp), Math.cos(pp) * Math.cos(y)], c.dist); };
   let d = free(c.yaw, c.pitch);
   if(d >= c.dist - 0.02) return c;
   // un cadrage tout prêt qui tombe dans un meuble (un comptoir, un dossier) : on cherche l'angle le plus proche
   // d'où l'on voit vraiment le sujet, un peu plus haut ou un peu sur le côté, plutôt que de coller l'objectif au sujet
   if(fit && d < c.dist * 0.8){
     let best = null;
-    for(const dp of [0, -8, -16, -26]) for(const dy of [0, 12, -12, 24, -24, 38, -38, 55, -55, 75, -75]){
+    let most = null;
+    for(const dp of [0, -8, -16, -26, -40]) for(const dy of [0, 12, -12, 24, -24, 38, -38, 55, -55, 75, -75, 100, -100, 130, -130]){
       if(!dp && !dy) continue;
       const pt = clamp(c.pitch + dp, -60, 60), f = free(c.yaw + dy, pt), cost = Math.abs(dy) + Math.abs(dp) * 1.4;
       if(f >= c.dist * 0.92 && (!best || cost < best.cost)) best = { cost, yaw:c.yaw + dy, pitch:pt, d:f };
+      if(!most || f - cost * 0.01 > most.d - most.cost * 0.01) most = { cost, yaw:c.yaw + dy, pitch:pt, d:f };
     }
+    // aucun angle ne laisse tout le recul (un personnage collé à un comptoir) : celui qui en laisse le plus
+    if(!best && most && most.d > Math.max(d * 1.5, 0.45)) best = most;
     if(best){ c.yaw = best.yaw; c.pitch = best.pitch; d = Math.min(best.d, c.dist); if(d >= c.dist - 0.02) return c; }
   }
-  const nd = Math.max(0.3, d - 0.02);
+  // juste devant ce qui gêne : jamais dans le meuble lui-même
+  const nd = Math.max(0.05, d);
   if(fit && c.lens) c.lens = clamp(c.lens * nd / c.dist, 14, 200);
   c.dist = nd;
   return c;
@@ -580,7 +705,7 @@ function camEdit(fn, keepLens){ const before = clone(shot().cam); edit(() => { f
 function camGesture(c, fn, zoom){
   const e0 = camEyeRaw(c), t0 = [c.tx, c.ty, c.tz];
   fn(); keepCam(c);
-  const asked = c.dist; camSettle(c, e0, t0, !zoom);
+  const asked = c.dist; camSettle(c, e0, t0, !zoom, zoom);
   if(zoom){ camWant(c); CAM_WANT.dist = Math.min(asked, c.dist + 1.5); }
 }
 
@@ -605,7 +730,7 @@ function initMeshes(){
   for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, b = (i + 1) / 16 * Math.PI * 2; tri(g, [0, 0, 0], [Math.sin(b) * 0.36, 0, Math.cos(b) * 0.36], [Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36], C); }
   R.blob = GL.mesh(g);
   R.props = {}; R.propsOut = {};
-  PROPS.forEach(([id]) => { R.props[id] = GL.mesh(propGeo(id)); R.propsOut[id] = GL.mesh(smoothNormals(propGeo(id))); });
+  PROPS.map(p => p[0]).concat(['holster']).forEach(id => { R.props[id] = GL.mesh(propGeo(id)); R.propsOut[id] = GL.mesh(smoothNormals(propGeo(id))); });
 }
 /* un véhicule (forme et couleur), fabriqué une fois */
 R.veh = {};
@@ -657,6 +782,13 @@ function envOf(sh){
 }
 /* dessine un plan ; « clean » : l'image du film, sans aide (exports, vignettes).
    « o » (lecture, animatique) : { cam, chars } pour une image en mouvement. */
+/* ce que le personnage porte sur lui : le pistolet dans son étui sur la hanche droite, le fusil en travers du dos */
+function gearOf(ch, M){
+  const out = [], G = ch.gear || {};
+  if(G.holster && ch.prop !== 'gun'){ const m = M4.mul(M.pelvis, M4.trans(-0.19, 0.02, 0.02)); out.push(['holster', m], ['gun', m]); }
+  if(G.sling && ch.prop !== 'rifle') out.push(['rifle', M4.mul(M.chest, M4.mul(M4.trans(0, 0.1, -0.17), M4.mul(M4.rz(-0.75), M4.ry(Math.PI))))]);
+  return out;
+}
 function drawFrame(sh, w, h, clean, o){
   const gl = GL.gl; if(!gl) return;
   sh = sh || shot(); w = w || R.canvas.width; h = h || R.canvas.height; CAM_SET = sh.set;
@@ -703,9 +835,11 @@ function drawFrame(sh, w, h, clean, o){
   const px = 2 * Math.tan(fovOf(cam.lens) / 2) / h * clamp(h / 280, 1.7, 3.4);
   if(!fast) gl.cullFace(gl.FRONT);
   if(!fast) chars.forEach((ch, c) => { const P = lookMesh(lookOf(ch, c)).out; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, col:INK, out:px });
-    if(ch.prop && R.propsOut[ch.prop]) GL.draw(R.propsOut[ch.prop], { m:mats[c].handR, flat:true, col:INK, out:px }); });
+    if(ch.prop && R.propsOut[ch.prop]) GL.draw(R.propsOut[ch.prop], { m:mats[c].handR, flat:true, col:INK, out:px });
+    gearOf(ch, mats[c]).forEach(([id, m]) => GL.draw(R.propsOut[id], { m, flat:true, col:INK, out:px })); });
   gl.cullFace(gl.BACK);
-  chars.forEach((ch, c) => { if(ch.prop && R.props[ch.prop]) GL.draw(R.props[ch.prop], { m:mats[c].handR, col:[1, 1, 1], mul:true, char:true }); });
+  chars.forEach((ch, c) => { if(ch.prop && R.props[ch.prop]) GL.draw(R.props[ch.prop], { m:mats[c].handR, col:[1, 1, 1], mul:true, char:ch.prop !== 'gun' && ch.prop !== 'rifle' });   // l'arme garde son éclat de métal
+    gearOf(ch, mats[c]).forEach(([id, m]) => GL.draw(R.props[id], { m, col:[1, 1, 1], mul:true, char:id === 'holster' })); });
   chars.forEach((ch, c) => {
     const P = lookMesh(lookOf(ch, c)).parts;
     for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col:[1, 1, 1], tint, tintK:k, mul:true, char:true }); }
@@ -728,7 +862,7 @@ function drawFrame(sh, w, h, clean, o){
   if(fb){ gl.enable(gl.SCISSOR_TEST); gl.clearColor(0.07, 0.075, 0.085, 1);
     (fb.x > 0 ? [[0, 0, fb.x, h], [fb.x + fb.w, 0, w - fb.x - fb.w, h]] : [[0, 0, w, fb.y], [0, fb.y + fb.h, w, h - fb.y - fb.h]]).forEach(([x, y, bw, bh]) => { gl.scissor(Math.floor(x), Math.floor(y), Math.ceil(bw), Math.ceil(bh)); gl.clear(gl.COLOR_BUFFER_BIT); });
     gl.disable(gl.SCISSOR_TEST); }
-  if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); if(typeof planMarker === 'function') planMarker(); }
+  if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); if(typeof planMarker === 'function'){ planMarker(); techMarker(); } }
   CAM_SET = null;
 }
 /* les petits ordinateurs : on mesure une fois le temps d'une image ; si c'est lent, l'image de travail
