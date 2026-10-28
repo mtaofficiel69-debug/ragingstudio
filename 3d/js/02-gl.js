@@ -109,10 +109,10 @@ const GL = {
     const vs = `attribute vec3 aP; attribute vec3 aN; attribute vec3 aC;
       uniform mat4 uVP; uniform mat4 uM; uniform vec3 uCol; uniform float uVC;
       varying vec3 vN; varying vec3 vC; varying vec3 vW;
-      void main(){ vN = mat3(uM) * aN; vC = mix(uCol, aC, uVC); vec4 w = uM * vec4(aP, 1.0); vW = w.xyz; gl_Position = uVP * w; }`;
+      void main(){ vN = mat3(uM) * aN; vC = uVC > 1.5 ? uCol * aC : mix(uCol, aC, uVC); vec4 w = uM * vec4(aP, 1.0); vW = w.xyz; gl_Position = uVP * w; }`;
     const fs = `precision mediump float;
       uniform vec3 uL; uniform float uFlat; uniform float uA; uniform vec3 uTint; uniform float uTintK;
-      uniform vec3 uEye; uniform vec3 uT0; uniform vec3 uT1; uniform float uNT; uniform float uX;
+      uniform vec3 uEye; uniform vec3 uT0; uniform vec3 uT1; uniform float uNT; uniform float uX; uniform float uChar;
       varying vec3 vN; varying vec3 vC; varying vec3 vW;
       /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
       bool inTube(vec3 t){ vec3 d = t - uEye; float k = dot(vW - uEye, d) / dot(d, d); return k > 0.0 && k < 0.9 && distance(vW, uEye + d * k) < 0.42; }
@@ -126,7 +126,13 @@ const GL = {
         if(uFlat > 0.5){ gl_FragColor = vec4(vC, uA); return; }
         vec3 n = normalize(vN);
         float d = max(dot(n, uL), 0.0), h = 0.5 + 0.5 * n.y;
-        vec3 c = mix(vC, uTint, uTintK) * (0.42 + 0.2 * h + 0.5 * d);
+        vec3 c;
+        if(uChar > 0.5){
+          // personnages : sans ombres (trop lourdes pour un vieux PC), on lit le visage autrement :
+          // une petite lumière portée par la caméra, et un liseré clair sur les contours
+          float f = max(dot(n, normalize(uEye - vW)), 0.0);
+          c = mix(vC, uTint, uTintK) * (0.3 + 0.14 * h + 0.36 * d + 0.32 * f) + vec3(0.13) * pow(1.0 - f, 3.0);
+        } else c = mix(vC, uTint, uTintK) * (0.42 + 0.2 * h + 0.5 * d);
         gl_FragColor = vec4(c, uA);
       }`;
     const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); return s; };
@@ -134,7 +140,7 @@ const GL = {
     if(!gl.getProgramParameter(p, gl.LINK_STATUS)) return false;
     gl.useProgram(p); this.prog = p;
     ['aP', 'aN', 'aC'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
-    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT0', 'uT1', 'uNT', 'uX'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
+    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT0', 'uT1', 'uNT', 'uX', 'uChar'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // pour la sélection au clic : une petite image hors écran où chaque partie du corps a sa couleur
@@ -159,7 +165,7 @@ const GL = {
     this.bind(mesh);
     gl.uniformMatrix4fv(L.uM, false, o.m || M4.ident());
     const c = o.col || [1, 1, 1]; gl.uniform3f(L.uCol, c[0], c[1], c[2]);
-    gl.uniform1f(L.uVC, o.vc ? 1 : 0); gl.uniform1f(L.uFlat, o.flat ? 1 : 0); gl.uniform1f(L.uA, o.a == null ? 1 : o.a);
+    gl.uniform1f(L.uVC, o.mul ? 2 : o.vc ? 1 : 0); gl.uniform1f(L.uChar, o.char ? 1 : 0); gl.uniform1f(L.uFlat, o.flat ? 1 : 0); gl.uniform1f(L.uA, o.a == null ? 1 : o.a);
     const t = o.tint || [0, 0, 0]; gl.uniform3f(L.uTint, t[0], t[1], t[2]); gl.uniform1f(L.uTintK, o.tintK || 0);
     gl.uniform1f(L.uX, o.x || 0);
     gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
@@ -201,3 +207,22 @@ const GL = {
     return px[0] + px[1] * 256;
   },
 };
+
+/* profil extrudé : un contour convexe dans le plan (z, y), étiré en largeur de x0 à x1.
+   Sert aux carrosseries (capot et pare-brise inclinés), aux toits en pente, aux marches. */
+function prism(g, pts, x0, x1, col){
+  const C = typeof col === 'string' ? hexRGB(col) : col, n = pts.length;
+  const cz = pts.reduce((a, p) => a + p[0], 0) / n, cy = pts.reduce((a, p) => a + p[1], 0) / n;
+  const P = (p, x) => [x, p[1], p[0]];
+  // chaque face est tournée vers l'extérieur (on vérifie le sens de sa normale)
+  const put = (a, b, c, out) => {
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx;
+    if(nx*out[0] + ny*out[1] + nz*out[2] < 0) tri(g, a, c, b, C); else tri(g, a, b, c, C);
+  };
+  for(let i = 1; i < n - 1; i++){ put(P(pts[0], x1), P(pts[i], x1), P(pts[i + 1], x1), [1, 0, 0]); put(P(pts[0], x0), P(pts[i], x0), P(pts[i + 1], x0), [-1, 0, 0]); }
+  for(let i = 0; i < n; i++){
+    const a = pts[i], b = pts[(i + 1) % n], out = [0, (a[1] + b[1]) / 2 - cy, (a[0] + b[0]) / 2 - cz];
+    put(P(a, x0), P(b, x0), P(b, x1), out); put(P(a, x0), P(b, x1), P(a, x1), out);
+  }
+}
