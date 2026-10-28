@@ -1285,6 +1285,8 @@ const SPOTS = {
   .forEach(([id, r, h]) => { if(SET_DEF[id] && !SET_DEF[id].rooms){ SET_DEF[id].rooms = [[SETS.find(x => x.id === id).fr, SETS.find(x => x.id === id).en, 0, r]]; SET_DEF[id].roomH = h; } });
 // la maison : les pièces deviennent la liste « aller dans une pièce » (avec le jardin à la fin)
 Object.values(SET_DEF).forEach(d => { if(d.rooms && (d.levels || d.rooms.length > 1)) d.floors = d.rooms.map(r => { const c = roomCam(d, r); return [r[0], r[1], r[2], c.eye, c.target, r]; }).concat(d.garden ? [d.garden] : []); });
+// un lieu à étages s'ouvre sur sa première pièce, cadrée depuis son coin (jamais dans un mur)
+Object.values(SET_DEF).forEach(d => { if(d.floors && d.levels){ const f = d.floors[0]; d.cam = camLook(f[3], f[4], 22); } });
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
 const SET_COLL = {};
@@ -1608,7 +1610,7 @@ const VEH_DEF = {
   moto:{ fr:'Moto', en:'Motorbike', ic:'moto', cols:MOTO_COLS, label:1.9, shots:MOTO_SHOTS,
     seats:[{ fr:'Pilote', en:'Rider', pose:'ride', x:0, z:-0.2 }, { fr:'Passager', en:'Passenger', pose:'rideBack', x:0, z:-0.55 }] },
   car:{ fr:'Voiture', en:'Car', ic:'car', cols:['#3D5A80', '#B4232C', '#E9E6E0', '#24262B', '#2F6E4F'], label:2.0, shots:SEDAN_SHOTS, seats:CAR_SEATS },
-  police:{ fr:'Voiture de police', en:'Police car', ic:'police', cols:['#1E1F23'], label:2.1, shots:SEDAN_SHOTS, seats:CAR_SEATS },
+  police:{ fr:'Voiture de police', en:'Police car', tag:['Police', 'Police'], ic:'police', cols:['#1E1F23'], label:2.1, shots:SEDAN_SHOTS, seats:CAR_SEATS },
   heli:{ fr:'Hélicoptère', en:'Helicopter', ic:'heli', cols:['#2F6E4F', '#B4232C', '#24262B', '#E9E6E0'], label:3.3, shots:HELI_SHOTS, fly:true,
     seats:[{ fr:'Pilote', en:'Pilot', pose:'pilot', x:-0.33, z:0.55, py:0.8 }, { fr:'Copilote', en:'Co-pilot', pose:'sit', x:0.33, z:0.55, py:0.8 }, { fr:'Passager', en:'Passenger', pose:'sit', x:-0.33, z:-0.45, py:0.8 }, { fr:'Passager 2', en:'Passenger 2', pose:'sit', x:0.33, z:-0.45, py:0.8 }] },
   plane:{ fr:'Avion', en:'Plane', ic:'plane', cols:['#E9E6E0', '#3D5A80', '#E8B923', '#2F6E4F'], label:3.0, shots:PLANE_SHOTS, fly:true,

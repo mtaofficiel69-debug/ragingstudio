@@ -145,7 +145,7 @@ function setPlace(id){ S.room = null;
   const s = shot(); if(!SET_DEF[id] || id === s.set) return;
   endEdit();
   const before = clone(s.cam);
-  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => Object.assign(charFromSpawn(i, def, ch.look), ch.outfit ? { outfit:ch.outfit } : {})); s.cam = clone(def.cam); s.info.size = 'pe'; s.info.move = 'fix'; delete s.camEnd; s.crowds = []; s.vehicles = []; s.chars.forEach(ch => delete ch.on); });
+  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => Object.assign(charFromSpawn(i, def, ch.look), ch.outfit ? { outfit:ch.outfit } : {})); s.cam = camSafe(clone(def.cam), id, true); s.info.size = 'pe'; s.info.move = 'fix'; delete s.camEnd; s.crowds = []; s.vehicles = []; s.chars.forEach(ch => delete ch.on); });
   startTween(before);
   clearTimeout(R.benchT); R.benchT = setTimeout(benchmark, 600);   // un grand espace est plus lourd : on revérifie
 }
@@ -430,8 +430,11 @@ const PHYS = {};
 /* les obstacles d'un lieu, préparés une fois : pavés (tournés), murs (segments), pièces (sol, plafond) */
 function physOf(id){
   if(PHYS[id] !== undefined) return PHYS[id];
+  // les obstacles se relèvent en construisant le lieu : s'il n'a pas encore été dessiné, on le construit maintenant
+  // (sinon la caméra posée en arrivant dans le lieu ne voyait pas ses murs)
+  if(!SET_COLL[id] && SET_DEF[id] && GL.gl) setMesh(id);
   const C = SET_COLL[id], d = SET_DEF[id];
-  if(!C){ PHYS[id] = null; return null; }
+  if(!C) return null;
   const all = [C.main].concat(C.levels), boxes = [], walls = [];
   all.forEach(L => {
     L.b.forEach(b => boxes.push([b[0], b[1], b[2], b[3] + CAM_R, b[4] + CAM_R, b[5] + CAM_R, Math.cos(b[6]), Math.sin(b[6])]));
@@ -835,7 +838,7 @@ function placeHandles(sh, vp, w, h, mats){
       <button class="hd-move" data-hd="cmove" data-k="${k}" aria-label="${esc(L('Déplacer la foule', 'Move the crowd'))}">${icon('crowd')}<span>${L('Foule', 'Crowd')}</span></button>
       <button class="hd-turn" data-hd="cturn" data-k="${k}" aria-label="${esc(L('Tourner la foule', 'Turn the crowd'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
     </div>`).join('') + vehs.map((v, k) => `<div class="hd hd-crowd hd-veh" data-k="${k}">
-      <button class="hd-move" data-hd="vmove" data-k="${k}" aria-label="${esc(L('Déplacer le véhicule', 'Move the vehicle'))}">${icon((VEH_DEF[v.kind] || VEH_DEF.moto).ic)}<span>${esc(L((VEH_DEF[v.kind] || VEH_DEF.moto).fr, (VEH_DEF[v.kind] || VEH_DEF.moto).en))}</span></button>
+      <button class="hd-move" data-hd="vmove" data-k="${k}" aria-label="${esc(L('Déplacer le véhicule', 'Move the vehicle'))}">${icon((VEH_DEF[v.kind] || VEH_DEF.moto).ic)}<span>${esc((D => D.tag ? L(...D.tag) : L(D.fr, D.en))(VEH_DEF[v.kind] || VEH_DEF.moto))}</span></button>
       <button class="hd-turn" data-hd="vturn" data-k="${k}" aria-label="${esc(L('Tourner le véhicule', 'Turn the vehicle'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
     </div>`).join('');
   }
