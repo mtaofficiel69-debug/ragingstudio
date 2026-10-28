@@ -107,6 +107,18 @@
   .foot .foot-sup{margin-top:8px;}
   .foot .foot-sup a{color:var(--ink); text-decoration:underline; text-decoration-color:var(--hair); text-underline-offset:3px;}
   .foot .foot-sup a:hover{text-decoration-color:var(--red);}
+  /* Discord : la pastille de la communauté (avec sa petite carte au survol) */
+  .dsc-w{position:relative; display:inline-flex;}
+  .dsc{display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 11px; margin:0 0 0 6px; border-radius:999px; border:1px solid var(--hair); background:var(--surface); text-decoration:none; font-size:13.5px; font-weight:600; white-space:nowrap; transition:border-color .15s, background .15s;}
+  .dsc:hover{border-color:#5865F266; background:#5865F212;}
+  .dsc svg{width:17px; height:13px; fill:#5865F2;}
+  .dsc .fr{font-size:10.5px; font-weight:700; letter-spacing:.04em; padding:2px 6px; border-radius:999px; background:#5865F21A; color:#4752C4;}
+  [data-theme="dark"] .dsc .fr{color:#9EA6FF;}
+  .dsc-card{position:absolute; top:calc(100% + 10px); right:0; width:300px; padding:14px 16px; border-radius:12px; background:var(--surface); border:1px solid var(--hair); box-shadow:var(--shadow-md); font-size:13px; line-height:1.5; color:var(--ink-soft); opacity:0; visibility:hidden; transform:translateY(-4px); transition:opacity .15s, transform .15s, visibility .15s; z-index:40; text-align:left; white-space:normal;}
+  .dsc-w:hover .dsc-card, .dsc-w:focus-within .dsc-card{opacity:1; visibility:visible; transform:none;}
+  .dsc-card b{display:block; color:var(--ink); font-size:14px; margin-bottom:4px;}
+  .flag{flex:none; width:16px; height:11px; border-radius:2px; background:linear-gradient(90deg,#1F4FA3 0 33.3%,#fff 33.3% 66.6%,#D9363E 66.6%); box-shadow:0 0 0 1px var(--hair);}
+  .dsc-card .only{display:flex; align-items:center; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid var(--hair); color:var(--ink); font-weight:600; font-size:12.5px;}
   .gh{display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:6px; color:var(--ink-soft);}
   .gh:hover{background:var(--overlay-hover); color:var(--ink);}
   .gh svg{width:18px; height:18px;}
@@ -310,6 +322,7 @@
     .top{padding:0 12px; gap:8px;}
     .brand{gap:9px;} .brand .mm-word{font-size:24px;} .brand .lg{width:32px; height:32px;}
     .gh, .sep, .theme span, .sup span{display:none;}
+    .dsc > span, .dsc-card{display:none;} .dsc{padding:0; width:34px; justify-content:center; margin:0 1px;} .sup{margin:0 1px;} .top{gap:4px;}
     .sup{padding:0; width:34px; justify-content:center; margin:0 2px;}
     .wrap{padding:0 16px;}
     .hero{padding:30px 0 18px;}
@@ -334,6 +347,7 @@
     .foot{grid-template-columns:1fr;}
   }
   @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} .tile, .tile .go{transition:none;} }
+  @media (max-width:420px){ .brand .mm-word{font-size:19px;} .brand .lg{width:28px; height:28px;} .brand{gap:7px;} .sup, .dsc{width:32px; height:32px;} .top{padding:0 10px;} }
 </style>
 </head>
 <body>
@@ -346,6 +360,7 @@
     <a class="l" href="../guide.html?from=studio">Guide</a>
     <a class="l" href="#faq">Questions</a>
     <a class="sup" href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener" title="Raging Studio est gratuit. S’il t’aide, tu peux le soutenir sur Ko-fi."><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.6S1.8 9.9 1.8 5.7A3.1 3.1 0 0 1 8 4.6a3.1 3.1 0 0 1 6.2 1.1C14.2 9.9 8 13.6 8 13.6z"/></svg><span>Soutenir</span></a>
+    <span class="dsc-w"><a class="dsc" href="https://discord.gg/j5GXQPg6hb" target="_blank" rel="noopener" title="Rejoindre Undergrounders, le serveur Discord des cinéastes indépendants (100 % francophone)"><svg viewBox="0 0 127.14 96.36" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/></svg><span>Discord</span></a><span class="dsc-card" role="note"><b>Undergrounders</b>Le serveur Discord des cinéastes indépendants : se regrouper pour faire des films, s’entraider, partager des astuces, parler cinéma.<span class="only"><i class="flag" aria-hidden="true"></i>100 % francophone : on y parle uniquement français.</span></span></span>
     <a class="gh" href="https://github.com/mtaofficiel69-debug/ragingstudio" target="_blank" rel="noopener" aria-label="Code source sur GitHub" title="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .2a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 .2z"/></svg></a>
     <span class="sep"></span>
     <div class="lang" role="group" aria-label="Language / Langue"><a href="../" hreflang="en" lang="en" class="" data-l="en">EN</a><a href="./" hreflang="fr" lang="fr" class="on" data-l="fr">FR</a></div>
@@ -486,7 +501,7 @@
       <p>Des outils gratuits pour les cinéastes. Faits par un cinéaste, en open source.</p></div>
     <div><h3>Outils</h3><ul><li><a href="../page/">Raging Page</a></li><li><a href="../draw/">Raging Draw</a></li></ul></div>
     <div><h3>Aide</h3><ul><li><a href="../guide.html?from=studio">Guide</a></li><li><a href="#faq">Questions</a></li><li><a href="https://github.com/mtaofficiel69-debug/ragingpage/issues" target="_blank" rel="noopener">Signaler un bug</a></li></ul></div>
-    <div><h3>Raging Studio</h3><ul><li><a href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener">Soutenir sur Ko-fi</a></li><li><a href="https://github.com/mtaofficiel69-debug/ragingstudio" target="_blank" rel="noopener">GitHub</a></li><li><a href="../privacy.html">Confidentialité</a></li><li><a href="../" hreflang="en">English</a></li></ul></div>
+    <div><h3>Raging Studio</h3><ul><li><a href="https://ko-fi.com/ragingstudio" target="_blank" rel="noopener">Soutenir sur Ko-fi</a></li><li><a href="https://discord.gg/j5GXQPg6hb" target="_blank" rel="noopener">Discord Undergrounders</a></li><li><a href="https://github.com/mtaofficiel69-debug/ragingstudio" target="_blank" rel="noopener">GitHub</a></li><li><a href="../privacy.html">Confidentialité</a></li><li><a href="../" hreflang="en">English</a></li></ul></div>
     <div class="legal"><span>© 2026 Raging Studio · Gratuit et open source (MIT)</span><span>ragingstudio.com</span></div>
   </div>
 </footer>

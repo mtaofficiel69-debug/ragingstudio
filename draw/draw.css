@@ -713,6 +713,8 @@ html[data-theme="dark"] .tthumb{background-color:#1E1F24;}
 /* accueil : « Soutenir », une ligne comme les autres de la colonne, avec un cœur rouge */
 #homeView .wd-sup{text-decoration:none;}
 #homeView .wd-sup .icon{color:#D9363E; fill:#D9363E;}
+#homeView .wd-dsc{text-decoration:none;}
+#homeView .wd-dsc .icon{fill:#5865F2; stroke:none; width:17px;}
 
 /* astuce de l'accueil : une note discrète sous la liste, sans titre ni compteur (clic = astuce suivante) */
 #homeView .wd-tip{align-items:flex-start; margin-top:10px; padding-top:8px; padding-bottom:8px;}
