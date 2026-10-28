@@ -586,3 +586,15 @@ html[data-theme="dark"] .bh-resume{color:var(--accent-ink);}
   .bh-about{display:none;} .bh-resume{margin-left:0;}
 }
 @media (max-width:760px){ #home .lang-flags{display:flex;} #home .lang-flag{padding:5px 8px;} }
+/* les trois outils, en petit (comme dans Raging Page et Raging Draw) */
+.app-trio{display:inline-flex; align-items:center; gap:2px; padding:3px; margin-left:4px; border-radius:10px; background:var(--chip-bg);}
+.app-trio .at-i{display:flex; padding:3px; border-radius:7px; opacity:.72; transition:opacity .12s, background .12s;}
+.app-trio a.at-i:hover{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
+.app-trio .at-i.on{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
+.app-trio svg{width:24px; height:24px; display:block; border-radius:6px;}
+/* les trois outils, en petit (comme dans Raging Page et Raging Draw) */
+.app-trio{display:inline-flex; align-items:center; gap:2px; padding:3px; margin-left:4px; border-radius:10px; background:var(--chip-bg);}
+.app-trio .at-i{display:flex; padding:3px; border-radius:7px; opacity:.72; transition:opacity .12s, background .12s;}
+.app-trio a.at-i:hover{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
+.app-trio .at-i.on{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
+.app-trio svg{width:24px; height:24px; display:block; border-radius:6px;}

@@ -418,9 +418,28 @@ const _eyeCache = new Map();
 function camEye(c){
   const raw = camEyeRaw(c), d = camDist(c);
   const ds = CAM_SMOOTH.cam === c ? Math.min(c.dist, CAM_SMOOTH.d) : d;
-  if(ds >= c.dist - 1e-6) return raw;
-  const k = ds / c.dist;
-  return [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k];
+  const k = ds >= c.dist - 1e-6 ? 1 : ds / c.dist;
+  const e = [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k];
+  e[1] += furnLift(e);
+  return e;
+}
+/* près d'un meuble bas (canapé, table, lit…), l'objectif monte doucement par-dessus au lieu de rentrer
+   dedans : la montée commence 20 cm avant le meuble, elle ne fait donc jamais de saut */
+const _liftCache = new Map();
+function furnLift(e){
+  const id = CAM_SET || (S.doc && S.doc.shots[S.i] && S.doc.shots[S.i].set), C = id && id !== 'taxi' && SET_COLL[id]; if(!C) return 0;
+  const key = id + '|' + e[0].toFixed(3) + '|' + e[1].toFixed(3) + '|' + e[2].toFixed(3), hit = _liftCache.get(key); if(hit != null) return hit;
+  const lists = [C.main.b].concat(C.levels.map(l => l.b));
+  let up = 0;
+  for(const list of lists) for(const b of list){
+    if(b[4] >= 0.9) continue;                                   // les grands meubles et les murs : réglés par la distance
+    const top = b[1] + b[4], bot = b[1] - b[4]; if(e[1] > top + 0.2 || e[1] < bot - 0.6) continue;
+    const cs = Math.cos(b[6]), sn = Math.sin(b[6]), px = e[0] - b[0], pz = e[2] - b[2], lx = px * cs - pz * sn, lz = px * sn + pz * cs;
+    const dd = Math.hypot(Math.max(Math.abs(lx) - b[3], 0), Math.max(Math.abs(lz) - b[5], 0)); if(dd > 0.2) continue;
+    const s = 1 - dd / 0.2, want = (top + 0.2 - e[1]) * s * s * (3 - 2 * s); if(want > up && want < 1.3) up = want;
+  }
+  if(_liftCache.size > 600) _liftCache.clear(); _liftCache.set(key, up);
+  return up;
 }
 /* la distance à laquelle l'objectif peut vraiment se placer : seuls les murs et les cloisons l'arrêtent
    (pas les meubles, qui faisaient sauter l'image à chaque fauteuil) */
@@ -524,7 +543,8 @@ function drawSet(SM, sh, cam, o, lines){
   const gl = GL.gl, show = SM.levels.length ? levelsShown(sh, cam) : [];
   // les faces un peu repoussées : le trait des arêtes passe toujours devant
   if(lines){ gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
-  GL.draw(SM.g, o); SM.levels.forEach((m, i) => { if(show[i]) GL.draw(m, o); });
+  const lv = SET_DEF[sh.set].levels || [];
+  GL.draw(SM.g, o); SM.levels.forEach((m, i) => { if(show[i]) GL.draw(m, Object.assign({}, o, { floor:lv[i] || 0 })); });
   if(lines){
     gl.disable(gl.POLYGON_OFFSET_FILL); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     const L = { flat:true, lines:true, col:INK, a:0.3 };
@@ -581,7 +601,7 @@ function drawFrame(sh, w, h, clean, o){
   GL.view(eye, tube.map(c => M4.apply(mats[c].chest, [0, 0.12, 0])));
   const SM = setMesh(sh.set);
   drawSet(SM, sh, cam, { vc:true }, !fast);
-  (sh.vehicles || []).forEach(v => { const M = vehMat(v); GL.draw(vehMesh(v), { m:M, vc:true }); if(!fast){ gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(vehLines(v), { m:M, flat:true, lines:true, col:INK, a:0.3 }); gl.depthMask(true); gl.disable(gl.BLEND); } });
+  (sh.vehicles || []).forEach(v => { const M = vehMat(v); GL.draw(vehMesh(v), { m:M, vc:true, floor:v.y || 0 }); if(!fast){ gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(vehLines(v), { m:M, flat:true, lines:true, col:INK, a:0.3 }); gl.depthMask(true); gl.disable(gl.BLEND); } });
   // une ombre douce sous chaque personnage (trois disques très légers, pas de calcul d'ombre)
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   chars.forEach((ch, c) => {
@@ -1056,9 +1076,13 @@ function placePreview(id){
    La caméra glisse jusqu'à la pièce ; les étages du dessus s'effacent tout seuls. */
 /* aller n'importe où dans la maison : on clique sur le plan, la caméra s'y pose à hauteur d'yeux */
 function goSpot(level, x, z){
-  const s = shot(), d = SET_DEF[s.set]; if(!d.levels) return; const y0 = d.levels[level] || 0;
-  camEdit(() => { const c = s.cam; c.tx = x; c.tz = z; c.ty = y0 + 1.1; c.dist = clamp(c.dist, 1.2, 3.2); c.pitch = clamp(c.pitch, -30, -4); c.lens = Math.min(c.lens, 28); });
-  S.room = null; S.planLevel = level;
+  const s = shot(), d = SET_DEF[s.set]; if(!d.levels) return;
+  // la pièce où l'on a cliqué (ou la plus proche) : la caméra se met dans son coin opposé
+  const rs = (d.rooms || []).filter(r => r[2] === level), dist = r => Math.hypot(Math.max(r[3][0] - x, 0, x - r[3][2]), Math.max(r[3][1] - z, 0, z - r[3][3]));
+  const r = rs.reduce((b, q) => !b || dist(q) < dist(b) ? q : b, null);
+  if(r){ const c = roomCam(d, r, [x, 0, z]); camEdit(() => { s.cam = camLook(c.eye, c.target, 22); s.info.size = 'pe'; s.info.angle = 'neu'; }); S.room = d.floors.findIndex(f => f[5] === r); }
+  else { const y0 = d.levels[level] || 0; camEdit(() => { const c = s.cam; c.tx = x; c.tz = z; c.ty = y0 + 1.1; }); S.room = null; }
+  S.planLevel = level;
 }
 /* amener le personnage choisi là où vise la caméra (pratique pour changer d'étage) */
 function bringHere(){

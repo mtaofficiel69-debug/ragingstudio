@@ -41,8 +41,7 @@ function setPanel(id, keep){
 }
 
 /* ---------- La charpente de la page ---------- */
-// Raging Board est d'abord pensé en sombre (la 3D y ressort mieux) : le mode clair reste au choix
-function theme(){ return lsGet(LS_THEME) === 'light' ? 'light' : 'dark'; }
+function theme(){ return lsGet(LS_THEME) === 'dark' ? 'dark' : 'light'; }
 function renderUI(){
   const app = document.getElementById('app');
   document.documentElement.lang = getLang(); document.documentElement.dataset.theme = theme();
@@ -94,7 +93,6 @@ function renderTop(){
         <span class="save-status" id="saveStatus"><i></i><span></span></span>
       </div>
       <div class="topbar-right">
-        <a class="dsc-pill" id="tbDiscord" href="${DISCORD_URL}" target="_blank" rel="noopener">${discordSvg()}<span>Discord</span><em id="tbDiscordFr"></em></a>
         <div class="lang-flags" role="group" aria-label="Language / Langue"><button class="lang-flag" data-act="lang" data-l="fr">FR</button><button class="lang-flag" data-act="lang" data-l="en">EN</button></div>
         <button class="ib" data-act="theme" id="tbTheme"></button>
         <div class="menu-wrap">
@@ -109,8 +107,6 @@ function renderTop(){
   document.getElementById('tbUndo').title = L('Annuler (Ctrl+Z)', 'Undo (Ctrl+Z)'); document.getElementById('tbRedo').title = L('Rétablir (Ctrl+Y)', 'Redo (Ctrl+Y)');
   document.getElementById('tbUndo').disabled = !S.undo.length; document.getElementById('tbRedo').disabled = !S.redo.length;
   document.querySelectorAll('.lang-flag').forEach(b => b.classList.toggle('active', b.dataset.l === getLang()));
-  const dc = document.getElementById('tbDiscord'); dc.title = L('Undergrounders : le serveur Discord des cinéastes indépendants (100 % francophone)', 'Undergrounders: the Discord server for independent filmmakers (French-speaking only)');
-  document.getElementById('tbDiscordFr').textContent = getLang() === 'fr' ? '' : 'FR';
   const th = document.getElementById('tbTheme'); th.innerHTML = icon(theme() === 'dark' ? 'sun' : 'moon'); th.title = theme() === 'dark' ? L('Mode clair', 'Light mode') : L('Mode sombre', 'Dark mode');
   document.getElementById('tbExportLbl').textContent = L('Exporter', 'Export');
   document.getElementById('exportMenu').innerHTML = exportList();
@@ -143,7 +139,6 @@ function renderHead(){
   const s = shot(), n = S.doc.shots.length, inf = s.info;
   el.innerHTML = `<div class="sh-l">
       <span class="sh-no">${L('Plan', 'Shot')} ${S.i + 1}</span><span class="sh-of">${L('sur', 'of')} ${n}</span>
-      ${SET_DEF[s.set].floors ? `<label class="sh-room">${icon('stairs')}<select data-act="room" aria-label="${esc(L('Pièce', 'Room'))}"><option value="">${L('Pièce…', 'Room…')}</option>${SET_DEF[s.set].floors.map((f, k) => `<option value="${k}" ${S.room === k ? 'selected' : ''}>${esc(L(f[0], f[1]))}</option>`).join('')}</select></label>` : ''}
       ${inf.scene ? `<span class="sh-chip">${esc(L('Sc. ', 'Sc. ') + inf.scene)}</span>` : ''}
       <span class="sh-chip">${esc(shotLabel('size', inf.size))}</span>
       ${inf.move !== 'fix' ? `<span class="sh-chip mv">${icon('move')}${esc(shotLabel('move', inf.move))}${S.endEd ? ' · ' + L('cadre de fin', 'end frame') : ''}</span>` : ''}
@@ -691,7 +686,6 @@ function showIntro(force){
       ${st('frame', L('Cadre', 'Frame'), L('« Le cadrage » : choisis la valeur du plan, la caméra se place. Ce que tu vois dans le cadre, c’est ton plan : il s’enregistre tout seul.', '“Framing”: pick a shot size, the camera places itself. What you see in the frame is your shot: it saves by itself.'))}
       ${st('plus', L('Enchaîne', 'Keep going'), L('« Nouveau plan », en bas : il reprend le plan actuel, tu changes juste ce qui bouge. Puis « Lire le storyboard » et la planche PDF.', '“New shot”, at the bottom: it starts from the current one, you only change what moves. Then “Play the storyboard” and the PDF board.'))}
     </ol>
-    <a class="intro-dsc" href="${DISCORD_URL}" target="_blank" rel="noopener">${discordSvg()}<span><b>${L('Rejoins Undergrounders', 'Join Undergrounders')}</b>${L('Le Discord des cinéastes indépendants : monter des films, s’entraider, partager des astuces. 100 % francophone.', 'The Discord of independent filmmakers: make films together, help each other, share tips. French-speaking only.')}</span></a>
     <div class="modal-f"><button class="btn btn-primary" data-act="introOk">${L('C’est parti', 'Let’s go')}</button></div></div>`;
   document.body.appendChild(bd);
 }

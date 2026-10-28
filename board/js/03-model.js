@@ -888,18 +888,21 @@ Object.assign(SET_DEF, {
     levels:[0, 2.9, 5.8, 8.7], prev:{ tx:0, ty:3.2, tz:0, yaw:32, pitch:-12, dist:21, lens:28 }, box:[-5.2, -4.2, 5.2, 4.2],
     cam:{ tx:-1.5, ty:0.8, tz:-2.2, yaw:43, pitch:-16, dist:4.4, lens:24 },
     // les pièces : [fr, en, étage, œil de la caméra (dans un coin de la pièce), point visé (son centre)]
-    floors:[
-      ['Salon', 'Living room', 0, [0.55, 2.0, 0.9], [-1.5, 0.8, -2.2]],
-      ['Cuisine', 'Kitchen', 0, [1.05, 2.0, 0.95], [3.0, 0.8, -1.9]],
-      ['Entrée et escalier', 'Hall and stairs', 0, [4.6, 2.1, 3.6], [-2.6, 1.1, 1.6]],
-      ['1er : palier', '1st: landing', 1, [-2.55, 5.0, -3.75], [-3.7, 3.6, 1.8]],
-      ['1er : chambre', '1st: bedroom', 1, [4.7, 4.9, 0.15], [0.6, 3.4, -2.6]],
-      ['1er : salle de bain', '1st: bathroom', 1, [-2.0, 4.9, 0.7], [3.0, 3.4, 3.0]],
-      ['2e : chambre d’enfant', '2nd: child’s room', 2, [-1.35, 7.8, 0.35], [3.2, 6.3, -2.2]],
-      ['2e : bureau', '2nd: study', 2, [-1.35, 7.8, 0.85], [3.0, 6.6, 3.0]],
-      ['Grenier', 'Attic', 3, [4.3, 9.8, 0.3], [-1, 9.3, -0.5]],
-      ['Le jardin', 'Garden', -1, [8, 4.6, 19], [0, 3.6, 0]],
+    // les pièces, étage par étage : leur rectangle au sol (x0, z0, x1, z1). La caméra s'y place toute seule,
+    // dans le coin le plus éloigné de ce qu'on veut voir, à hauteur d'yeux : toute la pièce est dans l'image
+    rooms:[
+      ['Salon', 'Living room', 0, [-3.7, -4, 0.8, 1.2]],
+      ['Cuisine', 'Kitchen', 0, [0.8, -4, 5, 1.2]],
+      ['Entrée et escalier', 'Hall and stairs', 0, [-3.7, 1.2, 5, 4]],
+      ['1er : palier', '1st: landing', 1, [-5, -4, -2.3, -0.45], [-3.0, 1.4]],
+      ['1er : chambre', '1st: bedroom', 1, [-2.3, -4, 5, 0.4]],
+      ['1er : salle de bain', '1st: bathroom', 1, [-2.3, 0.4, 5, 4]],
+      ['2e : palier', '2nd: landing', 2, [-5, -4, -1.6, -0.45], [-3.0, 1.4]],
+      ['2e : chambre d’enfant', '2nd: child’s room', 2, [-1.6, -4, 5, 0.6]],
+      ['2e : bureau', '2nd: study', 2, [-1.6, 0.6, 5, 4]],
+      ['Grenier', 'Attic', 3, [-5, -4, 5, 4]],
     ],
+    garden:['Le jardin', 'Garden', -1, [7.5, 3.4, 17], [0, 2.6, 4.7]],
     build(g, gl, L){
       const H = HOUSE, W0 = '#E6DDCC', WOOD = '#9C7B5B', top = H.h * 3;
       // le jardin (percé sous la maison : son plancher ne clignote pas)
@@ -1116,6 +1119,8 @@ const SPOTS = {
   airfield:[ ['Sur le tarmac', 'On the apron', -2.0, 4.0, 60], ['En face', 'Facing', 0.2, 5.4, -120], ['Dans le hangar', 'In the hangar', -22, -9, 90], ['Au bord de la piste', 'By the runway', 4.2, 20, 90], ['Sur l’aire de l’hélico', 'On the helipad', -6, 11, 180, null, 0.04], ['Au pied de la tour', 'At the tower', -35.4, 10, 90] ],
   forest:[ ['Dans la clairière', 'In the clearing', 0.2, 0.6, 200], ['En face', 'Facing', -0.9, -0.6, 30], ['Sur le sentier', 'On the path', 1.2, -12, 0, 'walk'], ['Assis sur un rondin', 'Sitting on a log', -0.7, -3.1, 0, 'sit'], ['Sur la passerelle', 'On the footbridge', 9, 2, 90, null, 0.16], ['Dans la cabane', 'In the cabin', -6.5, 5.5, 160, null, 0.15], ['Entre les arbres', 'Among the trees', -12, -10, 40] ],
 };
+// la maison : les pièces deviennent la liste « aller dans une pièce » (avec le jardin à la fin)
+Object.values(SET_DEF).forEach(d => { if(d.rooms) d.floors = d.rooms.map(r => { const c = roomCam(d, r); return [r[0], r[1], r[2], c.eye, c.target, r]; }).concat(d.garden ? [d.garden] : []); });
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
 const SET_COLL = {};
@@ -1219,6 +1224,15 @@ const CAR_SHOTS = [
   ['dessus', 'Vue du dessus', 'From above', [0.2, 9, 0.6], [0, 0.5, -0.2], 24, 'pg'],
 ];
 /* une caméra à partir de l'endroit où elle est (e) et de ce qu'elle regarde (t) */
+/* la caméra dans une pièce, pour voir le point T : dans le coin opposé, à hauteur d'yeux */
+function roomCam(def, r, T){
+  const [x0, z0, x1, z1] = r[3], y0 = def.levels[r[2]], m = 0.45;
+  const t = !T && r[4] ? [r[4][0], y0 + 1.0, r[4][1]] : [clamp(T ? T[0] : (x0 + x1) / 2, x0 + 0.3, x1 - 0.3), y0 + 1.0, clamp(T ? T[2] : (z0 + z1) / 2, z0 + 0.3, z1 - 0.3)];
+  const cand = r[2] === 3 ? [[x0 + 0.6, 0], [x1 - 0.6, 0]].map(([x, z]) => [x, y0 + 1.55, z])   // sous le toit : aux deux bouts du faîte
+    : [[x0 + m, z0 + m], [x1 - m, z0 + m], [x0 + m, z1 - m], [x1 - m, z1 - m]].map(([x, z]) => [x, y0 + 1.65, z]);
+  const e = cand.reduce((b, c) => Math.hypot(c[0] - t[0], c[2] - t[2]) > Math.hypot(b[0] - t[0], b[2] - t[2]) ? c : b);
+  return { eye:e, target:t };
+}
 function camLook(e, t, lens){
   const vx = e[0] - t[0], vy = e[1] - t[1], vz = e[2] - t[2], dist = Math.hypot(vx, vy, vz) || 1;
   return { tx:t[0], ty:t[1], tz:t[2], yaw:Math.atan2(vx, vz) / D2R, pitch:-Math.asin(vy / dist) / D2R, dist, lens, roll:0 };
