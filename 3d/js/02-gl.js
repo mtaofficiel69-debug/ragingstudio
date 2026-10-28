@@ -108,24 +108,33 @@ const GL = {
     this.gl = gl;
     const vs = `attribute vec3 aP; attribute vec3 aN; attribute vec3 aC;
       uniform mat4 uVP; uniform mat4 uM; uniform vec3 uCol; uniform float uVC;
-      varying vec3 vN; varying vec3 vC;
-      void main(){ vN = mat3(uM) * aN; vC = mix(uCol, aC, uVC); gl_Position = uVP * uM * vec4(aP, 1.0); }`;
+      varying vec3 vN; varying vec3 vC; varying vec3 vW;
+      void main(){ vN = mat3(uM) * aN; vC = mix(uCol, aC, uVC); vec4 w = uM * vec4(aP, 1.0); vW = w.xyz; gl_Position = uVP * w; }`;
     const fs = `precision mediump float;
       uniform vec3 uL; uniform float uFlat; uniform float uA; uniform vec3 uTint; uniform float uTintK;
-      varying vec3 vN; varying vec3 vC;
+      uniform vec3 uEye; uniform vec3 uT0; uniform vec3 uT1; uniform float uNT; uniform float uX;
+      varying vec3 vN; varying vec3 vC; varying vec3 vW;
+      /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
+      bool inTube(vec3 t){ vec3 d = t - uEye; float k = dot(vW - uEye, d) / dot(d, d); return k > 0.0 && k < 0.9 && distance(vW, uEye + d * k) < 0.42; }
       void main(){
+        if(uX > 0.5){
+          bool hid = (uNT > 0.5 && inTube(uT0)) || (uNT > 1.5 && inTube(uT1));
+          if(uX < 1.5 && hid) discard;        // passe opaque : on laisse un trou…
+          if(uX > 1.5 && !hid) discard;       // …que la passe transparente remplit à moitié
+        }
+        if(distance(vW, uEye) < 0.3 && uX > 0.5) discard;   // rien ne colle à l'objectif
         if(uFlat > 0.5){ gl_FragColor = vec4(vC, uA); return; }
         vec3 n = normalize(vN);
         float d = max(dot(n, uL), 0.0), h = 0.5 + 0.5 * n.y;
         vec3 c = mix(vC, uTint, uTintK) * (0.42 + 0.2 * h + 0.5 * d);
-        gl_FragColor = vec4(c, 1.0);
+        gl_FragColor = vec4(c, uA);
       }`;
     const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); return s; };
     const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
     if(!gl.getProgramParameter(p, gl.LINK_STATUS)) return false;
     gl.useProgram(p); this.prog = p;
     ['aP', 'aN', 'aC'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
-    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
+    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT0', 'uT1', 'uNT', 'uX'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // pour la sélection au clic : une petite image hors écran où chaque partie du corps a sa couleur
@@ -152,6 +161,7 @@ const GL = {
     const c = o.col || [1, 1, 1]; gl.uniform3f(L.uCol, c[0], c[1], c[2]);
     gl.uniform1f(L.uVC, o.vc ? 1 : 0); gl.uniform1f(L.uFlat, o.flat ? 1 : 0); gl.uniform1f(L.uA, o.a == null ? 1 : o.a);
     const t = o.tint || [0, 0, 0]; gl.uniform3f(L.uTint, t[0], t[1], t[2]); gl.uniform1f(L.uTintK, o.tintK || 0);
+    gl.uniform1f(L.uX, o.x || 0);
     gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
   },
   begin(w, h, vp, bg){
@@ -159,6 +169,13 @@ const GL = {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h);
     gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix4fv(this.loc.uVP, false, vp);
+  },
+  /* la position de la caméra, et les personnages à ne jamais laisser cacher par le décor */
+  view(eye, targets){
+    const gl = this.gl, L = this.loc, t = targets || [];
+    gl.uniform3f(L.uEye, eye[0], eye[1], eye[2]);
+    const a = t[0] || [0, -99, 0], b = t[1] || [0, -99, 0];
+    gl.uniform3f(L.uT0, a[0], a[1], a[2]); gl.uniform3f(L.uT1, b[0], b[1], b[2]); gl.uniform1f(L.uNT, t.length);
   },
   /* image de sélection, à la taille réduite de l'écran (assez pour viser une main) */
   beginPick(w, h, vp){

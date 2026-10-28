@@ -131,6 +131,37 @@ input, select, textarea{font-family:inherit;}
 .nogl{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; gap:8px; padding:30px; text-align:center; font-size:14px; line-height:1.5; color:var(--ink-soft);}
 .nogl b{color:var(--ink); font-size:16px;}
 
+/* ---------- La poignée au-dessus des têtes (jamais dans les exports : elle est hors de l'image 3D) ---------- */
+.handles{position:absolute; inset:0; pointer-events:none; overflow:hidden;}
+.hd{position:absolute; left:0; top:0; width:0; height:0; pointer-events:none;}
+.hd-move{position:absolute; left:-15px; top:-40px; width:30px; height:40px; padding:0; border:0; background:transparent; pointer-events:auto; cursor:grab; touch-action:none; animation:bob 2.4s ease-in-out infinite;}
+.hd-move svg{display:block; width:30px; height:40px; filter:drop-shadow(0 3px 4px rgba(15,77,49,.35));}
+.hd-move path{fill:#7FD1A8; stroke:#fff; stroke-width:1.6; stroke-linejoin:round;}
+.hd-move .hl{fill:#ffffff8c; stroke:none;}
+.hd.on .hd-move path:first-child{fill:var(--accent);}
+.hd-move:hover{animation-play-state:paused;}
+.hd-move:hover svg{transform:scale(1.12);}
+.hd.busy .hd-move{cursor:grabbing; animation:none;}
+.hd-turn{position:absolute; left:14px; top:-30px; width:22px; height:22px; padding:0; display:grid; place-items:center; border:1.5px solid #fff; border-radius:50%; background:#ffffffe6; color:var(--accent-2); pointer-events:auto; cursor:ew-resize; touch-action:none; box-shadow:0 2px 5px rgba(16,24,40,.25); opacity:0; transition:opacity .15s;}
+.hd-turn svg{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;}
+.hd:hover .hd-turn, .hd.on .hd-turn, .hd.busy .hd-turn{opacity:1;}
+@keyframes bob{0%, 100%{transform:translateY(0);} 50%{transform:translateY(-5px);}}
+@media (prefers-reduced-motion:reduce){ .hd-move{animation:none;} }
+body.dragging, body.dragging *{cursor:grabbing !important; user-select:none;}
+
+/* ---------- Le pavé de déplacement ---------- */
+.nav{position:absolute; right:10px; bottom:10px; display:flex; align-items:flex-end; gap:6px; padding:6px; border-radius:12px; background:#ffffffd9; box-shadow:var(--shadow-md); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); opacity:.55; transition:opacity .15s;}
+.nav:hover, .nav:focus-within{opacity:1;}
+.nav button{width:30px; height:30px; padding:0; display:grid; place-items:center; border:1px solid var(--hair); border-radius:7px; background:var(--surface); color:var(--ink-soft); touch-action:none; user-select:none;}
+.nav button:hover{color:var(--ink); border-color:var(--accent-soft);}
+.nav button.on{background:var(--accent); border-color:var(--accent); color:#fff;}
+.nav svg{width:14px; height:14px; fill:currentColor; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
+.nav .pad{display:grid; grid-template-columns:repeat(3, 30px); grid-template-rows:repeat(2, 30px); gap:3px;}
+.nav .pad [data-nav="fwd"]{grid-column:2; grid-row:1;} .nav .pad [data-nav="left"]{grid-column:1; grid-row:2;}
+.nav .pad [data-nav="back"]{grid-column:2; grid-row:2;} .nav .pad [data-nav="right"]{grid-column:3; grid-row:2;}
+.nav .col{display:flex; flex-direction:column; gap:3px;}
+.hint{max-width:calc(100% - 290px);}
+
 /* ---------- La planche ---------- */
 .strip{flex:none; background:var(--surface); border-top:1px solid var(--hair); padding:10px 14px 12px;}
 .strip-h{display:flex; align-items:baseline; gap:10px; margin-bottom:8px;}
@@ -203,4 +234,5 @@ input, select, textarea{font-family:inherit;}
   .tools{gap:6px 10px; padding:8px; overflow-x:auto; flex-wrap:nowrap;}
   .tl, .grid-btn{display:none;}
   .hint{display:none;}
+  .nav{display:none;}   /* sur téléphone, les doigts suffisent : un doigt tourne, deux doigts zooment et décalent */
 }

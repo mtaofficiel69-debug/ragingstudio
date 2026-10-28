@@ -127,7 +127,7 @@ function lookAtOther(){
 /* ---------- Cadrage rapide ---------- */
 function frameSize(size){
   const s = shot(), ch = s.chars[S.target] || s.chars[0];
-  edit(() => {
+  camEdit(() => {
     if(size === 'am'){ if(s.chars.length > 1) s.cam = frameOTS(ch, s.chars[1 - S.target], 50); }
     else if(size === '2p'){ if(s.chars.length > 1) s.cam = frameTwo(s.chars[0], s.chars[1], 35, s.cam.yaw); }
     else if((size === 'pe' || size === 'pg') && s.chars.length > 1){ s.cam = frameTwo(s.chars[0], s.chars[1], size === 'pg' ? 24 : 28, s.cam.yaw, true); if(size === 'pg') s.cam.dist *= 1.8; }
@@ -138,7 +138,7 @@ function frameSize(size){
 }
 function frameAngle(angle){
   const s = shot(), ch = s.chars[S.target] || s.chars[0];
-  edit(() => {
+  camEdit(() => {
     s.info.angle = angle;
     if(angle === 'deb'){ s.cam.roll = s.cam.roll ? 0 : 14; return; }
     s.cam.roll = 0;
@@ -148,7 +148,7 @@ function frameAngle(angle){
 }
 function setLens(l){
   const s = shot();
-  edit(() => {
+  camEdit(() => {
     // on garde la même taille de sujet à l'image : le recul suit la focale
     s.cam.dist = clamp(s.cam.dist * l / s.cam.lens, 0.35, 28); s.cam.lens = l;
   });
@@ -164,6 +164,21 @@ function viewProj(c, aspect){
   // le débullé tourne l'image autour de l'axe de la caméra
   return M4.mul(M4.persp(fovOf(c.lens), aspect, 0.05, 80), M4.mul(M4.rz(r), M4.lookAt(e, [c.tx, c.ty, c.tz], [0, 1, 0])));
 }
+/* la caméra glisse jusqu'au nouveau cadrage au lieu de sauter (un quart de seconde) */
+const TWEEN_MS = 320;
+function startTween(from){ S.tween = { from, t0:performance.now() }; requestRender(); }
+function viewCam(sh){
+  sh = sh || shot();
+  if(!S.tween || sh !== shot()) return sh.cam;
+  const k = (performance.now() - S.tween.t0) / TWEEN_MS;
+  if(k >= 1){ S.tween = null; return sh.cam; }
+  const e = 1 - Math.pow(1 - k, 3), a = S.tween.from, b = sh.cam, o = {};
+  for(const f in b) o[f] = a[f] == null ? b[f] : a[f] + (b[f] - a[f]) * e;
+  const dy = ((b.yaw - a.yaw) % 360 + 540) % 360 - 180; o.yaw = a.yaw + dy * e;   // par le plus court chemin
+  return o;
+}
+/* un changement de cadrage annulable, avec la caméra qui glisse */
+function camEdit(fn){ const before = clone(shot().cam); edit(fn); startTween(before); }
 
 /* ---------- Rendu ---------- */
 const R = { canvas:null, sets:{}, parts:{}, blob:null, raf:0 };
@@ -174,27 +189,44 @@ function initMeshes(){
   for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, b = (i + 1) / 16 * Math.PI * 2; tri(g, [0, 0, 0], [Math.sin(b) * 0.36, 0, Math.cos(b) * 0.36], [Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36], C); }
   R.blob = GL.mesh(g);
 }
-function requestRender(){ if(R.raf || S.rec) return; R.raf = requestAnimationFrame(() => { R.raf = 0; drawFrame(); }); }
-const BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8');
-/* dessine un plan ; « clean » : sans la sélection en vert (exports, vignettes) */
+function requestRender(){
+  if(R.raf || S.rec) return;
+  R.raf = requestAnimationFrame(() => { R.raf = 0; drawFrame(); if(S.tween || NAV.held) requestRender(); });
+}
+const BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552');
+/* dessine un plan ; « clean » : l'image du film, sans aide (exports, vignettes) */
 function drawFrame(sh, w, h, clean){
   const gl = GL.gl; if(!gl) return;
   sh = sh || shot(); w = w || R.canvas.width; h = h || R.canvas.height;
-  GL.begin(w, h, viewProj(sh.cam, w / h), BG);
-  GL.draw(setMesh(sh.set), { vc:true });
+  const cam = clean ? sh.cam : viewCam(sh), vp = viewProj(cam, w / h), eye = camEye(cam);
+  GL.begin(w, h, vp, BG);
+  // en travaillant, le décor qui cache un personnage devient transparent ; à l'export, il reste en place
+  const mats = sh.chars.map(ch => charMatrices(ch));
+  GL.view(eye, clean ? [] : mats.map(M => M4.apply(M.chest, [0, 0.12, 0])));
+  GL.draw(setMesh(sh.set), { vc:true, x:1 });
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   const ground = sh.set === 'taxi' ? 0.305 : 0.006;
   sh.chars.forEach(ch => GL.draw(R.blob, { m:M4.trans(ch.root.x, ground, ch.root.z), flat:true, a:0.22, col:[0.06, 0.07, 0.09] }));
   gl.depthMask(true); gl.disable(gl.BLEND);
+  // en travaillant : les parties cachées par le décor (mur, voiture) sont dessinées en filigrane,
+  // avant les personnages, pour qu'elles n'apparaissent que là où le décor passe devant
+  if(!clean){
+    gl.enable(gl.BLEND); gl.depthMask(false); gl.depthFunc(gl.GREATER);
+    sh.chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c; for(const J of JOINTS) GL.draw(R.parts[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.42 : 0.2, col:on ? GREEN : GHOST }); });
+    gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
+  }
+  const tintOf = (c, id) => clean ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
   sh.chars.forEach((ch, c) => {
-    const M = charMatrices(ch), col = hexRGB(CHAR_LOOK[c].col);
-    for(const J of JOINTS){
-      let tint = null, k = 0;
-      if(!clean && S.sel && S.sel.c === c && S.sel.j === J.id){ tint = GREEN; k = 0.72; }
-      else if(!clean && S.hover && S.hover.c === c && S.hover.j === J.id){ tint = GREEN_L; k = 0.45; }
-      GL.draw(R.parts[J.id], { m:M[J.id], col, tint, tintK:k });
-    }
+    const col = hexRGB(CHAR_LOOK[c].col);
+    for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(R.parts[J.id], { m:mats[c][J.id], col, tint, tintK:k }); }
   });
+  if(!clean){
+    gl.enable(gl.BLEND); gl.depthMask(false);
+    // le décor coupé autour des personnages, remis en transparence par-dessus
+    GL.draw(setMesh(sh.set), { vc:true, x:2, a:0.22 });
+    gl.depthMask(true); gl.disable(gl.BLEND);
+    if(w === R.canvas.width) placeHandles(sh, vp, w, h, mats);
+  }
 }
 /* vignettes de la planche : petites images, refaites seulement quand un plan change */
 const THUMBS = new Map();
@@ -220,12 +252,75 @@ function thumbLater(i, all){
   }, all ? 0 : 200);
 }
 
-/* ce qu'il y a sous la souris : une partie du corps, ou rien */
+/* ---------- La poignée au-dessus de la tête (comme dans les Sims) ----------
+   Un losange vert flotte au-dessus de chaque personnage : on le maintient pour
+   déplacer le personnage, la petite flèche à côté sert à le faire tourner.
+   C'est un élément de la page, posé sur l'image : il n'est jamais dans les exports. */
+function placeHandles(sh, vp, w, h, mats){
+  const host = document.getElementById('handles'); if(!host) return;
+  if(host.children.length !== sh.chars.length) host.innerHTML = sh.chars.map((_, c) => `<div class="hd" data-c="${c}">
+      <button class="hd-move" data-hd="move" data-c="${c}" aria-label="${esc(L('Déplacer ', 'Move ') + L(CHAR_LOOK[c].fr, CHAR_LOOK[c].en))}"><svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1 22 13 12 31 2 13Z"/><path class="hl" d="M12 3.5 6 13h12Z"/></svg></button>
+      <button class="hd-turn" data-hd="turn" data-c="${c}" aria-label="${esc(L('Tourner ', 'Turn ') + L(CHAR_LOOK[c].fr, CHAR_LOOK[c].en))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
+    </div>`).join('');
+  const r = R.canvas.getBoundingClientRect(), k = r.width / w;
+  sh.chars.forEach((ch, c) => {
+    const el = host.children[c], top = M4.apply(mats[c].head, [0, 0.62, 0]);
+    // derrière la caméra : on cache la poignée
+    const clip = [vp[0] * top[0] + vp[4] * top[1] + vp[8] * top[2] + vp[12], vp[1] * top[0] + vp[5] * top[1] + vp[9] * top[2] + vp[13], vp[3] * top[0] + vp[7] * top[1] + vp[11] * top[2] + vp[15]];
+    if(clip[2] <= 0.05){ el.style.display = 'none'; return; }
+    const x = (clip[0] / clip[2] + 1) / 2 * w * k, y = (1 - clip[1] / clip[2]) / 2 * h * k;
+    el.style.display = x < -20 || y < -40 || x > r.width + 20 || y > r.height + 20 ? 'none' : '';
+    el.style.transform = `translate(${Math.round(x)}px, ${Math.round(clamp(y, 18, r.height - 10))}px)`;
+    el.classList.toggle('on', (S.sel && S.sel.c === c) || S.target === c);
+    el.classList.toggle('busy', HDRAG.c === c);
+  });
+}
+const HDRAG = { c:-1, kind:null, x:0, y:0, snap:null, moved:false };
+function onHandleDown(e){
+  const b = e.target.closest('[data-hd]'); if(!b || S.rec) return;
+  e.preventDefault(); e.stopPropagation();
+  const c = +b.dataset.c, ch = shot().chars[c]; if(!ch) return;
+  b.setPointerCapture(e.pointerId);
+  HDRAG.c = c; HDRAG.kind = b.dataset.hd; HDRAG.snap = snapshot(); HDRAG.moved = false; HDRAG.x = e.clientX;
+  S.target = c; S.sel = { c, j:'pelvis' };
+  HDRAG.y = e.clientY;
+  document.body.classList.add('dragging');
+  renderSide(); renderTools(); renderHint(); requestRender();
+}
+function onHandleMove(e){
+  if(HDRAG.c < 0) return;
+  const ch = shot().chars[HDRAG.c]; if(!ch) return;
+  if(HDRAG.kind === 'move'){
+    // la souris glisse, le personnage suit sur le sol : vers la droite de l'image, ou vers le fond
+    const dx = e.clientX - HDRAG.x, dy = e.clientY - HDRAG.y; HDRAG.x = e.clientX; HDRAG.y = e.clientY;
+    if(dx || dy){
+      const c = viewCam(), eye = camEye(c), y = c.yaw * D2R;
+      const vx = ch.root.x - eye[0], vy = 1.0 + ch.root.y - eye[1], vz = ch.root.z - eye[2], d = Math.hypot(vx, vy, vz) || 1;
+      const k = d * 2 * Math.tan(fovOf(c.lens) / 2) / (R.canvas.getBoundingClientRect().height || 500);
+      const depth = 1 / clamp(Math.abs(vy) / d + 0.25, 0.35, 1);     // vu de haut, un pixel vers le fond fait moins de chemin
+      const rx = Math.cos(y), rz = -Math.sin(y), fx = -Math.sin(y), fz = -Math.cos(y);
+      ch.root.x = clamp(ch.root.x + (rx * dx - fx * dy * depth) * k, -12, 12);
+      ch.root.z = clamp(ch.root.z + (rz * dx - fz * dy * depth) * k, -14, 12);
+      HDRAG.moved = true;
+    }
+  } else {
+    const dx = e.clientX - HDRAG.x; HDRAG.x = e.clientX;
+    if(dx){ ch.root.ry = ((ch.root.ry + dx * 0.8) % 360 + 540) % 360 - 180; HDRAG.moved = true; renderSide(true); }
+  }
+  requestRender();
+}
+function onHandleUp(){
+  if(HDRAG.c < 0) return;
+  HDRAG.c = -1; document.body.classList.remove('dragging');
+  if(HDRAG.moved){ pushUndo(HDRAG.snap); changed(); } else requestRender();
+}
+
+/* ce qu'il y a sous la souris : une partie du corps, ou rien.
+   Le décor n'arrête pas le clic : un personnage derrière un meuble reste attrapable. */
 function pickAt(px, py){
   const gl = GL.gl; if(!gl) return null;
   const sh = shot(), sc = 0.5, w = Math.max(1, Math.round(R.canvas.width * sc)), h = Math.max(1, Math.round(R.canvas.height * sc));
-  GL.beginPick(w, h, viewProj(sh.cam, R.canvas.width / R.canvas.height));
-  GL.draw(setMesh(sh.set), { flat:true, col:[0, 0, 0] });
+  GL.beginPick(w, h, viewProj(viewCam(), R.canvas.width / R.canvas.height));
   sh.chars.forEach((ch, c) => {
     const M = charMatrices(ch);
     for(const J of JOINTS){ const id = c * 32 + J.idx + 1; GL.draw(R.parts[J.id], { m:M[J.id], flat:true, col:[id / 255, 0, 0] }); }
@@ -237,7 +332,7 @@ function pickAt(px, py){
 }
 /* point du sol (y) sous un pixel de l'écran */
 function groundAt(px, py, y){
-  const inv = M4.invert(viewProj(shot().cam, R.canvas.width / R.canvas.height));
+  const inv = M4.invert(viewProj(viewCam(), R.canvas.width / R.canvas.height));
   const nx = px / R.canvas.width * 2 - 1, ny = 1 - py / R.canvas.height * 2;
   const a = M4.apply(inv, [nx, ny, -1]), b = M4.apply(inv, [nx, ny, 1]);
   const dy = b[1] - a[1]; if(Math.abs(dy) < 1e-6) return null;
@@ -245,15 +340,18 @@ function groundAt(px, py, y){
   return [a[0] + (b[0] - a[0]) * k, a[2] + (b[2] - a[2]) * k];
 }
 
-/* ---------- Souris, doigts ---------- */
+/* ---------- Souris, doigts ----------
+   Glisser dans le vide : tourner autour · clic droit (ou Maj) + glisser : se décaler ·
+   molette : avancer, reculer · double-clic : viser cet endroit. */
 const DRAG = { mode:null, x:0, y:0, moved:false, grab:null, pts:new Map(), pinch:0, snap:null };
 function canvasXY(e){ const r = R.canvas.getBoundingClientRect(), k = R.canvas.width / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; }
 function onDown(e){
   if(S.rec) return;
+  S.tween = null;
   R.canvas.setPointerCapture(e.pointerId);
   DRAG.pts.set(e.pointerId, [e.clientX, e.clientY]);
   if(DRAG.pts.size === 1) DRAG.snap = snapshot();
-  if(DRAG.pts.size === 2){ const [a, b] = [...DRAG.pts.values()]; DRAG.mode = 'pinch'; DRAG.pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); DRAG.dist0 = shot().cam.dist; return; }
+  if(DRAG.pts.size === 2){ const [a, b] = [...DRAG.pts.values()]; DRAG.mode = 'pinch'; DRAG.pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); DRAG.dist0 = shot().cam.dist; DRAG.mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; return; }
   const [x, y] = canvasXY(e);
   DRAG.x = e.clientX; DRAG.y = e.clientY; DRAG.moved = false;
   const hit = e.button === 0 && !e.shiftKey ? pickAt(x, y) : null;
@@ -261,7 +359,18 @@ function onDown(e){
     S.sel = hit; S.target = hit.c; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
     if(DRAG.mode === 'move'){ const ch = shot().chars[hit.c], g = groundAt(x, y, 0); DRAG.grab = g ? [ch.root.x - g[0], ch.root.z - g[1]] : null; }
     renderSide(); renderTools(); renderHint(); requestRender();
-  } else DRAG.mode = (e.button === 2 || e.button === 1 || e.shiftKey) ? 'pan' : 'orbit';
+  } else {
+    DRAG.mode = (e.button === 2 || e.button === 1 || e.shiftKey) ? 'pan' : 'orbit';
+    R.canvas.style.cursor = 'grabbing';
+  }
+}
+/* se décaler : la scène suit la souris, dans le plan de l'image */
+function panBy(cam, dx, dy){
+  const k = cam.dist * Math.tan(fovOf(cam.lens) / 2) * 2 / (R.canvas.getBoundingClientRect().height || 500), y = cam.yaw * D2R, p = cam.pitch * D2R;
+  cam.tx -= Math.cos(y) * dx * k; cam.tz += Math.sin(y) * dx * k;
+  // vers le haut et le bas : selon l'inclinaison de la caméra, on monte ou on avance
+  cam.ty = clamp(cam.ty + Math.cos(p) * dy * k, -0.5, 8);
+  cam.tx -= Math.sin(y) * Math.sin(p) * dy * k; cam.tz -= Math.cos(y) * Math.sin(p) * dy * k;
 }
 function onMove(e){
   if(DRAG.pts.has(e.pointerId)) DRAG.pts.set(e.pointerId, [e.clientX, e.clientY]);
@@ -269,16 +378,15 @@ function onMove(e){
   const cam = shot().cam;
   if(DRAG.mode === 'pinch'){
     if(DRAG.pts.size < 2) return;
-    const [a, b] = [...DRAG.pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
-    cam.dist = clamp(DRAG.dist0 * DRAG.pinch / Math.max(d, 1), 0.35, 30); DRAG.moved = true; requestRender(); return;
+    const [a, b] = [...DRAG.pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    cam.dist = clamp(DRAG.dist0 * DRAG.pinch / Math.max(d, 1), 0.35, 30);
+    panBy(cam, mid[0] - DRAG.mid[0], mid[1] - DRAG.mid[1]); DRAG.mid = mid;   // deux doigts : zoomer et se décaler
+    DRAG.moved = true; requestRender(); return;
   }
   const dx = e.clientX - DRAG.x, dy = e.clientY - DRAG.y; DRAG.x = e.clientX; DRAG.y = e.clientY;
   if(Math.abs(dx) + Math.abs(dy) > 0) DRAG.moved = true;
-  if(DRAG.mode === 'orbit'){ cam.yaw -= dx * 0.35; cam.pitch = clamp(cam.pitch + dy * 0.3, -88, 85); }
-  else if(DRAG.mode === 'pan'){
-    const k = cam.dist * 0.0016, y = cam.yaw * D2R;
-    cam.tx -= Math.cos(y) * dx * k; cam.tz += Math.sin(y) * dx * k; cam.ty = clamp(cam.ty + dy * k, -0.5, 8);
-  }
+  if(DRAG.mode === 'orbit'){ cam.yaw -= dx * 0.3; cam.pitch = clamp(cam.pitch + dy * 0.25, -88, 85); }
+  else if(DRAG.mode === 'pan') panBy(cam, dx, dy);
   else if(DRAG.mode === 'pose'){
     const J = JOINT[S.sel.j], v = shot().chars[S.sel.c].j[J.id], k = 0.5;
     // glisser vers le haut lève ou plie ; vers le côté, la deuxième façon de bouger
@@ -296,19 +404,31 @@ function onMove(e){
 function onUp(e){
   DRAG.pts.delete(e.pointerId);
   if(!DRAG.mode || DRAG.pts.size) return;
-  const m = DRAG.mode; DRAG.mode = null;
+  const m = DRAG.mode; DRAG.mode = null; R.canvas.style.cursor = 'grab';
   if(!DRAG.moved){
     if((m === 'orbit' || m === 'pan') && S.sel){ S.sel = null; renderSide(); renderHint(); requestRender(); }
     return;
   }
   pushUndo(DRAG.snap); changed();
 }
+/* molette : on avance vers ce qu'il y a sous la souris (et non vers le centre) */
 let _wheelT = 0, _wheelSnap = null;
 function onWheel(e){
-  e.preventDefault();
+  e.preventDefault(); S.tween = null;
   if(!_wheelSnap) _wheelSnap = snapshot();
-  const c = shot().cam; c.dist = clamp(c.dist * Math.exp(e.deltaY * 0.0012), 0.35, 30); requestRender();
+  const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015), nd = clamp(c.dist * f, 0.35, 30);
+  const [x, y] = canvasXY(e), g = groundAt(x, y, c.ty);
+  if(g && f < 1){ const k = (1 - nd / c.dist) * 0.5; c.tx += (g[0] - c.tx) * k; c.tz += (g[1] - c.tz) * k; }
+  c.dist = nd; requestRender();
   clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350);
+}
+/* double-clic : sur un personnage, la caméra le recadre ; ailleurs, elle vise ce point du sol */
+function onDblClick(e){
+  if(S.rec) return;
+  const [x, y] = canvasXY(e), hit = pickAt(x, y), s = shot();
+  if(hit){ S.target = hit.c; frameSize(FRAMES[s.info.size] ? s.info.size : 'pm'); return; }
+  const g = groundAt(x, y, 0); if(!g) return;
+  camEdit(() => { s.cam.tx = g[0]; s.cam.tz = g[1]; s.cam.ty = clamp(s.cam.ty, 0.8, 1.6); });
 }
 let _hoverT = 0;
 function hoverCheck(e){
@@ -317,4 +437,39 @@ function hoverCheck(e){
   const same = (h && S.hover && h.c === S.hover.c && h.j === S.hover.j) || (!h && !S.hover);
   R.canvas.style.cursor = h ? 'pointer' : 'grab';
   if(!same){ S.hover = h; requestRender(); renderHint(); }
+}
+
+/* ---------- Se déplacer : le pavé à l'écran et le clavier (ZQSD ou WASD, flèches haut et bas) ----------
+   On maintient un bouton ou une touche : la caméra avance tant qu'on appuie. */
+const NAV = { held:null, last:0, snap:null, keys:new Set() };
+const NAV_KEYS = { z:'fwd', w:'fwd', arrowup:'fwd', s:'back', arrowdown:'back', q:'left', a:'left', d:'right', r:'up', f:'down' };
+function navStep(kind, dt){
+  const c = shot().cam, y = c.yaw * D2R, sp = (0.6 + c.dist * 0.35) * dt, turn = 70 * dt;
+  const fx = -Math.sin(y), fz = -Math.cos(y), rx = Math.cos(y), rz = -Math.sin(y);
+  if(kind === 'fwd'){ c.tx += fx * sp; c.tz += fz * sp; }
+  else if(kind === 'back'){ c.tx -= fx * sp; c.tz -= fz * sp; }
+  else if(kind === 'left'){ c.tx -= rx * sp; c.tz -= rz * sp; }
+  else if(kind === 'right'){ c.tx += rx * sp; c.tz += rz * sp; }
+  else if(kind === 'up') c.ty = clamp(c.ty + sp * 0.6, -0.5, 8);
+  else if(kind === 'down') c.ty = clamp(c.ty - sp * 0.6, -0.5, 8);
+  else if(kind === 'turnL') c.yaw += turn;
+  else if(kind === 'turnR') c.yaw -= turn;
+  else if(kind === 'in') c.dist = clamp(c.dist * Math.exp(-1.2 * dt), 0.35, 30);
+  else if(kind === 'out') c.dist = clamp(c.dist * Math.exp(1.2 * dt), 0.35, 30);
+}
+function navLoop(now){
+  const kinds = [...NAV.keys]; if(NAV.held) kinds.push(NAV.held);
+  if(!kinds.length){ NAV.running = false; return; }
+  const dt = Math.min(0.05, (now - NAV.last) / 1000); NAV.last = now;
+  kinds.forEach(k => navStep(k, dt)); drawFrame();
+  requestAnimationFrame(navLoop);
+}
+function navStart(kind){
+  S.tween = null;
+  if(!NAV.snap) NAV.snap = snapshot();
+  if(!NAV.running){ NAV.running = true; NAV.last = performance.now(); requestAnimationFrame(navLoop); }
+}
+function navEnd(){
+  if(NAV.held || NAV.keys.size) return;
+  if(NAV.snap){ pushUndo(NAV.snap); NAV.snap = null; changed(); }
 }
