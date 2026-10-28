@@ -687,3 +687,12 @@ body.imm-clean .hplan{display:none;}
 .sw-hospital{background:linear-gradient(160deg, #F2F4F3 0 30%, #DCE6E3 30% 70%, #BFC8C7 70%);}
 .sw-metro{background:linear-gradient(160deg, #E9ECEE 0 25%, #1A1E25 25% 45%, #2E5A8C 45% 62%, #4A4E55 62%);}
 .sw-bar{background:linear-gradient(160deg, #2A2422 0 30%, #6E3A2E 30% 60%, #5A3A26 60%);}
+/* le moment de la journée, sous l'image, à côté des boutons de déplacement */
+.tod-box{gap:2px;}
+.tod-b{display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 11px; border:0; border-radius:8px; background:transparent; color:var(--ink-soft); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:background .12s, color .12s;}
+.tod-b .icon{width:14px; height:14px;}
+.tod-b:hover{background:var(--overlay-hover); color:var(--ink);}
+.tod-b.on[data-v="day"]{background:#F3D46B; color:#3A2E08;}
+.tod-b.on[data-v="dusk"]{background:#E58A5A; color:#fff;}
+.tod-b.on[data-v="night"]{background:#2B3A66; color:#fff;}
+@media (max-width:1100px){ .tod-b span{display:none;} .tod-b{padding:0 9px;} }
