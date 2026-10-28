@@ -206,16 +206,16 @@ function renderPlan(){
     // les personnages de cet étage
     s.chars.forEach((ch, c) => { if(levelOfY(d, ch.root.y + 0.5) !== lv) return; const [p, q] = planXY(ch.root.x, ch.root.z); if(p < 0 || p > W || q < 0 || q > H) return;
       svg += `<circle class="hp-char" cx="${p}" cy="${q}" r="4.2" style="--c:${lookOf(ch, c).top || '#888'}"><title>${esc(L(lookOf(ch, c).fr, lookOf(ch, c).en))}</title></circle>`; });
-    // les pièces : un point à cliquer
-    d.floors.forEach((f, k) => { if(f[2] !== lv) return; const [p, q] = planXY(f[4][0], f[4][2]);
+    // les pièces : toute la pièce se clique, son nom au milieu
+    d.floors.forEach((f, k) => { if(f[2] !== lv || !f[5]) return; const [x0, z0, x1, z1] = f[5][3], [p, q] = planXY(x0, z0), [r, t] = planXY(x1, z1);
       const nm = L(f[0], f[1]).replace(/^(1er|2e|1st|2nd)\s*:\s*/, '');
-      svg += `<g class="hp-room ${S.room === k ? 'on' : ''}" data-k="${k}"><circle cx="${p}" cy="${q}" r="9"/><text x="${p}" y="${q + 19}">${esc(nm)}</text></g>`; });
+      svg += `<g class="hp-room ${S.room === k ? 'on' : ''}" data-k="${k}"><rect x="${p + 1.5}" y="${q + 1.5}" width="${r - p - 3}" height="${t - q - 3}" rx="3"/><text x="${(p + r) / 2}" y="${(q + t) / 2 + 3.5}">${esc(nm)}</text></g>`; });
     svg += `<g class="hp-cam" id="hpCam"><path d="M0 0 L-7 -12 L7 -12 Z"/><circle r="3.4"/></g>`;
   }
   el.innerHTML = `<div class="hp-h"><button class="hp-tog" data-act="planTog" title="${esc(open ? L('Replier le plan', 'Fold the plan') : L('Ouvrir le plan de la maison', 'Open the house plan'))}">${icon('stairs')}<b>${L('Plan', 'Plan')}</b>${open ? '' : `<span>${esc(names[lv] || '')}</span>`}</button>
       ${open ? `<div class="hp-tabs">${short.map((t, i) => `<button class="${i === lv && S.room !== garden ? 'on' : ''}" data-act="planLv" data-l="${i}" title="${esc(names[i])}">${esc(t)}</button>`).join('')}${garden >= 0 ? `<button class="${S.room === garden ? 'on' : ''}" data-act="floor" data-k="${garden}">${L('Jardin', 'Garden')}</button>` : ''}</div>` : ''}</div>
     ${open ? `<svg class="hp-svg" id="hpSvg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" data-l="${lv}">${svg}</svg>
-    <div class="hp-f"><span>${L('Clique une pièce, ou n’importe où sur le plan', 'Click a room, or anywhere on the plan')}</span><button class="hp-bring" data-act="bringHere" title="${esc(L('Amener le personnage choisi là où vise la caméra', 'Bring the chosen character where the camera aims'))}">${icon('users')}${L('Amener ', 'Bring ') + charName(S.sel ? S.sel.c : S.target) + L(' ici', ' here')}</button></div>` : ''}`;
+    <div class="hp-f"><span>${L('Clique dans une pièce : la caméra s’y pose, tournée vers ce point', 'Click inside a room: the camera goes there, facing that spot')}</span><button class="hp-bring" data-act="bringHere" title="${esc(L('Amener le personnage choisi là où vise la caméra', 'Bring the chosen character where the camera aims'))}">${icon('users')}${L('Amener ', 'Bring ') + charName(S.sel ? S.sel.c : S.target) + L(' ici', ' here')}</button></div>` : ''}`;
   planMarker();
 }
 /* la caméra sur le plan : sa position et la direction où elle regarde (mis à jour à chaque image) */
@@ -481,6 +481,7 @@ const PANEL_HTML = {
       <li><b>${L('Plan suivant', 'Next shot')}</b>${L('« Nouveau plan », en bas : il reprend celui-ci, tu ne changes que ce qui bouge. « Contrechamp » fait l’angle inverse.', '“New shot”, at the bottom: it starts from this one, you only change what moves. “Reverse shot” makes the opposite angle.')}</li>
       <li><b>${L('Relis, exporte', 'Review, export')}</b>${L('« Lire le storyboard » le fait défiler avec les mouvements. Puis la planche PDF ou l’animatique.', '“Play the storyboard” runs it with the moves. Then the PDF board or the animatic.')}</li></ol>
       ${lbl(L('Dans l’image', 'In the picture'))}<p class="fly-note">${L('Épingle verte au-dessus d’une tête : maintiens-la pour déplacer · flèche ronde : tourner · clic sur un bras, la tête… : poser à la main · glisser dans le vide : tourner autour · clic droit : se décaler · molette : avancer · double-clic : viser.', 'Green pin above a head: hold to move · round arrow: turn · click an arm, the head…: pose by hand · drag empty space: orbit · right-click: pan · wheel: move in · double-click: aim.')}</p>
+      ${lbl(L('La caméra', 'The camera'))}<p class="fly-note">${L('Elle se promène comme une vraie caméra : elle ne traverse ni les murs ni les meubles, elle glisse le long et passe par-dessus ce qui est bas. Pour changer de pièce, passe par une porte (touches Z Q S D ou flèches), ou clique dans une pièce sur le plan.', 'It moves like a real camera: it never goes through walls or furniture, it slides along them and over anything low. To change rooms, go through a door (WASD or arrow keys), or click a room on the plan.')}</p>
       ${lbl(L('Pour une planche de pro', 'For a pro board'))}<ul class="pro">
         <li>${L('Ouvre la séquence par un plan large (plan général ou d’ensemble) : on comprend où l’on est.', 'Open the sequence on a wide shot (extreme wide or wide): we see where we are.')}</li>
         <li>${L('Dans un dialogue : champ, contrechamp, en restant du même côté des personnages (la règle des 180°). Le bouton « Contrechamp » le fait pour toi.', 'In a dialogue: shot, reverse shot, staying on the same side of the characters (the 180° rule). The “Reverse shot” button does it for you.')}</li>
@@ -892,10 +893,9 @@ function bindEvents(){
   // le plan de la maison : une pièce, ou n'importe quel point de l'étage
   document.addEventListener('click', e => {
     const svg = e.target.closest('#hpSvg'); if(!svg) return;
-    const room = e.target.closest('.hp-room');
-    if(room){ goRoom(+room.dataset.k); }
-    else { const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) * vb.width / r.width, y = (e.clientY - r.top) * vb.height / r.height;
-      const wx = clamp(PLAN.x0 + (x - PLAN.pad) / PLAN.k, -4.8, 4.8), wz = clamp(PLAN.z0 + (y - PLAN.pad) / PLAN.k, -3.8, 3.8); goSpot(+svg.dataset.l, wx, wz); }
+    // on clique dans une pièce : la caméra s'y pose, tournée vers l'endroit cliqué
+    const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) * vb.width / r.width, y = (e.clientY - r.top) * vb.height / r.height;
+    const wx = clamp(PLAN.x0 + (x - PLAN.pad) / PLAN.k, -4.8, 4.8), wz = clamp(PLAN.z0 + (y - PLAN.pad) / PLAN.k, -3.8, 3.8); goSpot(+svg.dataset.l, wx, wz);
     renderHead(); renderPanel();
   });
   document.addEventListener('click', e => {

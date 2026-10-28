@@ -90,6 +90,9 @@ function floor(g, x0, z0, x1, z1, y, col, down){
 /* GEO_K : le niveau de détail des formes rondes (plus bas pour les contours, plus légers à dessiner) */
 let GEO_K = 1;
 function cyl(g, x, y, z, r1, r2, len, col, seg, axis){
+  // les cylindres assez grands (tables rondes, colonnes, roues, troncs) sont aussi des obstacles pour la caméra
+  if(COLL && Math.max(2 * Math.max(r1, r2), len) >= 0.4){ const r = Math.max(r1, r2);
+    collOf(g).b.push(axis === 'x' ? [x + len / 2, y, z, len / 2, r, r, 0] : axis === 'z' ? [x, y, z + len / 2, r, r, len / 2, 0] : [x, y - len / 2, z, r, len / 2, r, 0]); }
   seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON; EDGE_ON = 0;
   const pt = (r, t, k) => { const a = Math.cos(t)*r, b = Math.sin(t)*r;
     if(axis === 'x') return [x + k, y + a, z + b];

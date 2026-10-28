@@ -127,7 +127,6 @@ function renderHome(){
   if(!el){ el = document.createElement('div'); el.id = 'home'; document.body.appendChild(el); }
   document.documentElement.lang = getLang(); document.documentElement.dataset.theme = theme();
   const lib = libGet().sort((a, b) => (b.upd || 0) - (a.upd || 0)), last = lib[0];
-  const tip = HOME_TIPS[Math.floor(Date.now() / 86400000) % HOME_TIPS.length];
   const cards = lib.map(b => `<article class="bh-card">
       <button class="bh-open" data-act="hOpen" data-id="${esc(b.id)}" title="${esc(L('Ouvrir', 'Open'))}">
         <span class="bh-img">${b.thumb ? `<img src="${b.thumb}" alt="" loading="lazy">` : `<span class="bh-noimg">${r3Logo(34)}</span>`}<span class="bh-n">${b.n || 1} ${(b.n || 1) > 1 ? L('plans', 'shots') : L('plan', 'shot')}</span></span>
@@ -142,6 +141,7 @@ function renderHome(){
       <a class="bh-brand" href="./" aria-label="Raging Board">${r3Logo(40, 'bh-logo')}${r3Wordmark()}</a>
       <nav class="bh-links" aria-label="${esc(L('Raging Studio et les autres outils', 'Raging Studio and the other tools'))}">
         <a class="bh-l" href="${HUB()}" title="${esc(L('L’accueil de Raging Studio : tous les outils', 'The Raging Studio home: all the tools'))}">${HUB_LOGO}<span>Raging Studio</span></a>
+        <a class="bh-l bh-guide" href="../guide.html?from=board" title="${esc(L('Comment fonctionnent Raging Page, Raging Board et Raging Draw', 'How Raging Page, Raging Board and Raging Draw work'))}"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3C6 2 3.5 2 2 2.8v10c1.5-.8 4-.8 6 .2M8 3c2-1 4.5-1 6 -.2v10c-1.5-.8-4-.8-6 .2V3z"/></svg><span>Guide</span></a>
         <span class="app-trio" role="group" aria-label="${esc(L('Les outils Raging Studio', 'Raging Studio tools'))}"><a class="at-i" href="../page/" title="Raging Page">${RP_LOGO}</a><span class="at-i on" title="Raging Board" aria-current="page">${r3Logo(24)}</span><a class="at-i" href="../draw/" title="Raging Draw">${RD_LOGO}</a></span>
         <span class="bh-sep"></span>
         <div class="lang-flags" role="group" aria-label="Language / Langue"><button class="lang-flag ${getLang() === 'fr' ? 'active' : ''}" data-act="hLang" data-l="fr">FR</button><button class="lang-flag ${getLang() === 'en' ? 'active' : ''}" data-act="hLang" data-l="en">EN</button></div>
@@ -159,7 +159,6 @@ function renderHome(){
           <a class="bh-nav dsc" href="${DISCORD_URL}" target="_blank" rel="noopener">${discordSvg()}<span>${L('La communauté Discord', 'The Discord community')}<small>${L('Undergrounders · 100 % francophone', 'Undergrounders · French only')}</small></span></a>
           <input type="file" id="hFile" accept=".rboard,.json,application/json" hidden>
         </div>
-        <p class="bh-tip" title="${esc(L(tip[0], tip[1]))}">${icon('bulb')}<span><span class="tip-k">${L('Astuce', 'Tip')}</span>${esc(L(tip[0], tip[1]))}</span></p>
         <div class="bh-about">${r3Wordmark()}<p>${L('Ton storyboard en 3D, sans savoir dessiner. Gratuit, sans compte.', 'Your storyboard in 3D, no drawing skills needed. Free, no account.')}</p></div>
       </aside>
       <main class="bh-main">

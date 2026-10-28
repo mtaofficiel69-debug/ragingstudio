@@ -231,7 +231,7 @@ function setLens(l){
   camEdit(() => {
     // on garde la même taille de sujet à l'image : le recul suit la focale
     s.cam.dist = clamp(s.cam.dist * l / s.cam.lens, 0.35, 28); s.cam.lens = l;
-  });
+  }, true);
 }
 
 /* ---------- Changer de personnage : la caméra le suit, en glissant ---------- */
@@ -401,7 +401,12 @@ function animChars(sh, t){
   });
 }
 /* une image du plan à l'instant t (en secondes depuis son début) */
-function frameAt(sh, t){ const k = t / (sh.info.dur || 2); return { cam:camAt(sh, k, t), chars:animChars(sh, t) }; }
+function frameAt(sh, t){
+  const k = t / (sh.info.dur || 2), cam = camAt(sh, k, t);
+  // dans un lieu fermé, un mouvement (travelling arrière, grue…) s'arrête aux murs au lieu de les traverser
+  if(sh.info.move && sh.info.move !== 'fix' && SET_DEF[sh.set] && SET_DEF[sh.set].rooms) camSafe(cam, sh.set, false);
+  return { cam, chars:animChars(sh, t) };
+}
 
 /* ---------- L'image finale ----------
    Un bouton montre exactement ce qui sera enregistré : sans transparence, sans poignées, sans grille. */
@@ -412,134 +417,141 @@ function camEyeRaw(c){
   const y = c.yaw * D2R, p = c.pitch * D2R;
   return [c.tx + c.dist * Math.cos(p) * Math.sin(y), c.ty - c.dist * Math.sin(p), c.tz + c.dist * Math.cos(p) * Math.cos(y)];
 }
-/* la caméra ne passe plus à travers les murs et les meubles : si quelque chose se trouve entre le point
-   visé et l'objectif, l'objectif s'arrête juste devant (comme une perche qui se replie). Le taxi garde
-   ses prises de vue à travers les vitres. */
+/* ---------- La caméra, un objet physique ----------
+   L'objectif est une petite boule qui ne traverse ni les murs, ni les meubles, ni les plafonds, ni le sol.
+   Quand on tourne, recule, avance ou se décale, il glisse le long de ce qu'il touche, comme une vraie
+   caméra qu'on promène : il ne saute jamais, et ce qu'on voit est exactement ce qui est enregistré
+   (rien n'est corrigé après coup). Pour passer d'une pièce à l'autre, on passe par les portes, ou on
+   se téléporte avec le plan. Le taxi garde ses prises de vue à travers les vitres. */
 let CAM_SET = null;
-/* ---------- La caméra dans les lieux ----------
-   Dedans (un lieu fait de pièces : maison, chambre d'hôtel, parking…), l'objectif reste toujours dans la
-   pièce où se trouve le point visé : on ne traverse plus les murs, on ne sort plus dehors, on ne voit jamais
-   le vide. Le rester-dans-la-pièce est continu (pas de saut) ; quand le point visé passe d'une pièce à
-   l'autre, l'objectif glisse en un clin d'œil jusqu'à la nouvelle pièce.
-   Dehors, seuls les murs et les gros volumes arrêtent l'objectif (pas les poteaux ni les troncs), et la
-   distance revient en douceur. */
-const CAM_SMOOTH = { cam:null, d:0, t:0, set:'', room:null, blend:null, last:null };
-const _eyeCache = new Map();
-const camSetId = () => CAM_SET || (S.doc && S.doc.shots[S.i] && S.doc.shots[S.i].set);
-/* la pièce qui contient le point visé (ou la plus proche, si on vise une porte) */
-function roomOf(id, x, y, z){
-  const d = SET_DEF[id]; if(!d || !d.rooms) return null;
-  let best = null, bd = d.levels ? 3 : 0.7;   // dans une maison, l'escalier compte pour la pièce la plus proche
-  for(const r of d.rooms){
-    const y0 = d.levels ? d.levels[r[2]] : 0, y1 = y0 + (d.roomH || 3);
-    if(y < y0 - 0.4 || y > y1 + 0.4) continue;
-    const [x0, z0, x1, z1] = r[3], dd = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
-    if(dd < bd){ bd = dd; best = r; }
+const CAM_R = 0.14;
+const PHYS = {};
+/* les obstacles d'un lieu, préparés une fois : pavés (tournés), murs (segments), pièces (sol, plafond) */
+function physOf(id){
+  if(PHYS[id] !== undefined) return PHYS[id];
+  const C = SET_COLL[id], d = SET_DEF[id];
+  if(!C || id === 'taxi'){ PHYS[id] = null; return null; }
+  const all = [C.main].concat(C.levels), boxes = [], walls = [];
+  all.forEach(L => {
+    L.b.forEach(b => boxes.push([b[0], b[1], b[2], b[3] + CAM_R, b[4] + CAM_R, b[5] + CAM_R, Math.cos(b[6]), Math.sin(b[6])]));
+    L.w.forEach(w => walls.push(w));
+  });
+  const rooms = (d.rooms || []).map(r => { const y0 = d.levels ? d.levels[r[2]] : 0; return { r:r[3], y0, y1:y0 + (d.roomH || 3), roof:r[5] === 'roof' }; });
+  return PHYS[id] = { boxes, walls, rooms };
+}
+/* l'obstacle (son numéro) qui contient le point, en sautant ceux de la liste « skip » */
+function physHit(P, p, skip){
+  const B = P.boxes;
+  for(let i = 0; i < B.length; i++){
+    const b = B[i], py = p[1] - b[1]; if(py > b[4] || py < -b[4]) continue;
+    const px = p[0] - b[0], pz = p[2] - b[2], lx = px * b[6] - pz * b[7], lz = px * b[7] + pz * b[6];
+    if(lx > b[3] || lx < -b[3] || lz > b[5] || lz < -b[5]) continue;
+    if(skip && skip.has(i)) continue;
+    return i;
   }
-  return best;
+  return -1;
 }
-/* ramener un point dans le volume d'une pièce (sous le toit en pente pour un grenier) */
-function inRoom(id, r, e){
-  const d = SET_DEF[id], y0 = d.levels ? d.levels[r[2]] : 0, m = 0.2, [x0, z0, x1, z1] = r[3];
-  const x = clamp(e[0], x0 + m, x1 - m), z = clamp(e[2], z0 + m, z1 - m);
-  let top = y0 + (d.roomH || 3) - 0.15;
-  if(r[5] === 'roof') top = y0 + 2.4 - 0.56 * Math.abs(z);
-  return [x, clamp(e[1], y0 + 0.25, Math.max(y0 + 0.4, top)), z];
-}
-/* l'endroit où l'objectif doit être, sans adoucissement */
-function camEyeWant(c){
-  const id = camSetId(), key = id + '|' + c.tx + '|' + c.ty + '|' + c.tz + '|' + c.yaw + '|' + c.pitch + '|' + c.dist;
-  const hit = _eyeCache.get(key); if(hit) return hit;
-  const raw = camEyeRaw(c), r = id && roomOf(id, c.tx, c.ty, c.tz);
-  let e;
-  if(r){ e = inRoom(id, r, raw); e[1] += furnLift(e); e = inRoom(id, r, e); }
-  else { const d = camDist(c), k = d >= c.dist - 1e-6 ? 1 : d / c.dist; e = [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k]; e[1] += furnLift(e); }
-  if(_eyeCache.size > 600) _eyeCache.clear(); _eyeCache.set(key, e);
-  return e;
-}
-function camEye(c){
-  const S0 = CAM_SMOOTH; if(S0.cam !== c) return camEyeWant(c);
-  let e;
-  if(S0.room){ e = camEyeWant(c); }
-  else {   // dehors : la distance adoucie
-    const raw = camEyeRaw(c), k = Math.min(c.dist, S0.d) / c.dist;
-    e = [c.tx + (raw[0] - c.tx) * k, c.ty + (raw[1] - c.ty) * k, c.tz + (raw[2] - c.tz) * k]; e[1] += furnLift(e);
+/* traverser un mur entre a et b ? (dans le plan, à la hauteur du mur) */
+function physWall(P, a, b){
+  for(const w of P.walls){
+    const y = (a[1] + b[1]) / 2; if(y < w[4] - CAM_R || y > w[5] + CAM_R) continue;
+    const ex = w[2] - w[0], ez = w[3] - w[1], dx = b[0] - a[0], dz = b[2] - a[2];
+    const den = dx * ez - dz * ex; if(Math.abs(den) < 1e-12) continue;
+    const qx = w[0] - a[0], qz = w[1] - a[2], t = (qx * ez - qz * ex) / den, u = (qx * dz - qz * dx) / den;
+    if(t >= 0 && t <= 1 && u >= -0.02 && u <= 1.02) return true;
+    // et pas trop près du mur non plus (la boule a une épaisseur)
+    const L2 = ex * ex + ez * ez, k = clamp(((b[0] - w[0]) * ex + (b[2] - w[1]) * ez) / L2, 0, 1), cx = w[0] + ex * k - b[0], cz = w[1] + ez * k - b[2];
+    const ka = clamp(((a[0] - w[0]) * ex + (a[2] - w[1]) * ez) / L2, 0, 1), ax = w[0] + ex * ka - a[0], az = w[1] + ez * ka - a[2];
+    const db = Math.hypot(cx, cz), da = Math.hypot(ax, az);
+    if(db < CAM_R * 0.7 && db < da) return true;
   }
-  if(S0.blend){ const k = clamp((performance.now() - S0.blend.t0) / 220, 0, 1), q = k * k * (3 - 2 * k);
-    if(k >= 1) S0.blend = null; else e = [0, 1, 2].map(i => S0.blend.from[i] + (e[i] - S0.blend.from[i]) * q); }
-  return e;
+  return false;
 }
-/* près d'un meuble bas (canapé, table, lit…), l'objectif monte doucement par-dessus au lieu de rentrer
-   dedans : la montée commence 45 cm avant le meuble, elle ne fait donc jamais de saut */
-const _liftCache = new Map();
-function furnLift(e){
-  const id = CAM_SET || (S.doc && S.doc.shots[S.i] && S.doc.shots[S.i].set), C = id && id !== 'taxi' && SET_COLL[id]; if(!C) return 0;
-  const key = id + '|' + e[0].toFixed(3) + '|' + e[1].toFixed(3) + '|' + e[2].toFixed(3), hit = _liftCache.get(key); if(hit != null) return hit;
-  const lists = [C.main.b].concat(C.levels.map(l => l.b));
-  const lv = (SET_DEF[id] || {}).levels, fl = lv ? lv.reduce((m, y) => e[1] >= y - 0.1 ? y : m, 0) : 0;
-  let up = 0;
-  for(const list of lists) for(const b of list){
-    if(b[4] >= 0.9) continue;                                   // les grands meubles et les murs : réglés par la distance
-    const top = b[1] + b[4], bot = b[1] - b[4]; if(e[1] > top + 0.2 || e[1] < bot - 0.6 || bot - fl > 0.8) continue;   // seulement les meubles posés au sol
-    const cs = Math.cos(b[6]), sn = Math.sin(b[6]), px = e[0] - b[0], pz = e[2] - b[2], lx = px * cs - pz * sn, lz = px * sn + pz * cs;
-    if(Math.min(b[3], b[5]) < 0.08) continue;   // rampes, pieds : trop fins pour gêner
-    const dd = Math.hypot(Math.max(Math.abs(lx) - b[3], 0), Math.max(Math.abs(lz) - b[5], 0)); if(dd > 0.45) continue;
-    const s = 1 - dd / 0.45, want = (top + 0.2 - e[1]) * s * s * (3 - 2 * s); if(want > up && want < 1.3) up = want;
+/* le sol et le plafond : dans une pièce, entre son sol et son plafond (sous le toit au grenier) ; dehors, au-dessus du sol */
+function physY(P, p){
+  let lo = 0.12, hi = 60, best = null, bd = 1e9;
+  for(const R0 of P.rooms){
+    const [x0, z0, x1, z1] = R0.r; if(p[0] < x0 || p[0] > x1 || p[2] < z0 || p[2] > z1) continue;
+    const dd = p[1] < R0.y0 ? R0.y0 - p[1] : p[1] > R0.y1 ? p[1] - R0.y1 : 0; if(dd < 0.05 && dd < bd){ bd = dd; best = R0; }   // seulement la pièce où l'on est (pas celle de l'étage d'en dessus)
   }
-  if(_liftCache.size > 600) _liftCache.clear(); _liftCache.set(key, up);
-  return up;
+  if(best){ lo = best.y0 + 0.15; hi = best.roof ? best.y0 + 2.4 - 0.56 * Math.abs(p[2]) - 0.12 : best.y1 - 0.12; hi = Math.max(hi, lo + 0.1); }
+  return clamp(p[1], lo, hi);
 }
-/* la distance à laquelle l'objectif peut vraiment se placer : seuls les murs et les cloisons l'arrêtent
-   (pas les meubles, qui faisaient sauter l'image à chaque fauteuil) */
-function camDist(c){
-  const raw = camEyeRaw(c), id = CAM_SET || (S.doc && S.doc.shots[S.i] && S.doc.shots[S.i].set);
-  const C = id && id !== 'taxi' && SET_COLL[id]; if(!C) return c.dist;
-  const key = id + '|' + c.tx + '|' + c.ty + '|' + c.tz + '|' + c.yaw + '|' + c.pitch + '|' + c.dist;
-  const hit = _eyeCache.get(key); if(hit != null) return hit;
-  const o = [c.tx, c.ty, c.tz], dir = [(raw[0] - o[0]) / c.dist, (raw[1] - o[1]) / c.dist, (raw[2] - o[2]) / c.dist];
-  let t = c.dist;
-  const test = L => { testWalls(L.w); testBoxes(L.b); };
-  // un mur d'un seul côté ne gêne que si l'objectif se trouve du côté où on le voit
-  const testWalls = list => { for(const w of list){
-    const dx = w[2] - w[0], dz = w[3] - w[1], len = Math.hypot(dx, dz), nx = -dz / len, nz = dx / len, dn = dir[0] * nx + dir[2] * nz;
-    if(dn <= 1e-6) continue;
-    const tt = ((w[0] - o[0]) * nx + (w[1] - o[2]) * nz) / dn; if(tt <= 0.05 || tt >= t) continue;
-    const px = o[0] + dir[0] * tt - w[0], py = o[1] + dir[1] * tt, pz = o[2] + dir[2] * tt - w[1], u = (px * dx + pz * dz) / len;
-    if(u >= 0 && u <= len && py >= w[4] && py <= w[5]) t = tt;
-  } };
-  const testBoxes = list => { for(const b of list){
-    if(b[4] < 0.9 || Math.min(b[3], b[5]) < 0.25) continue;   // un meuble bas, un poteau, un tronc : on passe à travers (pas de saut)
-    // le rayon dans le repère du pavé (qui peut être tourné autour de la verticale)
-    const cs = Math.cos(b[6]), sn = Math.sin(b[6]), px = o[0] - b[0], pz = o[2] - b[2];
-    const P = [px * cs - pz * sn, o[1] - b[1], px * sn + pz * cs], D = [dir[0] * cs - dir[2] * sn, dir[1], dir[0] * sn + dir[2] * cs];
-    let t0 = -1e9, t1 = 1e9, inside = true;
-    for(let k = 0; k < 3; k++){
-      const h = b[3 + k]; if(Math.abs(P[k]) > h) inside = false;
-      if(Math.abs(D[k]) < 1e-9){ if(Math.abs(P[k]) > h){ t0 = 1e9; break; } continue; }
-      let a = (-h - P[k]) / D[k], z = (h - P[k]) / D[k]; if(a > z){ const q = a; a = z; z = q; }
-      if(a > t0) t0 = a; if(z < t1) t1 = z;
+/* déplacer l'objectif de « from » vers « to » : par petits pas, en glissant le long de ce qu'il touche */
+function physMove(P, from, to){
+  let p = from.slice(); p[1] = physY(P, p);
+  const skip = new Set(); for(let i = physHit(P, p); i >= 0; i = physHit(P, p, skip)) skip.add(i);   // ce qui contient déjà l'objectif ne le retient pas
+  const D = [to[0] - p[0], to[1] - p[1], to[2] - p[2]], L = Math.hypot(...D); if(L < 1e-7) return p;
+  const n = Math.min(400, Math.ceil(L / 0.04)), st = D.map(v => v / n);
+  const ok = q => Math.abs(physY(P, q) - q[1]) < 1e-9 && physHit(P, q, skip) < 0 && !physWall(P, p, q);   // le sol, le plafond et le toit sont des obstacles comme les autres
+  for(let k = 0; k < n; k++){
+    // tout droit, sinon en glissant le long de l'obstacle, sinon en montant par-dessus (un tonneau, une table)
+    const up = Math.hypot(st[0], st[2]);
+    const tries = [st, [st[0], 0, st[2]], [st[0], st[1], 0], [0, st[1], st[2]], [st[0], 0, 0], [0, 0, st[2]], [st[0], up, st[2]], [0, up, 0], [0, st[1], 0]];
+    let moved = false;
+    for(const m of tries){
+      if(!m[0] && !m[1] && !m[2]) continue;
+      if(up > 1e-4 && m[1] !== up && Math.hypot(m[0], m[2]) < up * 0.1 && m !== tries[8]) continue;   // on avançait : glisser sur place ne compte pas
+      const q = [p[0] + m[0], p[1] + m[1], p[2] + m[2]];
+      if(ok(q)){ p = q; moved = true; break; }
     }
-    if(!inside && t0 <= t1 && t0 > 0.05 && t0 < t) t = t0;   // un pavé qui contient le point visé ne compte pas
-  } };
-  test(C.main);
-  if(C.levels.length){ const show = levelsShown({ set:id }, c); C.levels.forEach((l, i) => { if(show[i]) test(l); }); }
-  const d = t < c.dist ? Math.max(Math.min(0.3, c.dist), t - 0.15) : c.dist;
-  if(_eyeCache.size > 400) _eyeCache.clear(); _eyeCache.set(key, d);
-  return d;
+    if(!moved) break;
+  }
+  return p;
 }
-/* une fois par image de travail : on rapproche en douceur la distance affichée de la bonne distance
-   (vite quand un mur arrive, plus lentement quand on se dégage) */
-function camSmoothStep(sh, cam){
-  const now = performance.now(), S0 = CAM_SMOOTH, fresh = S0.set !== sh.set || now - S0.t > 400 || S0.cam !== cam;
-  const r = roomOf(sh.set, cam.tx, cam.ty, cam.tz), want = r ? cam.dist : camDist(cam);
-  // on change de pièce : on part de là où était l'objectif
-  if(!fresh && r !== S0.room && S0.last) S0.blend = { from:S0.last.slice(), t0:now };
-  if(fresh){ S0.d = want; S0.blend = null; }
-  else if(!r){ const dt = now - S0.t, tau = want < S0.d ? 70 : 160; S0.d += (want - S0.d) * (1 - Math.exp(-dt / tau)); if(Math.abs(S0.d - want) < 0.01) S0.d = want; }
-  S0.t = now; S0.set = sh.set; S0.cam = cam; S0.room = r;
-  S0.last = camEye(cam);
-  if((!r && S0.d !== want) || S0.blend) requestRender();
+/* après chaque geste de caméra : l'objectif part d'où il était (e0) et va où on le demande, physiquement.
+   S'il se décale avec le point visé (avancer, se décaler), tout le « pied » de caméra s'arrête ensemble ;
+   s'il tourne ou recule autour du point visé, la caméra garde ce qu'elle a pu faire. */
+const CAM_WANT = { cam:null, dist:0 };
+function camSettle(c, e0, t0, restore){
+  const id = shot().set, P = physOf(id); if(!P) return;
+  const t = [c.tx, c.ty, c.tz], rig = Math.hypot(t[0] - t0[0], t[1] - t0[1], t[2] - t0[2]) > 1e-9;
+  if(restore && !rig && CAM_WANT.cam === c && CAM_WANT.dist > c.dist + 0.01) c.dist = Math.min(CAM_WANT.dist, c.dist + 0.12);   // le recul voulu revient peu à peu quand la place se libère
+  const want = camEyeRaw(c), e = physMove(P, e0, want);
+  if(Math.hypot(e[0] - want[0], e[1] - want[1], e[2] - want[2]) < 1e-6) return;
+  if(rig){ c.tx += e[0] - want[0]; c.ty += e[1] - want[1]; c.tz += e[2] - want[2]; return; }
+  const v = [e[0] - c.tx, e[1] - c.ty, e[2] - c.tz], d = Math.hypot(...v); if(d < 0.05) return;
+  const yaw = Math.atan2(v[0], v[2]) / D2R;
+  c.yaw = yaw + Math.round((c.yaw - yaw) / 360) * 360; c.pitch = clamp(-Math.asin(clamp(v[1] / d, -1, 1)) / D2R, -89, 89); c.dist = d;
 }
+/* le recul que l'on a demandé (molette, pincement) : la caméra y revient d'elle-même, doucement, dès qu'il y a la place */
+function camWant(c){ CAM_WANT.cam = c; CAM_WANT.dist = c.dist; }
+/* une caméra posée d'un coup (un cadrage, une pièce) : si quelque chose se trouve entre le point visé et
+   l'objectif, l'objectif se pose juste devant ; la focale s'élargit pour garder la même taille de sujet */
+function camSafe(c, id, fit){
+  const P = physOf(id); if(!P) return c;
+  const t = [c.tx, c.ty, c.tz], skip = new Set(); for(let i = physHit(P, t); i >= 0; i = physHit(P, t, skip)) skip.add(i);
+  // jusqu'où l'objectif peut reculer depuis le point visé, dans la direction (yaw, pitch)
+  const free = (yaw, pitch) => {
+    const y = yaw * D2R, pp = pitch * D2R, dir = [Math.cos(pp) * Math.sin(y), -Math.sin(pp), Math.cos(pp) * Math.cos(y)];
+    let p = t, d = 0;
+    while(d < c.dist){
+      const nd = Math.min(c.dist, d + 0.04), q = [t[0] + dir[0] * nd, t[1] + dir[1] * nd, t[2] + dir[2] * nd];
+      if(Math.abs(physY(P, q) - q[1]) > 1e-6 || physHit(P, q, skip) >= 0 || physWall(P, p, q)) break;
+      p = q; d = nd;
+    }
+    return d;
+  };
+  let d = free(c.yaw, c.pitch);
+  if(d >= c.dist - 0.02) return c;
+  // un cadrage tout prêt qui tombe dans un meuble (un comptoir, un dossier) : on cherche l'angle le plus proche
+  // d'où l'on voit vraiment le sujet, un peu plus haut ou un peu sur le côté, plutôt que de coller l'objectif au sujet
+  if(fit && d < c.dist * 0.8){
+    let best = null;
+    for(const dp of [0, -8, -16, -26]) for(const dy of [0, 12, -12, 24, -24, 38, -38, 55, -55, 75, -75]){
+      if(!dp && !dy) continue;
+      const pt = clamp(c.pitch + dp, -60, 60), f = free(c.yaw + dy, pt), cost = Math.abs(dy) + Math.abs(dp) * 1.4;
+      if(f >= c.dist * 0.92 && (!best || cost < best.cost)) best = { cost, yaw:c.yaw + dy, pitch:pt, d:f };
+    }
+    if(best){ c.yaw = best.yaw; c.pitch = best.pitch; d = Math.min(best.d, c.dist); if(d >= c.dist - 0.02) return c; }
+  }
+  const nd = Math.max(0.3, d - 0.02);
+  if(fit && c.lens) c.lens = clamp(c.lens * nd / c.dist, 14, 200);
+  c.dist = nd;
+  return c;
+}
+/* l'objectif : là où on l'a mis */
+const camEye = c => camEyeRaw(c);
 function viewProj(c, aspect){
   const e = camEye(c), r = (c.roll || 0) * D2R;
   // le débullé tourne l'image autour de l'axe de la caméra ; on voit loin dans les grands espaces
@@ -559,7 +571,14 @@ function viewCam(sh){
   return o;
 }
 /* un changement de cadrage annulable, avec la caméra qui glisse */
-function camEdit(fn){ const before = clone(shot().cam); edit(fn); startTween(before); }
+function camEdit(fn, keepLens){ const before = clone(shot().cam); edit(() => { fn(); const s = shot(); camSafe(s.cam, s.set, !keepLens); CAM_WANT.cam = null; }); startTween(before); }
+/* un geste de caméra (tourner, se décaler, zoomer, avancer) : l'objectif y va physiquement */
+function camGesture(c, fn, zoom){
+  const e0 = camEyeRaw(c), t0 = [c.tx, c.ty, c.tz];
+  fn(); keepCam(c);
+  const asked = c.dist; camSettle(c, e0, t0, !zoom);
+  if(zoom){ camWant(c); CAM_WANT.dist = Math.min(asked, c.dist + 1.5); }
+}
 
 /* ---------- Rendu ---------- */
 const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new Map(), scale:1 };
@@ -645,7 +664,6 @@ function drawFrame(sh, w, h, clean, o){
   if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true; } }
   const fast = moving && R.slow;
   const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh));
-  if(!clean && !o && w === R.canvas.width) camSmoothStep(sh, cam);
   const vp = viewProj(cam, w / h), eye = camEye(cam);
   const E = envOf(sh);
   GL.begin(w, h, vp, E.bg, E);
@@ -960,9 +978,7 @@ function zoomBy(c, f){
     c.tx -= Math.sin(y) * Math.cos(p) * step; c.ty = clamp(c.ty + Math.sin(p) * step, -0.5, 30); c.tz -= Math.cos(y) * Math.cos(p) * step;
     c.dist = Math.max(DIST_MIN, Math.min(c.dist, DIST_MIN));
   } else {
-    // reculer contre un mur : on repart de la distance réellement vue (pas de molette « dans le vide »)
-    const w = camEyeWant(c), eff = Math.hypot(w[0] - c.tx, w[1] - c.ty, w[2] - c.tz);
-    c.dist = Math.min(DIST_MAX, f > 1 && eff < c.dist - 0.05 ? Math.max(DIST_MIN, eff * f) : want);
+    c.dist = Math.min(DIST_MAX, want);
   }
   keepCam(c);
 }
@@ -989,15 +1005,13 @@ function onMove(e){
   if(DRAG.mode === 'pinch'){
     if(DRAG.pts.size < 2) return;
     const [a, b] = [...DRAG.pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    zoomBy(cam, DRAG.dist0 * DRAG.pinch / Math.max(d, 1) / cam.dist);
-    panBy(cam, mid[0] - DRAG.mid[0], mid[1] - DRAG.mid[1]); DRAG.mid = mid;   // deux doigts : zoomer et se décaler
+    camGesture(cam, () => { zoomBy(cam, DRAG.dist0 * DRAG.pinch / Math.max(d, 1) / cam.dist); panBy(cam, mid[0] - DRAG.mid[0], mid[1] - DRAG.mid[1]); }, true); DRAG.mid = mid;   // deux doigts : zoomer et se décaler
     DRAG.moved = true; requestRender(); return;
   }
   const dx = e.clientX - DRAG.x, dy = e.clientY - DRAG.y; DRAG.x = e.clientX; DRAG.y = e.clientY;
   if(Math.abs(dx) + Math.abs(dy) > 0) DRAG.moved = true;
-  if(DRAG.mode === 'orbit'){ cam.yaw -= dx * 0.3; cam.pitch = clamp(cam.pitch + dy * 0.25, -88, 85); }
-  else if(DRAG.mode === 'pan') panBy(cam, dx, dy);
-  if(DRAG.mode === 'orbit' || DRAG.mode === 'pan') keepCam(cam);
+  if(DRAG.mode === 'orbit') camGesture(cam, () => { cam.yaw -= dx * 0.3; cam.pitch = clamp(cam.pitch + dy * 0.25, -88, 85); });
+  else if(DRAG.mode === 'pan') camGesture(cam, () => panBy(cam, dx, dy));
   else if(DRAG.mode === 'pose'){
     const J = JOINT[S.sel.j], v = shot().chars[S.sel.c].j[J.id], k = 0.5;
     // glisser vers le haut lève ou plie ; vers le côté, la deuxième façon de bouger
@@ -1030,8 +1044,10 @@ function onWheel(e){
   const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015);
   const [x, y] = canvasXY(e), g = groundAt(x, y, c.ty);
   // vers le point sous la souris, mais jamais plus loin que le recul actuel (sinon on part à l'horizon)
-  if(g && f < 1){ const k = (1 - f) * 0.5, dx = (g[0] - c.tx) * k, dz = (g[1] - c.tz) * k, l = Math.hypot(dx, dz), m = c.dist * 0.25; c.tx += l > m ? dx * m / l : dx; c.tz += l > m ? dz * m / l : dz; }
-  zoomBy(c, f); requestRender();
+  camGesture(c, () => {
+    if(g && f < 1){ const k = (1 - f) * 0.5, dx = (g[0] - c.tx) * k, dz = (g[1] - c.tz) * k, l = Math.hypot(dx, dz), m = c.dist * 0.25; c.tx += l > m ? dx * m / l : dx; c.tz += l > m ? dz * m / l : dz; }
+    zoomBy(c, f);
+  }, true); requestRender();
   clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350);
 }
 /* double-clic : sur un personnage, la caméra le recadre ; ailleurs, elle vise ce point du sol */
@@ -1073,7 +1089,7 @@ function navLoop(now){
   const kinds = [...NAV.keys]; if(NAV.held) kinds.push(NAV.held);
   if(!kinds.length){ NAV.running = false; return; }
   const dt = Math.min(0.05, (now - NAV.last) / 1000); NAV.last = now;
-  kinds.forEach(k => navStep(k, dt)); keepCam(shot().cam); drawFrame();
+  const c = shot().cam; camGesture(c, () => kinds.forEach(k => navStep(k, dt)), kinds.includes('in') || kinds.includes('out')); drawFrame();
   requestAnimationFrame(navLoop);
 }
 function navStart(kind){
