@@ -457,3 +457,44 @@ html[data-theme="dark"] .sh-room{color:var(--accent-ink);}
 .chip.on{border-color:var(--accent); background:var(--accent-tint); color:var(--accent-2);}
 .chip small{font-size:11px; opacity:.7; margin-left:3px;}
 .pro{margin:0 0 6px; padding-left:18px; font-size:12.5px; line-height:1.55; color:var(--ink-soft);} .pro li{margin-bottom:5px;}
+/* supprimer un plan : la corbeille sur chaque vignette (visible au survol, toujours sur le plan en cours) */
+.sc-wrap{position:relative; flex:none; display:flex;}
+.sc-del{position:absolute; top:9px; right:9px; z-index:2; width:26px; height:26px; display:flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:7px; background:rgba(18,19,22,.72); color:#fff; opacity:0; transition:opacity .12s, background .12s;}
+.sc-del .icon{width:14px; height:14px;}
+.sc-wrap:hover .sc-del, .sc-wrap:focus-within .sc-del, .sv-card:hover .sc-del, .sc-del:focus-visible{opacity:1;}
+.sc-del:hover{background:#C4373B;}
+.sv-card{position:relative;}
+.sv-del{top:16px; right:16px;}
+@media (hover:none){ .sc-del{opacity:1;} }
+.toast-act{margin-left:4px; padding:3px 10px; border:0; border-radius:999px; background:rgba(255,255,255,.14); color:#fff; font:inherit; font-weight:600; cursor:pointer;}
+.toast-act:hover{background:rgba(255,255,255,.24);}
+/* ---------- Des volets mieux rangés ----------
+   le titre reste en haut quand on fait défiler, les longues listes ont une barre de catégories,
+   et chaque partie est séparée par un filet */
+.side .ph{position:sticky; top:-4px; z-index:3; background:var(--surface); padding:16px 16px 10px; box-shadow:0 1px 0 var(--hair);}
+.ph-t{min-width:0; flex:1;}
+.jump{display:flex; flex-wrap:wrap; gap:4px; margin-top:10px;}
+.jump::-webkit-scrollbar{display:none;}
+.jump button{flex:none; padding:5px 10px; border:0; border-radius:999px; background:var(--surface-soft-2); color:var(--ink-soft); font-size:12px; font-weight:600; white-space:nowrap;}
+.jump button:hover{background:var(--accent-tint); color:var(--accent-2);}
+html[data-theme="dark"] .jump button:hover{color:var(--accent-ink);}
+.side .pb > .fly-lbl, .side .pb > .pose-g{scroll-margin-top:120px;}
+.side .pb > .fly-lbl:not(:first-child){margin-top:20px; padding-top:16px; border-top:1px solid var(--hair);}
+.side .pose-g{margin:20px 0 8px; padding-top:16px; border-top:1px solid var(--hair); font-size:10.5px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft);}
+.side .pb > .pose-g:first-child, .side .pb > .fly-lbl:first-child{border-top:0; padding-top:0; margin-top:16px;}
+.seg.wide.wrap{flex-wrap:wrap;} .seg.wide.wrap button{flex:1 1 30%;}
+.vtile{display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 6px 10px; border:1px solid var(--hair); border-radius:10px; background:var(--surface); color:var(--ink); font-size:12.5px; font-weight:600;}
+.vtile .icon{width:22px; height:22px; color:var(--accent);}
+.vtile:hover{border-color:var(--accent); background:var(--accent-tint);}
+/* Discord : la pastille dans la barre du haut, et une ligne sur l'accueil */
+.dsc-svg{width:17px; height:13px; fill:#5865F2; flex:none;}
+.dsc-pill{display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 11px; margin-right:6px; border:1px solid var(--hair); border-radius:999px; background:var(--surface); color:var(--ink); text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap; transition:border-color .15s, background .15s;}
+.dsc-pill:hover{border-color:#5865F266; background:#5865F212;}
+.dsc-pill em{font-style:normal; font-size:10px; font-weight:700; letter-spacing:.04em; padding:2px 5px; border-radius:999px; background:#5865F21A; color:#4752C4;}
+.dsc-pill em:empty{display:none;}
+html[data-theme="dark"] .dsc-pill em{color:#9EA6FF;}
+@media (max-width:900px){ .dsc-pill span, .dsc-pill em{display:none;} .dsc-pill{width:32px; padding:0; justify-content:center;} }
+.intro-dsc{display:flex; align-items:center; gap:12px; margin:8px 16px 0; padding:11px 14px; border:1px solid var(--hair); border-radius:11px; color:var(--ink-soft); text-decoration:none; font-size:12.5px; line-height:1.45; transition:border-color .15s, background .15s;}
+.intro-dsc:hover{border-color:#5865F266; background:#5865F20D;}
+.intro-dsc .dsc-svg{width:24px; height:18px;}
+.intro-dsc b{display:block; color:var(--ink); font-size:13px;}

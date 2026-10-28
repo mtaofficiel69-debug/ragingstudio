@@ -59,7 +59,11 @@ function tri(g, a, b, c, col){
 }
 const quad = (g, a, b, c, d, col) => { tri(g, a, b, c, col); tri(g, a, c, d, col); };
 /* pavé centré en (x,y,z), tourné de ry autour de la verticale ; faces tournées vers l'extérieur */
+/* les pavés assez grands d'un décor (murs épais, meubles) sont aussi notés comme obstacles pour la caméra */
+let COLL = null;
+const collOf = g => { let a = COLL.get(g); if(!a) COLL.set(g, a = { b:[], w:[] }); return a; };
 function box(g, x, y, z, w, h, d, col, ry){
+  if(COLL && Math.max(w, h, d) >= 0.4 && h >= 0.03 && !(h < 0.25 && w > 2 && d > 2)) collOf(g).b.push([x, y, z, w / 2, h / 2, d / 2, ry || 0]);
   const e0 = EDGE_ON; if(Math.min(w, h, d) < 0.012) EDGE_ON = 0;   // les bandes peintes au sol : pas de trait
   const hx = w/2, hy = h/2, hz = d/2, c = Math.cos(ry || 0), s = Math.sin(ry || 0);
   const P = (a, b, e) => [x + a*c + e*s, y + b, z - a*s + e*c];
@@ -72,6 +76,7 @@ function box(g, x, y, z, w, h, d, col, ry){
 }
 /* mur d'un seul côté : on le voit de face, il disparaît vu de dos (la caméra peut passer derrière) */
 function wall(g, a, b, h, col, y0){
+  if(COLL && h >= 0.4 && Math.hypot(b[0] - a[0], b[1] - a[1]) >= 0.4) collOf(g).w.push([a[0], a[1], b[0], b[1], y0 || 0, (y0 || 0) + h]);
   const C = typeof col === 'string' ? hexRGB(col) : col, y = y0 || 0;
   quad(g, [a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], C);
 }

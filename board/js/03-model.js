@@ -254,12 +254,12 @@ const POSES = [
   { id:'kneelHands', fr:'À genoux, mains sur la tête', en:'Kneeling, hands on head', g:'gun', prop:'gun', y:-0.47, j:{ thighL:[0,  6,  0], shinL:[92], footL:[30], thighR:[0,  6,  0], shinR:[92], footR:[30], head:[12,  0,  0], armL:[100,  -11,  -52], foreL:[103,  0], handL:[0,  0], armR:[100,  -11,  53], foreR:[103,  0], handR:[0,  0] } },
   { id:'oneKnee', fr:'Un genou à terre', en:'One knee down', g:'seat', y:-0.47, j:{ thighL:[0,  4,  0], shinL:[92], footL:[30], thighR:[88,  4,  0], shinR:[88], footR:[0], armL:[0,  -14,  50], foreL:[0,  76], handL:[-1,  0], armR:[32,  -15,  -15], foreR:[2,  21], handR:[0,  0] } },
   { id:'handshake', fr:'Serrer la main', en:'Handshake', g:'gest', y:0, j:{ armR:[34,  -15,  0], foreR:[18,  -13], handR:[0,  0] } },
-  { id:'hug', fr:'Prendre dans ses bras', en:'Hugging', g:'gest', y:0, j:{ head:[0,  25,  6], armL:[42,  -14,  0], foreL:[78,  -11], handL:[0,  0], armR:[33,  -8,  6], foreR:[82,  9], handR:[0,  0] } },
-  { id:'drink', fr:'Boire', en:'Drinking', g:'gest', y:0, j:{ head:[-12,  0,  0], armR:[54,  -4,  45], foreR:[123,  0], handR:[0,  0] } },
-  { id:'shout', fr:'Crier (mains en porte-voix)', en:'Shouting', g:'gest', y:0, j:{ head:[-14,  0,  0], chest:[-4,  0,  0], armL:[59,  -4,  -45], foreL:[127,  0], handL:[0,  0], armR:[59,  -4,  45], foreR:[127,  0], handR:[0,  0] } },
+  { id:'hug', fr:'Prendre dans ses bras', en:'Hugging', g:'gest', y:0, j:{ head:[0,  18,  4], spine:[6,  0,  0], armL:[46,  -15,  0], foreL:[82,  -4], handL:[0,  0], armR:[50,  -15,  8], foreR:[59,  9], handR:[0,  0] } },
+  { id:'drink', fr:'Boire', en:'Drinking', g:'gest', y:0, j:{ head:[-12,  0,  0], armR:[13,  57,  60], foreR:[131,  -14], handR:[0,  0] } },
+  { id:'shout', fr:'Crier (mains en porte-voix)', en:'Shouting', g:'gest', y:0, j:{ head:[-14,  0,  0], chest:[-4,  0,  0], armL:[92,  28,  0], foreL:[132,  -49], handL:[-1,  0], armR:[92,  28,  0], foreR:[132,  49], handR:[-1,  0] } },
   { id:'readPhone', fr:'Regarder son téléphone', en:'Looking at the phone', g:'gest', y:0, j:{ head:[32,  0,  0], armL:[-9,  -15,  9], foreL:[88,  -26], handL:[0,  0], armR:[-2,  -7,  -21], foreR:[85,  45], handR:[0,  0] } },
-  { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[0,  -15,  15], foreL:[17,  58], handL:[0,  0], armR:[0,  -15,  -15], foreR:[17,  -58], handR:[0,  0] } },
-  { id:'punch', fr:'Coup de poing', en:'Punching', g:'gest', y:0, j:{ spine:[4,  -14,  0], chest:[4,  -10,  0], thighR:[-10,  0,  0], thighL:[14,  0,  0], shinL:[10], armL:[40,  -2,  31], foreL:[142,  -30], handL:[0,  0], armR:[102,  -15,  21], foreR:[3,  26], handR:[0,  0] } },
+  { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[-10,  6,  -69], foreL:[29,  -3], handL:[0,  0], armR:[-10,  6,  69], foreR:[29,  3], handR:[0,  0] } },
+  { id:'punch', fr:'Coup de poing', en:'Punching', g:'gest', y:0, j:{ spine:[4,  -14,  0], chest:[4,  -10,  0], thighR:[-10,  0,  0], thighL:[14,  0,  0], shinL:[10], armL:[45,  5,  -15], foreL:[140,  0], handL:[0,  0], armR:[96,  -15,  16], foreR:[5,  41], handR:[0,  0] } },
   { id:'guard', fr:'En garde', en:'On guard', g:'gest', y:0, j:{ thighL:[16,  4,  0], thighR:[-12,  4,  0], shinR:[12], spine:[6,  0,  0], head:[6,  0,  0], armL:[57,  -8,  0], foreL:[101,  -15], handL:[0,  0], armR:[49,  -12,  15], foreR:[111,  0], handR:[0,  0] } },
   { id:'headInHands', fr:'La tête dans les mains', en:'Head in hands', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[42,  7,  -45], foreL:[133,  0], armR:[42,  7,  45], foreR:[133,  0], spine:[24,  0,  0], chest:[14,  0,  0], head:[28,  0,  0], handL:[0,  0], handR:[0,  0] } },
   { id:'lookBack', fr:'Se retourner', en:'Looking back', g:'move', y:0, j:{ chest:[0,  30,  0], spine:[0,  18,  0], head:[0,  70,  0], armL:[8,  8,  0], armR:[-8,  8,  0] } },
@@ -273,8 +273,8 @@ const POSES = [
   { id:'jump', fr:'Sauter', en:'Jumping', g:'move', y:0.35, j:{ thighL:[40,  4,  0], shinL:[80], thighR:[20,  4,  0], shinR:[60], spine:[6,  0,  0], armL:[125,  9,  35], foreL:[76,  0], handL:[0,  0], armR:[125,  9,  -35], foreR:[76,  0], handR:[0,  0] } },
   { id:'leanWall', fr:'Adossé au mur', en:'Leaning on the wall', g:'move', y:-0.03, j:{ pelvis:[-6,  0], thighR:[30,  0,  0], shinR:[60], spine:[-4,  0,  0], head:[0,  18,  0], armL:[-9,  -15,  90], foreL:[53,  78], handL:[0,  0], armR:[-9,  -15,  -90], foreR:[53,  -78], handR:[0,  0] } },
   { id:'clap', fr:'Applaudir', en:'Clapping', g:'gest', y:0, j:{ armL:[60,  24,  0], foreL:[94,  -79], handL:[0,  0], armR:[60,  24,  0], foreR:[94,  79], handR:[0,  0] } },
-  { id:'facepalm', fr:'La main sur le visage', en:'Facepalm', g:'gest', y:0, j:{ head:[18,  0,  0], armR:[56,  -7,  45], foreR:[120,  0], handR:[0,  0] } },
-  { id:'pray', fr:'Mains jointes', en:'Hands together', g:'gest', y:0, j:{ head:[16,  0,  0], armL:[56,  28,  0], foreL:[114,  -80], handL:[0,  0], armR:[56,  28,  0], foreR:[114,  80], handR:[0,  0] } },
+  { id:'facepalm', fr:'La main sur le visage', en:'Facepalm', g:'gest', y:0, j:{ head:[18,  0,  0], armR:[48,  33,  34], foreR:[127,  26], handR:[0,  0] } },
+  { id:'pray', fr:'Mains jointes', en:'Hands together', g:'gest', y:0, j:{ head:[16,  0,  0], armL:[3,  9,  15], foreL:[105,  -60], handL:[0,  0], armR:[3,  9,  -15], foreR:[105,  60], handR:[0,  0] } },
   { id:'carry', fr:'Porter un carton', en:'Carrying a box', g:'gest', y:0, j:{ spine:[-6,  0,  0], armL:[0,  22,  6], foreL:[81,  -30], handL:[0,  0], armR:[0,  22,  -6], foreR:[81,  30], handR:[0,  0] } },
   { id:'stop', fr:'Faire signe de s’arrêter', en:'Signalling stop', g:'gest', y:0, j:{ armR:[73,  -15,  -19], foreR:[45,  22], handR:[0,  0] } },
   { id:'scared', fr:'Avoir peur', en:'Scared', g:'gest', y:-0.05, j:{ spine:[-10,  0,  0], head:[-6,  0,  0], thighR:[-6,  0,  0], shinL:[10], armL:[33,  -9,  0], foreL:[114,  -7], handL:[0,  0], armR:[26,  3,  15], foreR:[112,  0], handR:[0,  0] } },
@@ -387,6 +387,7 @@ const SET_DEF = {
       // escalier de secours
       for(let y = 3.6; y < 9; y += 2.6){ box(g, 2.0, y, -3.2, 0.8, 0.05, 2.4, '#2C2E33'); box(g, 1.62, y + 0.45, -3.2, 0.04, 0.9, 2.4, '#2C2E33'); }
       for(let i = 0; i < 9; i++) box(g, 2.05, 1.8 + i * 0.2, -4.2 + i * 0.2, 0.6, 0.03, 0.12, '#2C2E33');
+      [[1.72, 1.76], [2.34, 2.38]].forEach(([a, b]) => { prism(g, [[-4.32, 1.7], [-4.32, 1.86], [-2.44, 3.74], [-2.44, 3.58]], a, b, '#2C2E33'); prism(g, [[-4.32, 1.86], [-4.32, 1.7], [-2.44, 3.58], [-2.44, 3.74]], a, b, '#2C2E33'); });   // les limons
       // benne, caisses, poubelles, réverbère
       box(g, -1.75, 0.6, -3.2, 1.2, 1.2, 2.0, '#2F6E4F'); box(g, -1.75, 1.24, -3.2, 1.25, 0.08, 2.05, '#26593F');
       box(g, 1.85, 0.25, 1.6, 0.5, 0.5, 0.5, '#9A7A55'); box(g, 1.85, 0.72, 1.55, 0.44, 0.44, 0.44, '#8A6A4A'); box(g, 1.5, 0.22, 2.2, 0.44, 0.44, 0.44, '#9A7A55');
@@ -662,6 +663,7 @@ Object.assign(SET_DEF, {
       box(g, -13.5, 2.9, 5.5, 2.6, 1.4, 2.6, '#C9503C'); prism(g, [[4.0, 3.6], [7.0, 3.6], [5.5, 4.4]], -15, -12, '#E9E6E0');
       wall(g, [-14.3, 6.81], [-12.7, 6.81], 0.6, '#3E4552', 3.1);
       for(let i = 0; i < 8; i++) box(g, -13.5, 0.15 + i * 0.27, 7.05, 0.8, 0.04, 0.12, '#E9E6E0');
+      [-13.93, -13.07].forEach(x => box(g, x, 1.15, 7.05, 0.06, 2.3, 0.06, '#E9E6E0'));   // les montants de l'échelle
       palm(g, 13, 7, 1.0, 1.3); palm(g, 16, 3, 1.15, -1.0); palm(g, -20, 12, 1.1, 0.8);
       [[22, -5, 1.4], [24, -7, 0.9], [-26, -6, 1.2]].forEach(([x, z, k]) => ball(g, x, 0.4 * k, z, 1.1 * k, 0.7 * k, 0.9 * k, '#8D8579', 7));
       [6.5, 13.5].forEach(x => cyl(g, x, 2.4, 10, 0.04, 0.04, 2.4, '#E9E6E0', 6)); box(g, 10, 2.15, 10, 7, 0.5, 0.02, '#2C2E33');
@@ -720,7 +722,7 @@ Object.assign(SET_DEF, {
       [-5.6, 5.6].forEach(x => [0.45, 0.85].forEach(y => box(g, x, y, 0, 0.05, 0.08, 160, '#8A6A4A')));
       for(let z = -150; z <= 150; z += 30){ cyl(g, 7.5, 8, z, 0.12, 0.14, 8, '#6B4E37', 6); box(g, 7.5, 7.6, z, 1.4, 0.1, 0.1, '#6B4E37'); }
       [7.0, 8.0].forEach(x => box(g, x, 7.62, 0, 0.02, 0.02, 300, '#2C2E33'));
-      for(let z = -120; z <= 120; z += 14) ball(g, -8.5, 4.5, z + 4, 1.2, 4.2, 1.2, '#4E7C58', 8);
+      for(let z = -120; z <= 120; z += 14){ cyl(g, -8.5, 0.9, z + 4, 0.13, 0.17, 0.9, '#6B4E37', 6); ball(g, -8.5, 4.5, z + 4, 1.2, 4.2, 1.2, '#4E7C58', 8); }
       [[16, -18, 1.4], [24, 8, 1.2], [-22, 30, 1.3], [-30, -60, 1.5], [30, -70, 1.2]].forEach(([x, z, k]) => tree(g, x, z, k));
       // la ferme et la grange
       box(g, -26, 2.2, -30, 9, 4.4, 7, '#E6DDCC'); prism(g, [[-33.6, 4.4], [-26.4, 4.4], [-30, 6.8]], -30.8, -21.2, '#8C4A3A');
@@ -764,7 +766,7 @@ Object.assign(SET_DEF, {
       prism(g, [[HZ0 - 0.3, HH], [HZ1 + 0.3, HH], [(HZ0 + HZ1) / 2, HH + 2.2]], HX0 - 0.3, HX1 + 0.3, '#7C828B');
       prism(g, [[HZ1 + 0.3, HH], [HZ0 - 0.3, HH], [(HZ0 + HZ1) / 2, HH + 2.1]], HX0 - 0.2, HX1 + 0.2, '#C9CCD1');   // le dessous du toit
       [HZ0 + 0.15, HZ1 - 0.15].forEach(z => box(g, HX1, HH / 2, z, 0.4, HH, 0.3, '#6E747C'));
-      box(g, HX1 + 0.5, HH - 0.4, (HZ0 + HZ1) / 2, 0.2, 0.8, HZ1 - HZ0 + 0.4, '#3D5A80');
+      box(g, HX1 + 0.3, HH - 0.4, (HZ0 + HZ1) / 2, 0.2, 0.8, HZ1 - HZ0 + 0.4, '#3D5A80');
       // l'atelier dans le hangar : établi, fûts, caisses, chariot à outils
       box(g, HX0 + 0.6, 0.48, -9, 0.9, 0.96, 4, '#7A5C42'); [-11.5, -11, -10.5].forEach((z, i) => cyl(g, HX0 + 0.7, 0.92, z - 2, 0.3, 0.3, 0.9, ['#B4232C', '#3D5A80', '#E8B923'][i], 10));
       [[-20, -14.5], [-21.2, -14.5], [-20.6, -14.5]].forEach(([x, z], i) => box(g, x, i === 2 ? 1.5 : 0.5, z, 1, 1, 1, '#A88A5E'));
@@ -778,7 +780,9 @@ Object.assign(SET_DEF, {
       box(g, 36, 3, -40, 0.1, 6, 0.1, '#D9D6CF'); cyl(g, 36, 5.8, -40.3, 0.32, 0.16, 1.8, '#E26A2C', 8, 'z');
       for(let z = -220; z <= 220; z += 20) [4.8, 31.2].forEach(x => box(g, x, 0.25, z, 0.18, 0.5, 0.18, '#E8B923'));
       for(let z = -60; z <= 60; z += 3) box(g, -50, 1, z, 0.08, 2, 0.08, '#7C828B'); [0.3, 1.0, 1.9].forEach(y => box(g, -50, y, 0, 0.03, 0.04, 120, '#9AA0A8'));
-      box(g, -12, 1.4, -0.2, 2.2, 2.2, 2.4, '#B4232C'); cyl(g, -13.3, 1.7, 2.9, 1.0, 1.0, 5.2, '#D9D6CF', 12, 'z'); [[-12.7, -0.6], [-12.7, 4.6], [-12.7, 6.4]].forEach(([x, z]) => [x - 0.95, x + 2.35].forEach(xx => cyl(g, xx, 0.45, z, 0.45, 0.45, 0.3, '#17181B', 10, 'x')));
+      // le camion-citerne : la cabine devant, la citerne posée sur le châssis, les roues sous le châssis
+      box(g, -12, 0.6, 2.4, 2.0, 0.3, 7.2, '#2C2E33'); box(g, -12, 1.65, -0.3, 2.2, 1.8, 1.8, '#B4232C'); box(g, -12, 2.05, -1.21, 1.9, 0.7, 0.02, '#A9C4D2');
+      cyl(g, -12, 1.7, 0.9, 0.95, 0.95, 5.4, '#D9D6CF', 12, 'z'); [-0.3, 3.2, 4.8].forEach(z => [-13.1, -11.2].forEach(x => cyl(g, x, 0.45, z, 0.45, 0.45, 0.3, '#17181B', 10, 'x')));
       // les collines au loin, des arbres
       [[-120, -200, 90, 26, '#6E8F5A'], [130, -180, 80, 22, '#76966A'], [-160, 120, 80, 24, '#6E8F5A'], [150, 160, 90, 20, '#76966A']].forEach(([x, z, r, h, c]) => ball(g, x, 0, z, r, h, r, c, 14));
       [[-60, -30], [-64, -20], [-58, 30], [-66, 40], [60, -60], [62, 20], [58, 70]].forEach(([x, z], i) => tree(g, x, z, 1.2 + (i % 3) * 0.2));
@@ -793,7 +797,8 @@ Object.assign(SET_DEF, {
       cyl(g, 0, 0.006, 0, 9, 9, 0.004, '#7D8A4E', 18);
       for(let i = -40; i < 40; i++){ const z = i * 1.5, x = Math.sin(z * 0.08) * 2.5; box(g, x, 0.009, z, 1.4, 0.004, 1.7, '#8E7A5A', Math.cos(z * 0.08) * 0.2); }
       for(let i = -40; i < 40; i++){ const z = i * 1.5, x = 9 + Math.sin(z * 0.1 + 1) * 1.6; box(g, x, 0.012, z, 1.6, 0.004, 1.8, '#4C7186', Math.cos(z * 0.1 + 1) * 0.16); [-1, 1].forEach(sd => ball(g, x + sd * 0.95, 0.05, z, 0.25, 0.14, 0.4, '#8C8A84', 5)); }
-      box(g, 9, 0.18, 2, 2.6, 0.08, 1.2, '#7A5C42'); [-0.5, 0.5].forEach(dz => box(g, 9, 0.3, 2 + dz, 2.6, 0.06, 0.08, '#6E5440'));   // une passerelle
+      box(g, 9, 0.12, 2, 2.6, 0.08, 1.2, '#7A5C42'); [7.85, 10.15].forEach(x => box(g, x, 0.04, 2, 0.3, 0.08, 1.3, '#5E4532'));   // une passerelle, posée sur les berges
+      [-0.56, 0.56].forEach(dz => { box(g, 9, 0.86, 2 + dz, 2.6, 0.06, 0.06, '#6E5440'); [7.8, 9, 10.2].forEach(x => box(g, x, 0.51, 2 + dz, 0.06, 0.7, 0.06, '#6E5440')); });
       // le feu de camp, les rondins autour
       cyl(g, -1.6, 0.1, -1.8, 0.55, 0.6, 0.1, '#6F6A63', 10); for(let i = 0; i < 5; i++) box(g, -1.6, 0.15, -1.8, 0.08, 0.08, 0.9, '#4A3626', i * 0.63);
       ball(g, -1.6, 0.32, -1.8, 0.25, 0.32, 0.25, '#E8823A', 6); ball(g, -1.6, 0.26, -1.8, 0.16, 0.2, 0.16, '#F3C64A', 6);
@@ -808,8 +813,9 @@ Object.assign(SET_DEF, {
       for(let y = 0.4; y < CH; y += 0.32) [[CX0 - 0.06, 'z'], [CX1 + 0.06, 'z']].forEach(([x]) => box(g, x, y, (CZ0 + CZ1) / 2, 0.04, 0.03, CZ1 - CZ0, '#5E4532'));
       prism(g, [[CZ0 - 0.5, CH + 0.1], [CZ1 + 0.5, CH + 0.1], [(CZ0 + CZ1) / 2, CH + 1.9]], CX0 - 0.5, CX1 + 0.5, '#4E3B2C'); prism(g, [[CZ1 + 0.5, CH + 0.1], [CZ0 - 0.5, CH + 0.1], [(CZ0 + CZ1) / 2, CH + 1.8]], CX0 - 0.4, CX1 + 0.4, '#6E5440');
       gl && [[CZ0 + 1.8, CZ0 + 2.8]].forEach(([a, b]) => wall2(gl, [CX0 + 0.02, a], [CX0 + 0.02, b], 0.8, '#A9C4D2', 1.2));
-      box(g, CX0 + 0.8, 0.55, CZ1 - 1, 1.2, 0.08, 0.7, '#6E5440'); box(g, CX0 + 0.8, 0.85, CZ1 - 1.6, 0.4, 0.04, 0.4, '#6E5440');
-      box(g, CX1 - 0.6, 0.45, CZ1 - 1.2, 0.9, 0.3, 1.9, '#3D5A80'); box(g, CX0 + 0.5, 1.0, CZ0 + 0.6, 0.6, 1.7, 0.5, '#4A3626');
+      box(g, CX0 + 0.8, 0.88, CZ1 - 1, 1.2, 0.06, 0.7, '#6E5440'); [[-0.52, -0.28], [0.52, -0.28], [-0.52, 0.28], [0.52, 0.28]].forEach(([a, b]) => box(g, CX0 + 0.8 + a, 0.5, CZ1 - 1 + b, 0.06, 0.7, 0.06, '#5E4532'));
+      box(g, CX0 + 0.8, 0.6, CZ1 - 1.75, 0.4, 0.05, 0.4, '#6E5440'); [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]].forEach(([a, b]) => box(g, CX0 + 0.8 + a, 0.37, CZ1 - 1.75 + b, 0.04, 0.44, 0.04, '#5E4532'));
+      box(g, CX1 - 0.6, 0.27, CZ1 - 1.2, 0.95, 0.24, 1.95, '#5E4532'); box(g, CX1 - 0.6, 0.48, CZ1 - 1.2, 0.9, 0.18, 1.9, '#3D5A80'); box(g, CX0 + 0.5, 1.0, CZ0 + 0.6, 0.6, 1.7, 0.5, '#4A3626');
       // les sapins tout autour, plus serrés au loin, quelques rochers et souches
       let r = 7;
       const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
@@ -937,7 +943,7 @@ Object.assign(SET_DEF, {
       partition(g0, [0.8, 1.2], [H.x1, 1.2], 0, H.h, '#E9E3D6', [[1.2, 2.2]]);
       floor(g0, -3.2, -3.5, 0.4, -0.3, 0.008, '#B9876A');
       box(g0, -1.4, 0.22, -3.3, 2.2, 0.44, 0.9, '#5A6B7C'); box(g0, -1.4, 0.66, -3.68, 2.2, 0.5, 0.16, '#53637A'); [-0.22, -2.58].forEach(x => box(g0, x, 0.36, -3.3, 0.2, 0.32, 0.92, '#53637A'));
-      box(g0, -1.4, 0.38, -1.7, 1.1, 0.05, 0.6, '#6E5440');
+      box(g0, -1.4, 0.38, -1.7, 1.1, 0.05, 0.6, '#6E5440'); [[-0.48, -0.23], [0.48, -0.23], [-0.48, 0.23], [0.48, 0.23]].forEach(([a, b]) => box(g0, -1.4 + a, 0.18, -1.7 + b, 0.05, 0.36, 0.05, '#5E4532'));
       box(g0, 0.55, 1.0, -2.0, 0.4, 2.0, 1.4, '#7A5C42');
       box(g0, -2.3, 0.3, -1.6, 0.5, 0.6, 0.5, '#B9B0A0'); cyl(g0, -2.3, 1.0, -1.6, 0.12, 0.18, 0.4, '#F2E6C9', 10);
       box(g0, 4.65, 0.45, -1.5, 0.65, 0.9, 4.8, '#E9E6E0'); box(g0, 4.65, 0.92, -1.5, 0.7, 0.05, 4.85, '#5E636C'); box(g0, 4.65, 0.93, -2.6, 0.45, 0.04, 0.6, '#9AA0A8');
@@ -969,9 +975,12 @@ Object.assign(SET_DEF, {
       partition(g2, [-1.6, H.z0], [-1.6, H.z1], y2, H.h, '#E9E3D6', [[0.6, 1.5], [5.6, 6.5]]);
       partition(g2, [-1.6, 0.6], [H.x1, 0.6], y2, H.h, '#E9E3D6', []);
       box(g2, 3.9, y2 + 0.2, -2.6, 1.0, 0.4, 2.0, '#E9E4DA'); box(g2, 3.9, y2 + 0.42, -2.3, 0.96, 0.05, 1.4, '#3D5A80');
-      box(g2, 0.6, y2 + 0.72, -3.6, 1.2, 0.05, 0.6, '#E9E6E0'); box(g2, 0.6, y2 + 0.42, -3.2, 0.42, 0.05, 0.42, '#C9503C');
+      box(g2, 0.6, y2 + 0.72, -3.6, 1.2, 0.05, 0.6, '#E9E6E0'); [[-0.55, -0.25], [0.55, -0.25], [-0.55, 0.25], [0.55, 0.25]].forEach(([a, b]) => box(g2, 0.6 + a, y2 + 0.35, -3.6 + b, 0.04, 0.7, 0.04, '#C9CCD1'));
+      box(g2, 0.6, y2 + 0.42, -3.2, 0.42, 0.05, 0.42, '#C9503C'); [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(([a, b]) => box(g2, 0.6 + a, y2 + 0.2, -3.2 + b, 0.03, 0.4, 0.03, '#C9CCD1')); box(g2, 0.6, y2 + 0.68, -3.0, 0.42, 0.45, 0.04, '#C9503C');
       floor(g2, 1.4, -2.2, 3.2, -0.6, y2 + 0.006, '#E3A33A'); box(g2, -0.8, y2 + 0.3, -1.2, 0.5, 0.5, 0.5, '#D9707A'); ball(g2, 2.2, y2 + 0.15, -1.4, 0.15, 0.15, 0.15, '#3D5A80', 8);
-      box(g2, 2.4, y2 + 0.74, 3.4, 1.6, 0.05, 0.7, '#6E5440'); box(g2, 2.4, y2 + 1.0, 3.6, 0.55, 0.36, 0.04, '#2C2E33'); box(g2, 2.4, y2 + 0.45, 2.8, 0.48, 0.07, 0.46, '#3A3D44'); box(g2, 2.4, y2 + 0.8, 2.56, 0.46, 0.6, 0.06, '#3A3D44');
+      box(g2, 2.4, y2 + 0.74, 3.4, 1.6, 0.05, 0.7, '#6E5440'); [[-0.74, -0.3], [0.74, -0.3], [-0.74, 0.3], [0.74, 0.3]].forEach(([a, b]) => box(g2, 2.4 + a, y2 + 0.36, 3.4 + b, 0.05, 0.72, 0.05, '#5E4532'));
+      box(g2, 2.4, y2 + 1.0, 3.6, 0.55, 0.36, 0.04, '#2C2E33'); box(g2, 2.4, y2 + 0.82, 3.6, 0.06, 0.1, 0.06, '#2C2E33'); box(g2, 2.4, y2 + 0.775, 3.6, 0.22, 0.02, 0.16, '#2C2E33');
+      box(g2, 2.4, y2 + 0.45, 2.8, 0.48, 0.07, 0.46, '#3A3D44'); cyl(g2, 2.4, y2 + 0.42, 2.8, 0.03, 0.03, 0.36, '#9AA0A8', 6); box(g2, 2.4, y2 + 0.03, 2.8, 0.5, 0.05, 0.08, '#2C2E33'); box(g2, 2.4, y2 + 0.03, 2.8, 0.08, 0.05, 0.5, '#2C2E33'); box(g2, 2.4, y2 + 0.8, 2.56, 0.46, 0.6, 0.06, '#3A3D44');
       box(g2, 4.75, y2 + 1.0, 2.2, 0.4, 2.0, 2.4, '#7A5C42'); [0.5, 1.0, 1.5].forEach((yy, k) => { for(let i = 0; i < 9; i++) box(g2, 4.68, y2 + yy + 0.13, 1.2 + i * 0.22, 0.22, 0.24 - (i % 3) * 0.03, 0.12, ['#9B3B33', '#3D5A80', '#C9B48F', '#2F6E4F'][(i + k) % 4]); });
       [-4.6, -4.0].forEach(x => box(g2, x, y2 + H.h / 2, -2.8, 0.05, H.h, 0.05, '#8A6A4A')); for(let k = 1; k < 9; k++) box(g2, -4.3, y2 + k * 0.32, -2.8, 0.6, 0.04, 0.05, '#8A6A4A');
       // le grenier
@@ -1040,6 +1049,7 @@ Object.assign(SET_DEF, {
       [[-8, 4.5], [-2, 4.5], [4, 4.5], [-8, -3.2], [4, -3.2]].forEach(([cx, cz], r) => {
         [-0.55, 0.55].forEach(dz => [0, 1.6, 3.2].forEach(y => box(g, cx, y + 0.05, cz + dz * 1.6, 4.4, 0.1, 0.1, '#C9503C')));
         [-2.15, 0, 2.15].forEach(dx => [-1, 1].forEach(dz => box(g, cx + dx, 2.4, cz + dz * 0.88, 0.1, 4.8, 0.1, '#3D5A80')));
+        [0, 1.6, 3.2].forEach(y => box(g, cx, y + 0.13, cz, 4.4, 0.04, 1.86, '#9A8466'));   // le plateau de chaque étagère
         [0.1, 1.7, 3.3].forEach((y, k) => { for(let i = 0; i < 3; i++) if((i + k + r) % 4 !== 3) box(g, cx - 1.4 + i * 1.4, y + 0.45, cz, 1.2, 0.8, 1.4, crate[(i + k + r) % 5]); });
       });
       // au milieu : des palettes, des caisses en pile, un chariot élévateur, une table et des chaises
@@ -1103,11 +1113,17 @@ const SPOTS = {
   warehouse:[ ['Au milieu, face à face', 'In the middle, facing', -0.8, 1.8, 120], ['En face', 'Opposite', 0.6, 1.0, -60], ['Entre les rayonnages', 'Between the racks', -5.0, 2.6, 90], ['Caché derrière une caisse', 'Hiding behind a crate', -3.0, -1.5, 180, 'crouch'] ],
   country:[ ['Au bord de la route', 'By the roadside', 4.3, 1.0, -90], ['Sur la route', 'On the road', 0.9, 3.0, 180, 'walk'], ['Près de la clôture', 'By the fence', -5.0, -1.6, 90], ['Dans le champ', 'In the field', -12.0, -6.0, 30] ],
   airfield:[ ['Sur le tarmac', 'On the apron', -2.0, 4.0, 60], ['En face', 'Facing', 0.2, 5.4, -120], ['Dans le hangar', 'In the hangar', -22, -9, 90], ['Au bord de la piste', 'By the runway', 4.2, 20, 90], ['Sur l’aire de l’hélico', 'On the helipad', -6, 11, 180, null, 0.04], ['Au pied de la tour', 'At the tower', -35.4, 10, 90] ],
-  forest:[ ['Dans la clairière', 'In the clearing', 0.2, 0.6, 200], ['En face', 'Facing', -0.9, -0.6, 30], ['Sur le sentier', 'On the path', 1.2, -12, 0, 'walk'], ['Assis sur un rondin', 'Sitting on a log', -0.7, -3.1, 0, 'sit'], ['Sur la passerelle', 'On the footbridge', 9, 2, 90, null, 0.22], ['Dans la cabane', 'In the cabin', -6.5, 5.5, 160, null, 0.15], ['Entre les arbres', 'Among the trees', -12, -10, 40] ],
+  forest:[ ['Dans la clairière', 'In the clearing', 0.2, 0.6, 200], ['En face', 'Facing', -0.9, -0.6, 30], ['Sur le sentier', 'On the path', 1.2, -12, 0, 'walk'], ['Assis sur un rondin', 'Sitting on a log', -0.7, -3.1, 0, 'sit'], ['Sur la passerelle', 'On the footbridge', 9, 2, 90, null, 0.16], ['Dans la cabane', 'In the cabin', -6.5, 5.5, 160, null, 0.15], ['Entre les arbres', 'Among the trees', -12, -10, 40] ],
 };
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
-function setGeo(id){ const g = geo(), gl = geo(), L = (SET_DEF[id].levels || []).map(() => geo()); SET_DEF[id].build(g, gl, L); return { g, glass:gl, levels:L }; }
+const SET_COLL = {};
+function setGeo(id){
+  const g = geo(), gl = geo(), L = (SET_DEF[id].levels || []).map(() => geo());
+  COLL = new Map(); SET_DEF[id].build(g, gl, L);
+  const E = { b:[], w:[] }; SET_COLL[id] = { main:COLL.get(g) || E, levels:L.map(l => COLL.get(l) || E) }; COLL = null;
+  return { g, glass:gl, levels:L };
+}
 
 /* ---------- Le vocabulaire du storyboard (le même que dans Raging Page) ---------- */
 const SHOT = {
