@@ -172,7 +172,9 @@ const GL = {
         if(uChar > 0.5){
           // personnages : sans ombres (trop lourdes pour un vieux PC), on lit le visage autrement :
           // une petite lumière portée par la caméra, une lumière chaude, et un liseré clair sur les contours
-          c = base * (0.3 + 0.14 * h + 0.34 * d * vec3(1.04, 1.0, 0.95) + 0.3 * f) + vec3(0.12, 0.125, 0.135) * pow(1.0 - f, 3.0);
+          c = base * (0.32 + 0.15 * h + 0.36 * d * vec3(1.05, 1.0, 0.94) + 0.3 * f);
+          float lc = dot(c, vec3(0.299, 0.587, 0.114)); c = mix(vec3(lc), c, 1.22);                  // des couleurs un peu plus franches que le décor
+          c += vec3(0.3, 0.3, 0.31) * pow(1.0 - f, 2.2) * (0.5 + 0.5 * h);                       // un liseré clair tout autour : le personnage se détache du fond
         } else {
           // une lumière du ciel un peu froide par-dessus, un rebond chaud par-dessous, et un soleil doux
           // qui « enveloppe » les formes (aussi léger à calculer que l'ancien éclairage)
@@ -182,6 +184,9 @@ const GL = {
           // le pied des murs et des meubles, plus sombre (à chaque étage) : les objets « touchent » le sol
           if(abs(n.y) < 0.5) c *= mix(0.66, 1.0, smoothstep(0.0, 0.6, vW.y - uFloor));
           c = mix(c, c * c * (3.0 - 2.0 * c), 0.22);   // un peu plus de relief dans les valeurs
+          // le décor reste un peu en retrait (couleurs un peu plus douces, un voile très léger au loin) : les personnages ressortent
+          float ls = dot(c, vec3(0.299, 0.587, 0.114)); c = mix(c, vec3(ls), 0.3); c = mix(c, vec3(0.5, 0.51, 0.53), 0.07);
+          if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
         }
         float a = uA;
         if(uGlass > 0.5){ c = mix(vC, vec3(0.92, 0.96, 1.0), pow(1.0 - f, 2.0) * 0.6); a = uA + pow(1.0 - f, 3.0) * 0.35; }

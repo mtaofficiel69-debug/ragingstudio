@@ -271,11 +271,11 @@ const POSES = [
   { id:'gunDown', fr:'Arme baissée', en:'Gun lowered', g:'gun', prop:'gun', y:0, j:{ head:[10,  0,  0], armL:[7,  -7,  15], foreL:[56,  -44], handL:[0,  0], armR:[10,  -15,  -1], foreR:[55,  8], handR:[0,  0] } },
   { id:'crouchAim', fr:'Accroupi, en joue', en:'Crouched, aiming', g:'gun', prop:'gun', y:-0.62, j:{ thighL:[115,  10,  0], shinL:[135], footL:[-25], thighR:[115,  10,  0], shinR:[135], footR:[-25], spine:[12,  0,  0], chest:[0,  0,  0], head:[-14,  0,  0], armL:[68,  -15,  -22], foreL:[75,  19], armR:[76,  -3,  23], foreR:[60,  -6], handL:[0,  0], handR:[0,  0] } },
   { id:'kneel', fr:'À genoux', en:'Kneeling', g:'seat', y:-0.38, j:{ thighL:[0,  6,  0], shinL:[96], footL:[40], thighR:[0,  6,  0], shinR:[96], footR:[40], armL:[0,  -12,  55], foreL:[1,  79], handL:[-1,  0], armR:[0,  -12,  -55], foreR:[1,  -79], handR:[-1,  0] } },
-  { id:'kneelHands', fr:'À genoux, mains sur la tête', en:'Kneeling, hands on head', g:'gun', prop:'gun', y:-0.38, j:{ thighL:[0,  6,  0], shinL:[96], footL:[40], thighR:[0,  6,  0], shinR:[96], footR:[40], head:[12,  0,  0], armL:[100,  -11,  -52], foreL:[103,  0], handL:[0,  0], armR:[100,  -11,  53], foreR:[103,  0], handR:[0,  0] } },
+  { id:'kneelHands', fr:'À genoux, mains sur la tête', en:'Kneeling, hands on head', g:'gun', y:-0.38, j:{ thighL:[0, 6, 0], shinL:[96], footL:[40], thighR:[0, 6, 0], shinR:[96], footR:[40], head:[16, 0, 0], armL:[127, 45, 36], foreL:[126, -30], handL:[0, 0], armR:[127, 45, -36], foreR:[126, 30], handR:[0, 0] } },
   { id:'oneKnee', fr:'Un genou à terre', en:'One knee down', g:'seat', y:-0.39, j:{ thighL:[0,  4,  0], shinL:[96], footL:[40], thighR:[88,  4,  0], shinR:[88], footR:[-5], armL:[0,  -14,  50], foreL:[0,  76], handL:[-1,  0], armR:[32,  -15,  -15], foreR:[2,  21], handR:[0,  0] } },
   { id:'handshake', fr:'Serrer la main', en:'Handshake', g:'gest', y:0, j:{ armR:[34,  -15,  0], foreR:[18,  -13], handR:[0,  0] } },
   { id:'hug', fr:'Prendre dans ses bras', en:'Hugging', g:'gest', y:0, j:{ head:[0,  18,  4], spine:[6,  0,  0], armL:[46,  -15,  0], foreL:[82,  -4], handL:[0,  0], armR:[50,  -15,  8], foreR:[59,  9], handR:[0,  0] } },
-  { id:'drink', fr:'Boire', en:'Drinking', g:'gest', y:0, j:{ head:[-12,  0,  0], armR:[13,  57,  60], foreR:[131,  -14], handR:[0,  0] } },
+  { id:'drink', fr:'Boire', en:'Drinking', g:'gest', prop:'glass', y:0, j:{ head:[-16, 0, 0], armR:[42, -15, 56], foreR:[130, -25], handR:[-67, -30] } },
   { id:'shout', fr:'Crier (mains en porte-voix)', en:'Shouting', g:'gest', y:0, j:{ head:[-14,  0,  0], chest:[-4,  0,  0], armL:[92,  28,  0], foreL:[132,  -49], handL:[-1,  0], armR:[92,  28,  0], foreR:[132,  49], handR:[-1,  0] } },
   { id:'readPhone', fr:'Regarder son téléphone', en:'Looking at the phone', g:'gest', y:0, j:{ head:[32,  0,  0], armL:[1,  2,  30], foreL:[93,  -60], handL:[0,  0], armR:[-2,  -10,  -7], foreR:[90,  30], handR:[15,  -30] } },
   { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[0,  -13,  25], foreL:[0,  79], handL:[-1,  0], armR:[0,  -13,  -25], foreR:[0,  -79], handR:[-1,  0] } },
@@ -1405,7 +1405,7 @@ function camLook(e, t, lens){
 /* ---------- Les accessoires, tenus dans la main droite ----------
    Dans le repère de la main, les doigts vont vers le bas (-y) : le canon prolonge la main,
    la crosse descend dans la paume. */
-const PROPS = [['gun', 'Pistolet', 'Handgun'], ['phone', 'Téléphone', 'Phone']];
+const PROPS = [['gun', 'Pistolet', 'Handgun'], ['phone', 'Téléphone', 'Phone'], ['glass', 'Verre d’eau', 'Glass of water']];
 function propGeo(id){
   const g = geo(), K = '#23252B', Kl = '#3A3D44';
   if(id === 'gun'){
@@ -1416,6 +1416,11 @@ function propGeo(id){
   } else if(id === 'phone'){
     box(g, 0, -0.085, 0.03, 0.07, 0.14, 0.012, '#1E2026');
     box(g, 0, -0.085, 0.0365, 0.062, 0.128, 0.002, '#2E3846');
+  } else if(id === 'glass'){
+    // un verre d'eau tenu dans la paume : le verre (clair), l'eau (bleutée), le fond épais
+    cyl(g, -0.06, -0.072, 0.048, 0.036, 0.036, 0.12, '#DDE7EE', 12, 'x');
+    cyl(g, -0.058, -0.072, 0.048, 0.031, 0.031, 0.08, '#8EC3E0', 12, 'x');
+    cyl(g, -0.064, -0.072, 0.048, 0.037, 0.037, 0.012, '#C7D3DC', 12, 'x');
   }
   return g;
 }

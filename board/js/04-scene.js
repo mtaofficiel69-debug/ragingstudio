@@ -422,15 +422,16 @@ function camEyeRaw(c){
    Quand on tourne, recule, avance ou se décale, il glisse le long de ce qu'il touche, comme une vraie
    caméra qu'on promène : il ne saute jamais, et ce qu'on voit est exactement ce qui est enregistré
    (rien n'est corrigé après coup). Pour passer d'une pièce à l'autre, on passe par les portes, ou on
-   se téléporte avec le plan. Le taxi garde ses prises de vue à travers les vitres. */
+   se téléporte avec le plan. C'est la même règle dans tous les lieux, taxi compris (ses prises de vue toutes
+   prêtes, elles, passent par les vitres). */
 let CAM_SET = null;
-const CAM_R = 0.14;
+const CAM_R = 0.1;
 const PHYS = {};
 /* les obstacles d'un lieu, préparés une fois : pavés (tournés), murs (segments), pièces (sol, plafond) */
 function physOf(id){
   if(PHYS[id] !== undefined) return PHYS[id];
   const C = SET_COLL[id], d = SET_DEF[id];
-  if(!C || id === 'taxi'){ PHYS[id] = null; return null; }
+  if(!C){ PHYS[id] = null; return null; }
   const all = [C.main].concat(C.levels), boxes = [], walls = [];
   all.forEach(L => {
     L.b.forEach(b => boxes.push([b[0], b[1], b[2], b[3] + CAM_R, b[4] + CAM_R, b[5] + CAM_R, Math.cos(b[6]), Math.sin(b[6])]));
@@ -519,7 +520,7 @@ function camWant(c){ CAM_WANT.cam = c; CAM_WANT.dist = c.dist; }
 /* une caméra posée d'un coup (un cadrage, une pièce) : si quelque chose se trouve entre le point visé et
    l'objectif, l'objectif se pose juste devant ; la focale s'élargit pour garder la même taille de sujet */
 function camSafe(c, id, fit){
-  const P = physOf(id); if(!P) return c;
+  const P = id !== 'taxi' && physOf(id); if(!P) return c;   // les prises de vue du taxi sont faites pour passer par les vitres
   const t = [c.tx, c.ty, c.tz], skip = new Set(); for(let i = physHit(P, t); i >= 0; i = physHit(P, t, skip)) skip.add(i);
   // jusqu'où l'objectif peut reculer depuis le point visé, dans la direction (yaw, pitch)
   const free = (yaw, pitch) => {
@@ -683,7 +684,7 @@ function drawFrame(sh, w, h, clean, o){
   chars.forEach((ch, c) => {
     const M = mats[c], fy = Math.min(M4.apply(M.footL, [0, -0.065, 0.05])[1], M4.apply(M.footR, [0, -0.065, 0.05])[1]), k = bodyScale(lookOf(ch, c));
     const p = M4.apply(M.pelvis, [0, 0, 0]);
-    [[1.25, 0.07], [0.9, 0.09], [0.55, 0.11]].forEach(([r, a]) => GL.draw(R.blob, { m:M4.mul(M4.trans(p[0], Math.max(0, fy) + 0.008, p[2]), [r * k, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * k, 0, 0, 0, 0, 1]), flat:true, a, col:[0.06, 0.07, 0.09] }));
+    [[1.25, 0.08], [0.9, 0.11], [0.55, 0.14]].forEach(([r, a]) => GL.draw(R.blob, { m:M4.mul(M4.trans(p[0], Math.max(0, fy) + 0.008, p[2]), [r * k, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * k, 0, 0, 0, 0, 1]), flat:true, a, col:[0.06, 0.07, 0.09] }));
   });
   gl.depthMask(true); gl.disable(gl.BLEND);
   GL.drawCrowds(crowdMeshes(sh), vp, eye, [Math.cos(cam.yaw * D2R), 0, -Math.sin(cam.yaw * D2R)]);
@@ -696,7 +697,7 @@ function drawFrame(sh, w, h, clean, o){
   }
   const tintOf = (c, id) => final ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id && (id !== 'pelvis' || S.sel.pick)) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
   // le contour des personnages : comme un trait de crayon, d'épaisseur constante à l'écran
-  const px = 2 * Math.tan(fovOf(cam.lens) / 2) / h * clamp(h / 320, 1.4, 3);
+  const px = 2 * Math.tan(fovOf(cam.lens) / 2) / h * clamp(h / 280, 1.7, 3.4);
   if(!fast) gl.cullFace(gl.FRONT);
   if(!fast) chars.forEach((ch, c) => { const P = lookMesh(lookOf(ch, c)).out; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, col:INK, out:px });
     if(ch.prop && R.propsOut[ch.prop]) GL.draw(R.propsOut[ch.prop], { m:mats[c].handR, flat:true, col:INK, out:px }); });
@@ -970,7 +971,7 @@ function onDown(e){
 }
 /* zoomer : on se rapproche du point visé ; tout près, au lieu de se bloquer, la caméra continue d'avancer
    (le point visé avance avec elle) : on ne reste jamais coincé */
-const DIST_MIN = 0.6, DIST_MAX = 80;
+const DIST_MIN = 0.25, DIST_MAX = 80;
 function zoomBy(c, f){
   const want = c.dist * f;
   if(want < DIST_MIN){
@@ -1042,7 +1043,11 @@ function onWheel(e){
   e.preventDefault(); S.tween = null;
   if(!_wheelSnap) _wheelSnap = snapshot();
   const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015);
-  const [x, y] = canvasXY(e), g = groundAt(x, y, c.ty);
+  const [x, y] = canvasXY(e), hit = f < 1 && pickAt(x, y), g = groundAt(x, y, c.ty);
+  // sous la souris, un personnage : on avance vers ce qu'on montre (un visage, une main), pour un gros plan précis
+  if(hit){ const M = charMatrices(shot().chars[hit.c]), J = M[hit.j]; if(J){ const q = M4.apply(J, [0, hit.j === 'head' ? 0.1 : 0, 0]);
+    camGesture(c, () => { const k = (1 - f) * 0.9; c.tx += (q[0] - c.tx) * k; c.ty += (q[1] - c.ty) * k; c.tz += (q[2] - c.tz) * k; zoomBy(c, f); }, true);
+    requestRender(); clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350); return; } }
   // vers le point sous la souris, mais jamais plus loin que le recul actuel (sinon on part à l'horizon)
   camGesture(c, () => {
     if(g && f < 1){ const k = (1 - f) * 0.5, dx = (g[0] - c.tx) * k, dz = (g[1] - c.tz) * k, l = Math.hypot(dx, dz), m = c.dist * 0.25; c.tx += l > m ? dx * m / l : dx; c.tz += l > m ? dz * m / l : dz; }
