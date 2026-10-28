@@ -3,7 +3,7 @@
    Langue, petits utilitaires, icônes, logo, toasts.
    Même DA que Raging Page et Raging Draw ; la couleur de l'outil est le vert.
 ===================================================================== */
-const R3_VERSION = 'v0.1';
+const R3_VERSION = 'v0.5';
 const LS_LANG = 'raging3d_lang', LS_SCENE = 'raging3d_scene';
 
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
@@ -54,6 +54,27 @@ function icon(name, cls){
     user:'<circle cx="8" cy="4.6" r="2.4"/><path d="M3 14c.4-3 2.4-4.8 5-4.8s4.6 1.8 5 4.8"/>',
     new:'<path d="M3 1.5h6.5L13 5v9.5H3z"/><path d="M9.5 1.5V5H13"/>',
     help:'<circle cx="8" cy="8" r="6.3"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.6.3-.8.7-.8 1.3v.4M8 11.6h.01"/>',
+    place:'<path d="M8 14.5s4.8-4.6 4.8-8.2a4.8 4.8 0 0 0-9.6 0c0 3.6 4.8 8.2 4.8 8.2z"/><circle cx="8" cy="6.3" r="1.7"/>',
+    users:'<circle cx="6" cy="5" r="2.2"/><path d="M1.8 13.5c.3-2.7 2-4.3 4.2-4.3s3.9 1.6 4.2 4.3"/><path d="M10.6 3.2a2 2 0 0 1 0 3.8M12.2 9.6c1.1.6 1.8 1.9 2 3.9"/>',
+    pose:'<circle cx="8.6" cy="2.6" r="1.4"/><path d="M8.3 5 7.4 9.2l2.6 2.2v3.2M7.4 9.2 5 14.6M8.3 5l3.2 2.1 1.5-1.4M8.3 5 5.4 6.6 4.2 9"/>',
+    crowd:'<circle cx="4" cy="5.2" r="1.6"/><circle cx="8" cy="4.2" r="1.8"/><circle cx="12" cy="5.2" r="1.6"/><path d="M1.2 12c.2-2.2 1.2-3.6 2.8-3.6.8 0 1.4.3 1.9.8M14.8 12c-.2-2.2-1.2-3.6-2.8-3.6-.8 0-1.4.3-1.9.8M4.6 13.6c.3-2.8 1.6-4.4 3.4-4.4s3.1 1.6 3.4 4.4"/>',
+    frame:'<path d="M1.5 5V2.5H4M12 2.5h2.5V5M14.5 11v2.5H12M4 13.5H1.5V11"/><circle cx="8" cy="6.4" r="1.7"/><path d="M5 12c.3-2 1.4-3.2 3-3.2s2.7 1.2 3 3.2"/>',
+    move:'<path d="M2 8h10.5M9.5 5l3 3-3 3"/><path d="M2 4.2h4M2 11.8h4" opacity=".6"/>',
+    car:'<path d="M2 10.5V8.4l1.4-3.2c.2-.5.7-.8 1.2-.8h6.8c.5 0 1 .3 1.2.8L14 8.4v2.1"/><path d="M1.5 10.5h13v2h-13z"/><circle cx="4.6" cy="12.6" r=".9"/><circle cx="11.4" cy="12.6" r=".9"/><path d="M3.6 8.2h8.8"/>',
+    text:'<path d="M2.5 3.5h11M2.5 6.5h11M2.5 9.5h7.5M2.5 12.5h5"/>',
+    contrast:'<circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" stroke="none"/>',
+    moon:'<path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/>',
+    sun:'<circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/>',
+    grid:'<rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M6 2.5v11M10 2.5v11M1.5 6.2h13M1.5 9.8h13"/>',
+    board:'<rect x="1.5" y="2" width="5.5" height="4" rx=".6"/><rect x="9" y="2" width="5.5" height="4" rx=".6"/><rect x="1.5" y="9" width="5.5" height="4" rx=".6"/><rect x="9" y="9" width="5.5" height="4" rx=".6"/>',
+    strip:'<rect x="1.5" y="4" width="3.6" height="6" rx=".6"/><rect x="6.2" y="4" width="3.6" height="6" rx=".6"/><rect x="10.9" y="4" width="3.6" height="6" rx=".6"/><path d="M1.5 12.6h13"/>',
+    check:'<path d="M3 8.4 6.4 11.6 13 4.6"/>',
+    warn:'<path d="M8 2.2 14.6 13.6H1.4z"/><path d="M8 6.4v3.4M8 11.6h.01"/>',
+    copy:'<rect x="5" y="5" width="9" height="9" rx="1.2"/><path d="M11 5V3.2c0-.7-.5-1.2-1.2-1.2H3.2C2.5 2 2 2.5 2 3.2v6.6c0 .7.5 1.2 1.2 1.2H5"/>',
+    left:'<path d="M10 3.5 5.5 8l4.5 4.5"/>',
+    right:'<path d="M6 3.5 10.5 8 6 12.5"/>',
+    reverse:'<path d="M2.5 5.5h9l-2.4-2.4M13.5 10.5h-9l2.4 2.4"/>',
+    target:'<circle cx="8" cy="8" r="5.6"/><circle cx="8" cy="8" r="2"/><path d="M8 .8v2.4M8 12.8v2.4M.8 8h2.4M12.8 8h2.4"/>',
   }[name] || '';
   return `<svg class="icon ${cls || ''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 }

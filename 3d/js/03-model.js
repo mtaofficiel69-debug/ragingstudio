@@ -38,63 +38,166 @@ const JOINTS = [
 ];
 const JOINT = Object.fromEntries(JOINTS.map((j, i) => [j.id, Object.assign(j, { idx:i })]));
 
-/* ---------- Les quatre personnages : deux hommes, deux femmes ----------
-   Même squelette ; les femmes ont des épaules plus étroites, un bassin plus large,
-   une poitrine, des cheveux (chignon ou longs), et sont un peu plus petites. */
+/* ---------- Les huit personnages : deux hommes, deux femmes, deux enfants, deux aînés ----------
+   Même squelette pour tous. Chacun a sa silhouette, sa taille, sa coiffure et ses habits :
+   on les reconnaît d'un coup d'œil, même en noir et blanc (les habits n'ont pas la même clarté). */
 const CHAR_LOOK = [
-  { id:'m1', body:'m', col:'#E4E7EC', fr:'Homme 1', en:'Man 1' },
-  { id:'m2', body:'m', col:'#9CA3AF', fr:'Homme 2', en:'Man 2' },
-  { id:'f1', body:'f', hair:'bun', col:'#E4DCEA', fr:'Femme 1', en:'Woman 1' },
-  { id:'f2', body:'f', hair:'long', col:'#A99BB6', fr:'Femme 2', en:'Woman 2' },
+  { id:'m1', body:'m', fr:'Homme 1', en:'Man 1', skin:'#E7C8AE', hair:'#3B2A20', hairStyle:'short', top:'#2E3A4E', inner:'#EDEBE6', tie:'#7A2E3A', bottom:'#3A3D44', shoes:'#2A221D', wear:'suit' },
+  { id:'m2', body:'m', fr:'Homme 2', en:'Man 2', skin:'#8E6248', hair:'#1E1A18', hairStyle:'curly', top:'#B4593A', bottom:'#3E5577', shoes:'#E9E6E0', sole:'#F4F2EE', wear:'sweater' },
+  { id:'f1', body:'f', fr:'Femme 1', en:'Woman 1', skin:'#EDD0B8', hair:'#7A3E26', hairStyle:'bun', top:'#E8D9B5', bottom:'#7A2E3A', shoes:'#2A221D', wear:'blouse', skirt:true, lips:'#B8686A' },
+  { id:'f2', body:'f', fr:'Femme 2', en:'Woman 2', skin:'#C99B78', hair:'#2A1F1A', hairStyle:'long', top:'#3F6E7A', inner:'#E9E4DA', bottom:'#2A2C31', shoes:'#5A3A2A', wear:'coat', lips:'#9A5450' },
+  { id:'k1', body:'m', age:'kid', fr:'Garçon', en:'Boy', skin:'#D9AE8C', hair:'#5A3A24', hairStyle:'messy', top:'#E3A33A', bottom:'#4A6A8A', shoes:'#D64A3A', sole:'#F4F2EE', socks:'#F4F2EE', wear:'tee', shorts:true },
+  { id:'k2', body:'f', age:'kid', fr:'Fille', en:'Girl', skin:'#F0D3BE', hair:'#C9973E', hairStyle:'pigtails', top:'#D9707A', bottom:'#D9707A', shoes:'#3A3D44', socks:'#F4F2EE', wear:'dress', skirt:true, lips:'#C27A78' },
+  { id:'o1', body:'m', age:'old', fr:'Grand-père', en:'Grandpa', skin:'#E3C2AA', hair:'#E4E2DE', hairStyle:'bald', top:'#8A7356', inner:'#C9D3DC', bottom:'#5E636C', shoes:'#3A2A20', wear:'cardigan', glasses:true, stache:true },
+  { id:'o2', body:'f', age:'old', fr:'Grand-mère', en:'Grandma', skin:'#E8C8B4', hair:'#DAD8D4', hairStyle:'bun', top:'#7C6A8E', inner:'#EDEBE6', bottom:'#4A4458', shoes:'#3A2A20', wear:'cardigan', skirt:true, glasses:true, lips:'#B07C7A' },
 ];
-const MAX_CHARS = 4;
+CHAR_LOOK.forEach(lk => { lk.col = lk.top; });
+const MAX_CHARS = 6;
 const lookOf = (ch, c) => CHAR_LOOK[ch && ch.look != null ? ch.look : (c || 0) % 2] || CHAR_LOOK[0];
-/* les articulations qui bougent selon la silhouette */
+/* les articulations qui bougent selon la silhouette ; « head » grossit la tête (les enfants),
+   « stoop » voûte un peu le dos (les aînés) */
 const BODY = {
-  m:{ scale:1, off:{} },
-  f:{ scale:0.95, off:{ armL:[0.178, 0.235, 0], armR:[-0.178, 0.235, 0], thighL:[0.102, -0.06, 0], thighR:[-0.102, -0.06, 0] } },
+  m:{ scale:1, head:1, off:{} },
+  f:{ scale:0.95, head:1, off:{ armL:[0.178, 0.235, 0], armR:[-0.178, 0.235, 0], thighL:[0.102, -0.06, 0], thighR:[-0.102, -0.06, 0] } },
 };
+const AGE = { adult:{ k:1, head:1 }, kid:{ k:0.68, head:1.26 }, old:{ k:0.97, head:1, stoop:{ spine:[5, 0, 0], chest:[9, 0, 0], head:[-9, 0, 0] } } };
+const bodyScale = lk => (BODY[lk.body] || BODY.m).scale * (AGE[lk.age || 'adult'] || AGE.adult).k;
 
-/* la forme de chaque partie, dans le repère de son articulation (un mannequin d'artiste).
-   Les traits du visage sont plus sombres que la peau : on les voit même sans ombres. */
-const FEAT = [0.2, 0.21, 0.24], BROW = [0.32, 0.31, 0.32], LIP = [0.52, 0.42, 0.42], HAIR = [0.42, 0.33, 0.27];
-function partGeo(id, look){
-  const g = geo(), W = [1, 1, 1], L_ = look || CHAR_LOOK[0], f = L_.body === 'f';
-  const limb = (r1, r2, len, ball0) => { if(ball0) ball(g, 0, 0, 0, ball0, ball0, ball0, W, 10); cyl(g, 0, 0, 0, r1, r2, len, W, 10); };
+/* la forme de chaque partie, dans le repère de son articulation.
+   « bare » : sans les petits détails (yeux, bouche, boutons…), pour dessiner le contour. */
+function partGeo(id, look, bare){
+  const g = geo(), lk = look || CHAR_LOOK[0], f = lk.body === 'f', kid = lk.age === 'kid';
+  const H = c => hexRGB(c), SK = H(lk.skin), TOP = H(lk.top), BOT = H(lk.bottom), SHO = H(lk.shoes), HAIR = H(lk.hair);
+  const IN = H(lk.inner || lk.top), SOLE = H(lk.sole || '#2A2C31'), SOCK = H(lk.socks || lk.bottom);
+  const dark = (c, k) => c.map(v => v * k);
+  const sleeveLong = !(lk.wear === 'tee' || lk.wear === 'dress');
   const sx = f ? 0.178 : 0.2, hx = f ? 0.102 : 0.095;
+  // un membre en deux couleurs : le haut (habit) puis le bas (peau ou autre habit)
+  const limb2 = (r1, r2, len, cut, cTop, cBot, ball0, ballCol) => {
+    if(ball0) ball(g, 0, 0, 0, ball0, ball0, ball0, ballCol || cTop, 10);
+    if(cut <= 0){ cyl(g, 0, 0, 0, r1, r2, len, cBot, 10); return; }
+    if(cut >= len){ cyl(g, 0, 0, 0, r1, r2, len, cTop, 10); return; }
+    const rm = r1 + (r2 - r1) * cut / len;
+    cyl(g, 0, 0, 0, r1 + 0.006, rm + 0.006, cut, cTop, 10); cyl(g, 0, -cut, 0, rm, r2, len - cut, cBot, 10);
+  };
   switch(id){
-    case 'pelvis':
-      if(f){ box(g, 0, -0.01, 0, 0.35, 0.17, 0.21, W); ball(g, hx, -0.06, 0, 0.09, 0.09, 0.09, W, 10); ball(g, -hx, -0.06, 0, 0.09, 0.09, 0.09, W, 10); }
-      else { box(g, 0, -0.01, 0, 0.32, 0.16, 0.2, W); ball(g, hx, -0.06, 0, 0.085, 0.085, 0.085, W, 10); ball(g, -hx, -0.06, 0, 0.085, 0.085, 0.085, W, 10); }
+    case 'pelvis': {
+      const c = lk.skirt ? H(lk.bottom) : BOT;
+      box(g, 0, -0.01, 0, f ? 0.35 : 0.32, f ? 0.17 : 0.16, f ? 0.21 : 0.2, c);
+      ball(g, hx, -0.06, 0, f ? 0.09 : 0.085, f ? 0.09 : 0.085, f ? 0.09 : 0.085, c, 10); ball(g, -hx, -0.06, 0, f ? 0.09 : 0.085, f ? 0.09 : 0.085, f ? 0.09 : 0.085, c, 10);
+      if(lk.skirt){ const old = lk.age === 'old', len = old ? 0.5 : lk.wear === 'dress' ? 0.3 : 0.32; cyl(g, 0, 0.07, 0, f ? 0.18 : 0.172, old ? 0.255 : 0.245, len, c, 14); }
+      else if(!bare) box(g, 0, 0.065, 0, (f ? 0.35 : 0.32) + 0.008, 0.03, (f ? 0.21 : 0.2) + 0.008, dark(BOT, 0.55));   // la ceinture
+      if(lk.wear === 'coat' || lk.wear === 'cardigan') cyl(g, 0, 0.075, 0, f ? 0.186 : 0.178, f ? 0.2 : 0.19, lk.wear === 'coat' ? 0.2 : 0.1, TOP, 14);
       break;
-    case 'spine': box(g, 0, 0.1, 0, f ? 0.25 : 0.29, 0.2, f ? 0.17 : 0.18, W); break;
-    case 'chest':
-      box(g, 0, 0.13, 0.005, f ? 0.32 : 0.38, 0.28, f ? 0.2 : 0.22, W);
-      ball(g, sx, 0.235, 0, 0.064, 0.064, 0.064, W, 10); ball(g, -sx, 0.235, 0, 0.064, 0.064, 0.064, W, 10);
-      cyl(g, 0, 0.34, 0, f ? 0.045 : 0.05, f ? 0.05 : 0.055, 0.08, W, 10);
-      if(f) ball(g, 0, 0.11, 0.085, 0.14, 0.065, 0.05, W, 10);   // une forme de mannequin de couture, sobre
+    }
+    case 'spine': {
+      { const wb = f ? 0.24 : 0.28, wt = f ? 0.26 : 0.3, d = f ? 0.17 : 0.18; prismXY(g, [[-wb / 2, 0], [wb / 2, 0], [wt / 2, 0.2], [-wt / 2, 0.2]], -d / 2, d / 2, TOP); }
+      if(!bare && (lk.wear === 'suit' || lk.wear === 'coat' || lk.wear === 'cardigan')){
+        { const z = (f ? 0.085 : 0.09) + 0.0006; quad(g, [-0.035, 0.0, z], [0.035, 0.0, z], [0.035, 0.2, z], [-0.035, 0.2, z], IN); }         // le devant de la chemise
+        if(lk.wear === 'cardigan') [0.04, 0.12].forEach(y => box(g, 0.05, y, f ? 0.086 : 0.091, 0.014, 0.014, 0.006, dark(TOP, 0.6)));
+      }
+      if(!bare && lk.tie) quad(g, [-0.018, 0.0, 0.0912], [0.018, 0.0, 0.0912], [0.012, 0.2, 0.0912], [-0.012, 0.2, 0.0912], H(lk.tie));
       break;
-    case 'head':
-      ball(g, 0, 0.12, 0.005, 0.098, 0.12, 0.108, W, 12); box(g, 0, 0.035, 0.035, 0.12, 0.05, 0.12, W);
-      // nez, menton, oreilles : ils disent où regarde le personnage
-      box(g, 0, 0.1, 0.118, 0.03, 0.058, 0.048, W); box(g, 0, 0.035, 0.088, 0.072, 0.04, 0.04, W);
-      ball(g, 0.1, 0.115, -0.005, 0.02, 0.038, 0.028, W, 6); ball(g, -0.1, 0.115, -0.005, 0.02, 0.038, 0.028, W, 6);
-      // les yeux, les sourcils et la bouche, dessinés plus sombres
-      ball(g, 0.037, 0.128, 0.098, 0.017, 0.02, 0.012, FEAT, 6); ball(g, -0.037, 0.128, 0.098, 0.017, 0.02, 0.012, FEAT, 6);
-      box(g, 0.04, 0.162, 0.097, 0.042, 0.012, 0.02, BROW); box(g, -0.04, 0.162, 0.097, 0.042, 0.012, 0.02, BROW);
-      box(g, 0, 0.066, 0.101, f ? 0.04 : 0.048, 0.011, 0.012, f ? LIP : BROW);
-      if(f){
-        ball(g, 0, 0.158, -0.025, 0.104, 0.1, 0.1, HAIR, 12);
-        if(L_.hair === 'bun') ball(g, 0, 0.19, -0.11, 0.055, 0.055, 0.05, HAIR, 8);
-        else { box(g, 0, 0.03, -0.07, 0.19, 0.24, 0.07, HAIR); box(g, 0.085, 0.07, 0.01, 0.03, 0.17, 0.09, HAIR); box(g, -0.085, 0.07, 0.01, 0.03, 0.17, 0.09, HAIR); }
+    }
+    case 'chest': {
+      { const wb = f ? 0.27 : 0.31, wt = f ? 0.33 : 0.39, d = f ? 0.2 : 0.22;
+        prismXY(g, [[-wb / 2, -0.01], [wb / 2, -0.01], [wt / 2, 0.2], [wt / 2 - 0.035, 0.27], [-wt / 2 + 0.035, 0.27], [-wt / 2, 0.2]], -d / 2 + 0.005, d / 2 + 0.005, TOP); }
+      ball(g, sx, 0.228, 0, 0.058, 0.058, 0.058, TOP, 10); ball(g, -sx, 0.228, 0, 0.058, 0.058, 0.058, TOP, 10);
+      cyl(g, 0, 0.34, 0, f ? 0.045 : 0.05, f ? 0.05 : 0.055, 0.08, SK, 10);
+      if(f && !kid) ball(g, 0, 0.115, 0.08, 0.125, 0.052, 0.03, TOP, 10);
+      const zf = (f ? 0.1 : 0.11) + 0.0055;
+      if(!bare){
+        if(lk.wear === 'suit' || lk.wear === 'coat' || lk.wear === 'cardigan'){
+          // l'encolure en V : la chemise, la cravate, les revers de la veste
+          tri(g, [-0.075, 0.27, zf], [0, 0.04, zf], [0.075, 0.27, zf], IN);
+          if(lk.tie){ tri(g, [-0.02, 0.255, zf + 0.001], [0, 0.03, zf + 0.001], [0.02, 0.255, zf + 0.001], H(lk.tie)); box(g, 0, 0.255, zf, 0.032, 0.025, 0.006, H(lk.tie)); }
+          const lap = dark(TOP, 0.72);
+          tri(g, [-0.075, 0.27, zf + 0.0015], [-0.03, 0.12, zf + 0.0015], [-0.0, 0.04, zf + 0.0015], lap); tri(g, [0.075, 0.27, zf + 0.0015], [0, 0.04, zf + 0.0015], [0.03, 0.12, zf + 0.0015], lap);
+        }
+        if(lk.wear === 'sweater' || lk.wear === 'tee' || lk.wear === 'dress' || lk.wear === 'blouse') cyl(g, 0, 0.305, 0, f ? 0.058 : 0.064, f ? 0.06 : 0.066, 0.025, dark(TOP, 0.82), 12);   // le col
       }
       break;
-    case 'armL': case 'armR': f ? limb(0.05, 0.042, 0.28) : limb(0.058, 0.048, 0.28); break;
-    case 'foreL': case 'foreR': f ? limb(0.041, 0.033, 0.25, 0.045) : limb(0.047, 0.038, 0.25, 0.051); break;
-    case 'handL': case 'handR': ball(g, 0, 0, 0, 0.034, 0.034, 0.034, W, 6); box(g, 0, -0.082, 0.005, f ? 0.066 : 0.075, 0.125, 0.033, W); box(g, (id === 'handL' ? -1 : 1) * 0.038, -0.058, 0.02, 0.024, 0.058, 0.024, W); break;
-    case 'thighL': case 'thighR': f ? limb(0.09, 0.06, 0.42) : limb(0.085, 0.062, 0.42); break;
-    case 'shinL': case 'shinR': f ? limb(0.056, 0.04, 0.4, 0.06) : limb(0.06, 0.045, 0.4, 0.064); break;
-    case 'footL': case 'footR': ball(g, 0, 0, 0, 0.043, 0.043, 0.043, W, 6); box(g, 0, -0.035, 0.055, f ? 0.085 : 0.095, 0.06, f ? 0.22 : 0.24, W); break;
+    }
+    case 'head': {
+      const B = SK, LIP = H(lk.lips || '#A26A60'), BROW = dark(HAIR, lk.age === 'old' ? 0.85 : 0.9);
+      ball(g, 0, 0.125, 0.0, 0.097, 0.118, 0.106, B, 14);                   // le crâne
+      ball(g, 0, 0.06, 0.03, 0.074, 0.064, 0.078, B, 12);                   // la mâchoire, arrondie
+      ball(g, 0.1, 0.112, -0.004, 0.018, 0.036, 0.026, B, 8); ball(g, -0.1, 0.112, -0.004, 0.018, 0.036, 0.026, B, 8);   // les oreilles
+      ball(g, 0, 0.1, 0.1, 0.014, 0.033, 0.022, B, 8); ball(g, 0, 0.084, 0.113, 0.016, 0.013, 0.014, B, 8);              // le nez
+      if(!bare){
+        // les yeux : le blanc, puis l'iris ; les sourcils, posés sur le front ; la bouche
+        const zs = (x, y) => 0.106 * Math.sqrt(Math.max(0, 1 - (x / 0.097) ** 2 - ((y - 0.125) / 0.118) ** 2)) + 0.003;
+        [0.036, -0.036].forEach(x => {
+          ball(g, x, 0.128, 0.092, 0.019, 0.013, 0.012, [0.96, 0.95, 0.93], 8);
+          ball(g, x, 0.128, 0.1, 0.0085, 0.0095, 0.007, [0.17, 0.13, 0.11], 8);
+          const s = x > 0 ? 1 : -1, xi = x - 0.021 * s, xo = x + 0.021 * s;
+          const P = [[xi, 0.152], [xo, 0.157], [xo, 0.165], [xi, 0.162]].map(([a, b]) => [a, b, zs(a, b)]);
+          if(s > 0) quad(g, P[0], P[1], P[2], P[3], BROW); else quad(g, P[0], P[3], P[2], P[1], BROW);
+        });
+        ball(g, 0, 0.054, 0.101, f ? 0.023 : 0.026, 0.007, 0.01, LIP, 8);
+        if(lk.stache) ball(g, 0, 0.068, 0.106, 0.034, 0.009, 0.012, HAIR, 8);
+        if(lk.glasses){ const K = [0.2, 0.2, 0.22];
+          [0.037, -0.037].forEach(x => { box(g, x, 0.144, 0.113, 0.042, 0.005, 0.005, K); box(g, x, 0.112, 0.113, 0.042, 0.005, 0.005, K); box(g, x - 0.02, 0.128, 0.113, 0.005, 0.036, 0.005, K); box(g, x + 0.02, 0.128, 0.113, 0.005, 0.036, 0.005, K); });
+          box(g, 0, 0.13, 0.114, 0.016, 0.005, 0.005, K); [1, -1].forEach(sd => box(g, sd * 0.08, 0.135, 0.058, 0.005, 0.005, 0.118, K, Math.atan2(sd * 0.36, -0.93) + Math.PI)); }
+      }
+      // les cheveux
+      const hs = lk.hairStyle;
+      if(hs === 'short' || hs === 'messy' || hs === 'curly'){
+        const puff = hs === 'curly' ? 0.018 : hs === 'messy' ? 0.01 : 0;
+        ball(g, 0, 0.16 + puff * 0.6, -0.012, 0.103 + puff, 0.094 + puff, 0.104 + puff, HAIR, 12);
+        box(g, 0, 0.12, -0.075, 0.18 + puff, 0.1, 0.06, HAIR);
+        if(hs === 'messy') [[0.03, 0.25, 0.04], [-0.04, 0.245, 0.02], [0.0, 0.255, -0.02]].forEach(([x, y, z]) => ball(g, x, y, z, 0.03, 0.022, 0.03, HAIR, 6));
+      } else if(hs === 'bald'){
+        ball(g, 0, 0.115, -0.03, 0.102, 0.06, 0.09, HAIR, 12);             // une couronne de cheveux blancs, sur les côtés et derrière
+      } else {
+        ball(g, 0, 0.162, -0.02, 0.105, 0.101, 0.103, HAIR, 12);
+        if(hs === 'bun') ball(g, 0, 0.2, -0.112, 0.055, 0.055, 0.05, HAIR, 10);
+        if(hs === 'long'){ box(g, 0, 0.03, -0.07, 0.19, 0.25, 0.07, HAIR); box(g, 0.087, 0.07, 0.0, 0.028, 0.17, 0.09, HAIR); box(g, -0.087, 0.07, 0.0, 0.028, 0.17, 0.09, HAIR); }
+        if(hs === 'pigtails') [0.1, -0.1].forEach(x => { ball(g, x, 0.15, -0.05, 0.03, 0.03, 0.03, H('#D9707A'), 6); ball(g, x * 1.15, 0.08, -0.06, 0.04, 0.07, 0.04, HAIR, 8); });
+      }
+      break;
+    }
+    case 'armL': case 'armR': {
+      const r1 = f ? 0.05 : 0.058, r2 = f ? 0.042 : 0.048;
+      limb2(r1, r2, 0.28, sleeveLong ? 0.28 : 0.11, TOP, SK);
+      break;
+    }
+    case 'foreL': case 'foreR': {
+      const r1 = f ? 0.041 : 0.047, r2 = f ? 0.033 : 0.038, b0 = f ? 0.045 : 0.051;
+      if(sleeveLong){ limb2(r1, r2, 0.25, 0.235, TOP, SK, b0, TOP); if(!bare) cyl(g, 0, -0.2, 0, r2 + 0.009, r2 + 0.009, 0.035, lk.wear === 'suit' ? IN : dark(TOP, 0.85), 10); }
+      else limb2(r1, r2, 0.25, 0, SK, SK, b0, SK);
+      break;
+    }
+    case 'handL': case 'handR': {
+      const s = id === 'handL' ? -1 : 1;
+      ball(g, 0, 0, 0, 0.034, 0.034, 0.034, SK, 8);
+      ball(g, 0, -0.07, 0.004, f ? 0.034 : 0.038, 0.052, 0.018, SK, 10);
+      box(g, 0, -0.12, 0.006, f ? 0.058 : 0.066, 0.05, 0.026, SK);
+      ball(g, s * 0.037, -0.06, 0.02, 0.013, 0.032, 0.013, SK, 6);
+      break;
+    }
+    case 'thighL': case 'thighR': {
+      const r1 = f ? 0.09 : 0.085, r2 = f ? 0.06 : 0.062;
+      if(lk.skirt) limb2(r1, r2, 0.42, lk.wear === 'dress' ? 0.2 : lk.age === 'old' ? 0.42 : 0.24, BOT, lk.age === 'old' ? BOT : SK);
+      else if(lk.shorts) limb2(r1, r2, 0.42, 0.22, BOT, SK);
+      else if(lk.wear === 'coat') limb2(r1, r2, 0.42, 0.24, TOP, BOT);
+      else limb2(r1, r2, 0.42, 0.42, BOT, BOT);
+      break;
+    }
+    case 'shinL': case 'shinR': {
+      const r1 = f ? 0.056 : 0.06, r2 = f ? 0.04 : 0.045, b0 = f ? 0.06 : 0.064;
+      const leg = (lk.skirt || lk.shorts) ? SK : BOT;
+      limb2(r1, r2, 0.4, lk.skirt && lk.age === 'old' ? 0.06 : 0, lk.skirt ? BOT : leg, leg, b0, lk.age === 'old' && lk.skirt ? BOT : (lk.skirt || lk.shorts) ? SK : BOT);
+      if(lk.socks && !bare) cyl(g, 0, -0.32, 0, r2 + 0.006, r2 + 0.005, 0.08, SOCK, 10);
+      break;
+    }
+    case 'footL': case 'footR': {
+      ball(g, 0, 0, 0, 0.043, 0.043, 0.043, (lk.skirt || lk.shorts) && !lk.socks ? SK : SOCK, 8);
+      box(g, 0, -0.03, 0.055, f ? 0.085 : 0.095, 0.055, f ? 0.22 : 0.24, SHO);
+      ball(g, 0, -0.03, 0.15, (f ? 0.085 : 0.095) / 2, 0.026, 0.045, SHO, 8);
+      box(g, 0, -0.061, 0.06, (f ? 0.085 : 0.095) + 0.006, 0.014, (f ? 0.22 : 0.24) + 0.03, SOLE);
+      break;
+    }
   }
   return g;
 }
@@ -106,18 +209,20 @@ function newChar(i, spawn, look){
 
 /* matrices de chaque partie pour un personnage (repère du monde) */
 function charMatrices(ch){
-  const out = {}, B = BODY[lookOf(ch).body] || BODY.m;
+  const out = {}, lk = lookOf(ch), B = BODY[lk.body] || BODY.m, A = AGE[lk.age || 'adult'] || AGE.adult, stoop = A.stoop || {};
   for(const J of JOINTS){
-    const v = ch.j[J.id] || [];
+    const v = ch.j[J.id] || [], add = stoop[J.id] || [];
     // ordre : tourner (y), puis lever/plier (x), puis écarter/incliner (z)
-    const val = k => { let a = 0; J.ax.forEach((x, i) => { if(x[0] === k) a += x[1] * (v[i] || 0) * D2R; }); return a; };
+    const val = k => { let a = 0; J.ax.forEach((x, i) => { if(x[0] === k) a += x[1] * ((v[i] || 0) + (add[i] || 0)) * D2R; }); return a; };
     const R = M4.mul(M4.mul(M4.ry(val('y')), M4.rx(val('x'))), M4.rz(val('z')));
     const o = B.off[J.id] || J.off, local = M4.mul(M4.trans(o[0], o[1], o[2]), R);
     if(!J.parent){
-      const k = B.scale, W = M4.mul(M4.mul(M4.trans(ch.root.x, ch.root.y, ch.root.z), M4.ry(ch.root.ry * D2R)), [k,0,0,0, 0,k,0,0, 0,0,k,0, 0,0,0,1]);
+      const k = B.scale * A.k, W = M4.mul(M4.mul(M4.trans(ch.root.x, ch.root.y, ch.root.z), M4.ry(ch.root.ry * D2R)), [k,0,0,0, 0,k,0,0, 0,0,k,0, 0,0,0,1]);
       out[J.id] = M4.mul(W, local);
     } else out[J.id] = M4.mul(out[J.parent], local);
   }
+  // les enfants : une tête un peu plus grosse que le corps
+  if(A.head !== 1){ const h = A.head; out.head = M4.mul(out.head, [h,0,0,0, 0,h,0,0, 0,0,h,0, 0,0,0,1]); }
   return out;
 }
 
@@ -136,13 +241,18 @@ const POSES = [
   { id:'think', fr:'Réfléchir', en:'Thinking', y:0, j:{ armR:[35, 20, 60], foreR:[130, 0], armL:[15, 50, -90], foreL:[90, 0], head:[10, 0, 4] } },
   { id:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ armR:[65, 35, 30], foreR:[150, 0], handR:[-10, 0], head:[6, 0, -10] } },
   { id:'up', fr:'Mains en l’air', en:'Hands up', y:0, j:{ armL:[150, 28, 0], foreL:[38, 0], armR:[150, 28, 0], foreR:[38, 0], head:[-8, 0, 0] } },
+  { id:'sitground', fr:'Assis par terre', en:'Sitting on the ground', y:-0.83, j:{ thighL:[120, 10, 0], shinL:[83], footL:[10], thighR:[120, 10, 0], shinR:[83], footR:[10], spine:[10, 0, 0], armL:[55, 12, 0], foreL:[25, 0], armR:[55, 12, 0], foreR:[25, 0] } },
+  { id:'lie', fr:'Allongé', en:'Lying down', y:-0.83, j:{ pelvis:[-90, 0], head:[10, 0, 0], armL:[0, 10, 0], armR:[0, 10, 0] } },
 ];
 function applyPose(ch, pid){
   const P = POSES.find(p => p.id === pid); if(!P) return;
-  ch.j = blankPose();
+  ch.j = blankPose(); ch.pose = pid;
   for(const k in P.j) ch.j[k] = P.j[k].slice();
-  ch.root.y = P.y || 0;
+  ch.root.y = (P.y || 0) * bodyScale(lookOf(ch));    // un enfant plus petit descend moins pour s'asseoir
 }
+/* assis sur un vrai siège (canapé, banc, voiture) : le bassin reste à la hauteur du siège, quelle que soit la taille */
+const SEATED = { sit:1, drive:1 };
+function seatY(ch, adultY){ return 0.94 + adultY - 0.94 * bodyScale(lookOf(ch)); }
 
 /* ---------- Les lieux ----------
    Chaque lieu : sa géométrie (une seule forme, couleurs par sommet), où placer les deux
@@ -157,6 +267,10 @@ const SETS = [
   { id:'alley', fr:'Ruelle', en:'Alley' },
   { id:'taxi', fr:'Taxi', en:'Taxi' },
   { id:'park', fr:'Parc', en:'Park' },
+  { id:'street', fr:'Grande rue', en:'City street', big:true },
+  { id:'beach', fr:'Plage', en:'Beach', big:true },
+  { id:'stadium', fr:'Stade', en:'Stadium', big:true },
+  { id:'country', fr:'Campagne', en:'Countryside', big:true },
 ];
 const SET_DEF = {
   garage:{
@@ -217,6 +331,7 @@ const SET_DEF = {
     },
   },
   alley:{
+    sky:{ top:'#9DB3C8', hor:'#D3DAE0', low:'#6E737B' }, fog:[30, 120],
     spawn:[{ x:-0.5, z:0.3, ry:30 }, { x:0.7, z:-0.5, ry:-150 }],
     cam:{ tx:0, ty:1.2, tz:0, yaw:6, pitch:-4, dist:6.4, lens:28 },
     build(g){
@@ -240,9 +355,9 @@ const SET_DEF = {
     },
   },
   taxi:{
-    bg:'#CFD8E1',
+    bg:'#CFD8E1', sky:{ top:'#8FB3D4', hor:'#DCE4EB', low:'#8A8E95' }, fog:[30, 140],
     cam:{ tx:0, ty:1.0, tz:-0.2, yaw:58, pitch:-9, dist:6.4, lens:35 },
-    build(g){
+    build(g, gl){
       // la rue : chaussée, passage piéton, trottoir, façades de boutiques
       floor(g, -14, -16, 14, 16, 0, '#4A4E55');
       for(let z = -15; z < 16; z += 3.2) box(g, 3.1, 0.003, z, 0.12, 0.006, 1.7, '#D9D3B8');
@@ -271,9 +386,18 @@ const SET_DEF = {
         prism(g, [[-1.62, 0.95], [-1.75, 0.95], [-1.25, 1.5], [-1.15, 1.5]], a, b, K);
       });
       prism(g, [[0.6, 1.5], [0.52, 1.56], [-1.2, 1.56], [-1.28, 1.5]], -W + 0.02, W - 0.02, Y);
-      prism(g, [[1.18, 0.92], [1.14, 0.92], [0.53, 1.5], [0.57, 1.5]], -W + 0.05, W - 0.05, '#6E8796');               // pare-brise teinté (en bas seulement)
-      // enseigne TAXI
-      prism(g, [[0.05, 1.56], [-0.55, 1.56], [-0.5, 1.75], [0, 1.75]], -0.28, 0.28, '#F4EFD8'); box(g, -0.25, 1.755, 0, 0.6, 0.012, 0.5, Yd);
+      // les vitres : transparentes, on voit les passagers à travers
+      if(gl){
+        prism(gl, [[1.15, 0.92], [1.13, 0.92], [0.54, 1.5], [0.56, 1.5]], -W + 0.05, W - 0.05, '#A9C4D2');                    // pare-brise
+        prism(gl, [[-1.64, 0.95], [-1.24, 1.5], [-1.26, 1.5], [-1.66, 0.95]], -W + 0.05, W - 0.05, '#A9C4D2');                // lunette arrière
+        [[W - 0.04, W - 0.03], [-W + 0.03, -W + 0.04]].forEach(([a, b]) => {
+          prism(gl, [[1.12, 0.93], [0.54, 1.5], [-0.27, 1.5], [-0.27, 0.93]], a, b, '#A9C4D2');
+          prism(gl, [[-0.37, 0.93], [-0.37, 1.5], [-1.16, 1.5], [-1.62, 0.95]], a, b, '#A9C4D2');
+        });
+      }
+      // enseigne TAXI, posée sur le toit
+      prism(g, [[0.05, 1.56], [-0.55, 1.56], [-0.5, 1.75], [0, 1.75]], -0.28, 0.28, '#F4EFD8'); box(g, 0, 1.756, -0.25, 0.56, 0.012, 0.5, Yd);
+      [[0.282], [-0.282]].forEach(([x]) => { const sd = x > 0 ? 1 : -1; [0, 1, 2, 3].forEach(k => wall(g, sd > 0 ? [x, -0.05 - k * 0.11] : [x, -0.13 - k * 0.11], sd > 0 ? [x, -0.13 - k * 0.11] : [x, -0.05 - k * 0.11], 0.09, K, 1.61)); });
       // damier sur les portières (un seul côté de chaque carré : on ne le voit que de dehors)
       for(let i = 0; i < 24; i++){ const z = 1.05 - i * 0.12; for(let r = 0; r < 2; r++) if((i + r) % 2 === 0){
         wall(g, [W + 0.002, z], [W + 0.002, z - 0.12], 0.06, K, 0.68 + r * 0.06); wall(g, [-W - 0.002, z - 0.12], [-W - 0.002, z], 0.06, K, 0.68 + r * 0.06); } }
@@ -298,7 +422,7 @@ const SET_DEF = {
     },
   },
   living:{
-    cam:{ tx:0, ty:0.95, tz:-1.4, yaw:68, pitch:-8, dist:4.6, lens:28 },
+    cam:{ tx:0, ty:0.95, tz:-1.4, yaw:40, pitch:-8, dist:4.4, lens:28 },
     build(g){
       floor(g, -3.8, -3.2, 3.8, 3.2, 0, '#9C7B5B');
       for(let x = -3.6; x < 3.8; x += 0.4) box(g, x, 0.002, 0, 0.012, 0.004, 6.4, '#8C6D50');
@@ -347,7 +471,7 @@ const SET_DEF = {
     },
   },
   park:{
-    bg:'#C6D6E4',
+    bg:'#C6D6E4', sky:{ top:'#82B0D8', hor:'#DCE8EE', low:'#7C9A68' }, fog:[30, 140],
     cam:{ tx:0, ty:1.1, tz:0, yaw:18, pitch:-6, dist:6.2, lens:28 },
     build(g){
       floor(g, -18, -18, 18, 18, 0, '#6F8F5A');
@@ -388,20 +512,232 @@ const SET_DEF = {
     },
   },
 };
+/* ---------- Les grands espaces ----------
+   Dehors, le sol va loin et une brume légère cache l'horizon : la scène paraît
+   immense sans rien coûter de plus à dessiner. */
+/* une voiture simple (garée), orientée le long de la rue ; les vitres vont dans « gl » */
+function car(g, gl, x, z, col, flip){
+  const K = '#24262B', CH = '#A9AEB6', W = 0.88, s = flip ? -1 : 1, Z = v => z + v * s;
+  const P = pts => pts.map(([a, b]) => [Z(a), b]);
+  prism(g, P([[2.2, 0.3], [2.24, 0.62], [2.1, 0.8], [1.0, 0.88], [1.0, 0.3]]), x - W, x + W, col);
+  prism(g, P([[-1.6, 0.3], [-1.6, 0.9], [-2.2, 0.82], [-2.26, 0.6], [-2.24, 0.3]]), x - W, x + W, col);
+  prism(g, P([[1.0, 0.3], [1.0, 0.88], [-1.6, 0.9], [-1.6, 0.3]]), x - W, x + W, col);
+  prism(g, P([[1.0, 0.88], [0.4, 1.38], [-1.1, 1.4], [-1.6, 0.9]]), x - W + 0.06, x + W - 0.06, K);
+  prism(g, P([[0.36, 1.38], [-1.06, 1.4], [-1.04, 1.44], [0.34, 1.43]]), x - W + 0.08, x + W - 0.08, col);
+  if(gl) [[x + W - 0.055, x + W - 0.045], [x - W + 0.045, x - W + 0.055]].forEach(([a, b]) => prism(gl, P([[0.95, 0.9], [0.4, 1.36], [-1.05, 1.38], [-1.52, 0.92]]), a, b, '#A9C4D2'));
+  [1.4, -1.45].forEach(v => [x + W - 0.18, x - W - 0.04].forEach(x0 => { cyl(g, x0, 0.32, Z(v), 0.32, 0.32, 0.22, '#17181B', 12, 'x'); }));
+  box(g, x, 0.36, Z(2.26), 1.7, 0.1, 0.08, CH); box(g, x, 0.36, Z(-2.28), 1.7, 0.1, 0.08, CH);
+  [0.6, -0.6].forEach(dx => { box(g, x + dx, 0.6, Z(2.22), 0.24, 0.1, 0.04, '#FBF6DF'); box(g, x + dx, 0.66, Z(-2.24), 0.22, 0.1, 0.04, '#C2453B'); });
+}
+/* un arbre : un tronc et deux boules de feuillage */
+function tree(g, x, z, k, c1, c2){ cyl(g, x, 1.6 * k, z, 0.14 * k, 0.2 * k, 1.6 * k, '#6B4E37', 8); ball(g, x, 2.6 * k, z, 1.3 * k, 1.1 * k, 1.3 * k, c1 || '#4E7C58', 9); ball(g, x + 0.5 * k, 2.2 * k, z + 0.3 * k, 0.8 * k, 0.7 * k, 0.8 * k, c2 || '#5A8A60', 8); }
+/* un palmier : un tronc penché en tronçons, des palmes en lames */
+function palm(g, x, z, k, lean){
+  let px = x, py = 0, pz = z; const n = 6;
+  for(let i = 0; i < n; i++){ const nx = px + lean * k * 0.14 * (i + 1) / n, ny = py + 0.85 * k; cyl(g, px, ny, pz, 0.12 * k * (1 - i * 0.06), 0.15 * k * (1 - i * 0.06), 0.88 * k, '#8A7356', 7); px = nx; py = ny; }
+  for(let a = 0; a < 7; a++){ const t = a / 7 * Math.PI * 2, dx = Math.sin(t), dz = Math.cos(t);
+    prism(g, [[0, 0.06], [1.6 * k, -0.52 * k], [1.5 * k, -0.6 * k], [0.06, -0.02]], -0.12, 0.12, '#4E7C58');
+    // la palme est tracée dans le plan (z, y) : on la tourne autour du sommet
+    const last = g.p.length - prismCount(4) * 9; rotY(g, last, t, px, py, pz);
+  }
+}
+const prismCount = n => (n - 2) * 2 + n * 2;      // nombre de triangles d'un prisme à n côtés
+/* tourne les derniers sommets ajoutés (depuis « from ») autour de la verticale, puis les pose en (x, y, z) */
+function rotY(g, from, t, x, y, z){
+  const c = Math.cos(t), s = Math.sin(t);
+  for(let i = from; i < g.p.length; i += 3){
+    const a = g.p[i], b = g.p[i + 2], na = g.n[i], nb = g.n[i + 2];
+    g.p[i] = x + a * c + b * s; g.p[i + 1] += y; g.p[i + 2] = z - a * s + b * c;
+    g.n[i] = na * c + nb * s; g.n[i + 2] = -na * s + nb * c;
+  }
+}
+/* une façade d'immeuble, vue de la rue : sa couleur, ses fenêtres, sa vitrine en bas */
+function facade(g, x, z0, z1, h, col, faceX, shop){
+  const A = faceX > 0 ? [x, z0] : [x, z1], B = faceX > 0 ? [x, z1] : [x, z0];
+  // le mur est vu de la rue (il regarde vers faceX)
+  if(faceX < 0) wall(g, [x, z0], [x, z1], h, col); else wall(g, [x, z1], [x, z0], h, col);
+  const off = x - faceX * 0.01, len = Math.abs(z1 - z0), zs = Math.min(z0, z1);
+  for(let y = 3.6; y < h - 1.4; y += 3.0) for(let k = 0.9; k < len - 0.9; k += 2.2){
+    const a = zs + k, b = zs + k + 1.1;
+    if(faceX < 0) wall(g, [off, a], [off, b], 1.5, '#3E4552', y); else wall(g, [off, b], [off, a], 1.5, '#3E4552', y);
+  }
+  if(shop){
+    if(faceX < 0) wall(g, [off, zs + 0.6], [off, zs + len - 0.6], 2.3, '#2E3340', 0.2); else wall(g, [off, zs + len - 0.6], [off, zs + 0.6], 2.3, '#2E3340', 0.2);
+    // trois stores, un par vitrine
+    for(let k = 0; k < 3; k++){ const a = zs + 0.6 + k * (len - 1.2) / 3 + 0.2, b = a + (len - 1.2) / 3 - 0.4;
+      prismXY(g, [[x, 3.02], [x + faceX * 1.05, 2.62], [x + faceX * 1.05, 2.54], [x, 2.94]], a, b, shop); }
+  }
+}
+Object.assign(SET_DEF, {
+  street:{
+    sky:{ top:'#86AFD3', hor:'#DCE6EE', low:'#9DA3AA' }, fog:[40, 190],
+    cam:{ tx:-5.6, ty:1.2, tz:0.0, yaw:22, pitch:-4, dist:7.6, lens:28 },
+    build(g, gl){
+      floor(g, -60, -90, 60, 90, 0, '#4A4E55');
+      for(let z = -88; z < 90; z += 6) box(g, 0, 0.003, z, 0.14, 0.006, 3, '#E6E0C4');
+      [-3.4, 3.4].forEach(x => box(g, x, 0.003, 0, 0.12, 0.006, 180, '#D9D3B8'));
+      for(let x = -3.2; x <= 3.2; x += 0.66) box(g, x, 0.003, 6, 0.4, 0.006, 3, '#E6E0C4');
+      [-1, 1].forEach(sd => { box(g, sd * 4.05, 0.07, 0, 0.16, 0.14, 180, '#8D9198'); floor(g, sd < 0 ? -10 : 4.13, -90, sd < 0 ? -4.13 : 10, 90, 0.14, '#9A9EA5'); });
+      for(let z = -88; z < 90; z += 1.4) [-1, 1].forEach(sd => box(g, sd * 7, 0.142, z, 5.7, 0.004, 0.02, '#8C9097'));
+      // les immeubles des deux côtés : des hauteurs et des couleurs qui changent
+      const cols = ['#B39C86', '#9A8B7E', '#C9B9A3', '#8E7E72', '#A6ACB4', '#BFA58A'], shops = ['#2F6E4F', '#9B3B33', '#3D5A80', '#C99E2A', null, '#7C6A8E'];
+      let k = 0;
+      for(let z = -80; z < 80; z += 12, k++){
+        facade(g, -10, z, z + 12, 12 + (k * 7) % 9, cols[k % 6], 1, shops[k % 6]);
+        facade(g, 10, z, z + 12, 13 + (k * 5) % 10, cols[(k + 3) % 6], -1, shops[(k + 2) % 6]);
+      }
+      // lampadaires, arbres, abribus, banc, feu tricolore, voitures garées
+      for(let z = -60; z <= 60; z += 15) [-1, 1].forEach(sd => { const x = sd * 4.6; cyl(g, x, 4.6, z, 0.07, 0.08, 4.5, '#2C2E33', 6); box(g, x - sd * 0.35, 4.6, z, 0.8, 0.06, 0.1, '#2C2E33'); box(g, x - sd * 0.72, 4.5, z, 0.3, 0.12, 0.24, '#F2D98A'); });
+      for(let z = -54; z <= 54; z += 18) [-1, 1].forEach(sd => { const x = sd * 5.2; box(g, x, 0.2, z + 7, 0.9, 0.12, 0.9, '#5E636C'); cyl(g, x, 2.2, z + 7, 0.09, 0.12, 2.1, '#6B4E37', 7); ball(g, x, 3.0, z + 7, 1.15, 1.0, 1.15, '#557F57', 9); });
+      box(g, 6.8, 1.4, -8, 0.06, 2.5, 3.2, '#2C2E33'); box(g, 6.0, 2.68, -8, 1.8, 0.08, 3.4, '#3A3D44');
+      [-9.55, -6.45].forEach(z => box(g, 6.0, 1.4, z, 1.6, 2.5, 0.06, '#2C2E33'));
+      if(gl) wall(gl, [6.76, -9.5], [6.76, -6.5], 2.2, '#A9C4D2', 0.25);
+      box(g, 6.3, 0.48, -8, 0.4, 0.05, 2.2, '#8A6A4A');
+      cyl(g, -4.5, 3.0, 4.2, 0.07, 0.07, 3.0, '#2C2E33', 6); box(g, -4.5, 3.25, 4.2, 0.22, 0.6, 0.2, '#24262B');
+      [['#C2453B', 3.42], ['#E8B923', 3.25], ['#4E9A5B', 3.08]].forEach(([c, y]) => box(g, -4.5, y, 4.31, 0.1, 0.1, 0.02, c));
+      car(g, gl, 2.4, -14, '#3D5A80'); car(g, gl, 2.4, -24, '#9B3B33'); car(g, gl, -2.4, 18, '#E4E7EC', true); car(g, gl, 2.4, 22, '#2F6E4F');
+      box(g, -4.7, 0.6, -3, 0.5, 0.9, 0.5, '#2F6E4F');
+    },
+  },
+  beach:{
+    sky:{ top:'#79AED8', hor:'#E2EEF3', low:'#BFD0D8' }, fog:[45, 220],
+    cam:{ tx:1.5, ty:0.8, tz:1.0, yaw:40, pitch:-7, dist:9.0, lens:28 },
+    build(g, gl){
+      floor(g, -90, -6, 90, 80, 0, '#DDCCA3');
+      for(let i = 0; i < 80; i++){ const x = ((i * 9.37) % 120) - 60, z = ((i * 13.1) % 70) - 4; box(g, x, 0.003, z, 0.9, 0.006, 0.5, i % 2 ? '#D3C196' : '#E4D5AE'); }
+      floor(g, -90, -10, 90, -6, -0.005, '#BFAE8A');
+      floor(g, -260, -300, 260, -10, -0.04, '#4F86A3');
+      for(let z = -16; z > -120; z -= 9) box(g, ((z * 7.3) % 20), -0.03, z, 30, 0.004, 0.25, '#6B9DB8');
+      box(g, 0, -0.025, -10.2, 180, 0.01, 0.5, '#EEF2F2');
+      // parasols, serviettes, transats
+      [[-2.6, -1.2, '#C9503C'], [3.8, 2.2, '#3D5A80'], [-7.5, 3.5, '#E3A33A'], [9, -0.5, '#2F6E4F']].forEach(([x, z, c]) => {
+        cyl(g, x, 2.3, z, 0.025, 0.025, 2.3, '#E9E6E0', 6); cyl(g, x, 2.42, z, 0.05, 1.15, 0.34, c, 12); cyl(g, x, 2.08, z, 1.15, 1.12, 0.05, '#E9E6E0', 12);
+        box(g, x + 1.0, 0.012, z + 0.6, 0.85, 0.02, 1.8, c === '#3D5A80' ? '#E8D9B5' : '#E9E4DA'); box(g, x + 1.0, 0.016, z + 0.6, 0.85, 0.02, 0.25, c);
+      });
+      [[1.6, 1.0], [-5.2, -0.4]].forEach(([x, z]) => { prism(g, [[z - 0.8, 0.28], [z + 0.8, 0.28], [z + 0.8, 0.34], [z - 0.8, 0.34]], x - 0.3, x + 0.3, '#F4F2EE'); prism(g, [[z - 0.8, 0.34], [z - 0.7, 0.34], [z - 1.15, 0.95], [z - 1.25, 0.95]], x - 0.3, x + 0.3, '#F4F2EE'); [z - 0.7, z + 0.7].forEach(zz => box(g, x, 0.14, zz, 0.6, 0.28, 0.05, '#C9C3B5')); });
+      // le poste de secours, les palmiers, les rochers, le filet de volley
+      [[-14.6, 4.4], [-12.4, 4.4], [-14.6, 6.6], [-12.4, 6.6]].forEach(([x, z]) => box(g, x, 1.1, z, 0.12, 2.2, 0.12, '#E9E6E0'));
+      box(g, -13.5, 2.9, 5.5, 2.6, 1.4, 2.6, '#C9503C'); prism(g, [[4.0, 3.6], [7.0, 3.6], [5.5, 4.4]], -15, -12, '#E9E6E0');
+      wall(g, [-14.3, 6.81], [-12.7, 6.81], 0.6, '#3E4552', 3.1);
+      for(let i = 0; i < 8; i++) box(g, -13.5, 0.15 + i * 0.27, 7.05, 0.8, 0.04, 0.12, '#E9E6E0');
+      palm(g, 13, 7, 1.0, 1.3); palm(g, 16, 3, 1.15, -1.0); palm(g, -20, 12, 1.1, 0.8);
+      [[22, -5, 1.4], [24, -7, 0.9], [-26, -6, 1.2]].forEach(([x, z, k]) => ball(g, x, 0.4 * k, z, 1.1 * k, 0.7 * k, 0.9 * k, '#8D8579', 7));
+      [6.5, 13.5].forEach(x => cyl(g, x, 2.4, 10, 0.04, 0.04, 2.4, '#E9E6E0', 6)); box(g, 10, 2.15, 10, 7, 0.5, 0.02, '#2C2E33');
+    },
+  },
+  stadium:{
+    sky:{ top:'#6E9CC8', hor:'#D6E2EC', low:'#8B9196' }, fog:[70, 260],
+    cam:{ tx:0, ty:1.2, tz:0, yaw:32, pitch:-5, dist:8.5, lens:28 },
+    build(g, gl){
+      floor(g, -40, -58, 40, 58, 0, '#4F8A4A');
+      for(let z = -54; z < 54; z += 12) box(g, 0, 0.002, z + 3, 68, 0.004, 6, '#5A9655');
+      const line = (x, z, w, d, ry) => box(g, x, 0.005, z, w, 0.006, d, '#EEF0EA', ry);
+      line(34, 0, 0.12, 100); line(-34, 0, 0.12, 100); line(0, 50, 68.1, 0.12); line(0, -50, 68.1, 0.12); line(0, 0, 68, 0.12);
+      for(let i = 0; i < 32; i++){ const a = i / 32 * Math.PI * 2; line(Math.sin(a) * 9.15, Math.cos(a) * 9.15, 0.12, 1.8, a); }
+      [-1, 1].forEach(sd => { line(20.15, sd * 41.75, 0.12, 16.5); line(-20.15, sd * 41.75, 0.12, 16.5); line(0, sd * 33.5, 40.4, 0.12); line(9.16, sd * 47.25, 0.12, 5.5); line(-9.16, sd * 47.25, 0.12, 5.5); line(0, sd * 44.5, 18.4, 0.12);
+        // les buts, et leurs filets (transparents)
+        const z = sd * 50; [3.66, -3.66].forEach(x => cyl(g, x, 2.44, z, 0.06, 0.06, 2.44, '#F4F2EE', 8)); box(g, 0, 2.44, z, 7.44, 0.12, 0.12, '#F4F2EE');
+        if(gl){ wall(gl, [3.66, z + sd * 1.5], [-3.66, z + sd * 1.5], 2.2, '#EEF2F2'); wall(gl, [3.66, z], [3.66, z + sd * 1.5], 2.44, '#EEF2F2'); wall(gl, [-3.66, z + sd * 1.5], [-3.66, z], 2.44, '#EEF2F2'); } });
+      // panneaux publicitaires, tribunes en gradins, toits, projecteurs
+      const ads = ['#2F6E4F', '#C9503C', '#3D5A80', '#E3A33A'];
+      for(let z = -52; z < 52; z += 8) [-1, 1].forEach((sd, k) => { const x = sd * 37; if(sd > 0) wall(g, [x, z], [x, z + 8], 0.9, ads[(z / 8 + k + 7) & 3]); else wall(g, [x, z + 8], [x, z], 0.9, ads[(z / 8 + k + 6) & 3]); });
+      for(let i = 0; i < 16; i++){
+        const x = 39.4 + i * 0.8, y = 0.5 + i * 0.45;
+        [-1, 1].forEach(sd => { box(g, sd * x, y / 2, 0, 0.8, y, 112, i % 2 ? '#7E838B' : '#8D9198'); });
+        [-1, 1].forEach(sd => box(g, 0, y / 2, sd * (54.4 + i * 0.8), 76, y, 0.8, i % 2 ? '#7E838B' : '#8D9198'));
+      }
+      [-1, 1].forEach(sd => { box(g, sd * 46, 15.5, 0, 16, 0.3, 112, '#B9BEC6'); for(let z = -48; z <= 48; z += 24) cyl(g, sd * 53.5, 15.5, z, 0.25, 0.25, 15.5, '#8D9198', 8); });
+      [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([a, b]) => { const x = a * 58, z = b * 64; cyl(g, x, 32, z, 0.4, 0.6, 32, '#8D9198', 8); box(g, x, 33, z, 6, 3, 0.6, '#3A3D44', Math.atan2(-x, -z)); box(g, x - a * 0.2, 33, z - b * 0.2, 5.4, 2.4, 0.4, '#F7F1DA', Math.atan2(-x, -z)); });
+    },
+    // la foule des tribunes : des silhouettes, pas des personnages (rien à poser, presque rien à dessiner)
+    crowd(){
+      const out = [], rnd = seeded(7);
+      for(let i = 0; i < 14; i++){
+        const x = 39.4 + i * 0.8, y = 0.5 + i * 0.45;
+        for(let z = -54; z < 54; z += 0.95) [-1, 1].forEach(sd => { if(rnd() < 0.86 && !(sd < 0 && i < 6 && Math.abs(z - 10) < 3)) out.push(crowdOne(sd * x, y, z + rnd() * 0.3, rnd, 'cheer')); });
+        for(let xx = -36; xx < 36; xx += 0.95) [-1, 1].forEach(sd => { if(rnd() < 0.86) out.push(crowdOne(xx + rnd() * 0.3, y, sd * (54.4 + i * 0.8), rnd, 'cheer')); });
+      }
+      return out;
+    },
+  },
+  country:{
+    sky:{ top:'#86B3D9', hor:'#E6EBE6', low:'#9AA88A' }, fog:[50, 240],
+    cam:{ tx:2.4, ty:1.2, tz:1, yaw:-38, pitch:-4, dist:8, lens:28 },
+    build(g, gl){
+      floor(g, -200, -200, 200, 200, 0, '#7C9A5A');
+      // les champs de chaque côté de la route
+      [[-60, -120, -6, -40, '#C9B26A'], [-60, -40, -6, 20, '#5F7F48'], [-60, 20, -6, 120, '#8A6F52'], [6, -120, 70, -10, '#6E8F50'], [6, -10, 70, 60, '#C9B26A'], [6, 60, 70, 140, '#5F7F48']].forEach(([x0, z0, x1, z1, c], k) => {
+        floor(g, x0, z0, x1, z1, 0.004, c);
+        for(let x = x0 + 1; x < x1; x += 1.6) box(g, x, 0.006, (z0 + z1) / 2, 0.25, 0.004, z1 - z0 - 1, hexRGB(c).map(v => v * 0.9));
+      });
+      floor(g, -3.3, -200, 3.3, 200, 0.01, '#55595F'); [-4.2, 4.2].forEach(x => floor(g, x - 0.9, -200, x + 0.9, 200, 0.008, '#A69B85'));
+      for(let z = -196; z < 200; z += 8) box(g, 0, 0.013, z, 0.14, 0.006, 4, '#E6E0C4');
+      [-3.1, 3.1].forEach(x => box(g, x, 0.013, 0, 0.12, 0.006, 400, '#E6E0C4'));
+      // clôtures, poteaux électriques, arbres le long de la route
+      for(let z = -80; z <= 80; z += 2.5) [-5.6, 5.6].forEach(x => box(g, x, 0.5, z, 0.1, 1.0, 0.1, '#7A5C42'));
+      [-5.6, 5.6].forEach(x => [0.45, 0.85].forEach(y => box(g, x, y, 0, 0.05, 0.08, 160, '#8A6A4A')));
+      for(let z = -150; z <= 150; z += 30){ cyl(g, 7.5, 8, z, 0.12, 0.14, 8, '#6B4E37', 6); box(g, 7.5, 7.6, z, 1.4, 0.1, 0.1, '#6B4E37'); }
+      [7.0, 8.0].forEach(x => box(g, x, 7.62, 0, 0.02, 0.02, 300, '#2C2E33'));
+      for(let z = -120; z <= 120; z += 14) ball(g, -8.5, 4.5, z + 4, 1.2, 4.2, 1.2, '#4E7C58', 8);
+      [[16, -18, 1.4], [24, 8, 1.2], [-22, 30, 1.3], [-30, -60, 1.5], [30, -70, 1.2]].forEach(([x, z, k]) => tree(g, x, z, k));
+      // la ferme et la grange
+      box(g, -26, 2.2, -30, 9, 4.4, 7, '#E6DDCC'); prism(g, [[-33.6, 4.4], [-26.4, 4.4], [-30, 6.8]], -30.8, -21.2, '#8C4A3A');
+      wall(g, [-21.49, -29], [-21.49, -31], 2.1, '#6E5440'); [-27.5, -32.5].forEach(z => wall(g, [-21.49, z + 0.6], [-21.49, z - 0.6], 1.2, '#3E4552', 2.4));
+      box(g, -40, 3, -24, 8, 6, 10, '#9B3B33'); prism(g, [[-29, 6], [-19, 6], [-24, 8.6]], -44, -36, '#5E636C');
+      // les collines et les montagnes au loin
+      [[-90, -160, 60, 18, '#6E8F5A'], [40, -180, 80, 24, '#76966A'], [150, -120, 60, 16, '#6E8F5A'], [-150, 40, 70, 20, '#76966A'], [120, 120, 80, 22, '#6E8F5A']].forEach(([x, z, r, h, c]) => ball(g, x, 0, z, r, h, r, c, 14));
+      [[-40, -230, 70, 55], [60, -240, 90, 70], [180, -200, 60, 45]].forEach(([x, z, r, h]) => cyl(g, x, h, z, 0.5, r, h, '#8C9AA8', 9));
+      box(g, 4.6, 1.1, 10, 0.06, 2.2, 0.06, '#8D9198'); box(g, 4.6, 2.1, 10, 0.04, 0.6, 0.6, '#E8B923', Math.PI / 4);
+    },
+  },
+});
+/* un hasard qui donne toujours la même suite (la foule ne bouge pas d'une image à l'autre) */
+function seeded(n){ let s = (n * 9301 + 49297) % 233280 || 1; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
+const CROWD_TINTS = ['#C9503C', '#3D5A80', '#E3A33A', '#2F6E4F', '#7C6A8E', '#B4593A', '#4A6A8A', '#D9707A', '#8A7356', '#5E636C', '#E9E4DA', '#2E3A4E'].map(hexRGB);
+const CROWD_KINDS = { stand:[0, 3, 4, 0, 3, 5], cheer:[1, 2, 6, 7, 4, 1], mix:[0, 1, 2, 3, 4, 5, 6, 7] };
+function crowdOne(x, y, z, rnd, kind){
+  const v = CROWD_KINDS[kind] || CROWD_KINDS.mix;
+  return { x, y, z, v:v[Math.floor(rnd() * v.length)], h:1.62 + rnd() * 0.24, t:CROWD_TINTS[Math.floor(rnd() * CROWD_TINTS.length)], s:rnd() };
+}
+/* une foule posée par l'utilisateur : un rectangle de w × d mètres, tourné de ry, plus ou moins dense */
+function crowdSprites(c){
+  const out = [], rnd = seeded(c.seed || 1), n = Math.min(700, Math.round(c.w * c.d * (c.dens || 1) * 0.8));
+  const cs = Math.cos((c.ry || 0) * D2R), sn = Math.sin((c.ry || 0) * D2R);
+  for(let i = 0; i < n; i++){
+    const a = (rnd() - 0.5) * c.w, b = (rnd() - 0.5) * c.d;
+    out.push(crowdOne(c.x + a * cs + b * sn, c.y || 0, c.z - a * sn + b * cs, rnd, c.kind));
+  }
+  return out;
+}
+/* les sommets d'une foule : deux triangles par silhouette, la teinte et la peau de chacune */
+function crowdData(list){
+  const d = [];
+  for(const p of list){
+    const w = p.h * 0.5, u0 = p.v / 8, u1 = (p.v + 1) / 8;
+    const V = (ox, oy, u, v) => d.push(p.x, p.y, p.z, ox, oy, u, v, p.t[0], p.t[1], p.t[2], p.s);
+    V(-w / 2, 0, u0, 1); V(w / 2, 0, u1, 1); V(w / 2, p.h, u1, 0);
+    V(-w / 2, 0, u0, 1); V(w / 2, p.h, u1, 0); V(-w / 2, p.h, u0, 0);
+  }
+  return d;
+}
 /* les places toutes prêtes de chaque lieu : où mettre un personnage, dans quelle pose */
 const SPOTS = {
   garage:[ ['Au milieu', 'In the middle', -0.7, 0.4, 20], ['En face', 'Facing', 0.9, 0.2, -25], ['Près de l’établi', 'By the workbench', -2.5, -1.0, -90], ['Devant la porte', 'By the garage door', 0.6, -3.0, 0] ],
   office:[ ['Au bureau, assis', 'At the desk, seated', -0.2, -0.6, 180, 'sit'], ['Debout, en face', 'Standing, facing', 0.9, 0.9, 210], ['À la fenêtre', 'At the window', -1.0, -2.7, 180], ['À la porte', 'At the door', -1.6, 2.8, 180] ],
   alley:[ ['Au milieu', 'In the middle', -0.5, 0.3, 30], ['En face', 'Facing', 0.7, -0.5, -150], ['Près de la benne', 'By the dumpster', -1.0, -2.2, 90], ['Au fond, à la porte', 'At the back door', -0.3, -12.8, 0] ],
-  taxi:[ ['Au volant', 'At the wheel', 0.37, 0.3, 0, 'drive'], ['Derrière, à droite', 'Back seat, right', -0.4, -0.8, 0, 'sit', -0.35], ['Passager avant', 'Front passenger', -0.37, 0.3, 0, 'sit', -0.35], ['Sur le trottoir', 'On the sidewalk', -3.8, 0.4, 90] ],
+  taxi:[ ['Au volant', 'At the wheel', 0.37, 0.3, 0, 'drive'], ['Derrière, à droite', 'Back seat, right', -0.4, -0.8, 0, 'sit', -0.35], ['Passager avant', 'Front passenger', -0.37, 0.3, 0, 'sit', -0.35], ['Sur le trottoir', 'On the sidewalk', -3.8, 0.4, 90, null, 0.14] ],
   living:[ ['Sur le canapé', 'On the sofa', -0.55, -2.1, 0, 'sit'], ['Sur le canapé, à côté', 'On the sofa, next to', 0.55, -2.1, 0, 'sit'], ['Devant la télé', 'In front of the TV', 0.8, 1.6, 180], ['À la fenêtre', 'At the window', -3.0, 0.2, -90] ],
   cafe:[ ['Au comptoir, client', 'At the counter, customer', -1.0, -1.2, 180], ['Derrière le comptoir', 'Behind the counter', -1.0, -2.85, 0], ['À table', 'At a table', 1.52, 0.0, 90, 'sit'], ['À table, en face', 'At a table, facing', 2.88, 0.0, -90, 'sit'] ],
   park:[ ['Sur le banc', 'On the bench', -1.62, -0.55, 90, 'sit'], ['Sur le banc, à côté', 'On the bench, next to', -1.62, 0.25, 90, 'sit'], ['Sur le chemin', 'On the path', 0.2, 1.4, -160], ['Sous l’arbre', 'Under the tree', -3.6, -2.6, 40] ],
   hall:[ ['Au milieu', 'In the middle', 0.0, 0.0, 0], ['Devant l’ascenseur', 'At the lift', 0.0, -8.2, 180], ['À une porte', 'At a door', -1.1, -3.0, -90], ['Qui arrive', 'Walking in', 0.3, 2.8, 180, 'walk'] ],
+  street:[ ['Sur le trottoir', 'On the sidewalk', -6.2, 0.5, 120, null, 0.14], ['En face, sur le trottoir', 'Facing, on the sidewalk', -5.0, -0.5, -60, null, 0.14], ['Au passage piéton', 'At the crosswalk', -1.6, 6.0, 90, 'walk'], ['À l’abribus, assis', 'At the bus stop, seated', 6.32, -8.4, -90, 'sit', -0.34] ],
+  beach:[ ['Sur la serviette', 'On the towel', 4.8, 2.6, -150, 'sitground'], ['Allongé au soleil', 'Lying in the sun', -1.6, -0.6, 180, 'lie'], ['Au bord de l’eau', 'At the water’s edge', 1.0, -7.4, 180], ['Qui se promène', 'Taking a walk', -2.0, 2.4, -100, 'walk'] ],
+  stadium:[ ['Au rond central', 'Center circle', 0.0, 0.0, 30], ['Face à face', 'Facing', 0.8, 0.6, -150], ['Devant le but', 'In front of the goal', 0.0, 44.0, 180], ['En tribune', 'In the stands', -41.0, 10.0, 90, null, 1.4] ],
+  country:[ ['Au bord de la route', 'By the roadside', 4.3, 1.0, -90], ['Sur la route', 'On the road', 0.9, 3.0, 180, 'walk'], ['Près de la clôture', 'By the fence', -5.0, -1.6, 90], ['Dans le champ', 'In the field', -12.0, -6.0, 30] ],
 };
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
-function setGeo(id){ const g = geo(); SET_DEF[id].build(g); return g; }
+function setGeo(id){ const g = geo(), gl = geo(); SET_DEF[id].build(g, gl); return { g, glass:gl }; }
 
 /* ---------- Le vocabulaire du storyboard (le même que dans Raging Page) ---------- */
 const SHOT = {
@@ -410,7 +746,10 @@ const SHOT = {
     ['pg','Plan général','Extreme wide shot','PG','EWS'], ['am','Amorce (épaule)','Over the shoulder','Amorce','OTS'], ['ins','Insert','Insert','Insert','Insert'],
     ['pov','Plan subjectif','Point of view','Subjectif','POV'], ['2p','Plan à deux','Two-shot','Plan à deux','Two-shot']],
   angle:[['neu','Neutre','Eye level'], ['plo','Plongée','High angle'], ['con','Contre-plongée','Low angle'], ['dess','Vue de dessus','Overhead'], ['deb','Débullé','Dutch angle'], ['sol','Au ras du sol','Ground level']],
-  move:[['fix','Fixe','Static'], ['pan','Panoramique','Pan'], ['tilt','Tilt','Tilt'], ['trav','Travelling','Dolly'], ['zoom','Zoom','Zoom'], ['epa','Caméra épaule','Handheld'], ['stea','Steadicam','Steadicam'], ['grue','Grue','Crane'], ['drone','Drone','Drone']],
+  move:[['fix','Fixe','Static'], ['in','Travelling avant','Dolly in'], ['out','Travelling arrière','Dolly out'], ['panR','Panoramique vers la droite','Pan right'], ['panL','Panoramique vers la gauche','Pan left'],
+    ['tiltU','Tilt vers le haut','Tilt up'], ['tiltD','Tilt vers le bas','Tilt down'], ['travR','Travelling latéral vers la droite','Truck right'], ['travL','Travelling latéral vers la gauche','Truck left'],
+    ['zoomIn','Zoom avant','Zoom in'], ['zoomOut','Zoom arrière','Zoom out'], ['orbit','Travelling circulaire','Arc shot'], ['grue','Grue qui monte','Crane up'], ['grueD','Grue qui descend','Crane down'],
+    ['drone','Drone qui s’élève','Drone rising'], ['epa','Caméra épaule','Handheld'], ['end','Vers un cadre de fin','To an end frame']],
 };
 const shotLabel = (k, v, short) => { const o = (SHOT[k] || []).find(x => x[0] === v); return !o ? '' : (short && o[3]) ? L(o[3], o[4]) : L(o[1], o[2]); };
 
@@ -475,4 +814,25 @@ function faceEachOther(chars){
   const [a, b] = chars;
   a.root.ry = Math.atan2(b.root.x - a.root.x, b.root.z - a.root.z) / D2R;
   b.root.ry = Math.atan2(a.root.x - b.root.x, a.root.z - b.root.z) / D2R;
+}
+
+/* ---------- Les prises de vue en voiture (dans le taxi) ----------
+   Chacune : l'œil de la caméra, le point visé, la focale et la valeur de plan.
+   Elles supposent le conducteur au volant et le passager à l'arrière, à droite. */
+const CAR_SHOTS = [
+  ['pare', 'Conducteur, par le pare-brise', 'Driver, through the windshield', [0.3, 1.32, 3.0], [0.37, 1.27, 0.3], 50, 'pr'],
+  ['parearr', 'Passager, par le pare-brise', 'Passenger, through the windshield', [-0.25, 1.36, 3.0], [-0.4, 1.25, -0.8], 50, 'pr'],
+  ['deux', 'Les deux, de face', 'Both, from the front', [0, 1.45, 3.6], [0, 1.2, -0.25], 28, '2p'],
+  ['vitre', 'Profil, par la vitre', 'Profile, through the window', [2.3, 1.3, 0.32], [0.37, 1.27, 0.32], 50, 'gp'],
+  ['epaule', 'Par-dessus l’épaule (la route)', 'Over the shoulder (the road)', [0.02, 1.45, -0.25], [0.45, 1.1, 4.5], 24, 'am'],
+  ['arriere', 'Depuis la banquette arrière', 'From the back seat', [0.05, 1.33, -0.85], [0.37, 1.25, 0.4], 24, 'pr'],
+  ['retro', 'Les yeux dans le rétroviseur', 'Eyes in the rear-view mirror', [0.0, 1.42, 0.6], [0.37, 1.32, 0.3], 35, 'gp'],
+  ['portiere', 'À la portière (on monte)', 'At the door (getting in)', [-2.6, 1.25, -0.5], [-0.4, 1.05, -0.8], 35, 'pm'],
+  ['arrive', 'Le taxi arrive (plan large)', 'The taxi pulls up (wide)', [-2.2, 0.45, 10.5], [0, 0.8, 0.3], 28, 'pe'],
+  ['dessus', 'Vue du dessus', 'From above', [0.2, 9, 0.6], [0, 0.5, -0.2], 24, 'pg'],
+];
+/* une caméra à partir de l'endroit où elle est (e) et de ce qu'elle regarde (t) */
+function camLook(e, t, lens){
+  const vx = e[0] - t[0], vy = e[1] - t[1], vz = e[2] - t[2], dist = Math.hypot(vx, vy, vz) || 1;
+  return { tx:t[0], ty:t[1], tz:t[2], yaw:Math.atan2(vx, vz) / D2R, pitch:-Math.asin(vy / dist) / D2R, dist, lens, roll:0 };
 }
