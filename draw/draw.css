@@ -743,3 +743,10 @@ html[data-theme="dark"] .app-home .ah-logo{box-shadow:0 0 0 1.25px #FCFDFE;}
 .app-switch .as-word.rb .w2{fill:#1F8A5B;}
 .app-switch.app-rb:hover{border-color:#B9E2CC; box-shadow:var(--shadow-sm), 0 0 0 3px rgba(31,138,91,.13);}
 [data-theme="dark"] .app-switch .as-word.rb .w2{fill:#3FB57F;}
+
+/* les trois outils, en petit : on passe de l'un à l'autre d'un clic, sans encombrer la barre */
+.app-trio{display:inline-flex; align-items:center; gap:2px; padding:3px; margin-left:4px; border-radius:10px; background:var(--chip-bg);}
+.app-trio .at-i{display:flex; padding:3px; border-radius:7px; opacity:.72; transition:opacity .12s, background .12s;}
+.app-trio a.at-i:hover{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
+.app-trio .at-i.on{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
+.app-trio .at-logo{width:24px; height:24px; display:block; border-radius:6px;}

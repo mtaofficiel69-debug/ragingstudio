@@ -146,7 +146,7 @@ const GL = {
     const fs = `precision mediump float;
       uniform vec3 uL; uniform float uFlat; uniform float uA; uniform vec3 uTint; uniform float uTintK;
       uniform vec3 uEye; uniform vec3 uT[6]; uniform float uNT; uniform float uX; uniform float uChar;
-      uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass; uniform float uLine;
+      uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass; uniform float uLine; uniform float uFloor;
       varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2;
       /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
       bool inTube(vec3 t){ vec3 d = t - uEye; float k = dot(vW - uEye, d) / dot(d, d); return k > 0.0 && k < 0.9 && distance(vW, uEye + d * k) < 0.42; }
@@ -171,9 +171,14 @@ const GL = {
           // une petite lumière portée par la caméra, une lumière chaude, et un liseré clair sur les contours
           c = base * (0.3 + 0.14 * h + 0.34 * d * vec3(1.04, 1.0, 0.95) + 0.3 * f) + vec3(0.12, 0.125, 0.135) * pow(1.0 - f, 3.0);
         } else {
-          c = base * (0.42 + 0.2 * h + 0.5 * d * vec3(1.03, 1.0, 0.96));
-          // le pied des murs et des meubles, un peu plus sombre : les objets « touchent » le sol
-          if(abs(n.y) < 0.5) c *= mix(0.74, 1.0, smoothstep(0.0, 0.5, vW.y));
+          // une lumière du ciel un peu froide par-dessus, un rebond chaud par-dessous, et un soleil doux
+          // qui « enveloppe » les formes (aussi léger à calculer que l'ancien éclairage)
+          float w = max((dot(n, uL) + 0.35) / 1.35, 0.0);
+          vec3 amb = mix(vec3(0.37, 0.35, 0.33), vec3(0.5, 0.52, 0.56), h);
+          c = base * (amb + 0.56 * w * vec3(1.05, 1.0, 0.92));
+          // le pied des murs et des meubles, plus sombre (à chaque étage) : les objets « touchent » le sol
+          if(abs(n.y) < 0.5) c *= mix(0.66, 1.0, smoothstep(0.0, 0.6, vW.y - uFloor));
+          c = mix(c, c * c * (3.0 - 2.0 * c), 0.22);   // un peu plus de relief dans les valeurs
         }
         float a = uA;
         if(uGlass > 0.5){ c = mix(vC, vec3(0.92, 0.96, 1.0), pow(1.0 - f, 2.0) * 0.6); a = uA + pow(1.0 - f, 3.0) * 0.35; }
@@ -190,7 +195,7 @@ const GL = {
     const p = prog(vs, fs); if(!p) return false;
     gl.useProgram(p); this.prog = p;
     ['aP', 'aN', 'aC', 'aS'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
-    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
+    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine', 'uFloor'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // le ciel et le vignettage : un seul triangle qui couvre l'écran
@@ -266,7 +271,7 @@ const GL = {
     gl.uniform1f(L.uVC, o.mul ? 2 : o.vc ? 1 : 0); gl.uniform1f(L.uChar, o.char ? 1 : 0); gl.uniform1f(L.uFlat, o.raw ? 2 : o.flat ? 1 : 0); gl.uniform1f(L.uA, o.a == null ? 1 : o.a);
     const t = o.tint || [0, 0, 0]; gl.uniform3f(L.uTint, t[0], t[1], t[2]); gl.uniform1f(L.uTintK, o.tintK || 0);
     gl.uniform1f(L.uX, o.x || 0); gl.uniform1f(L.uOut, o.out || 0); gl.uniform1f(L.uGlass, o.glass ? 1 : 0);
-    gl.uniform1f(L.uLine, o.lines ? 1 : 0);
+    gl.uniform1f(L.uLine, o.lines ? 1 : 0); gl.uniform1f(L.uFloor, o.floor || 0);
     gl.drawArrays(o.lines ? gl.LINES : gl.TRIANGLES, 0, mesh.count);
   },
   /* env : { fogC, fog:[début, fin], bw:noir et blanc } */
