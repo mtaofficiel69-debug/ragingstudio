@@ -851,6 +851,8 @@ Object.assign(SET_DEF, {
     },
   },
 });
+/* les trois voitures-box du diner : leur position le long du mur et leur couleur */
+const DINER_CARS = [[-3.25, '#C2253A'], [0, '#E8B923'], [3.25, '#3FA9C4']];
 /* ---------- La chambre d'hôtel, le parking souterrain, le diner des années 50 ----------
    Trois lieux fermés : la caméra y reste dans la pièce où l'on vise (voir 04-scene.js). */
 Object.assign(SET_DEF, {
@@ -935,15 +937,35 @@ Object.assign(SET_DEF, {
       // les néons roses et bleus sous le plafond, les affiches de films
       [[[-X + 0.02, Z], [-X + 0.02, -Z]], [[X - 0.02, -Z], [X - 0.02, Z]], [[-X, -Z + 0.02], [X, -Z + 0.02]], [[X, Z - 0.02], [-X, Z - 0.02]]].forEach(([a, b], i) => { wall(g, a, b, 0.07, i % 2 ? '#FF4FA3' : '#3FE0E8', H - 0.35); wall(g, a, b, 0.05, i % 2 ? '#3FE0E8' : '#FF4FA3', H - 0.55); });
       [-4.6, -1.6, 1.4, 4.4].forEach((x, i) => { wall(g, [x - 0.55, -Z + 0.025], [x + 0.55, -Z + 0.025], 1.5, '#E8D9A8', 1.3); wall(g, [x - 0.47, -Z + 0.03], [x + 0.47, -Z + 0.03], 1.34, ['#B4232C', '#2E3A4E', '#E8B923', '#2F6E4F'][i], 1.38); });
-      // les box en forme de vieilles décapotables, le long du mur de gauche : la carrosserie, les roues,
-      // les phares, et à l'intérieur deux banquettes face à face et une table
-      [[-3.3, '#C2253A'], [-0.4, '#E8B923'], [2.5, '#3FA9C4']].forEach(([z, c]) => {
-        const x = -5.6, L = 2.5;
-        box(g, x, 0.42, z, 1.9, 0.5, L, c); box(g, x, 0.7, z, 1.95, 0.06, L + 0.05, '#E9E6E0');
-        box(g, x, 0.2, z + L / 2 + 0.12, 1.6, 0.3, 0.25, '#C9CDD3'); [-0.6, 0.6].forEach(dx => cyl(g, x + dx, 0.42, z + L / 2 + 0.25, 0.11, 0.11, 0.04, '#FBF6DF', 10, 'z'));
-        [-0.95, 0.95].forEach(dx => [-0.8, 0.8].forEach(dz => cyl(g, x + dx + (dx > 0 ? 0 : -0.12), 0.3, z + dz, 0.3, 0.3, 0.12, '#17181B', 12, 'x')));
-        [-0.75, 0.75].forEach(dz => { box(g, x, 0.47, z + dz, 1.6, 0.1, 0.55, '#7A1F25'); box(g, x, 0.85, z + dz * 1.35, 1.6, 0.7, 0.14, '#8C2630'); });
-        box(g, x, 0.76, z, 1.1, 0.05, 0.75, '#ECE8E1'); cyl(g, x, 0.74, z, 0.05, 0.05, 0.74, '#C9CDD3', 8);
+      // les box en forme de vieilles décapotables, le long du mur de gauche : une vraie voiture ouverte,
+      // capot devant, malle et ailerons derrière, portières basses sur les côtés ; dedans, deux banquettes
+      // face à face (assise à 50 cm, comme une chaise) et une table chromée au milieu
+      DINER_CARS.forEach(([z, c]) => {
+        const x = -5.55, W = 1.9, hw = W / 2;
+        // les portières (basses : on voit les clients assis), leur jonc chromé
+        [-1, 1].forEach(sd => { box(g, x + sd * (hw - 0.05), 0.42, z, 0.1, 0.6, 2.3, c); box(g, x + sd * (hw - 0.05), 0.735, z, 0.13, 0.03, 2.3, '#E3E6EA'); });
+        // le capot, la calandre et les phares ; le pare-brise (son cadre chromé)
+        box(g, x, 0.42, z + 1.35, W, 0.6, 0.4, c); box(g, x, 0.73, z + 1.35, W - 0.1, 0.02, 0.36, '#E3E6EA');
+        box(g, x, 0.36, z + 1.565, W - 0.3, 0.3, 0.03, '#C9CDD3'); [-0.65, 0.65].forEach(dx => cyl(g, x + dx, 0.52, z + 1.55, 0.1, 0.1, 0.04, '#FBF6DF', 12, 'z'));
+        box(g, x, 0.18, z + 1.58, W, 0.12, 0.06, '#C9CDD3');
+        [-1, 1].forEach(sd => box(g, x + sd * (hw - 0.04), 0.98, z + 1.17, 0.04, 0.5, 0.04, '#E3E6EA')); box(g, x, 1.22, z + 1.17, W - 0.04, 0.04, 0.04, '#E3E6EA');
+        // la malle, les ailerons, les feux
+        box(g, x, 0.42, z - 1.33, W, 0.6, 0.36, c); [-1, 1].forEach(sd => { box(g, x + sd * (hw - 0.08), 0.86, z - 1.36, 0.06, 0.3, 0.3, c); box(g, x + sd * (hw - 0.12), 0.6, z - 1.52, 0.18, 0.08, 0.02, '#E0303B'); });
+        box(g, x, 0.18, z - 1.55, W, 0.12, 0.06, '#C9CDD3');
+        // les roues, à moitié sous les ailes
+        [-1, 1].forEach(sd => [-1.25, 1.25].forEach(dz => { cyl(g, x + sd * hw - (sd > 0 ? 0 : 0.14), 0.3, z + dz, 0.3, 0.3, 0.14, '#17181B', 14, 'x'); cyl(g, x + sd * (hw + 0.005) - (sd > 0 ? 0 : 0.01), 0.3, z + dz, 0.15, 0.15, 0.01, '#C9CDD3', 10, 'x'); }));
+        // les banquettes : l'assise (dessus à 50 cm) et le dossier, en skaï
+        [-1, 1].forEach(sd => {
+          box(g, x, 0.22, z + sd * 0.78, W - 0.2, 0.44, 0.5, '#6E1A22');
+          box(g, x, 0.47, z + sd * 0.78, W - 0.24, 0.06, 0.5, '#8C2630');
+          box(g, x, 0.78, z + sd * 1.08, W - 0.2, 0.62, 0.12, '#8C2630');
+          box(g, x, 1.1, z + sd * 1.08, W - 0.2, 0.04, 0.14, '#E3E6EA');
+        });
+        // la table : plateau blanc cerclé de chrome, un seul pied
+        box(g, x, 0.74, z, 1.2, 0.04, 0.62, '#ECE8E1'); box(g, x, 0.715, z, 1.24, 0.02, 0.66, '#C9CDD3');
+        cyl(g, x, 0.71, z, 0.04, 0.04, 0.71, '#C9CDD3', 8); cyl(g, x, 0.02, z, 0.22, 0.22, 0.02, '#C9CDD3', 12);
+        // les milk-shakes
+        [-0.3, 0.3].forEach((dx, k) => { cyl(g, x + dx, 0.86, z + (k ? 0.12 : -0.12), 0.045, 0.03, 0.1, '#F1EFEA', 8); cyl(g, x + dx, 0.92, z + (k ? 0.12 : -0.12), 0.006, 0.006, 0.08, '#E0303B', 4); });
       });
       // les tables rondes au milieu, avec leurs chaises
       [[0.3, -2.4], [0.3, 1.3], [2.6, -0.6]].forEach(([x, z]) => {
@@ -959,7 +981,7 @@ Object.assign(SET_DEF, {
       for(let x = 0.0; x <= 4.4; x += 0.75){ cyl(g, x, 0.72, 3.55, 0.2, 0.2, 0.08, '#C2253A', 12); cyl(g, x, 0.66, 3.55, 0.035, 0.035, 0.66, '#C9CDD3', 6); cyl(g, x, 0.03, 3.55, 0.18, 0.18, 0.03, '#C9CDD3', 10); }
       box(g, 4.2, 1.35, 4.4, 0.7, 0.4, 0.5, '#E3E6EA'); [0, 1, 2].forEach(i => cyl(g, 3.95 + i * 0.25, 1.28, 4.4, 0.08, 0.08, 0.1, ['#E8B923', '#D9707A', '#7A5C42'][i], 10));
       // les suspensions
-      [[-5.6, -3.3], [-5.6, -0.4], [-5.6, 2.5], [0.3, -2.4], [0.3, 1.3], [2.6, -0.6]].forEach(([x, z]) => { cyl(g, x, H, z, 0.01, 0.01, 1.1, '#2C2E33', 4); cyl(g, x, H - 1.1, z, 0.08, 0.25, 0.22, '#E8B923', 10); });
+      DINER_CARS.map(([z]) => [-5.55, z]).concat([[0.3, -2.4], [0.3, 1.3], [2.6, -0.6]]).forEach(([x, z]) => { cyl(g, x, H, z, 0.01, 0.01, 1.1, '#2C2E33', 4); cyl(g, x, H - 1.1, z, 0.08, 0.25, 0.22, '#E8B923', 10); });
     },
   },
 });
@@ -1256,7 +1278,7 @@ const SPOTS = {
   forest:[ ['Dans la clairière', 'In the clearing', 0.2, 0.6, 200], ['En face', 'Facing', -0.9, -0.6, 30], ['Sur le sentier', 'On the path', 1.2, -12, 0, 'walk'], ['Assis sur un rondin', 'Sitting on a log', -0.7, -3.1, 0, 'sit'], ['Sur la passerelle', 'On the footbridge', 9, 2, 90, null, 0.16], ['Dans la cabane', 'In the cabin', -6.5, 5.5, 160, null, 0.15], ['Entre les arbres', 'Among the trees', -12, -10, 40] ],
   hotel:[ ['Assis sur le lit', 'Sitting on the bed', -0.6, 0.75, 180, 'sit', -0.25], ['Debout, en face', 'Standing, facing', -0.8, -0.7, 0], ['À la fenêtre', 'At the window', -3.0, -0.2, -90], ['Au bureau', 'At the desk', 0.75, 0.9, 90, 'sit'], ['Allongé sur le lit', 'Lying on the bed', -1.0, 1.9, 180, 'lie', 0.66], ['Dans la salle de bain', 'In the bathroom', 2.5, 1.2, 90], ['À la porte', 'At the door', 2.7, -2.4, 0] ],
   parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
-  diner:[ ['Dans la voiture, à gauche', 'In the car booth, left', -5.6, -4.05, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.6, -2.55, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
+  diner:[ ['Dans la voiture, côté malle', 'In the car booth, back seat', -5.55, -4.02, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.55, -2.48, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
 };
 // les lieux fermés d'une seule pièce : la caméra y reste aussi (même système que la maison)
 [['garage', [-4, -4, 4, 4], 3.2], ['office', [-3.5, -3.5, 3.5, 3.5], 2.9], ['living', [-3.8, -3.2, 3.8, 3.2], 2.7], ['cafe', [-4.5, -3.5, 4.5, 3.5], 3.0], ['hall', [-1.6, -9, 1.6, 4], 2.6], ['warehouse', [-12, -8, 12, 8], 8]]
