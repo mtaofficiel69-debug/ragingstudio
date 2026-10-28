@@ -353,6 +353,21 @@ function applyPose(ch, pid){
   for(const k in P.j) ch.j[k] = P.j[k].slice();
   ch.root.y = (P.y || 0) * bodyScale(lookOf(ch));    // un enfant plus petit descend moins pour s'asseoir
   retargetHands(ch, P);
+  if(!SEATED[pid] && !NO_GROUND[pid]) groundChar(ch);
+}
+/* le corps touche le sol (ou le matelas) : son point le plus bas est posé à 0, quelle que soit la silhouette
+   (allongée, une femme ou un aîné s'enfonçait de quelques centimètres ; un homme flottait un peu) */
+const NO_GROUND = { jump:1, ride:1, rideBack:1, pilot:1, drive:1 };
+const _lowPts = new Map();
+function lowPts(lk){
+  let m = _lowPts.get(lk.id); if(m) return m;
+  m = {}; JOINTS.forEach(J => { const p = partGeo(J.id, lk, true).p, a = []; for(let i = 0; i < p.length; i += 3) a.push([p[i], p[i + 1], p[i + 2]]); m[J.id] = a; });
+  _lowPts.set(lk.id, m); return m;
+}
+function groundChar(ch){
+  const M = charMatrices(ch), pts = lowPts(lookOf(ch)); let lo = 1e9;
+  for(const id in pts){ const m = M[id]; if(!m) continue; for(const q of pts[id]){ const y = m[1] * q[0] + m[5] * q[1] + m[9] * q[2] + m[13]; if(y < lo) lo = y; } }
+  if(lo < 1e8 && Math.abs(lo) < 0.4) ch.root.y -= lo;
 }
 /* ---------- Les mains à leur place, pour toutes les silhouettes ----------
    Les poses sont réglées sur l'homme adulte. Une femme a les épaules plus étroites, un enfant une plus
@@ -452,7 +467,7 @@ const SET_DEF = {
       partition(g, [2, Z0], [2, Z1], 0, H, WL, [[1.1, 2.4]]);
       // la plinthe et la main courante du couloir
       [[X0, Z0, X1, Z0], [X1, Z1, X0, Z1]].forEach(([a, b, c, d]) => box(g, (a + c) / 2, 0.06, b + (b < 0 ? 0.02 : -0.02), Math.abs(c - a), 0.12, 0.02, '#8FA7A2'));
-      box(g, X1 - 0.05, 0.95, 0, 0.05, 0.05, 6.8, '#C9CDD3');
+      [[-3.4, -2.95], [-1.45, 1.65], [3.15, 3.4]].forEach(([z0, z1]) => box(g, X1 - 0.05, 0.95, (z0 + z1) / 2, 0.05, 0.05, z1 - z0, '#C9CDD3'));   // la main courante s'arrête aux portes
       // le lit médicalisé : le cadre en métal, le matelas, le dossier relevé, les barrières, les roulettes
       const bx = -2.3, bz = 0.4;
       box(g, bx, 0.45, bz, 1.0, 0.12, 2.1, MET); box(g, bx, 0.58, bz, 0.92, 0.16, 2.0, '#F4F6F6');
@@ -467,16 +482,19 @@ const SET_DEF = {
       box(g, -3.15, 0.5, -0.9, 0.05, 1.0, 0.05, '#7E858C'); box(g, -3.15, 1.2, -0.9, 0.08, 0.38, 0.5, '#2C2E33'); box(g, -3.105, 1.2, -0.9, 0.005, 0.3, 0.42, '#16302A');
       box(g, -3.1, 1.22, -0.9, 0.003, 0.02, 0.36, '#4ED38A');
       box(g, -3.45, 0.38, 0.8, 0.45, 0.76, 0.45, '#E6E8E8'); box(g, -3.45, 0.79, 0.8, 0.48, 0.04, 0.48, '#C9CFCF');
-      box(g, -0.9, 0.45, 1.6, 0.48, 0.06, 0.48, '#4E8C83'); box(g, -0.9, 0.75, 1.82, 0.48, 0.55, 0.05, '#4E8C83'); [[-1.1, 1.4], [-0.7, 1.4], [-1.1, 1.8], [-0.7, 1.8]].forEach(([x, z]) => box(g, x, 0.21, z, 0.03, 0.42, 0.03, MET));
+      // la chaise du visiteur, tournée vers le lit
+      box(g, -1.25, 0.45, 0.9, 0.48, 0.06, 0.48, '#4E8C83'); box(g, -1.03, 0.75, 0.9, 0.05, 0.55, 0.48, '#4E8C83'); [[-1.45, 0.7], [-1.05, 0.7], [-1.45, 1.1], [-1.05, 1.1]].forEach(([x, z]) => box(g, x, 0.21, z, 0.03, 0.42, 0.03, MET));
       // la fenêtre et ses stores, le rideau de séparation sur son rail, le lavabo
       wall(g, [X0 + 0.01, 2.6], [X0 + 0.01, 0.6], 1.4, '#A9C6D6', 0.85); for(let y = 0.95; y < 2.25; y += 0.12) box(g, X0 + 0.04, y, 1.6, 0.01, 0.03, 2.0, '#EEF0F0');
       box(g, -0.6, 2.6, 0, 0.03, 0.03, 4.0, '#C9CDD3'); box(g, -0.6, 1.6, -1.6, 0.04, 1.9, 0.9, '#B7D2D6');
       box(g, 1.75, 0.85, -2.9, 0.4, 0.12, 0.35, '#F4F6F6'); wall(g, [1.98, -3.15], [1.98, -2.65], 0.6, '#B9D3E1', 1.15);
       // le couloir : les portes, le fauteuil roulant, les sièges d'attente, le panneau
-      [-2.2, 2.4].forEach(z => wall(g, [X1 - 0.01, z - 0.55], [X1 - 0.01, z + 0.55], 2.1, '#8FB5AD'));
+      [-2.2, 2.4].forEach(z => doorX(g, X1, z, 1.1, 2.1, '#8FB5AD', -1));
+      // l'encadrement de l'entrée de la chambre
+      [-2.43, -1.07].forEach(z => box(g, 2, 1.05, z, 0.14, 2.1, 0.06, '#E9ECEE')); box(g, 2, 2.13, -1.75, 0.14, 0.06, 1.42, '#E9ECEE');
       box(g, 3.4, 0.5, 2.6, 0.5, 0.06, 0.5, '#2C2E33'); box(g, 3.4, 0.8, 2.83, 0.5, 0.5, 0.04, '#2C2E33');
       [-1, 1].forEach(sd => { cyl(g, 3.4 + sd * 0.28, 0.32, 2.65, 0.3, 0.3, 0.03, '#3A3D44', 14, 'x'); cyl(g, 3.4 + sd * 0.22, 0.08, 2.35, 0.07, 0.07, 0.03, '#3A3D44', 8, 'x'); });
-      [-2.9, -2.35, -1.8].forEach(z => { box(g, 2.35, 0.45, z, 0.45, 0.06, 0.45, '#5E8FA8'); box(g, 2.15, 0.72, z, 0.05, 0.5, 0.45, '#5E8FA8'); box(g, 2.35, 0.22, z, 0.04, 0.44, 0.04, MET); });
+      [0.6, 1.15, 1.7].forEach(z => { box(g, 2.35, 0.45, z, 0.45, 0.06, 0.45, '#5E8FA8'); box(g, 2.15, 0.72, z, 0.05, 0.5, 0.45, '#5E8FA8'); box(g, 2.35, 0.22, z, 0.04, 0.44, 0.04, MET); });
       box(g, 3.5, 2.45, Z0 + 0.02, 1.3, 0.3, 0.04, '#2F6E8F'); pixText(g, 'HOPITAL', 3.5, 2.45, Z0 + 0.045, 1, 0.026, '#F4F6F6');
       [-1.5, 1.5].forEach(z => box(g, 3.5, 2.77, z, 0.4, 0.04, 1.2, '#FFFFFF'));
       box(g, -1, 2.77, 0.4, 0.5, 0.04, 1.4, '#FFFFFF');
@@ -495,11 +513,16 @@ const SET_DEF = {
       [-1, 1].forEach(sd => {
         const x = sd > 0 ? X1 : X0, A = (z0, z1) => sd > 0 ? [[x, z0], [x, z1]] : [[x, z1], [x, z0]];
         const W = (z0, z1, h, col, y) => { const [a, b] = A(z0, z1); wall(g, a, b, h, col, y); };
-        W(Z0, Z1, 0.85, '#C9CED3'); W(Z0, Z1, 0.45, '#C9CED3', 1.85);
-        // les fenêtres sur le noir du tunnel, entre les portes
-        [[-6.8, -3.9], [-2.1, 2.1], [3.9, 6.8]].forEach(([z0, z1]) => { W(z0, z1, 1.0, '#1A1E25', 0.85); for(let z = z0; z <= z1 + 0.01; z += (z1 - z0) / 2) box(g, x - sd * 0.02, 1.35, z, 0.04, 1.0, 0.05, '#9AA3AB'); });
-        // les portes, avec leurs vitres
-        [-3, 3].forEach(z => { W(z - 0.9, z + 0.9, 1.85, '#8E979F'); W(z - 0.75, z - 0.05, 1.0, '#2A3038', 0.75); W(z + 0.05, z + 0.75, 1.0, '#2A3038', 0.75); box(g, x - sd * 0.03, 0.95, z, 0.03, 1.9, 0.03, '#2C2E33'); });
+        // la paroi, morceau par morceau (rien ne se superpose : plus de scintillement), avec les fenêtres sur le noir du tunnel
+        [[Z0, -3.9], [-2.1, 2.1], [3.9, Z1]].forEach(([z0, z1]) => { W(z0, z1, 0.85, '#C9CED3'); W(z0, z1, 0.45, '#C9CED3', 1.85);
+          const w0 = Math.max(z0, -6.8), w1 = Math.min(z1, 6.8); W(w0, w1, 1.0, '#1A1E25', 0.85); if(w0 > z0) W(z0, w0, 1.0, '#C9CED3', 0.85); if(w1 < z1) W(w1, z1, 1.0, '#C9CED3', 0.85);
+          for(let z = w0; z <= w1 + 0.01; z += (w1 - w0) / 2) box(g, x - sd * 0.02, 1.35, z, 0.04, 1.0, 0.05, '#9AA3AB'); });
+        // les portes, un peu en retrait de la paroi, avec leurs vitres et leur joint
+        [-3, 3].forEach(z => { W(z - 0.9, z + 0.9, 0.35, '#C9CED3', 1.95);
+          const D = (z0, z1, h, col, y, k) => { const xx = x - sd * k, [a, b] = sd > 0 ? [[xx, z0], [xx, z1]] : [[xx, z1], [xx, z0]]; wall(g, a, b, h, col, y); };
+          D(z - 0.9, z + 0.9, 1.95, '#8E979F', 0, 0.015); D(z - 0.75, z - 0.06, 1.0, '#2A3038', 0.75, 0.03); D(z + 0.06, z + 0.75, 1.0, '#2A3038', 0.75, 0.03);
+          box(g, x - sd * 0.035, 0.98, z, 0.02, 1.95, 0.03, '#2C2E33'); box(g, x - sd * 0.03, 1.97, z, 0.06, 0.05, 1.9, '#7E868E');
+          [-0.92, 0.92].forEach(dz => box(g, x - sd * 0.02, 0.99, z + dz, 0.06, 1.98, 0.05, '#7E868E')); });   // les montants de l'encadrement
         // les banquettes, dos aux fenêtres
         [[-6.7, -4.0], [-2.0, 2.0], [4.0, 6.7]].forEach(([z0, z1]) => { const z = (z0 + z1) / 2, L_ = z1 - z0;
           box(g, x - sd * 0.25, 0.4, z, 0.48, 0.12, L_, '#2E5A8C'); box(g, x - sd * 0.06, 0.75, z, 0.1, 0.6, L_, '#2E5A8C'); box(g, x - sd * 0.25, 0.18, z, 0.42, 0.34, L_, '#3E4248');
@@ -535,7 +558,7 @@ const SET_DEF = {
       wall(g, [3.0, Z1 - 0.01], [-4.0, Z1 - 0.01], 0.9, '#6F7F88', 1.65);
       const BC = ['#2F6E4F', '#8C5A2A', '#C9A64B', '#7A2E3A', '#3D5A80', '#E3E6EA'];
       for(let x = -3.8; x <= 2.8; x += 0.22) [1.62, 2.07].forEach((y, k) => { const c = BC[((Math.round(x * 7 + k * 3) % BC.length) + BC.length) % BC.length]; cyl(g, x, y + 0.24, 4.85, 0.035, 0.035, 0.22, c, 6); cyl(g, x, y + 0.32, 4.85, 0.012, 0.012, 0.08, c, 4); });
-      [-1.0, -0.6, -0.2].forEach(x => { cyl(g, x, 1.45, 2.65, 0.03, 0.03, 0.3, '#C9CDD3', 6); box(g, x, 1.45, 2.62, 0.04, 0.12, 0.03, '#2C2E33'); });
+      [-1.0, -0.6, -0.2].forEach(x => { cyl(g, x, 1.42, 3.05, 0.025, 0.025, 0.27, '#C9CDD3', 6); box(g, x, 1.38, 2.98, 0.03, 0.03, 0.12, '#C9CDD3'); box(g, x, 1.55, 3.05, 0.035, 0.12, 0.035, '#2C2E33'); });   // les tireuses, côté barman
       box(g, -0.5, 2.75, Z1 - 0.05, 1.5, 0.45, 0.04, '#141414'); pixText(g, 'BAR', -0.5, 2.75, Z1 - 0.075, -1, 0.06, '#FF3D5A');
       // le billard et les queues au mur
       box(g, -3.6, 0.73, -2.4, 1.6, 0.12, 2.7, WOOD); box(g, -3.6, 0.8, -2.4, 1.36, 0.02, 2.46, '#2F7A4A');
@@ -550,7 +573,8 @@ const SET_DEF = {
       // les petites tables rondes, la porte, le juke-box
       [[2.0, -1.5], [3.8, -0.2], [2.4, 0.9]].forEach(([x, z]) => { cyl(g, x, 0.74, z, 0.38, 0.38, 0.04, DK, 14); cyl(g, x, 0.7, z, 0.04, 0.04, 0.68, '#2C2E33', 6); cyl(g, x, 0.03, z, 0.25, 0.25, 0.03, '#2C2E33', 10);
         [[0.55, 0], [-0.55, 0]].forEach(([dx, dz]) => { box(g, x + dx, 0.45, z + dz, 0.4, 0.05, 0.4, '#3A2A20'); box(g, x + dx * 1.35, 0.72, z + dz, 0.04, 0.5, 0.4, '#3A2A20'); box(g, x + dx, 0.22, z + dz, 0.04, 0.44, 0.04, '#2C2E33'); }); });
-      wall(g, [X1 - 0.01, -4.3], [X1 - 0.01, -3.1], 2.2, '#3A2416');
+      doorX(g, X1, -3.7, 1.1, 2.2, '#3A2416', -1, '#2E1F17'); box(g, X1 - 0.02, 1.6, -3.7, 0.01, 0.45, 0.4, '#C9B48F');   // la porte d'entrée et sa vitre
+      box(g, X1 - 0.03, 2.45, -3.7, 0.04, 0.16, 0.6, '#1E5A3A'); pixText(g, 'SORTIE', -3.7, 2.45, X1 - 0.055, -1, 0.018, '#7EE0A0', true);
       box(g, 5.6, 0.75, 2.5, 0.6, 1.5, 0.55, '#8C1F2A'); box(g, 5.31, 1.2, 2.5, 0.02, 0.45, 0.4, '#F2D98A'); cyl(g, 5.6, 1.5, 2.5, 0.3, 0.3, 0.01, '#C9A64B', 12, 'x');
       [-4.2, -1.4, 1.4, 4.2].forEach(x => { cyl(g, x, H, 0.4, 0.008, 0.008, 0.9, '#2C2E33', 4); cyl(g, x, 2.3, 0.4, 0.05, 0.16, 0.14, '#C9A64B', 10); ball(g, x, 2.14, 0.4, 0.045, 0.04, 0.045, '#F7E3A0', 6); });
     },
@@ -850,6 +874,15 @@ function pixText(g, text, cx, cy, z, dir, px, col, axisX){
     const u = (i * 4 + c - (w - 1) / 2) * px * dir, v = cy + (2 - r) * px;
     if(axisX) box(g, z, v, cx - u, 0.006, px * 0.92, px * 0.92, col); else box(g, cx + u, v, z, px * 0.92, px * 0.92, 0.006, col); })));
   EDGE_ON = e0;
+}
+/* une porte sur un mur vertical en x (vue de l'intérieur, côté faceX) : le battant, son encadrement, sa poignée */
+function doorX(g, x, z, w, h, col, faceX, frame){
+  const i = -faceX, A = [x + i * 0.012, z - w / 2], B = [x + i * 0.012, z + w / 2];
+  if(faceX > 0) wall(g, B, A, h, col); else wall(g, A, B, h, col);
+  const F = frame || '#E9ECEE';
+  [-1, 1].forEach(sd => box(g, x + i * 0.03, h / 2, z + sd * (w / 2 + 0.03), 0.06, h + 0.06, 0.06, F));
+  box(g, x + i * 0.03, h + 0.03, z, 0.06, 0.06, w + 0.12, F);
+  box(g, x + i * 0.04, h * 0.48, z + w / 2 - 0.12, 0.04, 0.03, 0.12, '#C9CDD3');
 }
 function facade(g, x, z0, z1, h, col, faceX, shop){
   const A = faceX > 0 ? [x, z0] : [x, z1], B = faceX > 0 ? [x, z1] : [x, z0];
@@ -1597,9 +1630,9 @@ const SPOTS = {
   parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
   diner:[ ['Dans la voiture, côté malle', 'In the car booth, back seat', -5.55, -4.02, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.55, -2.48, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
   bank:[ ['Au guichet', 'At the counter', -1.2, 2.3, 0], ['Derrière le guichet', 'Behind the counter', -1.2, 4.2, 180], ['Dans la file', 'In the queue', 0, -0.4, 0], ['À l’entrée', 'At the entrance', 0.6, -6.0, 0], ['Devant la chambre forte', 'In front of the vault', 5.8, 5.2, 180], ['Assis sur le banc', 'Sitting on the bench', -6.5, -5.75, 0, 'sit', 0.04] ],
-  hospital:[ ['Allongé dans le lit', 'Lying in the bed', -2.3, 0.15, 0, 'lie', 0.7], ['À son chevet, assis', 'At the bedside, seated', -0.9, 1.55, 180, 'sit'], ['Le médecin, debout', 'The doctor, standing', -1.2, -0.4, -90], ['Dans le couloir', 'In the corridor', 3.5, 0, 0], ['En salle d’attente', 'In the waiting area', 2.38, -2.35, 90, 'sit'], ['Devant la fenêtre', 'At the window', -3.5, 1.6, -90] ],
+  hospital:[ ['Allongé dans le lit', 'Lying in the bed', -2.3, 0.15, 0, 'lie', 0.66], ['À son chevet, assis', 'At the bedside, seated', -1.27, 0.9, -90, 'sit'], ['Le médecin, debout', 'The doctor, standing', -1.2, -0.4, -90], ['Dans le couloir', 'In the corridor', 3.5, 0, 0], ['En salle d’attente', 'In the waiting area', 2.38, 1.15, 90, 'sit'], ['Devant la fenêtre', 'At the window', -3.5, 1.6, -90] ],
   metro:[ ['Assis sur la banquette', 'Seated on the bench', 1.1, 0, -90, 'sit', -0.37], ['Assis en face', 'Seated opposite', -1.1, 0.6, 90, 'sit', -0.37], ['Debout à la barre', 'Standing at the pole', 0.25, 1.2, 0], ['Devant la porte', 'By the door', 0.9, 3, -90], ['Au bout de la rame', 'At the end of the car', 0, -6.2, 0] ],
-  bar:[ ['Au comptoir', 'At the counter', -1.2, 2.15, 0, 'sit', -0.06], ['Le barman', 'The bartender', -0.8, 3.9, 180], ['Au billard', 'At the pool table', -2.7, -2.4, -90], ['Dans le box', 'In the booth', -3.6, -4.45, 0, 'sit', -0.35], ['À une table', 'At a table', 2.55, -1.5, -90, 'sit'], ['Près du juke-box', 'By the jukebox', 4.8, 2.2, 90] ],
+  bar:[ ['Au comptoir', 'At the counter', -1.2, 2.15, 0, 'sit', -0.06], ['Le barman', 'The bartender', -0.8, 3.9, 180], ['Au billard', 'At the pool table', -2.7, -2.4, -90], ['Dans le box', 'In the booth', -4.3, -4.25, 90, 'sit', -0.33], ['En face, dans le box', 'Facing, in the booth', -2.9, -4.25, -90, 'sit', -0.33], ['À une table', 'At a table', 2.55, -1.5, -90, 'sit'], ['Près du juke-box', 'By the jukebox', 4.8, 2.2, 90] ],
   police:[ ['À l’accueil', 'At the front desk', -1, -3.0, 0], ['Derrière le comptoir', 'Behind the desk', -1, -1.5, 180], ['Dans la salle d’attente', 'In the waiting room', 4.4, -5.4, 0, 'sit'], ['À son bureau', 'At a desk', -3.6, 0.55, 0, 'sit'], ['Le suspect, à la table', 'The suspect, at the table', 5, 1.6, 0, 'sit'], ['L’inspecteur, en face', 'The detective, facing', 5, 3.6, 180, 'sit'], ['Dans la cellule', 'In the cell', -6.6, 5.4, 180] ],
 };
 // les lieux fermés d'une seule pièce : la caméra y reste aussi (même système que la maison)

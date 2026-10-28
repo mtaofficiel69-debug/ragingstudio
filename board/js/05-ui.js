@@ -58,7 +58,7 @@ function renderUI(){
               <div class="stage-wrap" id="stageWrap">
                 <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="tech hidden" id="tech"><i class="safe sa"></i><i class="safe st"></i><i class="ctr"></i><i class="hz" id="techHz"></i><div class="hud" id="techHud"></div></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="hplan hidden" id="hplan"></div><div class="play-fx" id="playFx"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
               </div>
-              <div class="under" id="under"><div class="dock" id="nav"></div><div class="hint" id="hint"></div></div>
+              <div class="under" id="under"><div class="dock" id="nav"></div><div class="dock tod-box" id="tod"></div><div class="hint" id="hint"></div></div>
             </div>
             <div class="sheet-view hidden" id="sheetView"></div>
             <div class="board" id="strip"></div>
@@ -158,7 +158,7 @@ function renderHead(){
       <span class="sh-no">${L('Plan', 'Shot')} ${S.i + 1}</span><span class="sh-of">${L('sur', 'of')} ${n}</span>
       ${inf.scene ? `<span class="sh-chip">${esc(L('Sc. ', 'Sc. ') + inf.scene)}</span>` : ''}
       <span class="sh-chip">${esc(shotLabel('size', inf.size))}</span>
-      ${(inf.time && inf.time !== 'day') ? `<span class="sh-chip">${icon(inf.time === 'night' ? 'moon' : 'sun')}${esc(slugOf(s))}</span>` : ''}
+      ${(inf.time && inf.time !== 'day') ? `<span class="sh-chip">${icon(inf.time === 'night' ? 'moon' : 'sunset')}${esc(slugOf(s))}</span>` : ''}
       ${(inf.trans && inf.trans !== 'cut') ? `<span class="sh-chip">${esc(L(TRANS.find(x => x[0] === inf.trans)[1], TRANS.find(x => x[0] === inf.trans)[2]))}</span>` : ''}
       ${inf.move !== 'fix' ? `<span class="sh-chip mv">${icon('move')}${esc(shotLabel('move', inf.move))}${S.endEd ? ' · ' + L('cadre de fin', 'end frame') : ''}</span>` : ''}
       <span class="sh-auto" title="${esc(L('Ce cadre est le plan : tout ce que tu vois est gardé, pas besoin d’enregistrer.', 'This frame is the shot: everything you see is kept, no need to save.'))}">${icon('check')}</span>
@@ -173,7 +173,7 @@ function renderHead(){
       <button class="ib" data-act="prevShot" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Plan précédent (←)', 'Previous shot (←)'))}">${icon('left')}</button>
       <button class="ib" data-act="nextShot" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Plan suivant (→)', 'Next shot (→)'))}">${icon('right')}</button>
     </div>`;
-  renderWarn(); renderPlan();
+  renderWarn(); renderPlan(); renderTod();
 }
 /* ---------- Le plan de la maison, posé sur l'image ----------
    Les étages en onglets, le plan de l'étage : on clique une pièce (ou n'importe quel point) et la caméra
@@ -284,6 +284,14 @@ function renderNav(){
     <span class="dk-sep"></span>${b('up', L('Monter (R)', 'Up (R)'), '<path d="M8 2v12M4.5 5.5 8 2l3.5 3.5" fill="none"/>')}${b('down', L('Descendre (F)', 'Down (F)'), '<path d="M8 2v12M4.5 10.5 8 14l3.5-3.5" fill="none"/>')}
     <span class="dk-sep"></span>${b('in', L('Zoomer', 'Zoom in'), '<path d="M8 3.5v9M3.5 8h9" fill="none"/>')}${b('out', L('Dézoomer', 'Zoom out'), '<path d="M3.5 8h9" fill="none"/>')}`;
 }
+/* le moment de la journée, juste sous l'image, à côté des boutons de déplacement : on le voit tout de suite */
+function renderTod(){
+  const el = document.getElementById('tod'); if(!el) return;
+  const t = shot().info.time || 'day';
+  el.title = L('Le moment de la journée, pour ce plan', 'Time of day, for this shot');
+  el.innerHTML = [['day', 'sun', 'Jour', 'Day'], ['dusk', 'sunset', 'Soir', 'Dusk'], ['night', 'moon', 'Nuit', 'Night']].map(([k, ic, fr, en]) =>
+    `<button class="tod-b ${t === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}" title="${esc(L('Le moment de la journée : ', 'Time of day: ') + L(TIMES[k].fr, TIMES[k].en))}">${icon(ic)}<span>${L(fr, en)}</span></button>`).join('');
+}
 function renderHint(){
   const el = document.getElementById('hint'); if(!el) return;
   let t;
@@ -389,7 +397,7 @@ const PANEL_HTML = {
     const fl = SET_DEF[sh.set].floors ? lblId(L('Aller dans une pièce', 'Go to a room'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
     const gid = ['in', 'out', 'wide'];
     return ph('place', L('Le lieu', 'The place'), L('Les personnages s’y placent tout seuls.', 'Characters go to ready-made spots by themselves.'), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
-      `<div class="pb">${lbl(L('Le moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+      `<div class="pb">${lbl(L('Le moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : k === 'dusk' ? 'sunset' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
   },
   chars(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
