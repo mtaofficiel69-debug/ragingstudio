@@ -21,7 +21,7 @@ let homeTipK = null;
 function homeTipHtml(){
   if(homeTipK === null){ const d = new Date(); homeTipK = (d.getFullYear()*372 + d.getMonth()*31 + d.getDate()) % HOME_TIPS.length; }
   const t = HOME_TIPS[homeTipK];
-  return `<button class="btn wd-nav wd-tip" data-act="nextTip" title="${L('Astuce suivante','Next tip')}">${icon('bulb')}<small><span class="sr">${L('Astuce','Tip')} : </span>${L(t[0], t[1])}</small></button>`;
+  return `<button class="btn wd-nav wd-tip" data-act="nextTip" title="${L('Astuce suivante','Next tip')}">${icon('bulb')}<small><span class="tip-k">${L('Astuce','Tip')}</span>${L(t[0], t[1])}</small></button>`;
 }
 function renderHome(){
   const list = S.index.slice().sort((a, b) => b.updatedAt - a.updatedAt);

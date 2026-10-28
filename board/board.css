@@ -247,6 +247,7 @@ html[data-theme="dark"] .crow-main em{color:var(--accent-ink);}
 .fig-t .fig{width:22px; height:28px;}
 .fig-t small{font-size:10.5px; font-weight:600; line-height:1.15; text-align:center;}
 .fig-t:hover{border-color:var(--accent); background:var(--surface); color:var(--ink);}
+.fig-t.on{border-color:var(--accent); background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1px var(--accent);}
 .fig-t:disabled{opacity:.38; cursor:default; border-color:var(--hair); background:var(--surface-soft);}
 .chips{display:flex; flex-wrap:wrap; gap:6px;}
 .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--hair); border-radius:999px; background:var(--surface); font-size:12.5px; font-weight:500;}
@@ -441,10 +442,6 @@ input[type=range]::-moz-range-thumb{width:12px; height:12px; border-radius:50%; 
 .rbox{display:inline-block; flex:none; box-sizing:border-box; border:1.4px solid currentColor; border-radius:2px; opacity:.75;}
 .seg.ratios button{flex:1 1 30%;}
 /* plein écran : l'image prend toute la place */
-.stage-area.fs{position:fixed; inset:0; z-index:200; background:#121316; padding:12px 18px 10px;}
-.stage-area:fullscreen{background:#121316; padding:12px 18px 10px;}
-.stage-area.fs .shot-head, .stage-area:fullscreen .shot-head{color:#E9ECEF;}
-.stage-area.fs .hint, .stage-area:fullscreen .hint{display:none;}
 body.fs-fake{overflow:hidden;}
 /* des volets plus calmes : le titre, une ligne d'explication, et le contenu */
 .ph{padding:16px 16px 4px;}
@@ -598,3 +595,51 @@ html[data-theme="dark"] .bh-resume{color:var(--accent-ink);}
 .app-trio a.at-i:hover{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
 .app-trio .at-i.on{opacity:1; background:var(--surface); box-shadow:var(--shadow-sm);}
 .app-trio svg{width:24px; height:24px; display:block; border-radius:6px;}
+
+/* l'astuce de l'accueil : un petit encart compact, aux couleurs de l'outil (2 lignes au plus) */
+.bh-tip{margin-top:12px; padding:8px 10px; gap:8px; border:1px solid var(--hair); border-radius:8px; background:var(--surface); align-items:flex-start;}
+.bh-tip:hover{border-color:var(--accent);}
+.bh-tip .icon{width:14px; height:14px; margin-top:1px; color:var(--accent);}
+.bh-tip > span{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:11.5px; line-height:1.4; color:var(--ink-soft); margin:0;}
+.bh-tip .tip-k{font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); margin-right:6px;}
+
+/* ---------- L'immersion : tout l'atelier en plein écran, l'image au centre, les outils resserrés ---------- */
+#app:fullscreen{height:100vh; width:100vw; background:#0B0C0E;}
+body.fs-fake #app{position:fixed; inset:0; z-index:50; height:auto;}
+body.imm .topbar{display:none;}
+body.imm .center{background:#0E0F12;}
+body.imm .stage-area{padding:10px 16px 8px;}
+body.imm .stage-area .shot-head{color:#E9ECEF;}
+body.imm .sh-of{color:#9DA1AB;}
+body.imm .stage{box-shadow:0 20px 50px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06);}
+body.imm .rail{width:62px;}
+body.imm .rail-brand{padding:0; justify-content:center;}
+body.imm .rail-brand .mm-word, body.imm .rail-project, body.imm .rail-bottom, body.imm .rail-item .lbl, body.imm .rail-item .rb{display:none;}
+body.imm .rail-nav{padding:4px 8px 12px;}
+body.imm .rail-group{height:1px; padding:0; margin:10px 6px; font-size:0; background:var(--hair-dark);}
+body.imm .rail-item{justify-content:center; padding:10px 0;}
+body.imm .rail-item::before{left:-8px;}
+body.imm .hint{display:none;}
+body.imm.imm-clean .rail, body.imm.imm-clean .side, body.imm.imm-clean .board, body.imm.imm-clean .under{display:none;}
+body.imm.imm-clean .stage-area{padding:10px 18px;}
+
+/* ---------- La barre du haut, comme dans Raging Page et Raging Draw ---------- */
+.topbar .btn{border-color:transparent; background:transparent; font-weight:500; padding:7px 11px; font-size:14px; white-space:nowrap; border-radius:8px;}
+.topbar .btn:hover:not(:disabled){background:var(--overlay-hover); border-color:transparent;}
+.topbar .btn .icon{color:var(--ink-soft);}
+.topbar .btn:disabled{opacity:.4; cursor:default;}
+.topbar .btn.tb-ic{padding:7px 9px;}
+.topbar .btn.btn-primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; padding:8px 15px;}
+.topbar .btn.btn-primary:hover{background:var(--accent-h); border-color:var(--accent-h);}
+.topbar .btn.btn-primary .icon{color:#fff;}
+.topbar .btn.tb-box{border-color:var(--hair); background:var(--surface); box-shadow:var(--shadow-sm); margin:0 2px; gap:6px;}
+.topbar .btn.tb-box:hover{border-color:var(--accent-soft); background:var(--surface-soft);}
+.topbar .btn.tb-back{display:inline-flex; align-items:center; justify-content:center; gap:7px; width:32px; height:32px; padding:0; border:0; border-radius:999px; background:var(--chip-bg); color:var(--ink); font-size:13.5px; font-weight:600; box-shadow:none;}
+.topbar .btn.tb-back .icon{width:14px; height:14px; color:currentColor;}
+.topbar .btn.tb-back:hover{background:var(--accent-tint); color:var(--accent-ink);}
+html[data-theme="dark"] .topbar .btn.tb-back:hover{color:var(--accent-rail);}
+.topbar .tb-title{width:min(240px, 18vw);}
+.topbar .save-status{margin-left:0; flex:none;}
+@media (max-width:1280px){ .topbar .btn[data-act="full"] .tb-lbl{display:none;} }
+.topbar .btn.tb-back .tb-lbl{display:none;}
+@media (max-width:1100px){ .topbar .btn.tb-box .tb-lbl{display:none;} }

@@ -53,7 +53,27 @@ const CHAR_LOOK = [
 ];
 CHAR_LOOK.forEach(lk => { lk.col = lk.top; });
 const MAX_CHARS = 6;
-const lookOf = (ch, c) => CHAR_LOOK[ch && ch.look != null ? ch.look : (c || 0) % 2] || CHAR_LOOK[0];
+/* les tenues : chaque personnage garde son visage, sa coiffure et sa silhouette, seuls les habits changent */
+const OUTFITS = [
+  { id:'base', fr:'Tenue d’origine', en:'Own outfit' },
+  { id:'blacksuit', fr:'Costume noir', en:'Black suit', wear:'suit', top:'#1F2024', inner:'#F4F2EE', tie:'#1F2024', bottom:'#1F2024', shoes:'#141518', skirt:false, shorts:false },
+  { id:'casual', fr:'Pull et jean', en:'Sweater and jeans', wear:'sweater', top:'#5E7F6A', bottom:'#3E5577', shoes:'#E9E6E0', sole:'#F4F2EE', skirt:false, shorts:false },
+  { id:'tee', fr:'T-shirt blanc', en:'White T-shirt', wear:'tee', top:'#F1EFEA', bottom:'#3E5577', shoes:'#2A2C31', skirt:false, shorts:false },
+  { id:'leather', fr:'Blouson de cuir', en:'Leather jacket', wear:'cardigan', top:'#1E1F23', inner:'#F1EFEA', bottom:'#2E3A4E', shoes:'#141518', skirt:false, shorts:false },
+  { id:'trench', fr:'Imperméable', en:'Trench coat', wear:'coat', top:'#B39A6B', inner:'#E9E4DA', bottom:'#3A3D44', shoes:'#2A221D', skirt:false, shorts:false },
+  { id:'dress', fr:'Robe de soirée', en:'Evening dress', wear:'dress', top:'#9B1C2E', bottom:'#9B1C2E', shoes:'#141518', skirt:true, shorts:false, body:'f' },
+  { id:'police', fr:'Uniforme de police', en:'Police uniform', wear:'suit', top:'#243046', inner:'#A9C4D2', tie:'#141A28', bottom:'#243046', shoes:'#141518', skirt:false, shorts:false },
+  { id:'doctor', fr:'Blouse blanche', en:'White coat', wear:'coat', top:'#F4F2EE', inner:'#A9C4D2', bottom:'#5E636C', shoes:'#E9E6E0', skirt:false, shorts:false },
+  { id:'sport', fr:'Survêtement', en:'Tracksuit', wear:'sweater', top:'#2F6E4F', bottom:'#2F6E4F', shoes:'#F4F2EE', sole:'#F4F2EE', skirt:false, shorts:false },
+];
+const _outfitLooks = new Map();
+function outfitLook(base, oid){
+  const o = OUTFITS.find(x => x.id === oid); if(!o || o.id === 'base' || (o.body && o.body !== base.body)) return base;
+  const key = base.id + '_' + o.id; let lk = _outfitLooks.get(key);
+  if(!lk){ lk = Object.assign({}, base); for(const k in o) if(!['id', 'fr', 'en', 'body'].includes(k)) lk[k] = o[k]; lk.id = key; lk.col = lk.top; _outfitLooks.set(key, lk); }
+  return lk;
+}
+const lookOf = (ch, c) => { const base = CHAR_LOOK[ch && ch.look != null ? ch.look : (c || 0) % 2] || CHAR_LOOK[0]; return ch && ch.outfit ? outfitLook(base, ch.outfit) : base; };
 /* les articulations qui bougent selon la silhouette ; « head » grossit la tête (les enfants),
    « stoop » voûte un peu le dos (les aînés) */
 const BODY = {
@@ -242,23 +262,23 @@ const POSES = [
   { id:'point', g:'gest', fr:'Pointer', en:'Pointing', y:0, j:{ armR:[88, 8, 0], foreR:[4, 0], head:[0, -12, 0], chest:[0, -10, 0], handR:[-8, 0] } },
   { id:'wave', g:'gest', fr:'Saluer', en:'Waving', y:0, j:{ armR:[105, -10, -90], foreR:[80, 0], handR:[-10, 0], head:[-4, -6, 0] } },
   { id:'think', g:'gest', fr:'Réfléchir', en:'Thinking', y:0, j:{ armR:[35, 20, 60], foreR:[130, 0], armL:[15, 50, -90], foreL:[90, 0], head:[10, 0, 4] } },
-  { id:'phone', g:'gest', prop:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ armR:[65, 35, 30], foreR:[150, 0], handR:[-10, 0], head:[6, 0, -10] } },
+  { id:'phone', g:'gest', prop:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ head:[6,  0,  -10], armR:[125,  135,  90], foreR:[150,  41], handR:[-55,  -30] } },
   { id:'up', g:'gest', fr:'Mains en l’air', en:'Hands up', y:0, j:{ armL:[150, 28, 0], foreL:[38, 0], armR:[150, 28, 0], foreR:[38, 0], head:[-8, 0, 0] } },
-  { id:'sitground', g:'seat', fr:'Assis par terre', en:'Sitting on the ground', y:-0.83, j:{ thighL:[120, 10, 0], shinL:[83], footL:[10], thighR:[120, 10, 0], shinR:[83], footR:[10], spine:[10, 0, 0], armL:[55, 12, 0], foreL:[25, 0], armR:[55, 12, 0], foreR:[25, 0] } },
+  { id:'sitground', g:'seat', fr:'Assis par terre', en:'Sitting on the ground', y:-0.83, j:{ thighL:[120,  10,  0], shinL:[55], footL:[-20], thighR:[120,  10,  0], shinR:[55], footR:[-20], spine:[10,  0,  0], armL:[55,  12,  0], foreL:[25,  0], armR:[55,  12,  0], foreR:[25,  0] } },
   { id:'lie', g:'seat', fr:'Allongé', en:'Lying down', y:-0.83, j:{ pelvis:[-90, 0], head:[10, 0, 0], armL:[0, 10, 0], armR:[0, 10, 0] } },
   { id:'aim2', fr:'Viser à deux mains', en:'Two-handed aim', g:'gun', prop:'gun', y:0, j:{ head:[6,  0,  0], armL:[50,  -10,  0], foreL:[70,  -19], handL:[0,  0], armR:[61,  -15,  0], foreR:[55,  14], handR:[0,  0] } },
   { id:'aim1', fr:'Viser à une main', en:'One-handed aim', g:'gun', prop:'gun', y:0, j:{ chest:[0,  -8,  0], head:[0,  8,  0], armR:[92,  -15,  -10], foreR:[5,  39], handR:[0,  0] } },
   { id:'gunDown', fr:'Arme baissée', en:'Gun lowered', g:'gun', prop:'gun', y:0, j:{ head:[10,  0,  0], armL:[7,  -7,  15], foreL:[56,  -44], handL:[0,  0], armR:[10,  -15,  -1], foreR:[55,  8], handR:[0,  0] } },
   { id:'crouchAim', fr:'Accroupi, en joue', en:'Crouched, aiming', g:'gun', prop:'gun', y:-0.62, j:{ thighL:[115,  10,  0], shinL:[135], footL:[-25], thighR:[115,  10,  0], shinR:[135], footR:[-25], spine:[12,  0,  0], chest:[0,  0,  0], head:[-14,  0,  0], armL:[68,  -15,  -22], foreL:[75,  19], armR:[76,  -3,  23], foreR:[60,  -6], handL:[0,  0], handR:[0,  0] } },
-  { id:'kneel', fr:'À genoux', en:'Kneeling', g:'seat', y:-0.47, j:{ thighL:[0,  6,  0], shinL:[92], footL:[30], thighR:[0,  6,  0], shinR:[92], footR:[30], armL:[0,  -12,  55], foreL:[1,  79], handL:[-1,  0], armR:[0,  -12,  -55], foreR:[1,  -79], handR:[-1,  0] } },
-  { id:'kneelHands', fr:'À genoux, mains sur la tête', en:'Kneeling, hands on head', g:'gun', prop:'gun', y:-0.47, j:{ thighL:[0,  6,  0], shinL:[92], footL:[30], thighR:[0,  6,  0], shinR:[92], footR:[30], head:[12,  0,  0], armL:[100,  -11,  -52], foreL:[103,  0], handL:[0,  0], armR:[100,  -11,  53], foreR:[103,  0], handR:[0,  0] } },
-  { id:'oneKnee', fr:'Un genou à terre', en:'One knee down', g:'seat', y:-0.47, j:{ thighL:[0,  4,  0], shinL:[92], footL:[30], thighR:[88,  4,  0], shinR:[88], footR:[0], armL:[0,  -14,  50], foreL:[0,  76], handL:[-1,  0], armR:[32,  -15,  -15], foreR:[2,  21], handR:[0,  0] } },
+  { id:'kneel', fr:'À genoux', en:'Kneeling', g:'seat', y:-0.38, j:{ thighL:[0,  6,  0], shinL:[96], footL:[40], thighR:[0,  6,  0], shinR:[96], footR:[40], armL:[0,  -12,  55], foreL:[1,  79], handL:[-1,  0], armR:[0,  -12,  -55], foreR:[1,  -79], handR:[-1,  0] } },
+  { id:'kneelHands', fr:'À genoux, mains sur la tête', en:'Kneeling, hands on head', g:'gun', prop:'gun', y:-0.38, j:{ thighL:[0,  6,  0], shinL:[96], footL:[40], thighR:[0,  6,  0], shinR:[96], footR:[40], head:[12,  0,  0], armL:[100,  -11,  -52], foreL:[103,  0], handL:[0,  0], armR:[100,  -11,  53], foreR:[103,  0], handR:[0,  0] } },
+  { id:'oneKnee', fr:'Un genou à terre', en:'One knee down', g:'seat', y:-0.39, j:{ thighL:[0,  4,  0], shinL:[96], footL:[40], thighR:[88,  4,  0], shinR:[88], footR:[-5], armL:[0,  -14,  50], foreL:[0,  76], handL:[-1,  0], armR:[32,  -15,  -15], foreR:[2,  21], handR:[0,  0] } },
   { id:'handshake', fr:'Serrer la main', en:'Handshake', g:'gest', y:0, j:{ armR:[34,  -15,  0], foreR:[18,  -13], handR:[0,  0] } },
   { id:'hug', fr:'Prendre dans ses bras', en:'Hugging', g:'gest', y:0, j:{ head:[0,  18,  4], spine:[6,  0,  0], armL:[46,  -15,  0], foreL:[82,  -4], handL:[0,  0], armR:[50,  -15,  8], foreR:[59,  9], handR:[0,  0] } },
   { id:'drink', fr:'Boire', en:'Drinking', g:'gest', y:0, j:{ head:[-12,  0,  0], armR:[13,  57,  60], foreR:[131,  -14], handR:[0,  0] } },
   { id:'shout', fr:'Crier (mains en porte-voix)', en:'Shouting', g:'gest', y:0, j:{ head:[-14,  0,  0], chest:[-4,  0,  0], armL:[92,  28,  0], foreL:[132,  -49], handL:[-1,  0], armR:[92,  28,  0], foreR:[132,  49], handR:[-1,  0] } },
-  { id:'readPhone', fr:'Regarder son téléphone', en:'Looking at the phone', g:'gest', y:0, j:{ head:[32,  0,  0], armL:[-9,  -15,  9], foreL:[88,  -26], handL:[0,  0], armR:[-2,  -7,  -21], foreR:[85,  45], handR:[0,  0] } },
-  { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[-10,  6,  -69], foreL:[29,  -3], handL:[0,  0], armR:[-10,  6,  69], foreR:[29,  3], handR:[0,  0] } },
+  { id:'readPhone', fr:'Regarder son téléphone', en:'Looking at the phone', g:'gest', y:0, j:{ head:[32,  0,  0], armL:[1,  2,  30], foreL:[93,  -60], handL:[0,  0], armR:[-2,  -10,  -7], foreR:[90,  30], handR:[15,  -30] } },
+  { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[0,  -13,  25], foreL:[0,  79], handL:[-1,  0], armR:[0,  -13,  -25], foreR:[0,  -79], handR:[-1,  0] } },
   { id:'punch', fr:'Coup de poing', en:'Punching', g:'gest', y:0, j:{ spine:[4,  -14,  0], chest:[4,  -10,  0], thighR:[-10,  0,  0], thighL:[14,  0,  0], shinL:[10], armL:[45,  5,  -15], foreL:[140,  0], handL:[0,  0], armR:[96,  -15,  16], foreR:[5,  41], handR:[0,  0] } },
   { id:'guard', fr:'En garde', en:'On guard', g:'gest', y:0, j:{ thighL:[16,  4,  0], thighR:[-12,  4,  0], shinR:[12], spine:[6,  0,  0], head:[6,  0,  0], armL:[57,  -8,  0], foreL:[101,  -15], handL:[0,  0], armR:[49,  -12,  15], foreR:[111,  0], handR:[0,  0] } },
   { id:'headInHands', fr:'La tête dans les mains', en:'Head in hands', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[42,  7,  -45], foreL:[133,  0], armR:[42,  7,  45], foreR:[133,  0], spine:[24,  0,  0], chest:[14,  0,  0], head:[28,  0,  0], handL:[0,  0], handR:[0,  0] } },
@@ -268,16 +288,16 @@ const POSES = [
   { id:'pilot', fr:'Aux commandes', en:'At the controls', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[4,  -14,  11], foreL:[66,  -9], armR:[14,  -15,  0], foreR:[43,  -8], spine:[-2,  0,  0], handL:[0,  0], handR:[0,  0] } },
   { id:'typing', fr:'Taper au clavier', en:'Typing', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[23,  -11,  0], foreL:[55,  -4], armR:[23,  -11,  0], foreR:[55,  4], spine:[8,  0,  0], head:[14,  0,  0], handL:[0,  0], handR:[0,  0] } },
   { id:'sitCross', fr:'Assis, jambes croisées', en:'Seated, legs crossed', g:'seat', y:-0.4, j:{ thighL:[90,  4,  0], shinL:[88], thighR:[96,  -14,  8], shinR:[70], armL:[-13,  -15,  17], foreL:[68,  -11], armR:[-3,  -15,  -8], foreR:[61,  30], spine:[6,  0,  0], handL:[0,  0], handR:[0,  0] } },
-  { id:'wounded', fr:'Blessé, assis par terre', en:'Wounded, sitting on the ground', g:'seat', y:-0.83, j:{ pelvis:[-24,  0], thighL:[96,  12,  0], shinL:[40], thighR:[70,  8,  0], shinR:[90], head:[18,  0,  6], spine:[6,  0,  0], armL:[0,  6,  -15], foreL:[12,  66], handL:[0,  0], armR:[-13,  -15,  90], foreR:[86,  -41], handR:[0,  0] } },
-  { id:'lieFront', fr:'Allongé sur le ventre', en:'Lying face down', g:'seat', y:-0.83, j:{ pelvis:[90,  0], head:[-30,  0,  0], armL:[90,  90,  -90], foreL:[117,  0], handL:[0,  0], armR:[90,  90,  90], foreR:[117,  0], handR:[0,  0] } },
+  { id:'wounded', fr:'Blessé, assis par terre', en:'Wounded, sitting on the ground', g:'seat', y:-0.83, j:{ pelvis:[-24,  0], thighL:[96,  12,  0], shinL:[40], thighR:[90,  8,  0], shinR:[45], head:[18,  0,  6], spine:[6,  0,  0], armL:[0,  6,  -15], foreL:[12,  66], handL:[0,  0], armR:[-13,  -15,  90], foreR:[86,  -41], handR:[0,  0], footR:[-20,  0,  0] } },
+  { id:'lieFront', fr:'Allongé sur le ventre', en:'Lying face down', g:'seat', y:-0.82, j:{ pelvis:[90,  0], head:[-30,  0,  0], armL:[135,  5,  66], foreL:[96,  -19], handL:[-1,  0], armR:[135,  5,  -66], foreR:[96,  19], handR:[-1,  0], footL:[45], footR:[45] } },
   { id:'jump', fr:'Sauter', en:'Jumping', g:'move', y:0.35, j:{ thighL:[40,  4,  0], shinL:[80], thighR:[20,  4,  0], shinR:[60], spine:[6,  0,  0], armL:[125,  9,  35], foreL:[76,  0], handL:[0,  0], armR:[125,  9,  -35], foreR:[76,  0], handR:[0,  0] } },
-  { id:'leanWall', fr:'Adossé au mur', en:'Leaning on the wall', g:'move', y:-0.03, j:{ pelvis:[-6,  0], thighR:[30,  0,  0], shinR:[60], spine:[-4,  0,  0], head:[0,  18,  0], armL:[-9,  -15,  90], foreL:[53,  78], handL:[0,  0], armR:[-9,  -15,  -90], foreR:[53,  -78], handR:[0,  0] } },
+  { id:'leanWall', fr:'Adossé au mur', en:'Leaning on the wall', g:'move', y:0.01, j:{ pelvis:[-6,  0], thighR:[30,  0,  0], shinR:[60], spine:[-4,  0,  0], head:[0,  18,  0], armL:[15,  50,  -90], foreL:[90,  0], handL:[0,  0], armR:[10,  40,  90], foreR:[90,  0], handR:[0,  0] } },
   { id:'clap', fr:'Applaudir', en:'Clapping', g:'gest', y:0, j:{ armL:[60,  24,  0], foreL:[94,  -79], handL:[0,  0], armR:[60,  24,  0], foreR:[94,  79], handR:[0,  0] } },
   { id:'facepalm', fr:'La main sur le visage', en:'Facepalm', g:'gest', y:0, j:{ head:[18,  0,  0], armR:[48,  33,  34], foreR:[127,  26], handR:[0,  0] } },
   { id:'pray', fr:'Mains jointes', en:'Hands together', g:'gest', y:0, j:{ head:[16,  0,  0], armL:[3,  9,  15], foreL:[105,  -60], handL:[0,  0], armR:[3,  9,  -15], foreR:[105,  60], handR:[0,  0] } },
   { id:'carry', fr:'Porter un carton', en:'Carrying a box', g:'gest', y:0, j:{ spine:[-6,  0,  0], armL:[0,  22,  6], foreL:[81,  -30], handL:[0,  0], armR:[0,  22,  -6], foreR:[81,  30], handR:[0,  0] } },
   { id:'stop', fr:'Faire signe de s’arrêter', en:'Signalling stop', g:'gest', y:0, j:{ armR:[73,  -15,  -19], foreR:[45,  22], handR:[0,  0] } },
-  { id:'scared', fr:'Avoir peur', en:'Scared', g:'gest', y:-0.05, j:{ spine:[-10,  0,  0], head:[-6,  0,  0], thighR:[-6,  0,  0], shinL:[10], armL:[33,  -9,  0], foreL:[114,  -7], handL:[0,  0], armR:[26,  3,  15], foreR:[112,  0], handR:[0,  0] } },
+  { id:'scared', fr:'Avoir peur', en:'Scared', g:'gest', y:0.03, j:{ spine:[-10,  0,  0], head:[-6,  0,  0], thighR:[-6,  0,  0], shinL:[10], armL:[33,  -9,  0], foreL:[114,  -7], handL:[0,  0], armR:[26,  3,  15], foreR:[112,  0], handR:[0,  0] } },
 ];
 function applyPose(ch, pid){
   const P = POSES.find(p => p.id === pid); if(!P) return;
@@ -313,6 +333,9 @@ const SETS = [
   { id:'warehouse', fr:'Entrepôt', en:'Warehouse' },
   { id:'airfield', fr:'Aérodrome', en:'Airfield', big:true },
   { id:'forest', fr:'Forêt', en:'Forest', big:true },
+  { id:'hotel', fr:'Chambre d’hôtel', en:'Hotel room' },
+  { id:'parking', fr:'Parking souterrain', en:'Underground car park' },
+  { id:'diner', fr:'Diner 50’s (Pulp Fiction)', en:'50s diner (Pulp Fiction)' },
 ];
 const SET_DEF = {
   garage:{
@@ -828,6 +851,118 @@ Object.assign(SET_DEF, {
     },
   },
 });
+/* ---------- La chambre d'hôtel, le parking souterrain, le diner des années 50 ----------
+   Trois lieux fermés : la caméra y reste dans la pièce où l'on vise (voir 04-scene.js). */
+Object.assign(SET_DEF, {
+  hotel:{
+    cam:{ tx:-0.9, ty:0.95, tz:0.6, yaw:-140, pitch:-10, dist:3.6, lens:24 },
+    roomH:2.7,
+    rooms:[['Chambre', 'Bedroom', 0, [-3.5, -3, 1.6, 3]], ['Entrée', 'Entry', 0, [1.6, -3, 3.5, 0]], ['Salle de bain', 'Bathroom', 0, [1.6, 0, 3.5, 3]]],
+    build(g, gl){
+      const X0 = -3.5, X1 = 3.5, Z0 = -3, Z1 = 3, H = 2.7, WL = '#E4DCCF';
+      floor(g, X0, Z0, X1, Z1, 0, '#6F6158'); floor(g, X0, Z0, X1, Z1, H, '#F1EEE8', true);
+      wall(g, [X0, Z0], [X1, Z0], H, WL); wall(g, [X0, Z1], [X0, Z0], H, '#DDD4C6'); wall(g, [X1, Z0], [X1, Z1], H, '#DDD4C6'); wall(g, [X1, Z1], [X0, Z1], H, WL);
+      partition(g, [1.6, Z0], [1.6, Z1], 0, H, WL, [[0.5, 1.3]]);
+      partition(g, [1.6, 0], [X1, 0], 0, H, WL, [[0.4, 1.2]]);
+      // la porte de la chambre et son numéro, la penderie
+      wall(g, [2.2, Z0 + 0.01], [3.2, Z0 + 0.01], 2.1, '#5E4532'); wall(g, [2.55, Z0 + 0.015], [2.85, Z0 + 0.015], 0.12, '#C9A64B', 1.55);
+      box(g, 3.2, 1.1, -1.4, 0.55, 2.2, 1.3, '#7A5C42'); box(g, 2.93, 1.1, -1.4, 0.01, 2.0, 0.02, '#4A3626');
+      // la grande fenêtre et ses rideaux
+      wall(g, [X0 + 0.01, 1.4], [X0 + 0.01, -1.6], 1.7, '#9FC0D4', 0.6);
+      [[1.75, 1.2], [-1.95, -1.6]].forEach(([z, z2]) => box(g, X0 + 0.08, 1.3, (z + z2) / 2, 0.06, 2.4, Math.abs(z - z2) * 0.4 + 0.35, '#8C3B3F'));
+      box(g, X0 + 0.06, 2.52, -0.1, 0.05, 0.06, 3.6, '#2C2E33');
+      // le grand lit, sa tête de lit, les tables de chevet et leurs lampes
+      box(g, -1.0, 0.2, 1.95, 1.85, 0.4, 2.1, '#4A3626'); box(g, -1.0, 0.5, 1.95, 1.8, 0.2, 2.05, '#F4F2EE');
+      box(g, -1.0, 0.63, 1.55, 1.84, 0.06, 1.35, '#2E4A6B'); [-1.45, -0.55].forEach(x => box(g, x, 0.68, 2.7, 0.7, 0.16, 0.4, '#F7F5F0'));
+      box(g, -1.0, 1.05, 2.97, 2.3, 1.1, 0.06, '#6E5440');
+      [-2.4, 0.4].forEach(x => { box(g, x, 0.27, 2.75, 0.5, 0.54, 0.42, '#5E4532'); cyl(g, x, 0.62, 2.75, 0.06, 0.08, 0.08, '#C9A64B', 8); cyl(g, x, 0.88, 2.75, 0.12, 0.18, 0.26, '#F2E6C9', 10); });
+      box(g, -1.0, 1.85, 2.96, 1.3, 0.75, 0.03, '#C9B48F'); box(g, -1.0, 1.85, 2.945, 1.18, 0.63, 0.01, '#5F7F8E');
+      // le bureau, sa chaise, la télé, le fauteuil près de la fenêtre, la valise
+      box(g, 1.25, 0.74, 0.9, 0.6, 0.05, 1.3, '#5E4532'); [[1.0, 0.3], [1.5, 0.3], [1.0, 1.5], [1.5, 1.5]].forEach(([x, z]) => box(g, x, 0.36, z, 0.05, 0.72, 0.05, '#4A3626'));
+      box(g, 0.75, 0.45, 0.9, 0.45, 0.06, 0.45, '#3A3D44'); [[0.55, 0.7], [0.95, 0.7], [0.55, 1.1], [0.95, 1.1]].forEach(([x, z]) => box(g, x, 0.21, z, 0.04, 0.42, 0.04, '#2C2E33')); box(g, 0.53, 0.75, 0.9, 0.05, 0.55, 0.45, '#3A3D44');
+      box(g, 1.52, 1.45, 0.9, 0.05, 0.6, 1.0, '#1E1F23'); box(g, 1.495, 1.45, 0.9, 0.01, 0.52, 0.92, '#2E3846');
+      box(g, -2.9, 0.22, -2.3, 0.8, 0.44, 0.8, '#7C6A8E'); box(g, -3.25, 0.62, -2.3, 0.14, 0.5, 0.8, '#7C6A8E'); [-2.62, -3.18].forEach(z => box(g, -2.9, 0.52, z, 0.8, 0.2, 0.12, '#6E5C80'));
+      cyl(g, -2.6, 0.55, -1.5, 0.3, 0.3, 0.03, '#5E4532', 12); cyl(g, -2.6, 0.53, -1.5, 0.03, 0.03, 0.53, '#2C2E33', 6);
+      box(g, 2.6, 0.33, -0.55, 0.75, 0.5, 0.28, '#B4232C'); box(g, 2.6, 0.62, -0.55, 0.3, 0.08, 0.04, '#2C2E33');
+      floor(g, -2.6, -1.1, 0.6, 0.85, 0.006, '#9A7B67');
+      cyl(g, -0.9, 2.66, 0, 0.25, 0.3, 0.06, '#F4F2EE', 12);
+      // la salle de bain : carrelage, baignoire, lavabo et miroir, toilettes
+      floor(g, 1.65, 0.05, X1, Z1, 0.005, '#D9DEE3');
+      for(let x = 1.9; x < X1; x += 0.3) box(g, x, 0.008, 1.5, 0.008, 0.003, 2.9, '#C2C8CF');
+      box(g, 2.55, 0.28, 2.6, 1.8, 0.56, 0.75, '#F4F2EE'); box(g, 2.55, 0.5, 2.6, 1.6, 0.14, 0.58, '#C9D3DC');
+      box(g, 3.3, 0.85, 1.2, 0.4, 0.12, 0.6, '#F4F2EE'); box(g, 3.35, 0.4, 1.2, 0.3, 0.8, 0.5, '#E3E6EA'); wall(g, [X1 - 0.01, 0.85], [X1 - 0.01, 1.55], 0.8, '#B9D3E1', 1.1);
+      box(g, 3.25, 0.22, 0.4, 0.38, 0.44, 0.5, '#F4F2EE'); box(g, 3.42, 0.6, 0.4, 0.15, 0.4, 0.45, '#F4F2EE');
+    },
+  },
+  parking:{
+    cam:{ tx:0, ty:1.1, tz:0, yaw:-35, pitch:-6, dist:7, lens:24 },
+    roomH:2.6,
+    rooms:[['Parking', 'Car park', 0, [-14, -10, 14, 10]]],
+    build(g, gl){
+      const X = 14, Z = 10, H = 2.6;
+      floor(g, -X, -Z, X, Z, 0, '#75787E'); floor(g, -X, -Z, X, Z, H, '#8E9197', true);
+      wall(g, [-X, -Z], [X, -Z], H, '#A3A6AC'); wall(g, [-X, Z], [-X, -Z], H, '#9A9DA3'); wall(g, [X, -Z], [X, Z], H, '#9A9DA3'); wall(g, [X, Z], [-X, Z], H, '#A3A6AC');
+      // la bande jaune et la bande grise le long des murs, les numéros de places
+      [[[-X, -Z + 0.01], [X, -Z + 0.01]], [[X, Z - 0.01], [-X, Z - 0.01]], [[-X + 0.01, Z], [-X + 0.01, -Z]], [[X - 0.01, -Z], [X - 0.01, Z]]].forEach(([a, b]) => { wall(g, a, b, 0.35, '#E8B923', 0.9); wall(g, a, b, 0.9, '#5E636C', 0); });
+      // l'allée au milieu et ses flèches, les places de chaque côté
+      floor(g, -X, -2.6, X, 2.6, 0.004, '#6A6D73');
+      for(let x = -12; x <= 12; x += 6){ box(g, x, 0.008, 0, 1.2, 0.004, 0.16, '#E6E2D6'); box(g, x + 0.62, 0.008, 0.12, 0.34, 0.004, 0.12, '#E6E2D6', 0.6); box(g, x + 0.62, 0.008, -0.12, 0.34, 0.004, 0.12, '#E6E2D6', -0.6); }
+      for(let x = -13.6; x <= 13.7; x += 2.7) [-1, 1].forEach(sd => box(g, x, 0.008, sd * 6.3, 0.1, 0.004, 4.6, '#E6E2D6'));
+      // les piliers, avec leur bande jaune et noire
+      for(let x = -10.8; x <= 10.9; x += 5.4) [-2.95, 2.95].forEach(z => { box(g, x, H / 2, z, 0.5, H, 0.5, '#B9BCC1'); for(let k = 0; k < 4; k++) box(g, x, 0.12 + k * 0.24, z, 0.52, 0.12, 0.52, k % 2 ? '#24262B' : '#E8B923'); });
+      // les voitures garées
+      const cols = ['#B4232C', '#2E3A4E', '#D9D6CF', '#3D5A80', '#24262B', '#5F7F48', '#C9B48F', '#8A8D93'];
+      let k = 0;
+      for(let x = -12.25; x <= 12.3; x += 2.7) [-1, 1].forEach(sd => { k++; if(k % 3 === 1) return; car(g, gl, x, sd * 6.0, cols[k % cols.length], sd > 0); });
+      // les néons, les tuyaux, la sortie, l'ascenseur
+      for(let x = -12; x <= 12; x += 4) [-1.4, 1.4].forEach(z => { box(g, x, H - 0.04, z, 1.25, 0.05, 0.12, '#F4F6F2'); box(g, x, H - 0.015, z, 1.3, 0.03, 0.18, '#5E636C'); });
+      [[-6.5, '#B4232C'], [-6.85, '#3D5A80']].forEach(([z, c]) => cyl(g, -X, H - 0.25, z, 0.09, 0.09, 2 * X, c, 8, 'x'));
+      wall(g, [-X + 0.02, 1.0], [-X + 0.02, -1.0], 2.15, '#9AA0A8'); wall(g, [-X + 0.025, 0.02], [-X + 0.025, -0.02], 2.15, '#6E747C');
+      box(g, -X + 0.08, 1.2, 1.3, 0.04, 0.16, 0.1, '#2C2E33'); box(g, -X + 0.06, 2.35, 0, 0.06, 0.18, 0.7, '#2F9E44');
+      box(g, X - 0.06, 2.35, -6, 0.06, 0.18, 0.7, '#2F9E44');
+    },
+  },
+  diner:{
+    cam:{ tx:-1.5, ty:1.0, tz:0, yaw:-120, pitch:-8, dist:5.5, lens:24 },
+    roomH:3.4,
+    rooms:[['Le diner', 'The diner', 0, [-7, -5, 7, 5]]],
+    build(g, gl){
+      const X = 7, Z = 5, H = 3.4;
+      floor(g, -X, -Z, X, Z, 0, '#1E1D22'); floor(g, -X, -Z, X, Z, H, '#17161C', true);
+      // le damier noir et blanc
+      for(let x = -X; x < X - 0.01; x += 0.7) for(let z = -Z; z < Z - 0.01; z += 0.7) if((Math.round((x + X) / 0.7) + Math.round((z + Z) / 0.7)) % 2 === 0) floor(g, x, z, x + 0.7, z + 0.7, 0.004, '#ECE8E1');
+      wall(g, [-X, -Z], [X, -Z], H, '#5A1E2A'); wall(g, [-X, Z], [-X, -Z], H, '#4A1A26'); wall(g, [X, -Z], [X, Z], H, '#4A1A26'); wall(g, [X, Z], [-X, Z], H, '#5A1E2A');
+      // les néons roses et bleus sous le plafond, les affiches de films
+      [[[-X + 0.02, Z], [-X + 0.02, -Z]], [[X - 0.02, -Z], [X - 0.02, Z]], [[-X, -Z + 0.02], [X, -Z + 0.02]], [[X, Z - 0.02], [-X, Z - 0.02]]].forEach(([a, b], i) => { wall(g, a, b, 0.07, i % 2 ? '#FF4FA3' : '#3FE0E8', H - 0.35); wall(g, a, b, 0.05, i % 2 ? '#3FE0E8' : '#FF4FA3', H - 0.55); });
+      [-4.6, -1.6, 1.4, 4.4].forEach((x, i) => { wall(g, [x - 0.55, -Z + 0.025], [x + 0.55, -Z + 0.025], 1.5, '#E8D9A8', 1.3); wall(g, [x - 0.47, -Z + 0.03], [x + 0.47, -Z + 0.03], 1.34, ['#B4232C', '#2E3A4E', '#E8B923', '#2F6E4F'][i], 1.38); });
+      // les box en forme de vieilles décapotables, le long du mur de gauche : la carrosserie, les roues,
+      // les phares, et à l'intérieur deux banquettes face à face et une table
+      [[-3.3, '#C2253A'], [-0.4, '#E8B923'], [2.5, '#3FA9C4']].forEach(([z, c]) => {
+        const x = -5.6, L = 2.5;
+        box(g, x, 0.42, z, 1.9, 0.5, L, c); box(g, x, 0.7, z, 1.95, 0.06, L + 0.05, '#E9E6E0');
+        box(g, x, 0.2, z + L / 2 + 0.12, 1.6, 0.3, 0.25, '#C9CDD3'); [-0.6, 0.6].forEach(dx => cyl(g, x + dx, 0.42, z + L / 2 + 0.25, 0.11, 0.11, 0.04, '#FBF6DF', 10, 'z'));
+        [-0.95, 0.95].forEach(dx => [-0.8, 0.8].forEach(dz => cyl(g, x + dx + (dx > 0 ? 0 : -0.12), 0.3, z + dz, 0.3, 0.3, 0.12, '#17181B', 12, 'x')));
+        [-0.75, 0.75].forEach(dz => { box(g, x, 0.47, z + dz, 1.6, 0.1, 0.55, '#7A1F25'); box(g, x, 0.85, z + dz * 1.35, 1.6, 0.7, 0.14, '#8C2630'); });
+        box(g, x, 0.76, z, 1.1, 0.05, 0.75, '#ECE8E1'); cyl(g, x, 0.74, z, 0.05, 0.05, 0.74, '#C9CDD3', 8);
+      });
+      // les tables rondes au milieu, avec leurs chaises
+      [[0.3, -2.4], [0.3, 1.3], [2.6, -0.6]].forEach(([x, z]) => {
+        cyl(g, x, 0.76, z, 0.45, 0.45, 0.04, '#ECE8E1', 14); cyl(g, x, 0.74, z, 0.05, 0.05, 0.72, '#C9CDD3', 8); cyl(g, x, 0.03, z, 0.25, 0.25, 0.03, '#C9CDD3', 10);
+        [0, Math.PI].forEach(a => { const cx = x + Math.sin(a) * 0.75, cz = z + Math.cos(a) * 0.75; box(g, cx, 0.46, cz, 0.42, 0.07, 0.42, '#C2253A'); box(g, cx, 0.8, cz + Math.cos(a) * 0.2, 0.42, 0.6, 0.05, '#C2253A'); cyl(g, cx, 0.43, cz, 0.03, 0.03, 0.43, '#C9CDD3', 6); });
+      });
+      // la piste de danse, son trophée, le juke-box
+      box(g, 5.4, 0.1, 0, 3.0, 0.2, 4.2, '#2E2B33'); for(let z = -1.8; z < 2.1; z += 0.6) for(let x = 4.2; x < 6.8; x += 0.6) if((Math.round(z / 0.6) + Math.round(x / 0.6)) % 2 === 0) box(g, x, 0.205, z, 0.58, 0.01, 0.58, '#3FE0E8');
+      cyl(g, 6.5, 1.0, 1.6, 0.04, 0.04, 1.0, '#C9CDD3', 6); cyl(g, 6.5, 1.35, 1.6, 0.13, 0.06, 0.35, '#E8B923', 10);
+      box(g, 6.6, 0.75, -2.6, 0.6, 1.5, 0.8, '#B4232C'); cyl(g, 6.6, 1.5, -2.6, 0.4, 0.4, 0.62, '#E8B923', 12, 'x'); box(g, 6.29, 0.95, -2.6, 0.02, 0.5, 0.55, '#3FE0E8');
+      // le comptoir, ses tabourets chromés, la vitrine à desserts
+      box(g, 2.2, 0.55, 4.4, 5.2, 1.1, 0.7, '#C2253A'); box(g, 2.2, 1.12, 4.35, 5.4, 0.05, 0.85, '#ECE8E1'); box(g, 2.2, 0.08, 4.0, 5.2, 0.16, 0.05, '#C9CDD3');
+      for(let x = 0.0; x <= 4.4; x += 0.75){ cyl(g, x, 0.72, 3.55, 0.2, 0.2, 0.08, '#C2253A', 12); cyl(g, x, 0.66, 3.55, 0.035, 0.035, 0.66, '#C9CDD3', 6); cyl(g, x, 0.03, 3.55, 0.18, 0.18, 0.03, '#C9CDD3', 10); }
+      box(g, 4.2, 1.35, 4.4, 0.7, 0.4, 0.5, '#E3E6EA'); [0, 1, 2].forEach(i => cyl(g, 3.95 + i * 0.25, 1.28, 4.4, 0.08, 0.08, 0.1, ['#E8B923', '#D9707A', '#7A5C42'][i], 10));
+      // les suspensions
+      [[-5.6, -3.3], [-5.6, -0.4], [-5.6, 2.5], [0.3, -2.4], [0.3, 1.3], [2.6, -0.6]].forEach(([x, z]) => { cyl(g, x, H, z, 0.01, 0.01, 1.1, '#2C2E33', 4); cyl(g, x, H - 1.1, z, 0.08, 0.25, 0.22, '#E8B923', 10); });
+    },
+  },
+});
 /* ---------- La maison de campagne, avec tous ses étages ----------
    Rez-de-chaussée (salon, cuisine, entrée, escalier), premier étage (deux chambres, salle de bain),
    grenier sous le toit, et le jardin autour. Chaque étage est dessiné à part : quand la caméra
@@ -890,6 +1025,7 @@ Object.assign(SET_DEF, {
     // les pièces : [fr, en, étage, œil de la caméra (dans un coin de la pièce), point visé (son centre)]
     // les pièces, étage par étage : leur rectangle au sol (x0, z0, x1, z1). La caméra s'y place toute seule,
     // dans le coin le plus éloigné de ce qu'on veut voir, à hauteur d'yeux : toute la pièce est dans l'image
+    roomH:2.9,
     rooms:[
       ['Salon', 'Living room', 0, [-3.7, -4, 0.8, 1.2]],
       ['Cuisine', 'Kitchen', 0, [0.8, -4, 5, 1.2]],
@@ -900,7 +1036,7 @@ Object.assign(SET_DEF, {
       ['2e : palier', '2nd: landing', 2, [-5, -4, -1.6, -0.45], [-3.0, 1.4]],
       ['2e : chambre d’enfant', '2nd: child’s room', 2, [-1.6, -4, 5, 0.6]],
       ['2e : bureau', '2nd: study', 2, [-1.6, 0.6, 5, 4]],
-      ['Grenier', 'Attic', 3, [-5, -4, 5, 4]],
+      ['Grenier', 'Attic', 3, [-5, -4, 5, 4], null, 'roof'],
     ],
     garden:['Le jardin', 'Garden', -1, [7.5, 3.4, 17], [0, 2.6, 4.7]],
     build(g, gl, L){
@@ -1118,9 +1254,15 @@ const SPOTS = {
   country:[ ['Au bord de la route', 'By the roadside', 4.3, 1.0, -90], ['Sur la route', 'On the road', 0.9, 3.0, 180, 'walk'], ['Près de la clôture', 'By the fence', -5.0, -1.6, 90], ['Dans le champ', 'In the field', -12.0, -6.0, 30] ],
   airfield:[ ['Sur le tarmac', 'On the apron', -2.0, 4.0, 60], ['En face', 'Facing', 0.2, 5.4, -120], ['Dans le hangar', 'In the hangar', -22, -9, 90], ['Au bord de la piste', 'By the runway', 4.2, 20, 90], ['Sur l’aire de l’hélico', 'On the helipad', -6, 11, 180, null, 0.04], ['Au pied de la tour', 'At the tower', -35.4, 10, 90] ],
   forest:[ ['Dans la clairière', 'In the clearing', 0.2, 0.6, 200], ['En face', 'Facing', -0.9, -0.6, 30], ['Sur le sentier', 'On the path', 1.2, -12, 0, 'walk'], ['Assis sur un rondin', 'Sitting on a log', -0.7, -3.1, 0, 'sit'], ['Sur la passerelle', 'On the footbridge', 9, 2, 90, null, 0.16], ['Dans la cabane', 'In the cabin', -6.5, 5.5, 160, null, 0.15], ['Entre les arbres', 'Among the trees', -12, -10, 40] ],
+  hotel:[ ['Assis sur le lit', 'Sitting on the bed', -0.6, 0.75, 180, 'sit', -0.25], ['Debout, en face', 'Standing, facing', -0.8, -0.7, 0], ['À la fenêtre', 'At the window', -3.0, -0.2, -90], ['Au bureau', 'At the desk', 0.75, 0.9, 90, 'sit'], ['Allongé sur le lit', 'Lying on the bed', -1.0, 1.9, 180, 'lie', 0.66], ['Dans la salle de bain', 'In the bathroom', 2.5, 1.2, 90], ['À la porte', 'At the door', 2.7, -2.4, 0] ],
+  parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
+  diner:[ ['Dans la voiture, à gauche', 'In the car booth, left', -5.6, -4.05, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.6, -2.55, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
 };
+// les lieux fermés d'une seule pièce : la caméra y reste aussi (même système que la maison)
+[['garage', [-4, -4, 4, 4], 3.2], ['office', [-3.5, -3.5, 3.5, 3.5], 2.9], ['living', [-3.8, -3.2, 3.8, 3.2], 2.7], ['cafe', [-4.5, -3.5, 4.5, 3.5], 3.0], ['hall', [-1.6, -9, 1.6, 4], 2.6], ['warehouse', [-12, -8, 12, 8], 8]]
+  .forEach(([id, r, h]) => { if(SET_DEF[id] && !SET_DEF[id].rooms){ SET_DEF[id].rooms = [[SETS.find(x => x.id === id).fr, SETS.find(x => x.id === id).en, 0, r]]; SET_DEF[id].roomH = h; } });
 // la maison : les pièces deviennent la liste « aller dans une pièce » (avec le jardin à la fin)
-Object.values(SET_DEF).forEach(d => { if(d.rooms) d.floors = d.rooms.map(r => { const c = roomCam(d, r); return [r[0], r[1], r[2], c.eye, c.target, r]; }).concat(d.garden ? [d.garden] : []); });
+Object.values(SET_DEF).forEach(d => { if(d.rooms && (d.levels || d.rooms.length > 1)) d.floors = d.rooms.map(r => { const c = roomCam(d, r); return [r[0], r[1], r[2], c.eye, c.target, r]; }).concat(d.garden ? [d.garden] : []); });
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
 const SET_COLL = {};
@@ -1226,9 +1368,9 @@ const CAR_SHOTS = [
 /* une caméra à partir de l'endroit où elle est (e) et de ce qu'elle regarde (t) */
 /* la caméra dans une pièce, pour voir le point T : dans le coin opposé, à hauteur d'yeux */
 function roomCam(def, r, T){
-  const [x0, z0, x1, z1] = r[3], y0 = def.levels[r[2]], m = 0.45;
+  const [x0, z0, x1, z1] = r[3], y0 = def.levels ? def.levels[r[2]] : 0, m = 0.45;
   const t = !T && r[4] ? [r[4][0], y0 + 1.0, r[4][1]] : [clamp(T ? T[0] : (x0 + x1) / 2, x0 + 0.3, x1 - 0.3), y0 + 1.0, clamp(T ? T[2] : (z0 + z1) / 2, z0 + 0.3, z1 - 0.3)];
-  const cand = r[2] === 3 ? [[x0 + 0.6, 0], [x1 - 0.6, 0]].map(([x, z]) => [x, y0 + 1.55, z])   // sous le toit : aux deux bouts du faîte
+  const cand = r[5] === 'roof' ? [[x0 + 0.6, 0], [x1 - 0.6, 0]].map(([x, z]) => [x, y0 + 1.55, z])   // sous le toit : aux deux bouts du faîte
     : [[x0 + m, z0 + m], [x1 - m, z0 + m], [x0 + m, z1 - m], [x1 - m, z1 - m]].map(([x, z]) => [x, y0 + 1.65, z]);
   const e = cand.reduce((b, c) => Math.hypot(c[0] - t[0], c[2] - t[2]) > Math.hypot(b[0] - t[0], b[2] - t[2]) ? c : b);
   return { eye:e, target:t };
