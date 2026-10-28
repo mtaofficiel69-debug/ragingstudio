@@ -2670,3 +2670,8 @@ html[data-theme="dark"] .rdlb{fill:#D9363E;}
 
 /* mode sombre : un fin contour blanc autour du logo Raging Studio */
 html[data-theme="dark"] .app-home .ah-logo{box-shadow:0 0 0 1.25px #FCFDFE;}
+
+/* Raging Board dans les passerelles */
+.app-switch .as-word.rb .w2{fill:#1F8A5B;}
+.app-switch.app-rb:hover{border-color:#B9E2CC; box-shadow:var(--shadow-sm), 0 0 0 3px rgba(31,138,91,.13);}
+[data-theme="dark"] .app-switch .as-word.rb .w2{fill:#3FB57F;}

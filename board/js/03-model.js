@@ -835,6 +835,7 @@ Object.assign(SET_DEF, {
 const HOUSE = { x0:-5, x1:5, z0:-4, z1:4, h:2.9 };
 /* un mur intérieur épais (visible des deux côtés), avec des ouvertures [début, fin] le long du mur */
 function partition(g, a, b, y0, h, col, gaps){
+  if(COLL) collOf(g).p.push([a, b, gaps || []]);   // pour le plan de la maison
   const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), ry = Math.atan2(dx, dz);
   const cuts = [[0, 0]].concat((gaps || []).map(([s, e]) => [s, e]), [[len, len]]);
   for(let i = 0; i < cuts.length - 1; i++){
@@ -1121,7 +1122,7 @@ const SET_COLL = {};
 function setGeo(id){
   const g = geo(), gl = geo(), L = (SET_DEF[id].levels || []).map(() => geo());
   COLL = new Map(); SET_DEF[id].build(g, gl, L);
-  const E = { b:[], w:[] }; SET_COLL[id] = { main:COLL.get(g) || E, levels:L.map(l => COLL.get(l) || E) }; COLL = null;
+  const E = { b:[], w:[], p:[] }; SET_COLL[id] = { main:COLL.get(g) || E, levels:L.map(l => COLL.get(l) || E) }; COLL = null;
   return { g, glass:gl, levels:L };
 }
 

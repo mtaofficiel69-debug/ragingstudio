@@ -61,7 +61,7 @@ const quad = (g, a, b, c, d, col) => { tri(g, a, b, c, col); tri(g, a, c, d, col
 /* pavé centré en (x,y,z), tourné de ry autour de la verticale ; faces tournées vers l'extérieur */
 /* les pavés assez grands d'un décor (murs épais, meubles) sont aussi notés comme obstacles pour la caméra */
 let COLL = null;
-const collOf = g => { let a = COLL.get(g); if(!a) COLL.set(g, a = { b:[], w:[] }); return a; };
+const collOf = g => { let a = COLL.get(g); if(!a) COLL.set(g, a = { b:[], w:[], p:[] }); return a; };
 function box(g, x, y, z, w, h, d, col, ry){
   if(COLL && Math.max(w, h, d) >= 0.4 && h >= 0.03 && !(h < 0.25 && w > 2 && d > 2)) collOf(g).b.push([x, y, z, w / 2, h / 2, d / 2, ry || 0]);
   const e0 = EDGE_ON; if(Math.min(w, h, d) < 0.012) EDGE_ON = 0;   // les bandes peintes au sol : pas de trait
