@@ -19,30 +19,37 @@ const fovOf = lens => 2 * Math.atan(12 / lens);
 const uidS = () => 's' + Math.random().toString(36).slice(2, 9);
 const shot = () => S.doc.shots[S.i];
 
-function charFromSpawn(i, def){
-  const sp = def.spawn[i] || def.spawn[0];
-  const ch = newChar(i, sp);
+function charFromSpawn(i, def, look){
+  const sp = def.spawn[i] || def.spawn[i % def.spawn.length];
+  const ch = newChar(i, sp, look);
   if(sp.pose) applyPose(ch, sp.pose);
   if(sp.y != null) ch.root.y = sp.y;
   return ch;
 }
+const newInfo = () => ({ cap:'', dial:'', scene:'', size:'pe', angle:'neu', side:'tq', move:'fix', dur:2 });
 function newShot(setId){
   const def = SET_DEF[setId];
-  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def)], cam:clone(def.cam), info:{ cap:'', size:'pe', angle:'neu', move:'fix', dur:2 } };
+  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:clone(def.cam), info:newInfo() };
 }
 function newDoc(setId){ return { v:2, title:L('Mon storyboard', 'My storyboard'), shots:[newShot(setId || 'garage')] }; }
 
 /* ---------- Sauvegarde automatique (dans le navigateur) ---------- */
 let _saveT = 0;
 function save(){ clearTimeout(_saveT); _saveT = setTimeout(() => lsSet(LS_SCENE, JSON.stringify({ doc:S.doc, i:S.i })), 250); }
+/* les plans d'avant gardent tout : on complète seulement ce qui manque */
+function fixShot(sh){
+  sh.info = Object.assign(newInfo(), sh.info || {});
+  sh.chars.forEach((ch, c) => { if(ch.look == null) ch.look = c % 2; });
+  return sh;
+}
 function load(){
   try{
     const o = JSON.parse(lsGet(LS_SCENE) || 'null'); if(!o) return false;
     // version 2 : la planche ; version 1 (la toute première) : chaque clé devient un plan
     const d = o.doc || o;
-    if(d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set])){ S.doc = d; S.i = clamp(o.i || 0, 0, d.shots.length - 1); return true; }
+    if(d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set])){ d.shots.forEach(fixShot); S.doc = d; S.i = clamp(o.i || 0, 0, d.shots.length - 1); return true; }
     if(d.v === 1 && SET_DEF[d.set] && Array.isArray(d.keys) && d.keys.length){
-      S.doc = { v:2, title:d.title, shots:d.keys.map(k => ({ id:uidS(), set:d.set, chars:k.chars, cam:k.cam, info:{ cap:'', size:'pe', angle:'neu', move:'fix', dur:2 } })) };
+      S.doc = { v:2, title:d.title, shots:d.keys.map(k => fixShot({ id:uidS(), set:d.set, chars:k.chars, cam:k.cam })) };
       S.i = 0; return true;
     }
   }catch(e){}
@@ -52,11 +59,12 @@ function load(){
 /* ---------- Annuler / rétablir ---------- */
 function snapshot(){ return JSON.stringify({ doc:S.doc, i:S.i }); }
 function pushUndo(snap){ S.undo.push(snap || snapshot()); if(S.undo.length > 80) S.undo.shift(); S.redo = []; }
-function restore(str){ const o = JSON.parse(str); S.doc = o.doc; S.i = clamp(o.i, 0, S.doc.shots.length - 1); S.sel = null; THUMBS.clear(); changed(true); }
+function restore(str){ const o = JSON.parse(str); S.doc = o.doc; S.i = clamp(o.i, 0, S.doc.shots.length - 1); S.sel = null; S.target = 0; THUMBS.clear(); changed(true); }
 function undo(){ if(!S.undo.length) return; S.redo.push(snapshot()); restore(S.undo.pop()); }
 function redo(){ if(!S.redo.length) return; S.undo.push(snapshot()); restore(S.redo.pop()); }
 /* après chaque changement : on enregistre, on redessine, on met à jour la vignette */
 function changed(all){
+  if(S.target >= shot().chars.length) S.target = 0;
   save(); if(all){ renderUI(); } else { renderSide(); renderShotPanel(); renderTools(); }
   requestRender(); thumbLater(S.i, all);
 }
@@ -64,19 +72,25 @@ function changed(all){
 function edit(fn){ pushUndo(); fn(); changed(); }
 
 /* ---------- Les plans ---------- */
-function goShot(i){ if(i === S.i || !S.doc.shots[i]) return; S.i = i; S.sel = null; S.hover = null; S.target = 0; save(); renderUI(); requestRender(); }
+function goShot(i){ if(i === S.i || !S.doc.shots[i]) return; S.i = i; S.sel = null; S.hover = null; S.target = 0; S.tween = null; save(); renderUI(); requestRender(); }
 function addShot(){
   pushUndo();
-  const n = clone(shot()); n.id = uidS(); n.info.cap = '';
+  const n = clone(shot()); n.id = uidS(); n.info.cap = ''; n.info.dial = '';
   S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.sel = null; changed(true);
   toast(L('Nouveau plan : il reprend le précédent. Change le cadrage ou la pose.', 'New shot: it starts from the previous one. Change the framing or the pose.'));
+}
+/* le personnage le plus proche d'un autre : celui à qui il parle */
+function otherOf(c, chars){
+  chars = chars || shot().chars; let best = -1, bd = 1e9;
+  chars.forEach((o, i) => { if(i === c) return; const d = Math.hypot(o.root.x - chars[c].root.x, o.root.z - chars[c].root.z); if(d < bd){ bd = d; best = i; } });
+  return best;
 }
 /* contrechamp : le plan suivant, vu par-dessus l'épaule de l'autre personnage */
 function addReverse(){
   const s = shot(); if(s.chars.length < 2) return;
   pushUndo();
-  const n = clone(s); n.id = uidS(); n.info = Object.assign({}, s.info, { cap:'', size:'am', angle:'neu' });
-  const front = S.target === 0 ? 1 : 0, back = 1 - front;
+  const n = clone(s); n.id = uidS(); n.info = Object.assign({}, s.info, { cap:'', dial:'', size:'am', angle:'neu' });
+  const back = S.target, front = otherOf(back, n.chars);
   n.cam = frameOTS(n.chars[front], n.chars[back], s.cam.lens >= 50 ? s.cam.lens : 50);
   S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.target = front; S.sel = null; changed(true);
 }
@@ -89,19 +103,33 @@ function moveShot(d){
   const j = S.i + d; if(j < 0 || j >= S.doc.shots.length) return;
   pushUndo(); const a = S.doc.shots; [a[S.i], a[j]] = [a[j], a[S.i]]; S.i = j; changed(true);
 }
+/* glisser-déposer dans la planche : le plan « from » va à la place « to » */
+function dropShot(from, to){
+  const a = S.doc.shots; if(from === to || !a[from] || to < 0 || to > a.length) return;
+  pushUndo(); const [m] = a.splice(from, 1); const k = to > from ? to - 1 : to; a.splice(k, 0, m); S.i = k; changed(true);
+}
+const totalDur = () => S.doc.shots.reduce((t, s) => t + (s.info.dur || 2), 0);
 
 /* ---------- Personnages, lieu, poses ---------- */
-function addChar(){
-  const s = shot(); if(s.chars.length >= 2) return;
-  edit(() => { s.chars.push(charFromSpawn(1, SET_DEF[s.set])); S.sel = { c:1, j:'pelvis' }; S.target = 1; });
+function addChar(look){
+  const s = shot(); if(s.chars.length >= MAX_CHARS) return;
+  edit(() => { const i = s.chars.length; s.chars.push(charFromSpawn(i, SET_DEF[s.set], look)); S.sel = { c:i, j:'pelvis' }; S.target = i; });
 }
-function removeChar(){
-  const s = shot(); if(s.chars.length < 2) return;
-  edit(() => { s.chars.length = 1; if(S.sel && S.sel.c === 1) S.sel = null; S.target = 0; });
+function removeChar(c){
+  const s = shot(); if(s.chars.length < 2 || !s.chars[c]) return;
+  edit(() => { s.chars.splice(c, 1); S.sel = null; S.target = 0; });
 }
 function setPlace(id){
   const s = shot(); if(!SET_DEF[id] || id === s.set) return;
-  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((_, i) => charFromSpawn(i, def)); s.cam = clone(def.cam); s.info.size = 'pe'; });
+  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => charFromSpawn(i, def, ch.look)); s.cam = clone(def.cam); s.info.size = 'pe'; });
+}
+/* une place toute prête du lieu : le personnage y va, avec la pose qui va avec */
+function placeAt(k){
+  const s = shot(), sp = (SPOTS[s.set] || [])[k], c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!sp || !ch) return;
+  edit(() => {
+    if(sp[5]) applyPose(ch, sp[5]); else if(ch.root.y < -0.1) applyPose(ch, 'stand');
+    ch.root.x = sp[2]; ch.root.z = sp[3]; ch.root.ry = sp[4]; if(sp[6] != null) ch.root.y = sp[6];
+  });
 }
 function setPose(pid){
   const s = shot(), c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!ch) return;
@@ -111,11 +139,15 @@ function resetPart(){
   if(!S.sel) return;
   edit(() => { const ch = shot().chars[S.sel.c]; ch.j[S.sel.j] = blankPose()[S.sel.j]; });
 }
-function faceThem(){ const s = shot(); if(s.chars.length < 2) return; edit(() => faceEachOther(s.chars)); }
+function faceThem(){
+  const s = shot(); if(s.chars.length < 2) return;
+  const a = S.target, b = otherOf(a);
+  edit(() => faceEachOther([s.chars[a], s.chars[b]]));
+}
 /* le personnage regarde l'autre (il tourne la tête et un peu le torse) */
 function lookAtOther(){
   const s = shot(); if(s.chars.length < 2) return;
-  const c = S.sel ? S.sel.c : S.target, me = s.chars[c], other = s.chars[1 - c];
+  const c = S.sel ? S.sel.c : S.target, me = s.chars[c], other = s.chars[otherOf(c)];
   edit(() => {
     const want = Math.atan2(other.root.x - me.root.x, other.root.z - me.root.z) / D2R;
     let d = ((want - me.root.ry) % 360 + 540) % 360 - 180;
@@ -124,26 +156,51 @@ function lookAtOther(){
   });
 }
 
-/* ---------- Cadrage rapide ---------- */
+/* ---------- Cadrage rapide ----------
+   La valeur (taille du sujet), l'angle (hauteur de la caméra), le côté (face, trois-quarts,
+   profil, dos) : on choisit, la caméra se place. */
+const SIDES = [['face', 'Face', 'Front', 0], ['tq', '¾', '¾', 26], ['tqg', '¾ inversé', '¾ other side', -26], ['prof', 'Profil', 'Profile', 88], ['dos', 'Dos', 'Back', 180]];
+const sideDeg = k => (SIDES.find(x => x[0] === k) || SIDES[1])[3];
+function frameNow(s, size, angle){
+  const ch = s.chars[S.target] || s.chars[0], o = otherOf(S.target, s.chars);
+  if(size === 'am'){ if(o >= 0) s.cam = frameOTS(ch, s.chars[o], 50); }
+  else if(size === '2p'){ if(o >= 0) s.cam = frameTwo(ch, s.chars[o], 35, s.cam.yaw); }
+  else if(size === 'pov'){
+    // plan subjectif : la caméra à la place des yeux du personnage
+    const b = bodyMarks(ch), y = b.face;
+    s.cam = { tx:b.eyes[0] + Math.sin(y * D2R) * 2, ty:b.eyes[1] - 0.05, tz:b.eyes[2] + Math.cos(y * D2R) * 2, yaw:y + 180, pitch:-2, dist:2, lens:28 };
+  }
+  else if((size === 'pe' || size === 'pg') && s.chars.length > 1 && o >= 0){
+    // plan large à plusieurs : tout le monde dans le cadre ; le côté choisi fait tourner la caméra autour du groupe
+    s.cam = frameTwo(ch, s.chars[o], size === 'pg' ? 24 : 28, s.cam.yaw, true); if(size === 'pg') s.cam.dist *= 1.8;
+    s.cam.yaw += sideDeg(s.info.side) - sideDeg('tq');
+  }
+  else s.cam = frameOn(ch, size, angle, null, sideDeg(s.info.side));
+}
 function frameSize(size){
-  const s = shot(), ch = s.chars[S.target] || s.chars[0];
+  const s = shot();
   camEdit(() => {
-    if(size === 'am'){ if(s.chars.length > 1) s.cam = frameOTS(ch, s.chars[1 - S.target], 50); }
-    else if(size === '2p'){ if(s.chars.length > 1) s.cam = frameTwo(s.chars[0], s.chars[1], 35, s.cam.yaw); }
-    else if((size === 'pe' || size === 'pg') && s.chars.length > 1){ s.cam = frameTwo(s.chars[0], s.chars[1], size === 'pg' ? 24 : 28, s.cam.yaw, true); if(size === 'pg') s.cam.dist *= 1.8; }
-    else s.cam = frameOn(ch, size, s.info.angle, null);
-    s.info.size = size;
-    if(size === 'am' || size === '2p'){ s.info.angle = 'neu'; s.cam.roll = 0; }
+    s.info.size = size; frameNow(s, size, s.info.angle);
+    if(size === 'am' || size === '2p' || size === 'pov'){ s.info.angle = 'neu'; s.cam.roll = 0; }
   });
 }
 function frameAngle(angle){
-  const s = shot(), ch = s.chars[S.target] || s.chars[0];
+  const s = shot();
   camEdit(() => {
     s.info.angle = angle;
     if(angle === 'deb'){ s.cam.roll = s.cam.roll ? 0 : 14; return; }
     s.cam.roll = 0;
-    if(FRAMES[s.info.size]) s.cam = Object.assign(frameOn(ch, s.info.size, angle, s.cam.lens), { roll:0 });
+    if(FRAMES[s.info.size]){ const lens = s.cam.lens; frameNow(s, s.info.size, angle); if(lens){ s.cam.dist = clamp(s.cam.dist * lens / s.cam.lens, 0.35, 28); s.cam.lens = lens; } }
     else { const A = ANGLES[angle]; if(A) s.cam.pitch = A.pitch; }
+  });
+}
+function frameSide(side){
+  const s = shot();
+  camEdit(() => {
+    s.info.side = side;
+    if((s.info.size === 'pe' || s.info.size === 'pg') && s.chars.length > 1) s.cam.yaw = bodyMarks(s.chars[S.target] || s.chars[0]).face + 22;
+    if(FRAMES[s.info.size]){ const lens = s.cam.lens; frameNow(s, s.info.size, s.info.angle); s.cam.dist = clamp(s.cam.dist * lens / s.cam.lens, 0.35, 28); s.cam.lens = lens; }
+    else { const ch = s.chars[S.target] || s.chars[0]; s.cam.yaw = bodyMarks(ch).face + sideDeg(side); }
   });
 }
 function setLens(l){
@@ -184,13 +241,13 @@ function camEdit(fn){ const before = clone(shot().cam); edit(fn); startTween(bef
 const R = { canvas:null, sets:{}, parts:{}, blob:null, raf:0 };
 function setMesh(id){ if(!R.sets[id]) R.sets[id] = GL.mesh(setGeo(id)); return R.sets[id]; }
 function initMeshes(){
-  JOINTS.forEach(J => R.parts[J.id] = GL.mesh(partGeo(J.id)));
+  CHAR_LOOK.forEach(lk => { R.parts[lk.id] = {}; JOINTS.forEach(J => R.parts[lk.id][J.id] = GL.mesh(partGeo(J.id, lk))); });
   const g = geo(), C = [0.08, 0.09, 0.11];
   for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, b = (i + 1) / 16 * Math.PI * 2; tri(g, [0, 0, 0], [Math.sin(b) * 0.36, 0, Math.cos(b) * 0.36], [Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36], C); }
   R.blob = GL.mesh(g);
 }
 function requestRender(){
-  if(R.raf || S.rec) return;
+  if(R.raf || S.rec || S.play) return;
   R.raf = requestAnimationFrame(() => { R.raf = 0; drawFrame(); if(S.tween || NAV.held) requestRender(); });
 }
 const BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552');
@@ -199,7 +256,7 @@ function drawFrame(sh, w, h, clean){
   const gl = GL.gl; if(!gl) return;
   sh = sh || shot(); w = w || R.canvas.width; h = h || R.canvas.height;
   const cam = clean ? sh.cam : viewCam(sh), vp = viewProj(cam, w / h), eye = camEye(cam);
-  GL.begin(w, h, vp, BG);
+  GL.begin(w, h, vp, SET_DEF[sh.set].bg ? hexRGB(SET_DEF[sh.set].bg) : BG);
   // en travaillant, le décor qui cache un personnage devient transparent ; à l'export, il reste en place
   const mats = sh.chars.map(ch => charMatrices(ch));
   GL.view(eye, clean ? [] : mats.map(M => M4.apply(M.chest, [0, 0.12, 0])));
@@ -212,13 +269,13 @@ function drawFrame(sh, w, h, clean){
   // avant les personnages, pour qu'elles n'apparaissent que là où le décor passe devant
   if(!clean){
     gl.enable(gl.BLEND); gl.depthMask(false); gl.depthFunc(gl.GREATER);
-    sh.chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c; for(const J of JOINTS) GL.draw(R.parts[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.42 : 0.2, col:on ? GREEN : GHOST }); });
+    sh.chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = R.parts[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.42 : 0.2, col:on ? GREEN : GHOST }); });
     gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
   }
   const tintOf = (c, id) => clean ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
   sh.chars.forEach((ch, c) => {
-    const col = hexRGB(CHAR_LOOK[c].col);
-    for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(R.parts[J.id], { m:mats[c][J.id], col, tint, tintK:k }); }
+    const lk = lookOf(ch, c), col = hexRGB(lk.col), P = R.parts[lk.id];
+    for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col, tint, tintK:k, mul:true, char:true }); }
   });
   if(!clean){
     gl.enable(gl.BLEND); gl.depthMask(false);
@@ -258,9 +315,12 @@ function thumbLater(i, all){
    C'est un élément de la page, posé sur l'image : il n'est jamais dans les exports. */
 function placeHandles(sh, vp, w, h, mats){
   const host = document.getElementById('handles'); if(!host) return;
+  const sig = sh.chars.map(ch => ch.look).join(',') + getLang();
+  if(host.dataset.sig !== sig){ host.dataset.sig = sig; host.innerHTML = '';
+  }
   if(host.children.length !== sh.chars.length) host.innerHTML = sh.chars.map((_, c) => `<div class="hd" data-c="${c}">
-      <button class="hd-move" data-hd="move" data-c="${c}" aria-label="${esc(L('Déplacer ', 'Move ') + L(CHAR_LOOK[c].fr, CHAR_LOOK[c].en))}"><svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1 22 13 12 31 2 13Z"/><path class="hl" d="M12 3.5 6 13h12Z"/></svg></button>
-      <button class="hd-turn" data-hd="turn" data-c="${c}" aria-label="${esc(L('Tourner ', 'Turn ') + L(CHAR_LOOK[c].fr, CHAR_LOOK[c].en))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
+      <button class="hd-move" data-hd="move" data-c="${c}" aria-label="${esc(L('Déplacer ', 'Move ') + L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}"><svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1 22 13 12 31 2 13Z"/><path class="hl" d="M12 3.5 6 13h12Z"/></svg></button>
+      <button class="hd-turn" data-hd="turn" data-c="${c}" aria-label="${esc(L('Tourner ', 'Turn ') + L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
     </div>`).join('');
   const r = R.canvas.getBoundingClientRect(), k = r.width / w;
   sh.chars.forEach((ch, c) => {
@@ -323,7 +383,8 @@ function pickAt(px, py){
   GL.beginPick(w, h, viewProj(viewCam(), R.canvas.width / R.canvas.height));
   sh.chars.forEach((ch, c) => {
     const M = charMatrices(ch);
-    for(const J of JOINTS){ const id = c * 32 + J.idx + 1; GL.draw(R.parts[J.id], { m:M[J.id], flat:true, col:[id / 255, 0, 0] }); }
+    const P = R.parts[lookOf(ch, c).id];
+    for(const J of JOINTS){ const id = c * 32 + J.idx + 1; GL.draw(P[J.id], { m:M[J.id], flat:true, col:[id / 255, 0, 0] }); }
   });
   const id = GL.readPick(Math.floor(px * sc), Math.floor(h - 1 - py * sc));
   if(!id) return null;
@@ -347,6 +408,7 @@ const DRAG = { mode:null, x:0, y:0, moved:false, grab:null, pts:new Map(), pinch
 function canvasXY(e){ const r = R.canvas.getBoundingClientRect(), k = R.canvas.width / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; }
 function onDown(e){
   if(S.rec) return;
+  if(S.play){ stopBoard(); return; }
   S.tween = null;
   R.canvas.setPointerCapture(e.pointerId);
   DRAG.pts.set(e.pointerId, [e.clientX, e.clientY]);

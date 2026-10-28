@@ -34,7 +34,7 @@ function renderUI(){
         <section class="work">
           <div class="tools" id="tools"></div>
           <div class="stage-wrap" id="stageWrap">
-            <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="shot-no" id="shotNo"></div><div class="hint" id="hint"></div><div class="nav" id="nav"></div><div class="rec hidden" id="recBox"></div></div>
+            <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="shot-no" id="shotNo"></div><div class="hint" id="hint"></div><div class="nav" id="nav"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">■ ${L('Arrêter', 'Stop')}</button><div class="rec hidden" id="recBox"></div></div>
           </div>
           <div class="strip" id="strip"></div>
         </section>
@@ -48,7 +48,8 @@ function renderUI(){
   document.querySelectorAll('.lang-flags button').forEach(b => b.classList.toggle('on', b.dataset.l === getLang()));
   document.getElementById('tbExportLbl').textContent = L('Exporter', 'Export');
   document.getElementById('exportMenu').innerHTML =
-    `<button data-act="exportPdf">${icon('new')}<span><b>${L('Planche de storyboard (PDF)', 'Storyboard sheets (PDF)')}</b><small>${L('Tous les plans, 6 par page, avec leurs infos : prêt à imprimer ou à envoyer', 'Every shot, 6 per page, with its details: ready to print or send')}</small></span></button>
+    `<button data-act="exportPdf" data-per="6">${icon('new')}<span><b>${L('Planche PDF · 6 plans par page', 'PDF board · 6 shots per page')}</b><small>${L('Pour voir tout le film d’un coup d’œil', 'To see the whole film at a glance')}</small></span></button>
+     <button data-act="exportPdf" data-per="3">${icon('new')}<span><b>${L('Planche PDF · 3 grands plans par page', 'PDF board · 3 large shots per page')}</b><small>${L('Avec l’action, le dialogue et de la place pour écrire : pour le tournage', 'With action, dialogue and room to write: for the shoot')}</small></span></button>
      <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
      <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, chacun pendant sa durée', 'The shots one after another, each for its length')}</small></span></button>`;
   renderSide(); renderTools(); renderStrip(); renderShotPanel(); renderHint(); renderNav(); fitStage();
@@ -68,12 +69,14 @@ function renderNav(){
     <div class="col">${b('in', L('Zoomer', 'Zoom in'), '<path d="M8 3.5v9M3.5 8h9" fill="none"/>')}${b('out', L('Dézoomer', 'Zoom out'), '<path d="M3.5 8h9" fill="none"/>')}</div>`;
 }
 
-/* ---------- À gauche : lieu, personnages, pose, partie du corps ---------- */
+/* ---------- À gauche, en trois étapes : le lieu, les personnages, la pose ---------- */
 function slider(label, act, i, v, min, max, step, unit){
   return `<label class="sl"><span class="sl-h"><span>${esc(label)}</span><b>${round(v, step < 1 ? 2 : 0)}${unit || '°'}</b></span>
     <input type="range" data-act="${act}" data-i="${i}" min="${min}" max="${max}" step="${step}" value="${v}"></label>`;
 }
-const charName = c => esc(L(CHAR_LOOK[c].fr, CHAR_LOOK[c].en));
+const charName = c => { const ch = shot().chars[c]; const lk = lookOf(ch, c); return esc(L(lk.fr, lk.en)); };
+/* une petite silhouette, homme ou femme, à la couleur du personnage */
+const figure = lk => `<svg class="fig" viewBox="0 0 16 20" aria-hidden="true"><circle cx="8" cy="4" r="3.2" fill="${lk.col}"/>${lk.body === 'f' ? `<path d="M8 1A3.6 3.6 0 0 1 11.6 4.6V6H4.4V4.6A3.6 3.6 0 0 1 8 1Z" fill="#6B5446"/>` : ''}<path d="${lk.body === 'f' ? 'M5.2 8h5.6l2.4 9H2.8Z' : 'M4 8h8l.8 11H3.2Z'}" fill="${lk.col}"/><path d="M8 1A3.2 3.2 0 1 1 8 7.4 3.2 3.2 0 1 1 8 1ZM4 8h8" fill="none" stroke="#00000030" stroke-width=".8"/></svg>`;
 function renderSide(onlyValues){
   const el = document.getElementById('side'); if(!el) return;
   const sh = shot(), sel = S.sel, chars = sh.chars;
@@ -87,28 +90,30 @@ function renderSide(onlyValues){
     });
     return;
   }
+  const target = sel ? sel.c : S.target, used = chars.map(c => c.look);
   const place = SETS.map(s => `<button class="chip-btn place ${sh.set === s.id ? 'on' : ''}" data-act="place" data-id="${s.id}"><i class="sw sw-${s.id}"></i>${esc(L(s.fr, s.en))}</button>`).join('');
-  const who = chars.map((c, i) => `<div class="who ${sel && sel.c === i ? 'on' : ''}">
-      <button class="who-main" data-act="pickChar" data-c="${i}"><i class="dot" style="background:${CHAR_LOOK[i].col}"></i>${charName(i)}</button>
-      ${i === 1 ? `<button class="who-x" data-act="removeChar" title="${esc(L('Retirer ce personnage du plan', 'Remove this character from the shot'))}">${icon('close')}</button>` : ''}
-    </div>`).join('') + (chars.length < 2 ? `<button class="add" data-act="addChar">${icon('plus')}${L('Ajouter un 2ᵉ personnage', 'Add a 2nd character')}</button>`
-      : `<div class="pair"><button class="chip-btn" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip-btn" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>`);
-  const target = sel ? sel.c : S.target;
+  const who = chars.map((c, i) => `<div class="who ${target === i ? 'on' : ''}">
+      <button class="who-main" data-act="pickChar" data-c="${i}">${figure(lookOf(c, i))}${charName(i)}</button>
+      ${chars.length > 1 ? `<button class="who-x" data-act="removeChar" data-c="${i}" title="${esc(L('Retirer ce personnage du plan', 'Remove this character from the shot'))}">${icon('close')}</button>` : ''}
+    </div>`).join('');
+  const add = chars.length < MAX_CHARS ? `<div class="add-row"><span>${L('Ajouter', 'Add')}</span>${CHAR_LOOK.map((lk, k) => `<button class="add-fig" data-act="addChar" data-look="${k}" ${used.includes(k) ? 'disabled' : ''} title="${esc(L(lk.fr, lk.en))}">${figure(lk)}<small>${esc(L(lk.fr, lk.en))}</small></button>`).join('')}</div>` : '';
+  const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip-btn" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
+  const pair = chars.length > 1 ? `<div class="pair"><button class="chip-btn" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip-btn" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>` : '';
   const poses = POSES.map(p => `<button class="chip-btn" data-act="pose" data-id="${p.id}">${esc(L(p.fr, p.en))}</button>`).join('');
   let part;
   if(sel){
     const J = JOINT[sel.j], v = chars[sel.c].j[sel.j], ch = chars[sel.c];
     part = `<div class="part-h"><b>${esc(L(J.fr, J.en))}</b><span>${charName(sel.c)}</span></div>
       ${J.ax.map((a, i) => slider(L(a[4], a[5]), 'axis', i, v[i], a[2], a[3], 1)).join('')}
-      ${sel.j === 'pelvis' ? `<p class="tip">${L('Glisse le bassin pour déplacer le personnage.', 'Drag the hips to move the character.')}</p>
-        ${slider(L('Tout le corps : tourner', 'Whole body: turn'), 'root', 0, ch.root.ry, -180, 180, 1)}
+      ${sel.j === 'pelvis' ? `${slider(L('Tout le corps : tourner', 'Whole body: turn'), 'root', 0, ch.root.ry, -180, 180, 1)}
         ${slider(L('Tout le corps : hauteur', 'Whole body: height'), 'root', 1, ch.root.y, -0.8, 1.2, 0.01, ' m')}` : ''}
       <button class="btn btn-sm btn-ghost" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
-  } else part = `<p class="tip">${L('Clique sur une partie du corps dans l’image, puis glisse pour la bouger. Les curseurs apparaîtront ici.', 'Click a body part in the picture, then drag to move it. The sliders will show up here.')}</p>`;
+  } else part = `<p class="tip">${L('Pour un geste précis : clique sur une partie du corps dans l’image et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture and drag. Its settings show up here.')}</p>`;
   el.innerHTML = `
-    <div class="sec"><h3>${L('Lieu', 'Place')}</h3><div class="grid2">${place}</div></div>
-    <div class="sec"><h3>${L('Personnages', 'Characters')}</h3>${who}</div>
-    <div class="sec"><h3>${L('Pose rapide', 'Quick pose')} <span class="for">${charName(target)}</span></h3><div class="chips">${poses}</div></div>
+    <div class="sec"><h3><i class="step">1</i>${L('Le lieu', 'The place')}</h3><div class="grid2">${place}</div></div>
+    <div class="sec"><h3><i class="step">2</i>${L('Les personnages', 'The characters')}</h3>${who}${add}
+      <div class="sub-h">${L('Placer', 'Place')} <b>${charName(target)}</b></div><div class="chips">${spots}</div>${pair}</div>
+    <div class="sec"><h3><i class="step">3</i>${L('La pose de', 'Pose for')}&nbsp;<span class="for">${charName(target)}</span></h3><div class="chips">${poses}</div></div>
     <div class="sec sec-part"><h3>${L('Partie du corps', 'Body part')}</h3>${part}</div>
     <div class="side-foot"><button class="btn btn-sm btn-ghost" data-act="newBoard">${icon('new')}${L('Nouveau storyboard', 'New storyboard')}</button><button class="btn btn-sm btn-ghost" data-act="help">${icon('help')}${L('Aide', 'Help')}</button></div>`;
 }
@@ -117,14 +122,19 @@ function renderSide(onlyValues){
 function renderTools(){
   const el = document.getElementById('tools'); if(!el) return;
   const sh = shot(), two = sh.chars.length > 1, inf = sh.info;
-  const sizes = ['pg', 'pe', 'pa', 'pm', 'pr', 'gp', 'tgp'].concat(two ? ['am', '2p'] : []);
-  const btn = (k, act, on, extra) => `<button class="${on ? 'on' : ''}" data-act="${act}" data-v="${k}" title="${esc(shotLabel(act === 'size' ? 'size' : 'angle', k))}">${extra || esc(shotLabel(act === 'size' ? 'size' : 'angle', k, true))}</button>`;
+  const sizes = ['pg', 'pe', 'pa', 'pm', 'pr', 'gp', 'tgp'].concat(two ? ['am', '2p'] : [], ['pov']);
+  const btn = (k, act, on, label, title) => `<button class="${on ? 'on' : ''}" data-act="${act}" data-v="${k}" title="${esc(title)}">${esc(label)}</button>`;
   el.innerHTML = `
-    ${two ? `<div class="tg"><span class="tl">${L('Sur', 'On')}</span><div class="seg2">${sh.chars.map((_, i) => `<button class="${S.target === i ? 'on' : ''}" data-act="target" data-c="${i}"><i class="dot" style="background:${CHAR_LOOK[i].col}"></i>${i + 1}</button>`).join('')}</div></div>` : ''}
-    <div class="tg"><span class="tl">${L('Valeur', 'Size')}</span><div class="seg2">${sizes.map(k => btn(k, 'size', inf.size === k)).join('')}</div></div>
-    <div class="tg"><span class="tl">${L('Angle', 'Angle')}</span><div class="seg2">${['neu', 'plo', 'con', 'dess', 'deb'].map(k => btn(k, 'angle', inf.angle === k, esc(shotLabel('angle', k)))).join('')}</div></div>
-    <div class="tg"><span class="tl">${L('Focale', 'Lens')}</span><div class="seg2">${LENSES.map(l => `<button class="${Math.round(sh.cam.lens) === l ? 'on' : ''}" data-act="lens" data-l="${l}">${l}</button>`).join('')}</div></div>
-    <button class="grid-btn ${S.grid ? 'on' : ''}" data-act="grid" title="${esc(L('Grille des tiers', 'Rule of thirds'))}"><svg viewBox="0 0 16 16" class="icon" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M6 2.5v11M10 2.5v11M1.5 6.2h13M1.5 9.8h13"/></svg></button>`;
+    <div class="tools-row">
+      <div class="tg"><span class="tl">${L('Cadrer', 'Frame')}</span><div class="seg2">${sh.chars.map((c, i) => `<button class="${S.target === i ? 'on' : ''}" data-act="target" data-c="${i}" title="${esc(L('Le cadrage vise ', 'Framing aims at ') + L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}${sh.chars.length > 2 ? esc(L(lookOf(c, i).fr, lookOf(c, i).en).replace(/^(\S)\S*\s/, '$1')) : charName(i)}</button>`).join('')}</div></div>
+      <div class="tg"><span class="tl">${L('Valeur', 'Size')}</span><div class="seg2">${sizes.map(k => btn(k, 'size', inf.size === k, shotLabel('size', k, true), shotLabel('size', k))).join('')}</div></div>
+    </div>
+    <div class="tools-row">
+      <div class="tg"><span class="tl">${L('Angle', 'Angle')}</span><div class="seg2">${['neu', 'plo', 'con', 'dess', 'sol', 'deb'].map(k => btn(k, 'angle', inf.angle === k, shotLabel('angle', k), shotLabel('angle', k))).join('')}</div></div>
+      <div class="tg"><span class="tl">${L('Côté', 'Side')}</span><div class="seg2">${SIDES.map(x => btn(x[0], 'side', inf.side === x[0], L(x[1], x[2]), L(x[1], x[2]))).join('')}</div></div>
+      <div class="tg"><span class="tl">${L('Focale', 'Lens')}</span><div class="seg2">${LENSES.map(l => `<button class="${Math.round(sh.cam.lens) === l ? 'on' : ''}" data-act="lens" data-l="${l}" title="${l} mm">${l}</button>`).join('')}</div></div>
+      <button class="grid-btn ${S.grid ? 'on' : ''}" data-act="grid" title="${esc(L('Grille des tiers', 'Rule of thirds'))}"><svg viewBox="0 0 16 16" class="icon" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M6 2.5v11M10 2.5v11M1.5 6.2h13M1.5 9.8h13"/></svg></button>
+    </div>`;
   document.getElementById('thirds').classList.toggle('hidden', !S.grid);
 }
 
@@ -133,38 +143,44 @@ const opt = (k, v) => SHOT[k].map(o => `<option value="${o[0]}" ${o[0] === v ? '
 function renderShotPanel(){
   const el = document.getElementById('sheet'); if(!el) return;
   const sh = shot(), inf = sh.info, n = S.doc.shots.length;
-  document.getElementById('shotNo').textContent = L('Plan ', 'Shot ') + (S.i + 1);
+  document.getElementById('shotNo').textContent = (inf.scene ? L('Sc. ', 'Sc. ') + inf.scene + ' · ' : '') + L('Plan ', 'Shot ') + (S.i + 1);
   el.innerHTML = `
     <div class="sec">
       <h3>${L('Plan', 'Shot')} ${S.i + 1} <span class="for">${L('sur', 'of')} ${n}</span></h3>
-      <label class="fld"><span>${L('Ce qui se passe', 'What happens')}</span><textarea id="cap" rows="4" placeholder="${esc(L('Léa entre dans la librairie…', 'Léa walks into the bookshop…'))}">${esc(inf.cap)}</textarea></label>
-      <label class="fld"><span>${L('Valeur', 'Size')}</span><select data-act="info" data-k="size">${opt('size', inf.size)}</select></label>
-      <label class="fld"><span>${L('Angle', 'Angle')}</span><select data-act="info" data-k="angle">${opt('angle', inf.angle)}</select></label>
-      <label class="fld"><span>${L('Mouvement', 'Movement')}</span><select data-act="info" data-k="move">${opt('move', inf.move)}</select></label>
-      <div class="fld-row"><label class="fld"><span>${L('Focale', 'Lens')}</span><b class="ro">${Math.round(sh.cam.lens)} mm</b></label>
+      <div class="fld-row"><label class="fld"><span>${L('Scène', 'Scene')}</span><input id="fScene" data-k="scene" maxlength="40" value="${esc(inf.scene)}" placeholder="${esc(L('ex. 3', 'e.g. 3'))}"></label>
         <label class="fld"><span>${L('Durée', 'Length')}</span><select data-act="info" data-k="dur">${[1, 1.5, 2, 3, 4, 5, 8].map(d => `<option value="${d}" ${d === inf.dur ? 'selected' : ''}>${fmtTime(d)}</option>`).join('')}</select></label></div>
+      <label class="fld"><span>${L('Ce qui se passe', 'What happens')}</span><textarea id="cap" data-k="cap" rows="3" placeholder="${esc(L('Léa entre dans le café et cherche quelqu’un.', 'Léa walks into the café, looking for someone.'))}">${esc(inf.cap)}</textarea></label>
+      <label class="fld"><span>${L('Dialogue ou son', 'Dialogue or sound')}</span><textarea id="dial" data-k="dial" rows="2" placeholder="${esc(L('LÉA : Tu es en retard.', 'LÉA: You’re late.'))}">${esc(inf.dial)}</textarea></label>
+      <label class="fld"><span>${L('Mouvement de caméra', 'Camera move')}</span><select data-act="info" data-k="move">${opt('move', inf.move)}</select></label>
+      <details class="more"><summary>${L('Valeur et angle notés', 'Noted size and angle')}</summary>
+        <p class="tip">${L('Remplis tout seuls quand tu cadres avec les boutons. Change-les ici si besoin.', 'Filled in when you frame with the buttons. Change them here if needed.')}</p>
+        <label class="fld"><span>${L('Valeur', 'Size')}</span><select data-act="info" data-k="size">${opt('size', inf.size)}</select></label>
+        <label class="fld"><span>${L('Angle', 'Angle')}</span><select data-act="info" data-k="angle">${opt('angle', inf.angle)}</select></label>
+        <p class="tip">${L('Focale', 'Lens')} : <b>${Math.round(sh.cam.lens)} mm</b></p></details>
     </div>
     <div class="sec">
-      <h3>${L('Ce plan', 'This shot')}</h3>
       <div class="acts">
-        <button class="chip-btn" data-act="moveShot" data-d="-1" ${S.i === 0 ? 'disabled' : ''}>← ${L('Avant', 'Earlier')}</button>
-        <button class="chip-btn" data-act="moveShot" data-d="1" ${S.i === n - 1 ? 'disabled' : ''}>${L('Après', 'Later')} →</button>
         <button class="chip-btn" data-act="dupShot">${L('Dupliquer', 'Duplicate')}</button>
+        <button class="chip-btn" data-act="moveShot" data-d="-1" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Avancer ce plan', 'Move this shot earlier'))}">←</button>
+        <button class="chip-btn" data-act="moveShot" data-d="1" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Reculer ce plan', 'Move this shot later'))}">→</button>
         <button class="chip-btn danger" data-act="delShot" ${n < 2 ? 'disabled' : ''}>${icon('trash')}${L('Supprimer', 'Delete')}</button>
       </div>
     </div>`;
 }
 
-/* ---------- En bas : la planche ---------- */
+/* ---------- En bas : la planche (on glisse une vignette pour changer l'ordre) ---------- */
+const fmtDur = t => { const m = Math.floor(t / 60), s = Math.round(t % 60); return m + ':' + String(s).padStart(2, '0'); };
 function renderStrip(){
   const el = document.getElementById('strip'); if(!el) return;
-  const two = shot().chars.length > 1;
-  el.innerHTML = `<div class="strip-h"><b>${L('Planche', 'Board')}</b><span>${S.doc.shots.length} ${S.doc.shots.length > 1 ? L('plans', 'shots') : L('plan', 'shot')}</span></div>
-    <div class="cards" id="cards">${S.doc.shots.map((s, i) => `<button class="shot-card ${i === S.i ? 'on' : ''}" data-act="goShot" data-i="${i}">
-        <span class="sc-img"><img src="${thumbOf(i)}" alt=""><span class="sc-n">${i + 1}</span></span>
+  const two = shot().chars.length > 1, n = S.doc.shots.length;
+  el.innerHTML = `<div class="strip-h"><b>${L('Planche', 'Board')}</b><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span>
+      <span class="strip-tip">${L('Glisse une vignette pour changer l’ordre', 'Drag a thumbnail to reorder')}</span>
+      <button class="btn btn-sm btn-play" data-act="playBoard">${icon('play')}${L('Lire le storyboard', 'Play the storyboard')}</button></div>
+    <div class="cards" id="cards">${S.doc.shots.map((s, i) => `<button class="shot-card ${i === S.i ? 'on' : ''}" data-act="goShot" data-i="${i}" draggable="true">
+        <span class="sc-img"><img src="${thumbOf(i)}" alt="" draggable="false"><span class="sc-n">${i + 1}</span>${s.info.scene ? `<span class="sc-sc">${esc(L('Sc. ', 'Sc. ') + s.info.scene)}</span>` : ''}<span class="sc-d">${fmtTime(s.info.dur || 2)}</span></span>
         <span class="sc-t"><b>${esc(shotLabel('size', s.info.size, true))}</b>${esc(s.info.cap || L('Sans description', 'No description'))}</span></button>`).join('')}
       <div class="add-col">
-        <button class="add-shot" data-act="addShot">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span></button>
+        <button class="add-shot" data-act="addShot" title="${esc(L('Reprend le plan actuel (touche N)', 'Starts from the current shot (N key)'))}">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span></button>
         ${two ? `<button class="add-shot rev" data-act="addReverse" title="${esc(L('Le plan suivant, par-dessus l’épaule de l’autre personnage', 'The next shot, over the other character’s shoulder'))}">⇄<span>${L('Contrechamp', 'Reverse shot')}</span></button>` : ''}
       </div></div>`;
   const on = el.querySelector('.shot-card.on'); if(on) on.scrollIntoView({ block:'nearest', inline:'nearest' });
@@ -172,7 +188,8 @@ function renderStrip(){
 function renderHint(){
   const el = document.getElementById('hint'); if(!el) return;
   let t;
-  if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer le personnage', 'drag to move the character') : L('glisse pour bouger', 'drag to move'));
+  if(S.play) t = L('Lecture du storyboard · Échap ou clic pour arrêter', 'Playing the storyboard · Esc or click to stop');
+  else if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer le personnage', 'drag to move the character') : L('glisse pour bouger', 'drag to move'));
   else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer le personnage sur le sol', 'Drag to move the character on the floor') : L('Glisse à gauche ou à droite pour le faire tourner', 'Drag left or right to turn them');
   else if(S.sel) t = L('Glisse la partie verte pour la bouger · Clique dans le vide pour désélectionner', 'Drag the green part to move it · Click empty space to deselect');
   else t = L('Losange vert : maintiens-le pour déplacer un personnage · Glisse dans le vide : tourner · Clic droit + glisser : se décaler · Molette : avancer · Double-clic : viser', 'Green diamond: hold it to move a character · Drag empty space: orbit · Right-click + drag: pan · Wheel: move in · Double-click: aim');
@@ -224,44 +241,107 @@ function loadPdf(){
   return _pdfLib;
 }
 const pdfText = s => String(s || '').replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/…/g, '...').replace(/[–—]/g, '-').replace(/ | /g, ' ');
-async function exportPdf(){
+/* la planche PDF : 6 plans par page (vue d'ensemble), ou 3 grands plans par page avec la place d'écrire */
+async function exportPdf(per){
+  per = per === 3 ? 3 : 6;
   let jsPDF;
   try{ jsPDF = await loadPdf(); }catch(e){ toast(L('Impossible de charger l’outil PDF : vérifie ta connexion.', 'Could not load the PDF tool: check your connection.'), 'warn'); return; }
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-  const W = 297, H = 210, M = 12, cols = 3, rows = 2, gx = 8, gy = 10;
-  const cw = (W - 2 * M - (cols - 1) * gx) / cols, ih = cw * 9 / 16, ch = (H - 2 * M - 16 - (rows - 1) * gy) / rows;
-  const shots = S.doc.shots, pages = Math.ceil(shots.length / 6);
+  const W = 297, H = 210, M = 12, shots = S.doc.shots, pages = Math.ceil(shots.length / per);
+  const meta = s => [shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), Math.round(s.cam.lens) + ' mm', fmtTime(s.info.dur || 2)].filter(Boolean).join(' · ');
+  const badge = (i, x, y) => {
+    doc.setFillColor(23, 122, 79); doc.roundedRect(x + 2, y + 2, 9, 5.4, 1, 1, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255); doc.text(String(i + 1), x + 6.5, y + 5.8, { align:'center' });
+  };
+  const ruled = (x, y, w, n, from) => { doc.setDrawColor(218, 223, 230); doc.setLineWidth(0.2); for(let l = from; l < n; l++) doc.line(x, y + 0.6 + l * 4, x + w, y + 0.6 + l * 4); };
   for(let p = 0; p < pages; p++){
     if(p) doc.addPage();
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(35, 38, 46);
     doc.text(pdfText(S.doc.title || 'Storyboard'), M, M + 5);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(92, 98, 112);
-    doc.text(pdfText(L('Storyboard · page ', 'Storyboard · page ') + (p + 1) + ' / ' + pages), W - M, M + 5, { align:'right' });
+    doc.text(pdfText(L('Storyboard · page ', 'Storyboard · page ') + (p + 1) + ' / ' + pages + ' · ' + shots.length + ' ' + L('plans', 'shots') + ' · ' + fmtDur(totalDur())), W - M, M + 5, { align:'right' });
     doc.setDrawColor(35, 38, 46); doc.setLineWidth(0.4); doc.line(M, M + 9, W - M, M + 9);
-    for(let k = 0; k < 6; k++){
-      const i = p * 6 + k; if(i >= shots.length) break;
-      const s = shots[i], x = M + (k % cols) * (cw + gx), y = M + 16 + Math.floor(k / cols) * (ch + gy);
-      doc.addImage(renderShotURL(i, 960, 540, 'image/jpeg', 0.86), 'JPEG', x, y, cw, ih);
-      doc.setDrawColor(35, 38, 46); doc.setLineWidth(0.3); doc.rect(x, y, cw, ih);
-      doc.setFillColor(23, 122, 79); doc.roundedRect(x + 2, y + 2, 9, 5.4, 1, 1, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255); doc.text(String(i + 1), x + 6.5, y + 5.8, { align:'center' });
-      const meta = [shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), Math.round(s.cam.lens) + ' mm'].filter(Boolean).join(' · ');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(35, 38, 46);
-      doc.text(pdfText(L('Plan ', 'Shot ') + (i + 1)), x, y + ih + 5);
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(23, 122, 79);
-      doc.text(pdfText(meta), x + 14, y + ih + 5, { maxWidth:cw - 14 });
-      doc.setTextColor(60, 64, 74); doc.setFontSize(8.5);
-      const lines = doc.splitTextToSize(pdfText(s.info.cap), cw).slice(0, 3);
-      doc.text(lines, x, y + ih + 10);
-      doc.setDrawColor(218, 223, 230); doc.setLineWidth(0.2);
-      for(let l = lines.length; l < 3; l++) doc.line(x, y + ih + 10.6 + l * 4, x + cw, y + ih + 10.6 + l * 4);
+    for(let k = 0; k < per; k++){
+      const i = p * per + k; if(i >= shots.length) break;
+      const s = shots[i], title = (s.info.scene ? L('Scène ', 'Scene ') + s.info.scene + ' · ' : '') + L('Plan ', 'Shot ') + (i + 1);
+      if(per === 6){
+        const cols = 3, gx = 8, gy = 10, cw = (W - 2 * M - (cols - 1) * gx) / cols, ih = cw * 9 / 16, ch = (H - 2 * M - 16 - gy) / 2;
+        const x = M + (k % cols) * (cw + gx), y = M + 16 + Math.floor(k / cols) * (ch + gy);
+        doc.addImage(renderShotURL(i, 960, 540, 'image/jpeg', 0.86), 'JPEG', x, y, cw, ih);
+        doc.setDrawColor(35, 38, 46); doc.setLineWidth(0.3); doc.rect(x, y, cw, ih); badge(i, x, y);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(35, 38, 46); doc.text(pdfText(title), x, y + ih + 5);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(23, 122, 79); doc.text(pdfText(meta(s)), x, y + ih + 9.2, { maxWidth:cw });
+        doc.setFontSize(8.5); doc.setTextColor(60, 64, 74);
+        const lines = doc.splitTextToSize(pdfText(s.info.cap), cw).slice(0, 2); doc.text(lines, x, y + ih + 14);
+        if(s.info.dial){ doc.setFont('helvetica', 'italic'); doc.setTextColor(92, 98, 112); doc.text(doc.splitTextToSize(pdfText(s.info.dial), cw).slice(0, 1), x, y + ih + 22); }
+        else ruled(x, y + ih + 14, cw, 3, lines.length);
+      } else {
+        const rh = (H - 2 * M - 16) / 3, ih = rh - 6, iw = ih * 16 / 9, x = M, y = M + 15 + k * rh, tx = x + iw + 8, tw = W - M - tx;
+        doc.addImage(renderShotURL(i, 1280, 720, 'image/jpeg', 0.86), 'JPEG', x, y, iw, ih);
+        doc.setDrawColor(35, 38, 46); doc.setLineWidth(0.3); doc.rect(x, y, iw, ih); badge(i, x, y);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(35, 38, 46); doc.text(pdfText(title), tx, y + 5);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(23, 122, 79); doc.text(pdfText(meta(s)), tx, y + 10.5, { maxWidth:tw });
+        doc.setFontSize(7.5); doc.setTextColor(92, 98, 112); doc.text(pdfText(L('ACTION', 'ACTION')), tx, y + 17);
+        doc.setFontSize(9.5); doc.setTextColor(45, 48, 56);
+        const lines = doc.splitTextToSize(pdfText(s.info.cap), tw).slice(0, 4); doc.text(lines, tx, y + 21.5); ruled(tx, y + 21.5, tw, 4, lines.length);
+        doc.setFontSize(7.5); doc.setTextColor(92, 98, 112); doc.text(pdfText(L('DIALOGUE / SON', 'DIALOGUE / SOUND')), tx, y + 40);
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(45, 48, 56);
+        const dl = doc.splitTextToSize(pdfText(s.info.dial), tw).slice(0, 2); doc.text(dl, tx, y + 44.5); doc.setFont('helvetica', 'normal'); ruled(tx, y + 44.5, tw, 2, dl.length);
+        if(k < 2){ doc.setDrawColor(218, 223, 230); doc.setLineWidth(0.2); doc.line(M, y + rh - 2.5, W - M, y + rh - 2.5); }
+      }
     }
-    doc.setFontSize(7.5); doc.setTextColor(92, 98, 112);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(92, 98, 112);
     doc.text('Raging 3D · ragingstudio.com/3d', M, H - 6);
   }
   doc.save(safeName(S.doc.title) + ' - storyboard.pdf');
   toast(L('Planche PDF enregistrée.', 'PDF board saved.'));
 }
+
+/* ---------- Lire le storyboard dans l'outil : chaque plan pendant sa durée, avec sa description ---------- */
+function playBoard(){
+  if(S.play){ stopBoard(); return; }
+  const shots = S.doc.shots, starts = []; let total = 0; shots.forEach(s => { starts.push(total); total += s.info.dur || 2; });
+  S.play = { t0:performance.now(), from:S.i, last:-1 }; S.sel = null; S.hover = null;
+  const st = document.getElementById('stage'); st.classList.add('playing');
+  const box = document.getElementById('playBox');
+  const t0 = S.play.t0 - starts[S.i] * 1000;
+  const step = now => {
+    if(!S.play) return;
+    const t = (now - t0) / 1000;
+    if(t >= total){ stopBoard(); return; }
+    let i = 0; while(i + 1 < shots.length && starts[i + 1] <= t) i++;
+    if(i !== S.play.last){
+      S.play.last = i; const s = shots[i];
+      box.innerHTML = `<b>${(s.info.scene ? L('Sc. ', 'Sc. ') + esc(s.info.scene) + ' · ' : '') + L('Plan ', 'Shot ') + (i + 1)}</b>${s.info.cap ? `<span>${esc(s.info.cap)}</span>` : ''}${s.info.dial ? `<i>${esc(s.info.dial)}</i>` : ''}`;
+      document.querySelectorAll('.shot-card').forEach((c, k) => c.classList.toggle('now', k === i));
+    }
+    drawFrame(shots[i], null, null, true);
+    document.getElementById('playBar').style.width = (t / total * 100) + '%';
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step); renderStrip(); renderHint();
+}
+function stopBoard(){
+  if(!S.play) return;
+  S.play = null;
+  document.getElementById('stage').classList.remove('playing');
+  document.querySelectorAll('.shot-card.now').forEach(c => c.classList.remove('now'));
+  renderStrip(); renderHint(); requestRender();
+}
+
+/* ---------- La première visite : trois étapes, puis on n'en parle plus ---------- */
+function showIntro(force){
+  if(!force && lsGet('raging3d_intro')) return;
+  const st = document.getElementById('stage'); if(!st || st.querySelector('.intro')) return;
+  const el = document.createElement('div'); el.className = 'intro';
+  el.innerHTML = `<div class="intro-card"><h3>${L('Ton storyboard en 3D, sans dessiner', 'Your storyboard in 3D, no drawing')}</h3>
+    <ol><li><b>${L('Installe', 'Set up')}</b>${L('Choisis un lieu, ajoute tes personnages, place-les.', 'Pick a place, add your characters, place them.')}</li>
+      <li><b>${L('Cadre', 'Frame')}</b>${L('Clique sur une valeur de plan au-dessus de l’image : la caméra se place.', 'Click a shot size above the picture: the camera places itself.')}</li>
+      <li><b>${L('Enchaîne', 'Keep going')}</b>${L('« Nouveau plan » reprend le plan actuel. Puis exporte la planche en PDF.', '“New shot” starts from the current one. Then export the board as a PDF.')}</li></ol>
+    <button class="btn btn-primary" data-act="introOk">${L('C’est parti', 'Let’s go')}</button></div>`;
+  st.appendChild(el);
+}
+
 function videoType(){
   const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
   return window.MediaRecorder ? types.find(t => MediaRecorder.isTypeSupported(t)) : null;
@@ -307,16 +387,17 @@ function showHelp(){
   const bd = document.createElement('div'); bd.className = 'modal-bd';
   bd.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><div class="modal-h"><h3>${L('Ton storyboard, sans savoir dessiner', 'Your storyboard, no drawing skills needed')}</h3><button class="btn btn-ghost btn-sm" data-act="closeModal">${icon('close')}</button></div>
     <ol class="how">
-      <li><b>${L('Installe la scène', 'Set the scene')}</b>${L('À gauche : le lieu, un ou deux personnages, une pose rapide.', 'On the left: the place, one or two characters, a quick pose.')}</li>
-      <li><b>${L('Cadre en un clic', 'Frame in one click')}</b>${L('Au-dessus de l’image : choisis la valeur (gros plan, plan moyen…), l’angle et la focale. La caméra se place toute seule.', 'Above the picture: pick the size (close-up, medium shot…), the angle and the lens. The camera places itself.')}</li>
-      <li><b>${L('Place tes personnages', 'Place your characters')}</b>${L('Maintiens le losange vert au-dessus d’une tête pour déplacer le personnage ; la petite flèche à côté le fait tourner. Le losange n’apparaît jamais dans les exports.', 'Hold the green diamond above a head to move the character; the small arrow next to it turns them. The diamond never shows in exports.')}</li>
-      <li><b>${L('Ajuste la pose', 'Adjust the pose')}</b>${L('Clique sur une partie du corps et glisse. Si un meuble cache un personnage, il devient transparent pendant que tu travailles.', 'Click a body part and drag. If furniture hides a character, it turns see-through while you work.')}</li>
-      <li><b>${L('Promène-toi dans la scène', 'Move around the scene')}</b>${L('Glisse dans le vide pour tourner autour · clic droit (ou Maj) + glisser pour te décaler · molette pour avancer vers la souris · double-clic pour viser un endroit ou recadrer un personnage · ZQSD ou WASD pour marcher, R et F pour monter et descendre, ou le pavé en bas à droite de l’image.', 'Drag empty space to orbit · right-click (or Shift) + drag to pan · wheel to move toward the mouse · double-click to aim at a spot or reframe a character · WASD or ZQSD to walk, R and F to go up and down, or the pad at the bottom right of the picture.')}</li>
-      <li><b>${L('Décris le plan', 'Describe the shot')}</b>${L('À droite : ce qui se passe, le mouvement de caméra, la durée.', 'On the right: what happens, the camera move, the length.')}</li>
-      <li><b>${L('Plan suivant', 'Next shot')}</b>${L('« Nouveau plan » reprend le plan actuel : tu changes juste ce qui bouge. Avec deux personnages, « Contrechamp » fait le plan inverse.', '“New shot” starts from the current one: you only change what moves. With two characters, “Reverse shot” makes the opposite angle.')}</li>
-      <li><b>${L('Exporte', 'Export')}</b>${L('La planche en PDF, l’image d’un plan, ou l’animatique en vidéo.', 'The board as a PDF, the image of a shot, or the animatic as a video.')}</li>
+      <li><b>${L('Le lieu', 'The place')}</b>${L('À gauche, étape 1 : garage, bureau, salon, café, couloir, ruelle, taxi ou parc.', 'On the left, step 1: garage, office, living room, café, hallway, alley, taxi or park.')}</li>
+      <li><b>${L('Les personnages', 'The characters')}</b>${L('Étape 2 : ajoute jusqu’à quatre personnages (deux hommes, deux femmes), puis « Placer » pour les mettre à un endroit tout prêt : au volant, au comptoir, sur le canapé…', 'Step 2: add up to four characters (two men, two women), then “Place” to put them in a ready-made spot: at the wheel, at the counter, on the sofa…')}</li>
+      <li><b>${L('La pose', 'The pose')}</b>${L('Étape 3 : une pose rapide (assis, course, bras croisés…). Pour un geste précis, clique sur une partie du corps et glisse.', 'Step 3: a quick pose (sitting, running, arms crossed…). For a precise gesture, click a body part and drag.')}</li>
+      <li><b>${L('Déplacer un personnage', 'Move a character')}</b>${L('Maintiens le losange vert au-dessus de sa tête ; la petite flèche à côté le fait tourner. Le losange n’apparaît jamais dans les exports.', 'Hold the green diamond above their head; the small arrow next to it turns them. The diamond never shows in exports.')}</li>
+      <li><b>${L('Cadrer', 'Frame')}</b>${L('Au-dessus de l’image : sur qui, la valeur (du plan général au très gros plan, amorce, plan à deux, subjectif), l’angle, le côté (face, trois-quarts, profil, dos) et la focale.', 'Above the picture: on whom, the size (from extreme wide to extreme close-up, over the shoulder, two-shot, point of view), the angle, the side (front, three-quarter, profile, back) and the lens.')}</li>
+      <li><b>${L('Se promener', 'Move around')}</b>${L('Glisse dans le vide pour tourner, clic droit + glisser pour te décaler, molette pour avancer, double-clic pour viser. ZQSD ou WASD pour marcher, R et F pour monter et descendre.', 'Drag empty space to orbit, right-click + drag to pan, wheel to move in, double-click to aim. WASD or ZQSD to walk, R and F to go up and down.')}</li>
+      <li><b>${L('Décrire', 'Describe')}</b>${L('À droite : la scène, ce qui se passe, le dialogue, le mouvement de caméra et la durée.', 'On the right: the scene, what happens, the dialogue, the camera move and the length.')}</li>
+      <li><b>${L('Enchaîner', 'Keep going')}</b>${L('« Nouveau plan » reprend le plan actuel. « Contrechamp » fait le plan inverse. Glisse les vignettes pour changer l’ordre, et « Lire le storyboard » pour le voir défiler.', '“New shot” starts from the current one. “Reverse shot” makes the opposite angle. Drag thumbnails to reorder, and “Play the storyboard” to watch it.')}</li>
+      <li><b>${L('Exporter', 'Export')}</b>${L('La planche en PDF (6 ou 3 plans par page), l’image d’un plan, ou l’animatique en vidéo.', 'The board as a PDF (6 or 3 shots per page), the image of a shot, or the animatic as a video.')}</li>
     </ol>
-    <p class="keys">${L('Raccourcis : ← → plan précédent ou suivant · ZQSD / WASD et ↑ ↓ se déplacer · R F monter, descendre · N nouveau plan · Ctrl+Z annuler · Échap désélectionner', 'Shortcuts: ← → previous or next shot · WASD / ZQSD and ↑ ↓ move · R F up, down · N new shot · Ctrl+Z undo · Esc deselect')}</p></div>`;
+    <p class="keys">${L('Raccourcis : ← → plan précédent ou suivant · ZQSD / WASD et ↑ ↓ se déplacer · R F monter, descendre · N nouveau plan · Espace lire le storyboard · Ctrl+Z annuler · Échap désélectionner', 'Shortcuts: ← → previous or next shot · WASD / ZQSD and ↑ ↓ move · R F up, down · N new shot · Space play the storyboard · Ctrl+Z undo · Esc deselect')}</p></div>`;
   document.body.appendChild(bd);
   bd.addEventListener('click', e => { if(e.target === bd || e.target.closest('[data-act="closeModal"]')) bd.remove(); });
 }
@@ -339,13 +420,15 @@ const ACT = {
   undo, redo,
   lang:b => setLang(b.dataset.l),
   exportMenu:() => document.getElementById('exportMenu').classList.toggle('hidden'),
-  exportPdf:() => { closeMenus(); exportPdf(); },
+  exportPdf:b => { closeMenus(); exportPdf(+b.dataset.per); },
   exportImage:() => { closeMenus(); exportImage(); },
   exportVideo:() => { closeMenus(); exportVideo(); },
   cancelRec:() => { if(S.rec) S.rec.cancel = true; },
   place:b => setPlace(b.dataset.id),
   pickChar:b => { S.sel = { c:+b.dataset.c, j:'pelvis' }; S.target = +b.dataset.c; renderSide(); renderTools(); requestRender(); },
-  addChar, removeChar, faceThem, lookAt:lookAtOther,
+  addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), faceThem, lookAt:lookAtOther,
+  spot:b => placeAt(+b.dataset.k), side:b => frameSide(b.dataset.v),
+  playBoard, stopBoard, introOk:() => { lsSet('raging3d_intro', '1'); const i = document.querySelector('.intro'); if(i) i.remove(); },
   pose:b => setPose(b.dataset.id),
   resetPart,
   target:b => { S.target = +b.dataset.c; renderTools(); renderSide(); },
@@ -375,7 +458,14 @@ function bindEvents(){
   document.addEventListener('input', e => {
     const t = e.target;
     if(t.id === 'tbTitle'){ S.doc.title = t.value; save(); return; }
-    if(t.id === 'cap'){ if(!capSnap) capSnap = snapshot(); shot().info.cap = t.value; save(); const c = document.querySelector(`.shot-card[data-i="${S.i}"] .sc-t`); if(c) c.lastChild.textContent = t.value || L('Sans description', 'No description'); return; }
+    // les champs du plan : scène, ce qui se passe, dialogue
+    if(t.id === 'cap' || t.id === 'dial' || t.id === 'fScene'){
+      if(!capSnap) capSnap = snapshot(); shot().info[t.dataset.k] = t.value; save();
+      const card = document.querySelector(`.shot-card[data-i="${S.i}"]`);
+      if(card && t.id === 'cap') card.querySelector('.sc-t').lastChild.textContent = t.value || L('Sans description', 'No description');
+      if(t.id === 'fScene') document.getElementById('shotNo').textContent = (t.value ? L('Sc. ', 'Sc. ') + t.value + ' · ' : '') + L('Plan ', 'Shot ') + (S.i + 1);
+      return;
+    }
     if((t.dataset.act === 'axis' || t.dataset.act === 'root') && S.sel){
       if(!sliderSnap) sliderSnap = snapshot();
       const ch = shot().chars[S.sel.c];
@@ -387,7 +477,7 @@ function bindEvents(){
   document.addEventListener('change', e => {
     const t = e.target;
     if(t.dataset.act === 'axis' || t.dataset.act === 'root'){ pushUndo(sliderSnap); sliderSnap = null; changed(); }
-    if(t.id === 'cap' && capSnap){ pushUndo(capSnap); capSnap = null; }
+    if((t.id === 'cap' || t.id === 'dial' || t.id === 'fScene') && capSnap){ pushUndo(capSnap); capSnap = null; if(t.id === 'fScene') renderStrip(); }
     if(t.dataset.act === 'info'){ const k = t.dataset.k; edit(() => { shot().info[k] = k === 'dur' ? +t.value : t.value; }); renderStrip(); }
   });
   const c = R.canvas;
@@ -395,6 +485,14 @@ function bindEvents(){
   c.addEventListener('pointerleave', () => { if(!DRAG.mode && S.hover){ S.hover = null; requestRender(); renderHint(); } });
   c.addEventListener('wheel', onWheel, { passive:false });
   c.addEventListener('dblclick', onDblClick);
+  // la planche : glisser une vignette pour la changer de place
+  const strip = document.getElementById('strip'); let dragFrom = -1;
+  strip.addEventListener('dragstart', e => { const c = e.target.closest('.shot-card'); if(!c) return; dragFrom = +c.dataset.i; c.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try{ e.dataTransfer.setData('text/plain', String(dragFrom)); }catch(err){} });
+  const dropIndex = e => { const cards = [...strip.querySelectorAll('.shot-card')]; for(let i = 0; i < cards.length; i++){ const r = cards[i].getBoundingClientRect(); if(e.clientX < r.left + r.width / 2) return i; } return cards.length; };
+  strip.addEventListener('dragover', e => { if(dragFrom < 0) return; e.preventDefault(); const k = dropIndex(e); strip.querySelectorAll('.shot-card').forEach((c, i) => { c.classList.toggle('drop-l', i === k); c.classList.toggle('drop-r', k === S.doc.shots.length && i === k - 1); }); });
+  const dragEnd = () => { dragFrom = -1; strip.querySelectorAll('.drag, .drop-l, .drop-r').forEach(c => c.classList.remove('drag', 'drop-l', 'drop-r')); };
+  strip.addEventListener('drop', e => { if(dragFrom < 0) return; e.preventDefault(); const f = dragFrom, k = dropIndex(e); dragEnd(); dropShot(f, k); });
+  strip.addEventListener('dragend', dragEnd);
   // la poignée au-dessus des têtes
   const hd = document.getElementById('handles');
   hd.addEventListener('pointerdown', onHandleDown);
@@ -422,6 +520,8 @@ function bindEvents(){
     if(e.key === 'ArrowRight'){ e.preventDefault(); goShot(S.i + 1); }
     else if(e.key === 'ArrowLeft'){ e.preventDefault(); goShot(S.i - 1); }
     else if(e.key.toLowerCase() === 'n'){ e.preventDefault(); addShot(); }
+    else if(e.key === 'Escape' && S.play){ stopBoard(); }
+    else if(e.key === ' ' && e.target === document.body){ e.preventDefault(); playBoard(); }
     else if(e.key === 'Escape'){ if(S.sel){ S.sel = null; renderSide(); renderHint(); requestRender(); } closeMenus(); }
   });
 }
@@ -436,5 +536,5 @@ function bindEvents(){
     document.getElementById('stage').innerHTML = `<div class="nogl"><b>${L('La 3D n’est pas disponible dans ce navigateur.', '3D isn’t available in this browser.')}</b>${L('Raging 3D a besoin de WebGL. Essaie avec une version récente de Chrome, Edge ou Firefox, ou active l’accélération matérielle dans les réglages du navigateur.', 'Raging 3D needs WebGL. Try a recent Chrome, Edge or Firefox, or turn on hardware acceleration in your browser settings.')}</div>`;
     return;
   }
-  initMeshes(); bindEvents(); fitStage(); renderStrip(); renderHint();
+  initMeshes(); bindEvents(); fitStage(); renderStrip(); renderHint(); showIntro();
 })();

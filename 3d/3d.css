@@ -85,7 +85,11 @@ input, select, textarea{font-family:inherit;}
 .sw-garage{background:linear-gradient(135deg, #A8ADB5 50%, #8D9198 50%);}
 .sw-office{background:linear-gradient(135deg, #E6E2DA 50%, #7A5C42 50%);}
 .sw-alley{background:linear-gradient(135deg, #9A8B7E 50%, #2F6E4F 50%);}
-.sw-taxi{background:linear-gradient(135deg, #E2B93B 50%, #2B2D32 50%);}
+.sw-taxi{background:linear-gradient(135deg, #E8B923 50%, #24262B 50%);}
+.sw-living{background:linear-gradient(135deg, #D9D2C5 50%, #5A6B7C 50%);}
+.sw-cafe{background:linear-gradient(135deg, #C9B9A3 50%, #6E5440 50%);}
+.sw-park{background:linear-gradient(135deg, #C6D6E4 50%, #6F8F5A 50%);}
+.sw-hall{background:linear-gradient(135deg, #D8D4CC 50%, #7A3B37 50%);}
 .who{display:flex; align-items:center; gap:4px; margin-bottom:6px; border:1px solid var(--hair); border-radius:8px;}
 .who.on{border-color:var(--accent); background:var(--accent-tint);}
 .who-main{flex:1; display:flex; align-items:center; gap:10px; padding:9px 10px; border:0; background:transparent; font-size:14px; font-weight:500; text-align:left;}
@@ -162,11 +166,52 @@ body.dragging, body.dragging *{cursor:grabbing !important; user-select:none;}
 .nav .col{display:flex; flex-direction:column; gap:3px;}
 .hint{max-width:calc(100% - 290px);}
 
+/* ---------- Les étapes, les personnages ---------- */
+.sec h3 .step{display:inline-grid; place-items:center; width:18px; height:18px; margin-right:7px; border-radius:50%; background:var(--accent); color:#fff; font-size:10.5px; font-style:normal; letter-spacing:0;}
+.sec h3{justify-content:flex-start;}
+.sub-h{margin:12px 0 7px; font-size:12.5px; color:var(--ink-soft);} .sub-h b{color:var(--ink); font-weight:600;}
+.fig{width:15px; height:19px; flex:none; display:block;}
+.who-main .fig{width:16px; height:20px;}
+.add-row{display:flex; align-items:center; gap:4px; margin:2px 0 4px; flex-wrap:wrap;}
+.add-row > span{font-size:12.5px; color:var(--ink-soft); margin-right:2px;}
+.add-fig{display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px 4px 4px; width:50px; border:1px dashed var(--accent-soft); border-radius:8px; background:var(--accent-tint); color:var(--accent-2);}
+.add-fig small{font-size:10px; line-height:1.1; text-align:center;}
+.add-fig:hover{border-color:var(--accent); border-style:solid;}
+.add-fig:disabled{opacity:.35; cursor:default; border-style:dashed;}
+.seg2 .fig{width:12px; height:15px;}
+.tools{flex-direction:column; align-items:stretch; gap:6px;}
+.tools-row{display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px;}
+.sheet input{width:100%; padding:8px 9px; border:1px solid var(--hair); border-radius:7px; background:var(--surface); font-size:13.5px; color:var(--ink);}
+.sheet input:focus{outline:none; border-color:var(--accent); box-shadow:var(--focus-ring);}
+details.more{margin-top:4px; border-top:1px solid var(--hair); padding-top:8px;}
+details.more summary{cursor:pointer; font-size:12.5px; color:var(--ink-soft); margin-bottom:8px;}
+
+/* ---------- Lire le storyboard, première visite ---------- */
+.play-box, .play-bar, .play-stop{display:none;}
+.stage.playing .play-box{display:flex; flex-direction:column; gap:3px; position:absolute; left:50%; bottom:22px; transform:translateX(-50%); max-width:80%; padding:9px 14px; border-radius:9px; background:#23262Ed9; color:#fff; font-size:13.5px; line-height:1.4; text-align:center; pointer-events:none;}
+.play-box b{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:#BFE8D3;} .play-box i{color:#D6D9DF;}
+.stage.playing .play-bar{display:block; position:absolute; left:0; right:0; bottom:0; height:4px; background:#00000033;}
+.play-bar i{display:block; height:100%; width:0; background:var(--accent);}
+.stage.playing .play-stop{display:block; position:absolute; top:10px; right:10px; padding:6px 11px; border:0; border-radius:7px; background:#fff; font-size:13px; font-weight:600; box-shadow:var(--shadow-md);}
+.stage.playing .handles, .stage.playing .nav, .stage.playing .hint, .stage.playing .thirds, .stage.playing .shot-no{display:none !important;}
+.intro{position:absolute; inset:0; display:grid; place-items:center; background:#23262E59; z-index:5; padding:16px;}
+.intro-card{width:min(440px, 100%); padding:20px 22px; border-radius:12px; background:var(--surface); box-shadow:var(--shadow-md);}
+.intro-card h3{margin:0 0 10px; font-size:17px;}
+.intro-card ol{margin:0 0 16px; padding-left:20px; display:grid; gap:8px; font-size:13.5px; line-height:1.45; color:var(--ink-soft);}
+.intro-card ol b{display:block; color:var(--ink);} .intro-card li::marker{color:var(--accent); font-weight:700;}
+
 /* ---------- La planche ---------- */
 .strip{flex:none; background:var(--surface); border-top:1px solid var(--hair); padding:10px 14px 12px;}
 .strip-h{display:flex; align-items:baseline; gap:10px; margin-bottom:8px;}
 .strip-h b{font-size:11.5px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft);}
 .strip-h span{font-size:12.5px; color:var(--ink-soft);}
+.strip-h .strip-tip{margin-left:auto; font-size:12px;}
+.btn-play{color:var(--accent-2); border-color:var(--accent-soft); background:var(--accent-tint);} .btn-play .icon{color:var(--accent);}
+.sc-sc{position:absolute; top:4px; right:4px; padding:1px 6px; border-radius:5px; background:#ffffffd9; color:var(--ink); font-size:10.5px; font-weight:600;}
+.sc-d{position:absolute; bottom:4px; right:4px; padding:1px 5px; border-radius:5px; background:#23262Ebf; color:#fff; font-size:10.5px; font-variant-numeric:tabular-nums;}
+.shot-card.drag{opacity:.4;}
+.shot-card.drop-l{box-shadow:-4px 0 0 var(--accent);} .shot-card.drop-r{box-shadow:4px 0 0 var(--accent);}
+.shot-card.now{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent);}
 .cards{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
 .shot-card{flex:none; width:168px; display:flex; flex-direction:column; gap:6px; padding:5px; border:1px solid var(--hair); border-radius:9px; background:var(--surface); text-align:left;}
 .shot-card:hover{border-color:var(--accent-soft);}
@@ -232,7 +277,8 @@ body.dragging, body.dragging *{cursor:grabbing !important; user-select:none;}
   .work{height:auto; min-height:0;}
   .stage-wrap{flex:none; height:56vw;}
   .tools{gap:6px 10px; padding:8px; overflow-x:auto; flex-wrap:nowrap;}
-  .tl, .grid-btn{display:none;}
+  .tl, .grid-btn, .strip-tip{display:none;}
+  .tools-row{flex-wrap:nowrap;}
   .hint{display:none;}
   .nav{display:none;}   /* sur téléphone, les doigts suffisent : un doigt tourne, deux doigts zooment et décalent */
 }
