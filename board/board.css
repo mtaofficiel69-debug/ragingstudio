@@ -682,3 +682,8 @@ body.imm-clean .hplan{display:none;}
 .tech .hud{position:absolute; left:10px; top:10px; display:flex; gap:5px; flex-wrap:wrap; font:600 10.5px/1 var(--font, inherit); font-variant-numeric:tabular-nums;}
 .tech .hud > *{padding:4px 6px; border-radius:5px; background:#14161cb3; color:#fff;} .tech .hud b{background:var(--accent);}
 .stage.playing .tech, .stage.final .tech{display:none !important;}
+/* la transition pendant la lecture (fondu, fondu au noir, flash) */
+.play-fx{position:absolute; inset:0; z-index:3; opacity:0; pointer-events:none;}
+.sw-hospital{background:linear-gradient(160deg, #F2F4F3 0 30%, #DCE6E3 30% 70%, #BFC8C7 70%);}
+.sw-metro{background:linear-gradient(160deg, #E9ECEE 0 25%, #1A1E25 25% 45%, #2E5A8C 45% 62%, #4A4E55 62%);}
+.sw-bar{background:linear-gradient(160deg, #2A2422 0 30%, #6E3A2E 30% 60%, #5A3A26 60%);}

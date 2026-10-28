@@ -56,7 +56,7 @@ function renderUI(){
             <div class="stage-area" id="stageArea">
               <div class="shot-head" id="shotHead"></div>
               <div class="stage-wrap" id="stageWrap">
-                <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="tech hidden" id="tech"><i class="safe sa"></i><i class="safe st"></i><i class="ctr"></i><i class="hz" id="techHz"></i><div class="hud" id="techHud"></div></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="hplan hidden" id="hplan"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
+                <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="tech hidden" id="tech"><i class="safe sa"></i><i class="safe st"></i><i class="ctr"></i><i class="hz" id="techHz"></i><div class="hud" id="techHud"></div></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="hplan hidden" id="hplan"></div><div class="play-fx" id="playFx"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
               </div>
               <div class="under" id="under"><div class="dock" id="nav"></div><div class="hint" id="hint"></div></div>
             </div>
@@ -158,6 +158,8 @@ function renderHead(){
       <span class="sh-no">${L('Plan', 'Shot')} ${S.i + 1}</span><span class="sh-of">${L('sur', 'of')} ${n}</span>
       ${inf.scene ? `<span class="sh-chip">${esc(L('Sc. ', 'Sc. ') + inf.scene)}</span>` : ''}
       <span class="sh-chip">${esc(shotLabel('size', inf.size))}</span>
+      ${(inf.time && inf.time !== 'day') ? `<span class="sh-chip">${icon(inf.time === 'night' ? 'moon' : 'sun')}${esc(slugOf(s))}</span>` : ''}
+      ${(inf.trans && inf.trans !== 'cut') ? `<span class="sh-chip">${esc(L(TRANS.find(x => x[0] === inf.trans)[1], TRANS.find(x => x[0] === inf.trans)[2]))}</span>` : ''}
       ${inf.move !== 'fix' ? `<span class="sh-chip mv">${icon('move')}${esc(shotLabel('move', inf.move))}${S.endEd ? ' · ' + L('cadre de fin', 'end frame') : ''}</span>` : ''}
       <span class="sh-auto" title="${esc(L('Ce cadre est le plan : tout ce que tu vois est gardé, pas besoin d’enregistrer.', 'This frame is the shot: everything you see is kept, no need to save.'))}">${icon('check')}</span>
     </div>
@@ -383,11 +385,11 @@ const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-
 
 const PANEL_HTML = {
   place(){
-    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
+    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'hospital', 'metro', 'bar', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
     const fl = SET_DEF[sh.set].floors ? lblId(L('Aller dans une pièce', 'Go to a room'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
     const gid = ['in', 'out', 'wide'];
     return ph('place', L('Le lieu', 'The place'), L('Les personnages s’y placent tout seuls.', 'Characters go to ready-made spots by themselves.'), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
-      `<div class="pb">${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+      `<div class="pb">${lbl(L('Le moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
   },
   chars(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
@@ -465,6 +467,8 @@ const PANEL_HTML = {
       `<div class="pb">${tipNow}<div class="angs moves">${tiles}</div>${end}
       ${lbl(L('Les personnages', 'Characters'))}<label class="ftog"><span>${L('Ceux qui marchent ou courent avancent pendant le plan', 'Walking or running characters move forward during the shot')}</span><input type="checkbox" data-act="walk" ${inf.walk ? 'checked' : ''}><i class="tg"></i></label>
       ${!walk ? `<p class="fly-note">${L('Donne la pose « Marche » ou « Course » à un personnage pour l’animer.', 'Give a character the “Walking” or “Running” pose to animate them.')}</p>` : ''}
+      ${lbl(L('L’entrée dans ce plan', 'How this shot begins'))}<div class="seg wide wrap">${TRANS.map(x => `<button class="${(inf.trans || 'cut') === x[0] ? 'on' : ''}" data-act="info" data-k="trans" data-v="${x[0]}">${esc(L(x[1], x[2]))}</button>`).join('')}</div>
+      <p class="fly-note">${L('Le cut est le plus courant. Le fondu enchaîné fait passer le temps ; le fondu au noir ferme une séquence.', 'The cut is the most common. A cross-fade shows time passing; a fade to black closes a sequence.')}</p>
       ${lbl(L('Durée du plan', 'Shot length'))}<div class="seg wide">${[1, 2, 3, 4, 5, 8].map(d => `<button class="${d === inf.dur ? 'on' : ''}" data-act="dur" data-v="${d}">${fmtTime(d)}</button>`).join('')}</div>
       <div class="pbtns"><button class="btn btn-sm btn-play" data-act="previewShot">${icon('play')}${L('Voir ce plan bouger', 'Watch this shot move')}</button></div></div>`;
   },
@@ -656,7 +660,8 @@ async function exportPdf(per){
   try{ jsPDF = await loadPdf(); }catch(e){ toast(L('Impossible de charger l’outil PDF : vérifie ta connexion.', 'Could not load the PDF tool: check your connection.'), 'warn'); return; }
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
   const W = 297, H = 210, M = 12, shots = S.doc.shots, pages = Math.ceil(shots.length / per);
-  const meta = s => [shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), Math.round(s.cam.lens) + ' mm', fmtTime(s.info.dur || 2)].filter(Boolean).join(' · ');
+  const tr = s => { const x = s.info.trans && s.info.trans !== 'cut' && TRANS.find(o => o[0] === s.info.trans); return x ? L(x[1], x[2]) : ''; };
+  const meta = s => [slugOf(s), tr(s), shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), Math.round(s.cam.lens) + ' mm', fmtTime(s.info.dur || 2)].filter(Boolean).join(' · ');
   const badge = (i, x, y) => {
     doc.setFillColor(23, 122, 79); doc.roundedRect(x + 2, y + 2, 9, 5.4, 1, 1, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255); doc.text(String(i + 1), x + 6.5, y + 5.8, { align:'center' });
@@ -728,14 +733,36 @@ function playBoard(only){
       document.querySelectorAll('.shot-card').forEach((c, j) => c.classList.toggle('now', j === i));
     }
     drawFrame(s, null, null, true, frameAt(s, t - starts[k]));
+    playFx(all, i, t - starts[k], k > 0 ? idx[k - 1] : -1);
     document.getElementById('playBar').style.width = (t / total * 100) + '%';
     requestAnimationFrame(step);
   };
   requestAnimationFrame(step); renderHint(); renderWarn();
 }
+/* la transition par-dessus l'image, pendant la lecture (une couleur, ou la dernière image du plan d'avant) */
+const _fxPrev = new Map();
+function lastFrameURL(i, w, h){
+  const s = S.doc.shots[i], key = s.id + JSON.stringify([s.cam, s.chars, s.info, w, h]);
+  if(!_fxPrev.has(key)){ if(_fxPrev.size > 8) _fxPrev.clear(); _fxPrev.set(key, offscreenURL(w, h, (W, H) => drawFrame(s, W, H, true, frameAt(s, s.info.dur || 2)), 0.85)); }
+  return _fxPrev.get(key);
+}
+function playFx(all, i, t, prevI){
+  const el = document.getElementById('playFx'); if(!el) return;
+  const f = fxAt(all, i, t);
+  if(!f || (f.prev && prevI < 0)){ el.style.opacity = 0; return; }
+  if(f.prev){ el.style.background = `center/cover url(${lastFrameURL(prevI, 640, 360)})`; }
+  else el.style.background = `rgb(${f.col.map(v => v * 255).join(',')})`;
+  el.style.opacity = clamp(f.a, 0, 1);
+}
+/* la ligne d'en-tête d'un plan, comme au scénario : INT. ou EXT., puis le moment */
+function slugOf(s){
+  const out = !!SET_DEF[s.set].sky && s.set !== 'taxi', T = TIMES[s.info.time] || TIMES.day;
+  return (out ? 'EXT.' : 'INT.') + ' ' + L(T.fr, T.en).toUpperCase();
+}
 function stopBoard(){
   if(!S.play) return;
   S.play = null;
+  const fx = document.getElementById('playFx'); if(fx) fx.style.opacity = 0;
   document.getElementById('stage').classList.remove('playing');
   document.querySelectorAll('.shot-card.now').forEach(c => c.classList.remove('now'));
   renderHint(); renderWarn(); requestRender();
@@ -795,12 +822,21 @@ async function exportVideoFrames(){
   const ow = R.canvas.width, oh = R.canvas.height, box = document.getElementById('recBox');
   S.rec = { cancel:false }; box.classList.remove('hidden');
   R.canvas.width = w; R.canvas.height = h;
+  const comp = document.createElement('canvas'); comp.width = w; comp.height = h; const cx = comp.getContext('2d'), prevImg = {};
   try{
     for(let f = 0; f < n; f++){
       if(S.rec.cancel || fail) break;
       const t = f / fps; let i = 0; while(i + 1 < shots.length && starts[i + 1] <= t) i++;
+      const fx = fxAt(shots, i, t - starts[i]);
+      if(fx && fx.prev && !prevImg[i]){   // la dernière image du plan d'avant, pour le fondu enchaîné
+        drawFrame(shots[i - 1], w, h, true, frameAt(shots[i - 1], shots[i - 1].info.dur || 2));
+        const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(R.canvas, 0, 0); prevImg[i] = c; }
       drawFrame(shots[i], w, h, true, frameAt(shots[i], t - starts[i]));
-      const vf = new VideoFrame(R.canvas, { timestamp:Math.round(f * 1e6 / fps), duration:Math.round(1e6 / fps) });
+      let src = R.canvas;
+      if(fx){ cx.globalAlpha = 1; cx.drawImage(R.canvas, 0, 0); cx.globalAlpha = clamp(fx.a, 0, 1);
+        if(fx.prev) cx.drawImage(prevImg[i], 0, 0); else { cx.fillStyle = `rgb(${fx.col.map(v => v * 255).join(',')})`; cx.fillRect(0, 0, w, h); }
+        cx.globalAlpha = 1; src = comp; }
+      const vf = new VideoFrame(src, { timestamp:Math.round(f * 1e6 / fps), duration:Math.round(1e6 / fps) });
       enc.encode(vf, { keyFrame:f % (fps * 2) === 0 }); vf.close();
       if(f % 6 === 0 || enc.encodeQueueSize > 6){
         box.innerHTML = `<span class="rec-dot"></span>${L('Animatique', 'Animatic')} · ${Math.round(f / n * 100)} %<button class="btn btn-sm" data-act="cancelRec">${L('Annuler', 'Cancel')}</button>`;

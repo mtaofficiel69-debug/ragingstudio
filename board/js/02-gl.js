@@ -53,6 +53,8 @@ function geo(){ return { p:[], n:[], c:[], e:[], m:[] }; }
    0 objet, meuble · 1 architecture (sols, murs) · 2 feuillage · 3 métal (armes) · 4 carrosserie */
 let MAT = 0;
 const isGreen = C => C[1] > C[0] * 1.08 && C[1] > C[2] * 1.02;
+/* une ampoule, un abat-jour, la tête d'un réverbère : petit, clair et chaud. La nuit, il reste allumé */
+const isLight = (C, size) => size < 0.62 && C[0] > 0.9 && C[1] > 0.78 && C[2] < 0.82 && C[0] - C[2] > 0.12;
 /* EDGE_ON : les arêtes de cette forme seront-elles tracées (meubles, murs) ? Pas pour les formes rondes. */
 let EDGE_ON = 1;
 function tri(g, a, b, c, col){
@@ -71,6 +73,7 @@ function box(g, x, y, z, w, h, d, col, ry){
   if(COLL && Math.max(w, h, d) >= 0.4 && h >= 0.03 && !(h < 0.25 && w > 2 && d > 2)) collOf(g).b.push([x, y, z, w / 2, h / 2, d / 2, ry || 0]);
   const e0 = EDGE_ON, m0 = MAT; if(Math.min(w, h, d) < 0.012) EDGE_ON = 0;   // les bandes peintes au sol : pas de trait
   if(MAT === 0 && ((h < 0.25 && w > 2 && d > 2) || Math.max(w, h, d) > 3.2)) MAT = 1;   // une dalle, un grand volume : de l'architecture
+  if(MAT === 0 && isLight(typeof col === 'string' ? hexRGB(col) : col, Math.max(w, h, d))) MAT = 5;
   const hx = w/2, hy = h/2, hz = d/2, c = Math.cos(ry || 0), s = Math.sin(ry || 0);
   const P = (a, b, e) => [x + a*c + e*s, y + b, z - a*s + e*c];
   const v = [P(-hx,-hy,-hz), P(hx,-hy,-hz), P(hx,hy,-hz), P(-hx,hy,-hz), P(-hx,-hy,hz), P(hx,-hy,hz), P(hx,hy,hz), P(-hx,hy,hz)];
@@ -102,6 +105,7 @@ function cyl(g, x, y, z, r1, r2, len, col, seg, axis){
     collOf(g).b.push(axis === 'x' ? [x + len / 2, y, z, len / 2, r, r, 0] : axis === 'z' ? [x, y, z + len / 2, r, r, len / 2, 0] : [x, y - len / 2, z, r, len / 2, r, 0]); }
   seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON, m0 = MAT; EDGE_ON = 0;
   if(MAT === 0 && isGreen(C)) MAT = 2;
+  if(MAT === 0 && isLight(C, Math.max(2 * Math.max(r1, r2), len))) MAT = 5;
   const pt = (r, t, k) => { const a = Math.cos(t)*r, b = Math.sin(t)*r;
     if(axis === 'x') return [x + k, y + a, z + b];
     if(axis === 'z') return [x + a, y + b, z + k];
@@ -118,6 +122,7 @@ function ball(g, x, y, z, rx, ry, rz, col, seg){
   seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const st = Math.max(4, Math.round(seg * .7)); const C = typeof col === 'string' ? hexRGB(col) : col, m0 = MAT, e0 = EDGE_ON; EDGE_ON = 0;
   const P = (i, j) => { const th = i / seg * Math.PI * 2, ph = j / st * Math.PI; return [x + Math.sin(ph)*Math.cos(th)*rx, y + Math.cos(ph)*ry, z + Math.sin(ph)*Math.sin(th)*rz]; };
   if(MAT === 0 && isGreen(C)) MAT = 2;
+  if(MAT === 0 && isLight(C, 2 * Math.max(rx, ry, rz))) MAT = 5;
   for(let j = 0; j < st; j++) for(let i = 0; i < seg; i++){
     const a = P(i, j), b = P(i + 1, j), c = P(i + 1, j + 1), d = P(i, j + 1);
     if(j === 0) tri(g, a, c, d, C); else if(j === st - 1) tri(g, a, b, c, C); else quad(g, a, b, c, d, C);
@@ -159,6 +164,7 @@ const GL = {
       uniform vec3 uL; uniform float uFlat; uniform float uA; uniform vec3 uTint; uniform float uTintK;
       uniform vec3 uEye; uniform vec3 uT[6]; uniform float uNT; uniform float uX; uniform float uChar;
       uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass; uniform float uLine; uniform float uFloor;
+      uniform vec3 uGrade; uniform vec3 uGradeC;
       varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2; varying float vM;
       /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
       bool inTube(vec3 t){ vec3 d = t - uEye; float k = dot(vW - uEye, d) / dot(d, d); return k > 0.0 && k < 0.9 && distance(vW, uEye + d * k) < 0.42; }
@@ -196,7 +202,7 @@ const GL = {
           // le décor reste un peu en retrait (couleurs un peu plus douces, un voile très léger au loin) : les personnages ressortent
           // chaque matière a sa lumière : l'architecture reste en retrait, les meubles et objets ressortent un peu,
           // le feuillage vit, le métal brille, les carrosseries ont un vernis (quelques calculs, sans texture ni ombre)
-          float mt = floor(vM + 0.5), ls = dot(c, vec3(0.299, 0.587, 0.114));
+          float mt = floor(vM + 0.5), ls = dot(c, vec3(0.299, 0.587, 0.114)), night = clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0);
           vec3 hv = normalize(uL + normalize(uEye - vW)); float nh = max(dot(n, hv), 0.0);
           if(mt < 0.5){ c = mix(c, vec3(ls), 0.14); c += vec3(0.07) * pow(nh, 24.0); }                          // objets, meubles
           else if(mt < 1.5){ c = mix(c, vec3(ls), 0.32); c = mix(c, vec3(0.5, 0.51, 0.53), 0.09); }             // architecture
@@ -205,9 +211,15 @@ const GL = {
             c = base * (amb * 1.08 + 0.62 * w * vec3(1.02, 1.04, 0.86)) * (1.0 + 0.1 * v); c = mix(vec3(ls), c, 1.12);
           }
           else if(mt < 3.5){ c = base * (0.45 + 0.35 * d) + vec3(0.6) * pow(nh, 40.0) + vec3(0.16) * pow(1.0 - f, 3.0); }   // métal
-          else { c = mix(c, vec3(ls), 0.06); c += vec3(0.42) * pow(nh, 60.0); c = mix(c, vec3(0.78, 0.84, 0.9) * (0.65 + 0.35 * n.y), pow(1.0 - f, 4.0) * 0.32); }   // carrosserie
+          else if(mt < 4.5){ c = mix(c, vec3(ls), 0.06); c += vec3(0.42) * pow(nh, 60.0); c = mix(c, vec3(0.78, 0.84, 0.9) * (0.65 + 0.35 * n.y), pow(1.0 - f, 4.0) * 0.32); }   // carrosserie
+          else if(mt < 5.5) c = mix(c, base * 1.18 + vec3(0.08, 0.06, 0.0), night);                           // une lampe : allumée la nuit
+          else if(night > 0.05){                                                                                // une fenêtre d'immeuble : la nuit, certaines sont éclairées
+            float r = fract(sin(dot(floor(vW.xz * 0.9) + floor(vW.y * 0.7) * 7.0, vec2(12.9898, 78.233))) * 43758.5);
+            if(r > 0.5) c = mix(c, vec3(1.0, 0.82, 0.52) * (0.85 + 0.3 * r), night);
+          }
           if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
         }
+        if(uChar > 0.5) c *= uGradeC; else if(floor(vM + 0.5) < 4.5) c *= uGrade; else c *= mix(uGrade, vec3(1.0), clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0));   // le moment de la journée : jour, fin de journée, nuit (les personnages restent lisibles, les lampes et les fenêtres s'allument)
         float a = uA;
         if(uGlass > 0.5){ c = mix(vC, vec3(0.92, 0.96, 1.0), pow(1.0 - f, 2.0) * 0.6); a = uA + pow(1.0 - f, 3.0) * 0.35; }
         if(uFog.x < 300.0) c = mix(c, uFogC, clamp((distance(vW, uEye) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0) * 0.82);   // la brume au loin (dehors)
@@ -223,7 +235,7 @@ const GL = {
     const p = prog(vs, fs); if(!p) return false;
     gl.useProgram(p); this.prog = p;
     ['aP', 'aN', 'aC', 'aS', 'aM'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
-    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine', 'uFloor'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
+    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine', 'uFloor', 'uGrade', 'uGradeC'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // le ciel et le vignettage : un seul triangle qui couvre l'écran
@@ -248,21 +260,21 @@ const GL = {
         uniform mat4 uVP; uniform vec3 uRight; uniform vec3 uEye;
         varying vec2 vUV; varying vec4 vT; varying float vDist; varying float vY;
         void main(){ vec3 p = aCen + uRight * aCor.x + vec3(0.0, aCor.y, 0.0); vUV = aUV; vT = aTint; vDist = distance(p, uEye); vY = aCor.y; gl_Position = uVP * vec4(p, 1.0); }`,
-      `precision mediump float; uniform sampler2D uTex; uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW;
+      `precision mediump float; uniform sampler2D uTex; uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform vec3 uGrade;
         varying vec2 vUV; varying vec4 vT; varying float vDist; varying float vY;
         void main(){
           vec4 t = texture2D(uTex, vUV); if(t.a < 0.5) discard;
           vec3 c = vec3(t.r);
           c = mix(c, c * vT.rgb * 1.5, t.g);                                           // les habits, à la couleur de chacun
           c = mix(c, c * mix(vec3(1.0, 0.86, 0.74), vec3(0.62, 0.45, 0.34), vT.a), t.b);  // la peau
-          c *= 0.78 + 0.22 * clamp(vY / 1.2, 0.0, 1.0);
+          c *= (0.78 + 0.22 * clamp(vY / 1.2, 0.0, 1.0)) * uGrade;
           c = mix(c, uFogC, clamp((vDist - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0) * 0.82);
           if(uBW > 0.5){ float l = dot(c, vec3(0.299, 0.587, 0.114)); c = vec3(l * 0.94); }
           gl_FragColor = vec4(c, 1.0);
         }`);
     if(this.crowd){
       this.crLoc = {}; ['aCen', 'aCor', 'aUV', 'aTint'].forEach(k => this.crLoc[k] = gl.getAttribLocation(this.crowd, k));
-      ['uVP', 'uRight', 'uEye', 'uTex', 'uFogC', 'uFog', 'uBW'].forEach(k => this.crLoc[k] = gl.getUniformLocation(this.crowd, k));
+      ['uVP', 'uRight', 'uEye', 'uTex', 'uFogC', 'uFog', 'uBW', 'uGrade'].forEach(k => this.crLoc[k] = gl.getUniformLocation(this.crowd, k));
       this.crTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.crTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, crowdAtlas());
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -310,6 +322,7 @@ const GL = {
     gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix4fv(L.uVP, false, vp);
     gl.uniform3f(L.uFogC, E.fogC[0], E.fogC[1], E.fogC[2]); gl.uniform2f(L.uFog, E.fog[0], E.fog[1]); gl.uniform1f(L.uBW, E.bw ? 1 : 0);
+    const g = E.grade || [1, 1, 1], gc = E.gradeC || [1, 1, 1]; gl.uniform3f(L.uGrade, g[0], g[1], g[2]); gl.uniform3f(L.uGradeC, gc[0], gc[1], gc[2]);
   },
   /* le ciel en dégradé (mode 0), ou le vignettage par-dessus l'image (mode 1) */
   drawSky(vp, top, hor, low, mode, aspect){
@@ -335,6 +348,7 @@ const GL = {
     this.off(); gl.useProgram(this.crowd);
     gl.uniformMatrix4fv(K.uVP, false, vp); gl.uniform3f(K.uRight, right[0], right[1], right[2]); gl.uniform3f(K.uEye, eye[0], eye[1], eye[2]);
     const E = this.env; gl.uniform3f(K.uFogC, E.fogC[0], E.fogC[1], E.fogC[2]); gl.uniform2f(K.uFog, E.fog[0], E.fog[1]); gl.uniform1f(K.uBW, E.bw ? 1 : 0);
+    const g = E.grade || [1, 1, 1]; gl.uniform3f(K.uGrade, g[0], g[1], g[2]);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.crTex); gl.uniform1i(K.uTex, 0);
     gl.disable(gl.CULL_FACE);
     for(const m of list){
