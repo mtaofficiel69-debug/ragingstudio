@@ -183,7 +183,8 @@ function renderPlan(){
   const s = shot(), d = SET_DEF[s.set], C = SET_COLL[s.set];
   if(!d.floors || !d.levels || !C || S.final){ el.classList.add('hidden'); el.innerHTML = ''; return; }
   el.classList.remove('hidden');
-  const open = lsGet('raging3d_plan') !== '0', lv = S.planLevel != null ? S.planLevel : levelOfY(d, s.cam.ty);
+  const open = lsGet('raging3d_plan') === '1',   // replié par défaut : une petite pastille, l'image reste libre
+   lv = S.planLevel != null ? S.planLevel : levelOfY(d, s.cam.ty);
   const names = [L('Rez-de-chaussée', 'Ground floor'), L('1er étage', '1st floor'), L('2e étage', '2nd floor'), L('Grenier', 'Attic')];
   const short = [L('RDC', 'GF'), L('1er', '1st'), L('2e', '2nd'), L('Grenier', 'Attic')];
   const garden = d.floors.findIndex(f => f[2] < 0);
@@ -863,7 +864,7 @@ const ACT = {
   stageShot:b => { S.view = 'stage'; goShot(+b.dataset.i); renderUI(); },
   stageView:() => { S.view = 'stage'; renderUI(); },
   sheetView:() => { S.view = 'sheet'; renderUI(); },
-  addShot, addReverse, dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '0' ? '1' : '0'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
+  addShot, addReverse, dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '1' ? '0' : '1'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
   addShotEnd:() => { goShot(S.doc.shots.length - 1); addShot(); },
   moveShot:b => moveShot(+b.dataset.d),
   info:b => { const k = b.dataset.k, v = b.dataset.v; if(k === 'move' && v !== 'end') endEdit(); edit(() => { shot().info[k] = v; }); renderStrip(); },
@@ -896,6 +897,7 @@ function bindEvents(){
     // on clique dans une pièce : la caméra s'y pose, tournée vers l'endroit cliqué
     const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) * vb.width / r.width, y = (e.clientY - r.top) * vb.height / r.height;
     const wx = clamp(PLAN.x0 + (x - PLAN.pad) / PLAN.k, -4.8, 4.8), wz = clamp(PLAN.z0 + (y - PLAN.pad) / PLAN.k, -3.8, 3.8); goSpot(+svg.dataset.l, wx, wz);
+    lsSet('raging3d_plan', '0');   // la pièce choisie, le plan se replie et laisse voir l'image
     renderHead(); renderPanel();
   });
   document.addEventListener('click', e => {
