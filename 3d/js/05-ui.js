@@ -34,7 +34,7 @@ function renderUI(){
         <section class="work">
           <div class="tools" id="tools"></div>
           <div class="stage-wrap" id="stageWrap">
-            <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="shot-no" id="shotNo"></div><div class="hint" id="hint"></div><div class="rec hidden" id="recBox"></div></div>
+            <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="shot-no" id="shotNo"></div><div class="hint" id="hint"></div><div class="nav" id="nav"></div><div class="rec hidden" id="recBox"></div></div>
           </div>
           <div class="strip" id="strip"></div>
         </section>
@@ -51,7 +51,21 @@ function renderUI(){
     `<button data-act="exportPdf">${icon('new')}<span><b>${L('Planche de storyboard (PDF)', 'Storyboard sheets (PDF)')}</b><small>${L('Tous les plans, 6 par page, avec leurs infos : prêt à imprimer ou à envoyer', 'Every shot, 6 per page, with its details: ready to print or send')}</small></span></button>
      <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
      <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, chacun pendant sa durée', 'The shots one after another, each for its length')}</small></span></button>`;
-  renderSide(); renderTools(); renderStrip(); renderShotPanel(); renderHint(); fitStage();
+  renderSide(); renderTools(); renderStrip(); renderShotPanel(); renderHint(); renderNav(); fitStage();
+}
+/* le pavé de déplacement, en bas à droite de l'image : on maintient un bouton pour bouger */
+function renderNav(){
+  const el = document.getElementById('nav'); if(!el) return;
+  const hd = document.getElementById('handles'); if(hd) hd.innerHTML = '';   // refaites dans la bonne langue au prochain dessin
+  const b = (k, t, svg) => `<button data-nav="${k}" title="${esc(t)}" aria-label="${esc(t)}"><svg viewBox="0 0 16 16" aria-hidden="true">${svg}</svg></button>`;
+  const ar = 'M8 3.5 12.5 9H3.5Z';
+  el.innerHTML = `<div class="pad">${b('fwd', L('Avancer (Z ou W)', 'Forward (W or Z)'), `<path d="${ar}"/>`)}
+      ${b('left', L('À gauche (Q ou A)', 'Left (A or Q)'), `<path d="${ar}" transform="rotate(-90 8 8)"/>`)}
+      ${b('right', L('À droite (D)', 'Right (D)'), `<path d="${ar}" transform="rotate(90 8 8)"/>`)}
+      ${b('back', L('Reculer (S)', 'Back (S)'), `<path d="${ar}" transform="rotate(180 8 8)"/>`)}</div>
+    <div class="col">${b('turnL', L('Tourner autour, à gauche', 'Orbit left'), '<path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2" fill="none"/><path d="M12 1.8v3.4H8.6" fill="none"/>')}${b('turnR', L('Tourner autour, à droite', 'Orbit right'), '<path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" fill="none"/><path d="M4 1.8v3.4h3.4" fill="none"/>')}</div>
+    <div class="col">${b('up', L('Monter (R)', 'Up (R)'), '<path d="M8 2v12M4.5 5.5 8 2l3.5 3.5" fill="none"/>')}${b('down', L('Descendre (F)', 'Down (F)'), '<path d="M8 2v12M4.5 10.5 8 14l3.5-3.5" fill="none"/>')}</div>
+    <div class="col">${b('in', L('Zoomer', 'Zoom in'), '<path d="M8 3.5v9M3.5 8h9" fill="none"/>')}${b('out', L('Dézoomer', 'Zoom out'), '<path d="M3.5 8h9" fill="none"/>')}</div>`;
 }
 
 /* ---------- À gauche : lieu, personnages, pose, partie du corps ---------- */
@@ -159,8 +173,9 @@ function renderHint(){
   const el = document.getElementById('hint'); if(!el) return;
   let t;
   if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer le personnage', 'drag to move the character') : L('glisse pour bouger', 'drag to move'));
+  else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer le personnage sur le sol', 'Drag to move the character on the floor') : L('Glisse à gauche ou à droite pour le faire tourner', 'Drag left or right to turn them');
   else if(S.sel) t = L('Glisse la partie verte pour la bouger · Clique dans le vide pour désélectionner', 'Drag the green part to move it · Click empty space to deselect');
-  else t = L('Choisis une valeur de plan en haut · ou glisse dans le vide pour tourner la caméra · molette pour zoomer', 'Pick a shot size above · or drag empty space to orbit the camera · wheel to zoom');
+  else t = L('Losange vert : maintiens-le pour déplacer un personnage · Glisse dans le vide : tourner · Clic droit + glisser : se décaler · Molette : avancer · Double-clic : viser', 'Green diamond: hold it to move a character · Drag empty space: orbit · Right-click + drag: pan · Wheel: move in · Double-click: aim');
   el.textContent = t;
 }
 
@@ -294,12 +309,14 @@ function showHelp(){
     <ol class="how">
       <li><b>${L('Installe la scène', 'Set the scene')}</b>${L('À gauche : le lieu, un ou deux personnages, une pose rapide.', 'On the left: the place, one or two characters, a quick pose.')}</li>
       <li><b>${L('Cadre en un clic', 'Frame in one click')}</b>${L('Au-dessus de l’image : choisis la valeur (gros plan, plan moyen…), l’angle et la focale. La caméra se place toute seule.', 'Above the picture: pick the size (close-up, medium shot…), the angle and the lens. The camera places itself.')}</li>
-      <li><b>${L('Ajuste si besoin', 'Adjust if needed')}</b>${L('Clique sur une partie du corps et glisse. Glisse dans le vide pour tourner la caméra, molette pour zoomer, Maj + glisser pour décaler.', 'Click a body part and drag. Drag empty space to orbit, wheel to zoom, Shift + drag to pan.')}</li>
+      <li><b>${L('Place tes personnages', 'Place your characters')}</b>${L('Maintiens le losange vert au-dessus d’une tête pour déplacer le personnage ; la petite flèche à côté le fait tourner. Le losange n’apparaît jamais dans les exports.', 'Hold the green diamond above a head to move the character; the small arrow next to it turns them. The diamond never shows in exports.')}</li>
+      <li><b>${L('Ajuste la pose', 'Adjust the pose')}</b>${L('Clique sur une partie du corps et glisse. Si un meuble cache un personnage, il devient transparent pendant que tu travailles.', 'Click a body part and drag. If furniture hides a character, it turns see-through while you work.')}</li>
+      <li><b>${L('Promène-toi dans la scène', 'Move around the scene')}</b>${L('Glisse dans le vide pour tourner autour · clic droit (ou Maj) + glisser pour te décaler · molette pour avancer vers la souris · double-clic pour viser un endroit ou recadrer un personnage · ZQSD ou WASD pour marcher, R et F pour monter et descendre, ou le pavé en bas à droite de l’image.', 'Drag empty space to orbit · right-click (or Shift) + drag to pan · wheel to move toward the mouse · double-click to aim at a spot or reframe a character · WASD or ZQSD to walk, R and F to go up and down, or the pad at the bottom right of the picture.')}</li>
       <li><b>${L('Décris le plan', 'Describe the shot')}</b>${L('À droite : ce qui se passe, le mouvement de caméra, la durée.', 'On the right: what happens, the camera move, the length.')}</li>
       <li><b>${L('Plan suivant', 'Next shot')}</b>${L('« Nouveau plan » reprend le plan actuel : tu changes juste ce qui bouge. Avec deux personnages, « Contrechamp » fait le plan inverse.', '“New shot” starts from the current one: you only change what moves. With two characters, “Reverse shot” makes the opposite angle.')}</li>
       <li><b>${L('Exporte', 'Export')}</b>${L('La planche en PDF, l’image d’un plan, ou l’animatique en vidéo.', 'The board as a PDF, the image of a shot, or the animatic as a video.')}</li>
     </ol>
-    <p class="keys">${L('Raccourcis : ← → plan précédent ou suivant · N nouveau plan · Ctrl+Z annuler · Échap désélectionner', 'Shortcuts: ← → previous or next shot · N new shot · Ctrl+Z undo · Esc deselect')}</p></div>`;
+    <p class="keys">${L('Raccourcis : ← → plan précédent ou suivant · ZQSD / WASD et ↑ ↓ se déplacer · R F monter, descendre · N nouveau plan · Ctrl+Z annuler · Échap désélectionner', 'Shortcuts: ← → previous or next shot · WASD / ZQSD and ↑ ↓ move · R F up, down · N new shot · Ctrl+Z undo · Esc deselect')}</p></div>`;
   document.body.appendChild(bd);
   bd.addEventListener('click', e => { if(e.target === bd || e.target.closest('[data-act="closeModal"]')) bd.remove(); });
 }
@@ -377,6 +394,20 @@ function bindEvents(){
   c.addEventListener('pointerdown', onDown); c.addEventListener('pointermove', onMove); c.addEventListener('pointerup', onUp); c.addEventListener('pointercancel', onUp);
   c.addEventListener('pointerleave', () => { if(!DRAG.mode && S.hover){ S.hover = null; requestRender(); renderHint(); } });
   c.addEventListener('wheel', onWheel, { passive:false });
+  c.addEventListener('dblclick', onDblClick);
+  // la poignée au-dessus des têtes
+  const hd = document.getElementById('handles');
+  hd.addEventListener('pointerdown', onHandleDown);
+  document.addEventListener('pointermove', onHandleMove);
+  document.addEventListener('pointerup', () => { if(HDRAG.c >= 0){ onHandleUp(); renderHint(); } });
+  document.addEventListener('pointercancel', onHandleUp);
+  // le pavé de déplacement : on maintient
+  const nav = document.getElementById('nav');
+  nav.addEventListener('pointerdown', e => { const b = e.target.closest('[data-nav]'); if(!b) return; e.preventDefault(); b.setPointerCapture(e.pointerId); NAV.held = b.dataset.nav; b.classList.add('on'); navStart(); });
+  const navUp = () => { if(!NAV.held) return; nav.querySelectorAll('.on').forEach(x => x.classList.remove('on')); NAV.held = null; navEnd(); };
+  nav.addEventListener('pointerup', navUp); nav.addEventListener('pointercancel', navUp); nav.addEventListener('lostpointercapture', navUp);
+  document.addEventListener('keyup', e => { const k = NAV_KEYS[e.key.toLowerCase()]; if(k && NAV.keys.delete(k)) navEnd(); });
+  window.addEventListener('blur', () => { if(NAV.keys.size){ NAV.keys.clear(); navEnd(); } });
   c.addEventListener('contextmenu', e => e.preventDefault());
   window.addEventListener('resize', fitStage);
   document.addEventListener('keydown', e => {
@@ -386,6 +417,8 @@ function bindEvents(){
     if(mod && e.key.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if(mod && e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); return; }
     if(mod) return;
+    const nk = NAV_KEYS[e.key.toLowerCase()];
+    if(nk){ e.preventDefault(); if(!NAV.keys.has(nk)){ NAV.keys.add(nk); navStart(); } return; }
     if(e.key === 'ArrowRight'){ e.preventDefault(); goShot(S.i + 1); }
     else if(e.key === 'ArrowLeft'){ e.preventDefault(); goShot(S.i - 1); }
     else if(e.key.toLowerCase() === 'n'){ e.preventDefault(); addShot(); }
