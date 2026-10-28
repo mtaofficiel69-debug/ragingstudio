@@ -64,6 +64,7 @@ function icon(name, cls){
     frame:'<path d="M1.5 5V2.5H4M12 2.5h2.5V5M14.5 11v2.5H12M4 13.5H1.5V11"/><circle cx="8" cy="6.4" r="1.7"/><path d="M5 12c.3-2 1.4-3.2 3-3.2s2.7 1.2 3 3.2"/>',
     move:'<path d="M2 8h10.5M9.5 5l3 3-3 3"/><path d="M2 4.2h4M2 11.8h4" opacity=".6"/>',
     car:'<path d="M2 10.5V8.4l1.4-3.2c.2-.5.7-.8 1.2-.8h6.8c.5 0 1 .3 1.2.8L14 8.4v2.1"/><path d="M1.5 10.5h13v2h-13z"/><circle cx="4.6" cy="12.6" r=".9"/><circle cx="11.4" cy="12.6" r=".9"/><path d="M3.6 8.2h8.8"/>',
+    police:'<path d="M2 11V9l1.4-3c.2-.5.7-.8 1.2-.8h6.8c.5 0 1 .3 1.2.8L14 9v2"/><path d="M1.5 11h13v1.8h-13z"/><circle cx="4.6" cy="12.9" r=".8"/><circle cx="11.4" cy="12.9" r=".8"/><path d="M6.2 5.2V3.6h3.6v1.6M8 2.2v1.4"/>',
     text:'<path d="M2.5 3.5h11M2.5 6.5h11M2.5 9.5h7.5M2.5 12.5h5"/>',
     contrast:'<circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" stroke="none"/>',
     moon:'<path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/>',

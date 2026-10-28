@@ -275,7 +275,7 @@ const POSES = [
   { id:'oneKnee', fr:'Un genou à terre', en:'One knee down', g:'seat', y:-0.39, j:{ thighL:[0,  4,  0], shinL:[96], footL:[40], thighR:[88,  4,  0], shinR:[88], footR:[-5], armL:[0,  -14,  50], foreL:[0,  76], handL:[-1,  0], armR:[32,  -15,  -15], foreR:[2,  21], handR:[0,  0] } },
   { id:'handshake', fr:'Serrer la main', en:'Handshake', g:'gest', y:0, j:{ armR:[34,  -15,  0], foreR:[18,  -13], handR:[0,  0] } },
   { id:'hug', fr:'Prendre dans ses bras', en:'Hugging', g:'gest', y:0, j:{ head:[0,  18,  4], spine:[6,  0,  0], armL:[46,  -15,  0], foreL:[82,  -4], handL:[0,  0], armR:[50,  -15,  8], foreR:[59,  9], handR:[0,  0] } },
-  { id:'drink', fr:'Boire', en:'Drinking', g:'gest', prop:'glass', y:0, j:{ head:[-16, 0, 0], armR:[42, -15, 56], foreR:[130, -25], handR:[-67, -30] } },
+  { id:'drink', fr:'Boire', en:'Drinking', g:'gest', prop:'glass', y:0, j:{ head:[-14, 0, 0], armR:[73, 6, -11], foreR:[122, 47], handR:[2, -30] } },
   { id:'shout', fr:'Crier (mains en porte-voix)', en:'Shouting', g:'gest', y:0, j:{ head:[-14,  0,  0], chest:[-4,  0,  0], armL:[92,  28,  0], foreL:[132,  -49], handL:[-1,  0], armR:[92,  28,  0], foreR:[132,  49], handR:[-1,  0] } },
   { id:'readPhone', fr:'Regarder son téléphone', en:'Looking at the phone', g:'gest', y:0, j:{ head:[32,  0,  0], armL:[1,  2,  30], foreL:[93,  -60], handL:[0,  0], armR:[-2,  -10,  -7], foreR:[90,  30], handR:[15,  -30] } },
   { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[0,  -13,  25], foreL:[0,  79], handL:[-1,  0], armR:[0,  -13,  -25], foreR:[0,  -79], handR:[-1,  0] } },
@@ -1406,6 +1406,19 @@ function camLook(e, t, lens){
    Dans le repère de la main, les doigts vont vers le bas (-y) : le canon prolonge la main,
    la crosse descend dans la paume. */
 const PROPS = [['gun', 'Pistolet', 'Handgun'], ['phone', 'Téléphone', 'Phone'], ['glass', 'Verre d’eau', 'Glass of water']];
+/* tourner une partie d'une forme (à partir du sommet « from ») pour que son axe x devienne la direction u, puis la poser en c */
+function alignX(g, from, u, c){
+  const l = Math.hypot(...u), a = u.map(v => v / l), k = [0, -a[2], a[1]], s = Math.hypot(...k), co = a[0];   // de x vers a : axe k, angle (cos co, sin s)
+  const K = s < 1e-9 ? [0, 0, 1] : k.map(v => v / s), t = 1 - co;
+  const R = [[co + K[0] * K[0] * t, K[0] * K[1] * t - K[2] * s, K[0] * K[2] * t + K[1] * s],
+             [K[1] * K[0] * t + K[2] * s, co + K[1] * K[1] * t, K[1] * K[2] * t - K[0] * s],
+             [K[2] * K[0] * t - K[1] * s, K[2] * K[1] * t + K[0] * s, co + K[2] * K[2] * t]];
+  const rot = v => [R[0][0] * v[0] + R[0][1] * v[1] + R[0][2] * v[2], R[1][0] * v[0] + R[1][1] * v[1] + R[1][2] * v[2], R[2][0] * v[0] + R[2][1] * v[1] + R[2][2] * v[2]];
+  for(let i = from; i < g.p.length; i += 3){
+    const p = rot([g.p[i], g.p[i + 1], g.p[i + 2]]), n = rot([g.n[i], g.n[i + 1], g.n[i + 2]]);
+    g.p[i] = p[0] + c[0]; g.p[i + 1] = p[1] + c[1]; g.p[i + 2] = p[2] + c[2]; g.n[i] = n[0]; g.n[i + 1] = n[1]; g.n[i + 2] = n[2];
+  }
+}
 function propGeo(id){
   const g = geo(), K = '#23252B', Kl = '#3A3D44';
   if(id === 'gun'){
@@ -1417,22 +1430,27 @@ function propGeo(id){
     box(g, 0, -0.085, 0.03, 0.07, 0.14, 0.012, '#1E2026');
     box(g, 0, -0.085, 0.0365, 0.062, 0.128, 0.002, '#2E3846');
   } else if(id === 'glass'){
-    // un verre d'eau tenu dans la paume : le verre (clair), l'eau (bleutée), le fond épais
-    cyl(g, -0.06, -0.072, 0.048, 0.036, 0.036, 0.12, '#DDE7EE', 12, 'x');
-    cyl(g, -0.058, -0.072, 0.048, 0.031, 0.031, 0.08, '#8EC3E0', 12, 'x');
-    cyl(g, -0.064, -0.072, 0.048, 0.037, 0.037, 0.012, '#C7D3DC', 12, 'x');
+    // un verre d'eau tenu dans la main, les doigts autour : le verre (clair), l'eau (bleutée), le fond épais.
+    // Il est fait couché le long de x, puis tourné pour que son axe suive U (dans le repère de la main) et centré en C :
+    // dans la pose « Boire », le bord touche les lèvres et le verre penche vers la bouche.
+    const st = g.p.length, U = [-0.7885, -0.2797, 0.5478], C = [-0.0157, -0.1176, 0.055];
+    cyl(g, -0.06, 0, 0, 0.036, 0.036, 0.12, '#DDE7EE', 12, 'x');
+    cyl(g, -0.058, 0, 0, 0.031, 0.031, 0.08, '#8EC3E0', 12, 'x');
+    cyl(g, -0.064, 0, 0, 0.037, 0.037, 0.012, '#C7D3DC', 12, 'x');
+    alignX(g, st, U, C);
   }
   return g;
 }
 
 /* ---------- Les véhicules qu'on pose où l'on veut (la moto) ----------
    Repère du véhicule : il regarde vers +z ; la selle du pilote est en z = -0.2, celle du passager en -0.55. */
-const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['heli', 'Hélicoptère', 'Helicopter'], ['plane', 'Avion', 'Plane']];
+const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['car', 'Voiture', 'Car'], ['police', 'Voiture de police', 'Police car'], ['heli', 'Hélicoptère', 'Helicopter'], ['plane', 'Avion', 'Plane']];
 const MOTO_COLS = ['#B4232C', '#24262B', '#3D5A80', '#E8B923'];
 function vehicleGeo(kind, col, glass){
   const g = geo(), K = '#1E2025', M = '#9AA0A8', C = col || MOTO_COLS[0];
   if(kind === 'heli') return heliGeo(col, glass);
   if(kind === 'plane') return planeGeo(col, glass);
+  if(kind === 'car' || kind === 'police') return carGeo(col, glass, kind === 'police');
   if(kind === 'moto'){
     [0.7, -0.72].forEach(z => { cyl(g, -0.06, 0.31, z, 0.31, 0.31, 0.12, '#17181B', 16, 'x'); cyl(g, -0.065, 0.31, z, 0.13, 0.13, 0.13, M, 10, 'x'); });
     prism(g, [[0.45, 0.78], [0.42, 0.98], [0.05, 1.0], [-0.02, 0.8]], -0.15, 0.15, C);                 // le réservoir
@@ -1537,9 +1555,60 @@ const PLANE_SHOTS = [
   ['helice', 'L’hélice en gros plan', 'Close-up on the propeller', [1.1, 1.55, 4.6], [0, 1.15, 2.4], 35, 'gp'],
   ['dessus', 'Vue aérienne', 'Aerial view', [3, 18, 4], [0, 1.2, -1], 35, 'pg', 'dess'],
 ];
+/* ---------- La voiture qu'on pose où l'on veut (civile ou de police) ----------
+   Repère : elle regarde vers +z, le conducteur est à gauche (x = 0.37). Même gabarit que le taxi :
+   les prises de vue du taxi marchent telles quelles. */
+function carGeo(col, glass, police){
+  const g = geo(), C = col || '#3D5A80', K = '#24262B', S = '#3B3E45', CH = '#A9AEB6', W = 0.92, D = police ? '#F4F2EE' : C;
+  prism(g, [[2.42, 0.3], [2.44, 0.62], [2.32, 0.82], [1.2, 0.92], [1.15, 0.6], [1.15, 0.3]], -W, W, C);            // le capot
+  prism(g, [[-1.75, 0.3], [-1.75, 0.95], [-2.4, 0.86], [-2.47, 0.62], [-2.45, 0.3]], -W, W, C);                    // le coffre
+  [[W - 0.06, W], [-W, -W + 0.06]].forEach(([a, b]) => prism(g, [[1.15, 0.3], [1.15, 0.92], [-1.75, 0.95], [-1.75, 0.3]], a, b, D));   // les portières
+  box(g, 0, 0.27, -0.3, 1.8, 0.06, 2.9, K);                                                                         // le plancher
+  [[W - 0.05, W - 0.01], [-W + 0.01, -W + 0.05]].forEach(([a, b]) => {                                              // les montants
+    prism(g, [[1.2, 0.92], [1.12, 0.92], [0.5, 1.5], [0.58, 1.5]], a, b, K);
+    prism(g, [[-0.27, 0.93], [-0.37, 0.93], [-0.37, 1.5], [-0.27, 1.5]], a, b, K);
+    prism(g, [[-1.62, 0.95], [-1.75, 0.95], [-1.25, 1.5], [-1.15, 1.5]], a, b, K);
+  });
+  prism(g, [[0.6, 1.5], [0.52, 1.56], [-1.2, 1.56], [-1.28, 1.5]], -W + 0.02, W - 0.02, police ? '#F4F2EE' : C);   // le toit
+  if(glass){                                                                                                        // les vitres
+    prism(glass, [[1.15, 0.92], [1.13, 0.92], [0.54, 1.5], [0.56, 1.5]], -W + 0.05, W - 0.05, '#A9C4D2');
+    prism(glass, [[-1.64, 0.95], [-1.24, 1.5], [-1.26, 1.5], [-1.66, 0.95]], -W + 0.05, W - 0.05, '#A9C4D2');
+    [[W - 0.04, W - 0.03], [-W + 0.03, -W + 0.04]].forEach(([a, b]) => {
+      prism(glass, [[1.12, 0.93], [0.54, 1.5], [-0.27, 1.5], [-0.27, 0.93]], a, b, '#A9C4D2');
+      prism(glass, [[-0.37, 0.93], [-0.37, 1.5], [-1.16, 1.5], [-1.62, 0.95]], a, b, '#A9C4D2');
+    });
+  }
+  box(g, 0, 0.36, 2.48, 1.86, 0.12, 0.1, CH); box(g, 0, 0.36, -2.5, 1.86, 0.12, 0.1, CH);                           // pare-chocs, calandre, phares, feux
+  box(g, 0, 0.55, 2.445, 0.9, 0.16, 0.02, K);
+  [0.66, -0.66].forEach(x => { box(g, x, 0.6, 2.44, 0.26, 0.12, 0.04, '#FBF6DF'); box(g, x, 0.7, -2.45, 0.24, 0.12, 0.04, '#C2453B'); });
+  [W + 0.05, -W - 0.05].forEach(x => box(g, x, 1.0, 1.05, 0.1, 0.08, 0.14, K));                                    // les rétroviseurs
+  [[1.55], [-1.65]].forEach(([z]) => [1, -1].forEach(sd => {                                                         // les roues
+    cyl(g, sd > 0 ? W - 0.2 : -W - 0.04, 0.34, z, 0.34, 0.34, 0.24, '#17181B', 14, 'x');
+    cyl(g, sd > 0 ? W + 0.04 : -W - 0.05, 0.34, z, 0.17, 0.17, 0.01, CH, 10, 'x');
+  }));
+  // l'habitacle : tableau de bord, volant, sièges
+  prism(g, [[1.15, 0.6], [1.15, 0.95], [0.95, 1.0], [0.85, 0.86], [0.9, 0.6]], -W + 0.06, W - 0.06, K);
+  cyl(g, 0.37, 0.98, 0.78, 0.17, 0.17, 0.025, '#111214', 14, 'z'); cyl(g, 0.37, 0.98, 0.8, 0.03, 0.03, 0.2, '#111214', 6, 'z');
+  [0.37, -0.37].forEach(x => { box(g, x, 0.44, 0.3, 0.54, 0.12, 0.5, S); prism(g, [[0.05, 0.5], [-0.07, 0.5], [-0.12, 1.22], [0.0, 1.22]], x - 0.27, x + 0.27, S); box(g, x, 1.3, -0.06, 0.24, 0.14, 0.09, S); });
+  box(g, 0, 0.44, -0.82, 1.62, 0.12, 0.56, S); prism(g, [[-1.05, 0.5], [-1.17, 0.5], [-1.24, 1.12], [-1.12, 1.12]], -0.81, 0.81, S);
+  if(police){
+    // la rampe de gyrophares (rouge et bleu), le pare-buffle, l'écusson doré et la bande sur les portières
+    box(g, 0, 1.6, -0.3, 1.2, 0.08, 0.26, K); box(g, -0.3, 1.68, -0.3, 0.5, 0.09, 0.22, '#E0303B'); box(g, 0.3, 1.68, -0.3, 0.5, 0.09, 0.22, '#2F6FE0');
+    box(g, 0, 0.55, 2.56, 1.0, 0.42, 0.06, K); [-0.42, 0.42].forEach(x => box(g, x, 0.55, 2.52, 0.06, 0.42, 0.1, K));
+    [W + 0.003, -W - 0.003].forEach(x => { const sd = x > 0 ? 1 : -1;
+      wall(g, sd > 0 ? [x, 0.75] : [x, 0.45], sd > 0 ? [x, 0.45] : [x, 0.75], 0.2, '#E8B923', 0.6);
+      wall(g, sd > 0 ? [x, 1.1] : [x, -1.7], sd > 0 ? [x, -1.7] : [x, 1.1], 0.05, '#2F6FE0', 0.42); });
+  }
+  return g;
+}
+const SEDAN_SHOTS = CAR_SHOTS.map(P => P[0] === 'arrive' ? ['arrive', 'La voiture arrive (plan large)', 'The car pulls up (wide)'].concat(P.slice(3)) : P);
+const CAR_SEATS = [{ fr:'Conducteur', en:'Driver', pose:'drive', x:0.37, z:0.3, py:0 }, { fr:'Passager avant', en:'Front passenger', pose:'sit', x:-0.37, z:0.3, py:0.05 },
+  { fr:'Arrière gauche', en:'Back left', pose:'sit', x:0.4, z:-0.8, py:0.05 }, { fr:'Arrière droite', en:'Back right', pose:'sit', x:-0.4, z:-0.8, py:0.05 }];
 const VEH_DEF = {
   moto:{ fr:'Moto', en:'Motorbike', ic:'moto', cols:MOTO_COLS, label:1.9, shots:MOTO_SHOTS,
     seats:[{ fr:'Pilote', en:'Rider', pose:'ride', x:0, z:-0.2 }, { fr:'Passager', en:'Passenger', pose:'rideBack', x:0, z:-0.55 }] },
+  car:{ fr:'Voiture', en:'Car', ic:'car', cols:['#3D5A80', '#B4232C', '#E9E6E0', '#24262B', '#2F6E4F'], label:2.0, shots:SEDAN_SHOTS, seats:CAR_SEATS },
+  police:{ fr:'Voiture de police', en:'Police car', ic:'police', cols:['#1E1F23'], label:2.1, shots:SEDAN_SHOTS, seats:CAR_SEATS },
   heli:{ fr:'Hélicoptère', en:'Helicopter', ic:'heli', cols:['#2F6E4F', '#B4232C', '#24262B', '#E9E6E0'], label:3.3, shots:HELI_SHOTS, fly:true,
     seats:[{ fr:'Pilote', en:'Pilot', pose:'pilot', x:-0.33, z:0.55, py:0.8 }, { fr:'Copilote', en:'Co-pilot', pose:'sit', x:0.33, z:0.55, py:0.8 }, { fr:'Passager', en:'Passenger', pose:'sit', x:-0.33, z:-0.45, py:0.8 }, { fr:'Passager 2', en:'Passenger 2', pose:'sit', x:0.33, z:-0.45, py:0.8 }] },
   plane:{ fr:'Avion', en:'Plane', ic:'plane', cols:['#E9E6E0', '#3D5A80', '#E8B923', '#2F6E4F'], label:3.0, shots:PLANE_SHOTS, fly:true,
