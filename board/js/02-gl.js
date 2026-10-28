@@ -48,15 +48,19 @@ const hexRGB = h => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 
 
 /* ---------- Géométrie : quelques formes simples, faces à plat ----------
    Une géométrie = { p:[...], n:[...], c:[...] } (positions, normales, couleurs par sommet). */
-function geo(){ return { p:[], n:[], c:[] }; }
+function geo(){ return { p:[], n:[], c:[], e:[] }; }
+/* EDGE_ON : les arêtes de cette forme seront-elles tracées (meubles, murs) ? Pas pour les formes rondes. */
+let EDGE_ON = 1;
 function tri(g, a, b, c, col){
   const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
   let nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
   for(const v of [a, b, c]){ g.p.push(v[0], v[1], v[2]); g.n.push(nx, ny, nz); g.c.push(col[0], col[1], col[2]); }
+  if(g.e) g.e.push(EDGE_ON);
 }
 const quad = (g, a, b, c, d, col) => { tri(g, a, b, c, col); tri(g, a, c, d, col); };
 /* pavé centré en (x,y,z), tourné de ry autour de la verticale ; faces tournées vers l'extérieur */
 function box(g, x, y, z, w, h, d, col, ry){
+  const e0 = EDGE_ON; if(Math.min(w, h, d) < 0.012) EDGE_ON = 0;   // les bandes peintes au sol : pas de trait
   const hx = w/2, hy = h/2, hz = d/2, c = Math.cos(ry || 0), s = Math.sin(ry || 0);
   const P = (a, b, e) => [x + a*c + e*s, y + b, z - a*s + e*c];
   const v = [P(-hx,-hy,-hz), P(hx,-hy,-hz), P(hx,hy,-hz), P(-hx,hy,-hz), P(-hx,-hy,hz), P(hx,-hy,hz), P(hx,hy,hz), P(-hx,hy,hz)];
@@ -64,6 +68,7 @@ function box(g, x, y, z, w, h, d, col, ry){
   quad(g, v[4], v[5], v[6], v[7], C); quad(g, v[1], v[0], v[3], v[2], C);
   quad(g, v[5], v[1], v[2], v[6], C); quad(g, v[0], v[4], v[7], v[3], C);
   quad(g, v[7], v[6], v[2], v[3], C); quad(g, v[0], v[1], v[5], v[4], C);
+  EDGE_ON = e0;
 }
 /* mur d'un seul côté : on le voit de face, il disparaît vu de dos (la caméra peut passer derrière) */
 function wall(g, a, b, h, col, y0){
@@ -80,7 +85,7 @@ function floor(g, x0, z0, x1, z1, y, col, down){
 /* GEO_K : le niveau de détail des formes rondes (plus bas pour les contours, plus légers à dessiner) */
 let GEO_K = 1;
 function cyl(g, x, y, z, r1, r2, len, col, seg, axis){
-  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const C = typeof col === 'string' ? hexRGB(col) : col;
+  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON; EDGE_ON = 0;
   const pt = (r, t, k) => { const a = Math.cos(t)*r, b = Math.sin(t)*r;
     if(axis === 'x') return [x + k, y + a, z + b];
     if(axis === 'z') return [x + a, y + b, z + k];
@@ -90,15 +95,17 @@ function cyl(g, x, y, z, r1, r2, len, col, seg, axis){
     const a0 = pt(r1, t0, 0), a1 = pt(r1, t1, 0), b0 = pt(r2, t0, len), b1 = pt(r2, t1, len);
     quad(g, a0, a1, b1, b0, C); tri(g, pt(0, 0, 0), a1, a0, C); tri(g, pt(0, 0, len), b0, b1, C);
   }
+  EDGE_ON = e0;
 }
 /* ellipsoïde bas en polygones */
 function ball(g, x, y, z, rx, ry, rz, col, seg){
-  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const st = Math.max(4, Math.round(seg * .7)); const C = typeof col === 'string' ? hexRGB(col) : col;
+  seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const st = Math.max(4, Math.round(seg * .7)); const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON; EDGE_ON = 0;
   const P = (i, j) => { const th = i / seg * Math.PI * 2, ph = j / st * Math.PI; return [x + Math.sin(ph)*Math.cos(th)*rx, y + Math.cos(ph)*ry, z + Math.sin(ph)*Math.sin(th)*rz]; };
   for(let j = 0; j < st; j++) for(let i = 0; i < seg; i++){
     const a = P(i, j), b = P(i + 1, j), c = P(i + 1, j + 1), d = P(i, j + 1);
     if(j === 0) tri(g, a, c, d, C); else if(j === st - 1) tri(g, a, b, c, C); else quad(g, a, b, c, d, C);
   }
+  EDGE_ON = e0;
 }
 
 /* normales lissées (moyenne des faces qui se touchent) : elles servent au contour
@@ -123,9 +130,9 @@ const GL = {
     this.gl = gl;
     const vs = `attribute vec3 aP; attribute vec3 aN; attribute vec3 aC; attribute vec3 aS;
       uniform mat4 uVP; uniform mat4 uM; uniform vec3 uCol; uniform float uVC; uniform float uOut; uniform mediump vec3 uEye;
-      varying vec3 vN; varying vec3 vC; varying vec3 vW;
+      varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2;
       void main(){
-        vN = mat3(uM) * aN; vC = uVC > 1.5 ? uCol * aC : mix(uCol, aC, uVC);
+        vN = mat3(uM) * aN; vN2 = mat3(uM) * aC; vC = uVC > 1.5 ? uCol * aC : mix(uCol, aC, uVC);
         vec4 w = uM * vec4(aP, 1.0);
         // le contour : la forme regonflée un tout petit peu, d'une épaisseur constante à l'écran
         if(uOut > 0.0) w.xyz += normalize(mat3(uM) * aS) * uOut * distance(w.xyz, uEye);
@@ -134,8 +141,8 @@ const GL = {
     const fs = `precision mediump float;
       uniform vec3 uL; uniform float uFlat; uniform float uA; uniform vec3 uTint; uniform float uTintK;
       uniform vec3 uEye; uniform vec3 uT[6]; uniform float uNT; uniform float uX; uniform float uChar;
-      uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass;
-      varying vec3 vN; varying vec3 vC; varying vec3 vW;
+      uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass; uniform float uLine;
+      varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2;
       /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
       bool inTube(vec3 t){ vec3 d = t - uEye; float k = dot(vW - uEye, d) / dot(d, d); return k > 0.0 && k < 0.9 && distance(vW, uEye + d * k) < 0.42; }
       vec3 bw(vec3 c, float lift){ float l = dot(c, vec3(0.299, 0.587, 0.114)); return vec3(l * (1.0 + lift) + lift * 0.4); }
@@ -147,7 +154,9 @@ const GL = {
           if(uX > 1.5 && !hid) discard;       // …que la passe transparente remplit à moitié
         }
         if(distance(vW, uEye) < 0.3 && uX > 0.5) discard;   // rien ne colle à l'objectif
-        if(uFlat > 0.5){ gl_FragColor = vec4(uBW > 0.5 && uFlat < 1.5 ? bw(vC, 0.0) : vC, uA); return; }
+        // une arête dont les deux faces tournent le dos à la caméra (un mur vu de derrière) ne se trace pas
+        if(uLine > 0.5){ vec3 v = uEye - vW; if(dot(vN, v) < 0.0 && dot(vN2, v) < 0.0) discard; }
+        if(uFlat > 0.5){ float la = uLine > 0.5 ? 1.0 - smoothstep(10.0, 42.0, distance(vW, uEye)) : 1.0; gl_FragColor = vec4(uBW > 0.5 && uFlat < 1.5 ? bw(vC, 0.0) : vC, uA * la); return; }
         vec3 n = normalize(vN);
         if(!gl_FrontFacing) n = -n;
         float d = max(dot(n, uL), 0.0), h = 0.5 + 0.5 * n.y, f = max(dot(n, normalize(uEye - vW)), 0.0);
@@ -176,7 +185,7 @@ const GL = {
     const p = prog(vs, fs); if(!p) return false;
     gl.useProgram(p); this.prog = p;
     ['aP', 'aN', 'aC', 'aS'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
-    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
+    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // le ciel et le vignettage : un seul triangle qui couvre l'écran
@@ -252,7 +261,8 @@ const GL = {
     gl.uniform1f(L.uVC, o.mul ? 2 : o.vc ? 1 : 0); gl.uniform1f(L.uChar, o.char ? 1 : 0); gl.uniform1f(L.uFlat, o.raw ? 2 : o.flat ? 1 : 0); gl.uniform1f(L.uA, o.a == null ? 1 : o.a);
     const t = o.tint || [0, 0, 0]; gl.uniform3f(L.uTint, t[0], t[1], t[2]); gl.uniform1f(L.uTintK, o.tintK || 0);
     gl.uniform1f(L.uX, o.x || 0); gl.uniform1f(L.uOut, o.out || 0); gl.uniform1f(L.uGlass, o.glass ? 1 : 0);
-    gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
+    gl.uniform1f(L.uLine, o.lines ? 1 : 0);
+    gl.drawArrays(o.lines ? gl.LINES : gl.TRIANGLES, 0, mesh.count);
   },
   /* env : { fogC, fog:[début, fin], bw:noir et blanc } */
   begin(w, h, vp, bg, env){
@@ -331,10 +341,10 @@ const GL = {
       gl.bindTexture(gl.TEXTURE_2D, O.tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.bindRenderbuffer(gl.RENDERBUFFER, O.rb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, O.rb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, w, h);   // 24 bits de profondeur : pas de sols qui se battent au loin
       gl.bindFramebuffer(gl.FRAMEBUFFER, O.fb);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, O.tex, 0);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, O.rb);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, O.rb);
       O.w = w; O.h = h;
     }
     this.target = O.fb;
@@ -417,4 +427,30 @@ function prismXY(g, pts, z0, z1, col){
   // on échange x et z, puis on remet chaque triangle dans le bon sens (l'échange retourne les faces)
   for(let i = from; i < g.p.length; i += 3){ const a = g.p[i]; g.p[i] = g.p[i + 2]; g.p[i + 2] = a; const n = g.n[i]; g.n[i] = g.n[i + 2]; g.n[i + 2] = n; }
   for(let i = from; i < g.p.length; i += 9) for(const A of [g.p, g.n, g.c]) for(let k = 0; k < 3; k++){ const t = A[i + 3 + k]; A[i + 3 + k] = A[i + 6 + k]; A[i + 6 + k] = t; }
+}
+
+/* les arêtes vives d'un décor (là où deux faces font un angle, et les bords des faces seules) :
+   tracées comme un trait de crayon fin, elles donnent au décor le même dessin que les personnages */
+function edgeLines(g, minDeg){
+  const cosT = Math.cos((minDeg || 28) * D2R), map = new Map(), K = v => Math.round(v * 500);
+  const key = (i, j) => { const a = K(g.p[i]) + ',' + K(g.p[i + 1]) + ',' + K(g.p[i + 2]), b = K(g.p[j]) + ',' + K(g.p[j + 1]) + ',' + K(g.p[j + 2]); return a < b ? a + '|' + b : b + '|' + a; };
+  for(let t = 0; t < g.p.length / 9; t++){
+    if(g.e && !g.e[t]) continue;
+    const i0 = t * 9, n = [g.n[i0], g.n[i0 + 1], g.n[i0 + 2]];
+    for(const [a, b] of [[0, 3], [3, 6], [6, 0]]){
+      const k = key(i0 + a, i0 + b); let r = map.get(k);
+      if(!r){ r = { i:i0 + a, j:i0 + b, n:[] }; map.set(k, r); }
+      r.n.push(n);
+    }
+  }
+  const out = { p:[], n:[], c:[] };
+  for(const r of map.values()){
+    let keep = r.n.length === 1;
+    if(!keep) for(let x = 0; x < r.n.length && !keep; x++) for(let y = x + 1; y < r.n.length; y++){ const a = r.n[x], b = r.n[y]; if(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] < cosT){ keep = true; break; } }
+    if(!keep) continue;
+    out.p.push(g.p[r.i], g.p[r.i + 1], g.p[r.i + 2], g.p[r.j], g.p[r.j + 1], g.p[r.j + 2]);
+    const a = r.n[0], b = r.n[r.n.length - 1];
+    out.n.push(a[0], a[1], a[2], a[0], a[1], a[2]); out.c.push(b[0], b[1], b[2], b[0], b[1], b[2]);   // les normales des deux faces
+  }
+  return out;
 }

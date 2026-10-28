@@ -265,6 +265,19 @@ const POSES = [
   { id:'lookBack', fr:'Se retourner', en:'Looking back', g:'move', y:0, j:{ chest:[0,  30,  0], spine:[0,  18,  0], head:[0,  70,  0], armL:[8,  8,  0], armR:[-8,  8,  0] } },
   { id:'ride', fr:'À moto (pilote)', en:'Riding (driver)', g:'moto', y:-0.02, j:{ spine:[16,  0,  0], chest:[10,  0,  0], head:[-22,  0,  0], armL:[76,  10,  0], foreL:[6,  32], handL:[0,  0], armR:[76,  10,  0], foreR:[6,  -32], handR:[0,  0], thighL:[71,  13,  0], shinL:[114], footL:[-37], thighR:[71,  13,  0], shinR:[114], footR:[-37] } },
   { id:'rideBack', fr:'À moto (passager)', en:'Riding (passenger)', g:'moto', y:0.02, j:{ spine:[10,  0,  0], head:[-10,  0,  0], thighL:[68,  21,  0], thighR:[68,  21,  0], shinL:[117], shinR:[117], armL:[27,  27,  2], foreL:[65,  -80], handL:[0,  0], armR:[27,  27,  -2], foreR:[65,  80], handR:[0,  0], footL:[-27], footR:[-27] } },
+  { id:'pilot', fr:'Aux commandes', en:'At the controls', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[4,  -14,  11], foreL:[66,  -9], armR:[14,  -15,  0], foreR:[43,  -8], spine:[-2,  0,  0], handL:[0,  0], handR:[0,  0] } },
+  { id:'typing', fr:'Taper au clavier', en:'Typing', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[23,  -11,  0], foreL:[55,  -4], armR:[23,  -11,  0], foreR:[55,  4], spine:[8,  0,  0], head:[14,  0,  0], handL:[0,  0], handR:[0,  0] } },
+  { id:'sitCross', fr:'Assis, jambes croisées', en:'Seated, legs crossed', g:'seat', y:-0.4, j:{ thighL:[90,  4,  0], shinL:[88], thighR:[96,  -14,  8], shinR:[70], armL:[-13,  -15,  17], foreL:[68,  -11], armR:[-3,  -15,  -8], foreR:[61,  30], spine:[6,  0,  0], handL:[0,  0], handR:[0,  0] } },
+  { id:'wounded', fr:'Blessé, assis par terre', en:'Wounded, sitting on the ground', g:'seat', y:-0.83, j:{ pelvis:[-24,  0], thighL:[96,  12,  0], shinL:[40], thighR:[70,  8,  0], shinR:[90], head:[18,  0,  6], spine:[6,  0,  0], armL:[0,  6,  -15], foreL:[12,  66], handL:[0,  0], armR:[-13,  -15,  90], foreR:[86,  -41], handR:[0,  0] } },
+  { id:'lieFront', fr:'Allongé sur le ventre', en:'Lying face down', g:'seat', y:-0.83, j:{ pelvis:[90,  0], head:[-30,  0,  0], armL:[90,  90,  -90], foreL:[117,  0], handL:[0,  0], armR:[90,  90,  90], foreR:[117,  0], handR:[0,  0] } },
+  { id:'jump', fr:'Sauter', en:'Jumping', g:'move', y:0.35, j:{ thighL:[40,  4,  0], shinL:[80], thighR:[20,  4,  0], shinR:[60], spine:[6,  0,  0], armL:[125,  9,  35], foreL:[76,  0], handL:[0,  0], armR:[125,  9,  -35], foreR:[76,  0], handR:[0,  0] } },
+  { id:'leanWall', fr:'Adossé au mur', en:'Leaning on the wall', g:'move', y:-0.03, j:{ pelvis:[-6,  0], thighR:[30,  0,  0], shinR:[60], spine:[-4,  0,  0], head:[0,  18,  0], armL:[-9,  -15,  90], foreL:[53,  78], handL:[0,  0], armR:[-9,  -15,  -90], foreR:[53,  -78], handR:[0,  0] } },
+  { id:'clap', fr:'Applaudir', en:'Clapping', g:'gest', y:0, j:{ armL:[60,  24,  0], foreL:[94,  -79], handL:[0,  0], armR:[60,  24,  0], foreR:[94,  79], handR:[0,  0] } },
+  { id:'facepalm', fr:'La main sur le visage', en:'Facepalm', g:'gest', y:0, j:{ head:[18,  0,  0], armR:[56,  -7,  45], foreR:[120,  0], handR:[0,  0] } },
+  { id:'pray', fr:'Mains jointes', en:'Hands together', g:'gest', y:0, j:{ head:[16,  0,  0], armL:[56,  28,  0], foreL:[114,  -80], handL:[0,  0], armR:[56,  28,  0], foreR:[114,  80], handR:[0,  0] } },
+  { id:'carry', fr:'Porter un carton', en:'Carrying a box', g:'gest', y:0, j:{ spine:[-6,  0,  0], armL:[0,  22,  6], foreL:[81,  -30], handL:[0,  0], armR:[0,  22,  -6], foreR:[81,  30], handR:[0,  0] } },
+  { id:'stop', fr:'Faire signe de s’arrêter', en:'Signalling stop', g:'gest', y:0, j:{ armR:[73,  -15,  -19], foreR:[45,  22], handR:[0,  0] } },
+  { id:'scared', fr:'Avoir peur', en:'Scared', g:'gest', y:-0.05, j:{ spine:[-10,  0,  0], head:[-6,  0,  0], thighR:[-6,  0,  0], shinL:[10], armL:[33,  -9,  0], foreL:[114,  -7], handL:[0,  0], armR:[26,  3,  15], foreR:[112,  0], handR:[0,  0] } },
 ];
 function applyPose(ch, pid){
   const P = POSES.find(p => p.id === pid); if(!P) return;
@@ -275,7 +288,7 @@ function applyPose(ch, pid){
   ch.root.y = (P.y || 0) * bodyScale(lookOf(ch));    // un enfant plus petit descend moins pour s'asseoir
 }
 /* assis sur un vrai siège (canapé, banc, voiture) : le bassin reste à la hauteur du siège, quelle que soit la taille */
-const SEATED = { sit:1, drive:1, headInHands:1 };
+const SEATED = { sit:1, drive:1, headInHands:1, pilot:1, typing:1, sitCross:1 };
 function seatY(ch, adultY){ return 0.94 + adultY - 0.94 * bodyScale(lookOf(ch)); }
 
 /* ---------- Les lieux ----------
@@ -298,6 +311,8 @@ const SETS = [
   { id:'house', fr:'Maison de campagne', en:'Country house' },
   { id:'roof', fr:'Toit d’immeuble', en:'Rooftop' },
   { id:'warehouse', fr:'Entrepôt', en:'Warehouse' },
+  { id:'airfield', fr:'Aérodrome', en:'Airfield', big:true },
+  { id:'forest', fr:'Forêt', en:'Forest', big:true },
 ];
 const SET_DEF = {
   garage:{
@@ -718,6 +733,95 @@ Object.assign(SET_DEF, {
     },
   },
 });
+/* ---------- L'aérodrome et la forêt ----------
+   L'aérodrome : une piste, un hangar ouvert, une tour de contrôle vitrée, une aire pour l'hélicoptère.
+   La forêt : une clairière, un sentier, un ruisseau, une cabane de bois, un feu de camp. */
+const wall2 = (g, a, b, h, col, y0) => { wall(g, a, b, h, col, y0); wall(g, b, a, h, col, y0); };
+function pine(g, x, z, k, c){ c = c || '#3F6B4A'; cyl(g, x, 1.2 * k, z, 0.12 * k, 0.16 * k, 1.2 * k, '#5E4532', 6);
+  [[1.2, 1.25, 2.2], [2.6, 0.95, 1.9], [3.8, 0.62, 1.6]].forEach(([y, r, h], i) => cyl(g, x, (y + h) * k, z, 0.02, r * k, h * k, hexRGB(c).map(v => v * (1 + i * 0.07)), 6)); }
+Object.assign(SET_DEF, {
+  airfield:{
+    sky:{ top:'#7FAEDB', hor:'#E9EDEE', low:'#9DAA90' }, fog:[70, 320],
+    cam:{ tx:-0.9, ty:1.2, tz:4.7, yaw:-62, pitch:-4, dist:6.5, lens:28 },
+    build(g, gl){
+      floor(g, -260, -260, 260, 260, 0, '#86A062');
+      // la piste (dans l'axe z), ses marques, la voie de circulation
+      floor(g, 6, -230, 30, 230, 0.01, '#5A5E64');
+      for(let z = -220; z <= 220; z += 14) box(g, 18, 0.016, z, 0.5, 0.006, 7, '#EDEAE0');
+      [6.6, 29.4].forEach(x => box(g, x, 0.016, 0, 0.3, 0.006, 460, '#EDEAE0'));
+      for(let i = 0; i < 8; i++) [-218, 218].forEach(z => box(g, 8.5 + i * 2.6 + (i > 3 ? 2 : 0), 0.016, z, 1.2, 0.006, 12, '#EDEAE0'));
+      floor(g, -24, -9, 6, -3, 0.012, '#62666C'); box(g, -9, 0.017, -6, 30, 0.006, 0.18, '#E8B923');
+      floor(g, -24, -3, 6, 12, 0.011, '#6A6E73');   // le tarmac devant le hangar
+      // l'aire de l'hélicoptère : un cercle et un H
+      cyl(g, -6, 0.025, 8, 6, 6, 0.012, '#4E5257', 24);
+      for(let i = 0; i < 32; i++){ const a0 = i / 32 * 6.2832, a1 = (i + 1) / 32 * 6.2832, P = (r, t) => [-6 + Math.cos(t) * r, 0.04, 8 + Math.sin(t) * r]; quad(g, P(5.1, a0), P(5.1, a1), P(5.4, a1), P(5.4, a0), hexRGB('#E8B923')); }
+      box(g, -7.3, 0.04, 8, 0.6, 0.012, 4, '#EDEAE0'); box(g, -4.7, 0.04, 8, 0.6, 0.012, 4, '#EDEAE0'); box(g, -6, 0.04, 8, 2, 0.012, 0.6, '#EDEAE0');
+      // le hangar, ouvert vers +x (on peut entrer)
+      const HX0 = -30, HX1 = -16, HZ0 = -16, HZ1 = -2, HH = 7;
+      floor(g, HX0, HZ0, HX1, HZ1, 0.02, '#8D9198');
+      wall2(g, [HX0, HZ0], [HX1, HZ0], HH, '#B9BEC4'); wall2(g, [HX1, HZ1], [HX0, HZ1], HH, '#B9BEC4'); wall2(g, [HX0, HZ1], [HX0, HZ0], HH, '#AEB3BA');
+      for(let z = HZ0 + 0.5; z < HZ1; z += 1.2) [HX0 + 0.02, HX0 - 0.02].forEach(x => box(g, x, HH / 2, z, 0.02, HH, 0.06, '#9EA3AA'));
+      prism(g, [[HZ0 - 0.3, HH], [HZ1 + 0.3, HH], [(HZ0 + HZ1) / 2, HH + 2.2]], HX0 - 0.3, HX1 + 0.3, '#7C828B');
+      prism(g, [[HZ1 + 0.3, HH], [HZ0 - 0.3, HH], [(HZ0 + HZ1) / 2, HH + 2.1]], HX0 - 0.2, HX1 + 0.2, '#C9CCD1');   // le dessous du toit
+      [HZ0 + 0.15, HZ1 - 0.15].forEach(z => box(g, HX1, HH / 2, z, 0.4, HH, 0.3, '#6E747C'));
+      box(g, HX1 + 0.5, HH - 0.4, (HZ0 + HZ1) / 2, 0.2, 0.8, HZ1 - HZ0 + 0.4, '#3D5A80');
+      // l'atelier dans le hangar : établi, fûts, caisses, chariot à outils
+      box(g, HX0 + 0.6, 0.48, -9, 0.9, 0.96, 4, '#7A5C42'); [-11.5, -11, -10.5].forEach((z, i) => cyl(g, HX0 + 0.7, 0.92, z - 2, 0.3, 0.3, 0.9, ['#B4232C', '#3D5A80', '#E8B923'][i], 10));
+      [[-20, -14.5], [-21.2, -14.5], [-20.6, -14.5]].forEach(([x, z], i) => box(g, x, i === 2 ? 1.5 : 0.5, z, 1, 1, 1, '#A88A5E'));
+      // la tour de contrôle, et sa vigie vitrée
+      box(g, -38, 4, 10, 4, 8, 4, '#E3DED4'); box(g, -38, 8.1, 10, 5.4, 0.2, 5.4, '#8D9198');
+      [[-40.6, 7.4], [-35.4, 7.4], [-40.6, 12.6], [-35.4, 12.6]].forEach(([x, z]) => box(g, x, 9.3, z, 0.15, 2.2, 0.15, '#2C2E33'));
+      box(g, -38, 10.5, 10, 5.6, 0.25, 5.6, '#5E636C'); box(g, -38, 11.1, 10, 0.08, 1.0, 0.08, '#2C2E33');
+      gl && [[[-40.6, 7.4], [-35.4, 7.4]], [[-35.4, 7.4], [-35.4, 12.6]], [[-35.4, 12.6], [-40.6, 12.6]], [[-40.6, 12.6], [-40.6, 7.4]]].forEach(([a, b]) => wall(gl, a, b, 2.2, '#A9C4D2', 8.2));
+      wall(g, [-36.01, 9.4], [-36.01, 10.6], 2.1, '#6E5440');
+      // la manche à air, les balises, la clôture, un camion-citerne
+      box(g, 36, 3, -40, 0.1, 6, 0.1, '#D9D6CF'); cyl(g, 36, 5.8, -40.3, 0.32, 0.16, 1.8, '#E26A2C', 8, 'z');
+      for(let z = -220; z <= 220; z += 20) [4.8, 31.2].forEach(x => box(g, x, 0.25, z, 0.18, 0.5, 0.18, '#E8B923'));
+      for(let z = -60; z <= 60; z += 3) box(g, -50, 1, z, 0.08, 2, 0.08, '#7C828B'); [0.3, 1.0, 1.9].forEach(y => box(g, -50, y, 0, 0.03, 0.04, 120, '#9AA0A8'));
+      box(g, -12, 1.4, -0.2, 2.2, 2.2, 2.4, '#B4232C'); cyl(g, -13.3, 1.7, 2.9, 1.0, 1.0, 5.2, '#D9D6CF', 12, 'z'); [[-12.7, -0.6], [-12.7, 4.6], [-12.7, 6.4]].forEach(([x, z]) => [x - 0.95, x + 2.35].forEach(xx => cyl(g, xx, 0.45, z, 0.45, 0.45, 0.3, '#17181B', 10, 'x')));
+      // les collines au loin, des arbres
+      [[-120, -200, 90, 26, '#6E8F5A'], [130, -180, 80, 22, '#76966A'], [-160, 120, 80, 24, '#6E8F5A'], [150, 160, 90, 20, '#76966A']].forEach(([x, z, r, h, c]) => ball(g, x, 0, z, r, h, r, c, 14));
+      [[-60, -30], [-64, -20], [-58, 30], [-66, 40], [60, -60], [62, 20], [58, 70]].forEach(([x, z], i) => tree(g, x, z, 1.2 + (i % 3) * 0.2));
+    },
+  },
+  forest:{
+    sky:{ top:'#93B4C8', hor:'#D9E0D8', low:'#6E8064' }, fog:[18, 90],
+    cam:{ tx:0, ty:1.1, tz:0.5, yaw:-20, pitch:-4, dist:7, lens:28 },
+    build(g, gl){
+      floor(g, -150, -150, 150, 150, 0, '#56703F');
+      // la clairière, le sentier qui la traverse, le ruisseau
+      cyl(g, 0, 0.006, 0, 9, 9, 0.004, '#7D8A4E', 18);
+      for(let i = -40; i < 40; i++){ const z = i * 1.5, x = Math.sin(z * 0.08) * 2.5; box(g, x, 0.009, z, 1.4, 0.004, 1.7, '#8E7A5A', Math.cos(z * 0.08) * 0.2); }
+      for(let i = -40; i < 40; i++){ const z = i * 1.5, x = 9 + Math.sin(z * 0.1 + 1) * 1.6; box(g, x, 0.012, z, 1.6, 0.004, 1.8, '#4C7186', Math.cos(z * 0.1 + 1) * 0.16); [-1, 1].forEach(sd => ball(g, x + sd * 0.95, 0.05, z, 0.25, 0.14, 0.4, '#8C8A84', 5)); }
+      box(g, 9, 0.18, 2, 2.6, 0.08, 1.2, '#7A5C42'); [-0.5, 0.5].forEach(dz => box(g, 9, 0.3, 2 + dz, 2.6, 0.06, 0.08, '#6E5440'));   // une passerelle
+      // le feu de camp, les rondins autour
+      cyl(g, -1.6, 0.1, -1.8, 0.55, 0.6, 0.1, '#6F6A63', 10); for(let i = 0; i < 5; i++) box(g, -1.6, 0.15, -1.8, 0.08, 0.08, 0.9, '#4A3626', i * 0.63);
+      ball(g, -1.6, 0.32, -1.8, 0.25, 0.32, 0.25, '#E8823A', 6); ball(g, -1.6, 0.26, -1.8, 0.16, 0.2, 0.16, '#F3C64A', 6);
+      [[-1.6, -3.1, 0], [-3.0, -1.6, Math.PI / 2], [-0.2, -1.2, 1.1]].forEach(([x, z, r]) => { cyl(g, x - Math.sin(r) * 0, 0.22, z, 0.22, 0.22, 1.8, '#6B4E37', 9, 'x'); });
+      // la cabane de bois (on peut entrer : la porte est ouverte)
+      const CX0 = -9, CX1 = -4, CZ0 = 3, CZ1 = 8, CH = 2.5;
+      floor(g, CX0, CZ0, CX1, CZ1, 0.15, '#8A6A4A'); box(g, (CX0 + CX1) / 2, 0.07, (CZ0 + CZ1) / 2, CX1 - CX0 + 0.3, 0.14, CZ1 - CZ0 + 0.3, '#5E4532');
+      partition(g, [CX0, CZ0], [CX1, CZ0], 0.15, CH, '#8A6545', [[1.8, 2.8]]);
+      partition(g, [CX1, CZ0], [CX1, CZ1], 0.15, CH, '#7F5C3E', [[1.6, 3.2]]);
+      partition(g, [CX1, CZ1], [CX0, CZ1], 0.15, CH, '#8A6545');
+      partition(g, [CX0, CZ1], [CX0, CZ0], 0.15, CH, '#7F5C3E', [[2.0, 3.0]]);
+      for(let y = 0.4; y < CH; y += 0.32) [[CX0 - 0.06, 'z'], [CX1 + 0.06, 'z']].forEach(([x]) => box(g, x, y, (CZ0 + CZ1) / 2, 0.04, 0.03, CZ1 - CZ0, '#5E4532'));
+      prism(g, [[CZ0 - 0.5, CH + 0.1], [CZ1 + 0.5, CH + 0.1], [(CZ0 + CZ1) / 2, CH + 1.9]], CX0 - 0.5, CX1 + 0.5, '#4E3B2C'); prism(g, [[CZ1 + 0.5, CH + 0.1], [CZ0 - 0.5, CH + 0.1], [(CZ0 + CZ1) / 2, CH + 1.8]], CX0 - 0.4, CX1 + 0.4, '#6E5440');
+      gl && [[CZ0 + 1.8, CZ0 + 2.8]].forEach(([a, b]) => wall2(gl, [CX0 + 0.02, a], [CX0 + 0.02, b], 0.8, '#A9C4D2', 1.2));
+      box(g, CX0 + 0.8, 0.55, CZ1 - 1, 1.2, 0.08, 0.7, '#6E5440'); box(g, CX0 + 0.8, 0.85, CZ1 - 1.6, 0.4, 0.04, 0.4, '#6E5440');
+      box(g, CX1 - 0.6, 0.45, CZ1 - 1.2, 0.9, 0.3, 1.9, '#3D5A80'); box(g, CX0 + 0.5, 1.0, CZ0 + 0.6, 0.6, 1.7, 0.5, '#4A3626');
+      // les sapins tout autour, plus serrés au loin, quelques rochers et souches
+      let r = 7;
+      const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+      for(let i = 0; i < 160; i++){ const a = rnd() * Math.PI * 2, d = 11 + rnd() * 48, x = Math.cos(a) * d, z = Math.sin(a) * d;
+        if(Math.abs(x - Math.sin(z * 0.08) * 2.5) < 2 || Math.abs(x - 9) < 3 || (x > -11 && x < -2 && z > 1 && z < 10) || Math.hypot(x + 12, z + 10) < 4) continue;
+        const k = 1.4 + rnd() * 1.3; (i % 7 === 0 ? tree(g, x, z, k * 0.8, '#55804E', '#61905A') : pine(g, x, z, k, ['#3F6B4A', '#355E42', '#48744F'][i % 3])); }
+      [[3, -5, 0.6], [-6, -6, 0.9], [4.5, 6, 0.5], [12, -9, 1.1]].forEach(([x, z, k]) => ball(g, x, 0.2 * k, z, 0.9 * k, 0.55 * k, 0.7 * k, '#8C8A84', 7));
+      [[5, -1.5], [-5.5, 0], [2, 7.5]].forEach(([x, z]) => cyl(g, x, 0.35, z, 0.3, 0.34, 0.35, '#6B4E37', 9));
+      for(let i = 0; i < 40; i++){ const a = rnd() * 6.28, d = 6 + rnd() * 10, x = Math.cos(a) * d, z = Math.sin(a) * d; if((x > -10 && x < -3 && z > 2 && z < 9) || Math.abs(x - Math.sin(z * 0.08) * 2.5) < 1.2 || Math.abs(x - 9) < 1.6) continue; ball(g, x, 0.2, z, 0.5, 0.35, 0.5, '#4C7A46', 6); }
+    },
+  },
+});
 /* ---------- La maison de campagne, avec tous ses étages ----------
    Rez-de-chaussée (salon, cuisine, entrée, escalier), premier étage (deux chambres, salle de bain),
    grenier sous le toit, et le jardin autour. Chaque étage est dessiné à part : quand la caméra
@@ -739,108 +843,154 @@ function floorHole(g, x0, z0, x1, z1, y, col, hole, down){
   floor(g, x0, z0, x1, hz0, y, col, down); floor(g, x0, hz1, x1, z1, y, col, down);
   floor(g, x0, hz0, hx0, hz1, y, col, down); floor(g, hx1, hz0, x1, hz1, y, col, down);
 }
-function stairs(g, x0, x1, zStart, zEnd, y0, rise, n, col){
-  const run = (zEnd - zStart) / n, st = rise / n;
-  for(let i = 0; i < n; i++){ const zc = zStart + run * (i + 0.5), top = y0 + st * (i + 1); box(g, (x0 + x1) / 2, (y0 + top) / 2, zc, x1 - x0, top - y0, Math.abs(run) + 0.01, col); }
+/* un vrai escalier droit : marches avec nez, contremarches, limons de chaque côté,
+   main courante et barreaux du côté ouvert (railX : liste des côtés qui ont une rampe) */
+function stairs(g, x0, x1, zStart, zEnd, y0, rise, n, col, railX){
+  const run = (zEnd - zStart) / n, st = rise / n, dir = Math.sign(run), W = x1 - x0, xc = (x0 + x1) / 2;
+  const WOOD = col || '#8A6A4A', RIS = '#E9E4DA', STR = '#6E5440';
+  for(let i = 0; i < n; i++){
+    const zf = zStart + run * i, zb = zf + run, top = y0 + st * (i + 1);
+    box(g, xc, top - 0.02, (zf + zb) / 2 - dir * 0.02, W, 0.04, Math.abs(run) + 0.04, WOOD);                      // la marche, qui dépasse un peu
+    box(g, xc, top - st / 2 - 0.02, zf + dir * 0.012, W - 0.02, st - 0.04, 0.024, RIS);                              // la contremarche
+  }
+  // les limons : deux bandes inclinées qui portent les marches
+  const P = [[zStart, y0], [zStart, y0 + 0.28], [zEnd, y0 + rise + 0.28], [zEnd, y0 + rise - 0.06]].map(([z, y]) => [z, y]);
+  [x0 - 0.03, x1 + 0.03].forEach(x => prism(g, P.map(([z, y], k) => [z, k === 0 || k === 3 ? y - 0.02 : y - 0.02]), x - 0.03, x + 0.03, STR));
+  // la rampe : poteaux, barreaux, main courante
+  (railX || []).forEach(x => {
+    for(let i = 0; i < n; i += 1){ const z = zStart + run * (i + 0.5), y = y0 + st * (i + 1); box(g, x, y + 0.45, z, 0.03, 0.9, 0.03, '#F4F2EE'); }
+    const len = Math.hypot(rise, Math.abs(zEnd - zStart)), a = Math.atan2(rise, Math.abs(zEnd - zStart));
+    const g2 = geo(); box(g2, 0, 0, 0, 0.07, 0.05, len + 0.1, STR);
+    for(let i = 0; i < g2.p.length; i += 3){ const yy = g2.p[i + 1], zz = g2.p[i + 2], c = Math.cos(a), s = Math.sin(a); g2.p[i + 1] = yy * c + zz * s * 1; g2.p[i + 2] = -yy * s + zz * c; const ny = g2.n[i + 1], nz = g2.n[i + 2]; g2.n[i + 1] = ny * c + nz * s; g2.n[i + 2] = -ny * s + nz * c; }
+    // la pente monte vers zEnd
+    for(let i = 0; i < g2.p.length; i += 3){ if(dir < 0){ g2.p[i + 2] = -g2.p[i + 2]; g2.n[i + 2] = -g2.n[i + 2]; } g2.p[i] += x; g2.p[i + 1] += y0 + rise / 2 + 0.95; g2.p[i + 2] += (zStart + zEnd) / 2; }
+    if(dir < 0) for(let i = 0; i < g2.p.length; i += 9) for(const A of [g2.p, g2.n, g2.c]) for(let k = 0; k < 3; k++){ const t = A[i + 3 + k]; A[i + 3 + k] = A[i + 6 + k]; A[i + 6 + k] = t; }
+    g.p.push(...g2.p); g.n.push(...g2.n); g.c.push(...g2.c); if(g.e) g.e.push(...g2.e);
+    [zStart, zEnd].forEach((z, k) => box(g, x, y0 + (k ? rise : 0) + 0.55, z, 0.09, 1.1, 0.09, STR));
+  });
+}
+/* un garde-corps le long d'un bord (au-dessus d'une trémie) */
+function railing(g, a, b, y){
+  const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), n = Math.max(2, Math.round(len / 0.14)), ry = Math.atan2(dx, dz);
+  for(let i = 0; i <= n; i++){ const t = i / n; box(g, a[0] + dx * t, y + 0.45, a[1] + dz * t, 0.03, 0.9, 0.03, '#F4F2EE'); }
+  box(g, (a[0] + b[0]) / 2, y + 0.92, (a[1] + b[1]) / 2, 0.07, 0.05, len + 0.07, '#6E5440', ry);
 }
 Object.assign(SET_DEF, {
   house:{
     sky:{ top:'#86B3D9', hor:'#E3E9E8', low:'#8FA27C' }, fog:[45, 200],
-    levels:[0, 2.9, 5.8], box:[-5.2, -4.2, 5.2, 4.2],
-    cam:{ tx:-1.6, ty:1.0, tz:-2.4, yaw:32, pitch:-10, dist:3.6, lens:24 },
-    // la caméra toute prête de chaque étage
-    floors:[['Rez-de-chaussée', 'Ground floor', { tx:-1.6, ty:1.0, tz:-2.4, yaw:32, pitch:-10, dist:3.6, lens:24 }], ['Premier étage', 'First floor', { tx:-1.4, ty:3.6, tz:-2.7, yaw:28, pitch:-18, dist:3.4, lens:24 }],
-      ['Grenier', 'Attic', { tx:-1, ty:6.4, tz:-0.5, yaw:81, pitch:-5, dist:5.4, lens:24 }], ['Le jardin', 'Garden', { tx:0, ty:2.6, tz:0, yaw:22, pitch:-6, dist:17, lens:28 }]],
+    levels:[0, 2.9, 5.8, 8.7], prev:{ tx:0, ty:3.2, tz:0, yaw:32, pitch:-12, dist:21, lens:28 }, box:[-5.2, -4.2, 5.2, 4.2],
+    cam:{ tx:-1.5, ty:0.8, tz:-2.2, yaw:43, pitch:-16, dist:4.4, lens:24 },
+    // les pièces : [fr, en, étage, œil de la caméra (dans un coin de la pièce), point visé (son centre)]
+    floors:[
+      ['Salon', 'Living room', 0, [0.55, 2.0, 0.9], [-1.5, 0.8, -2.2]],
+      ['Cuisine', 'Kitchen', 0, [1.05, 2.0, 0.95], [3.0, 0.8, -1.9]],
+      ['Entrée et escalier', 'Hall and stairs', 0, [4.6, 2.1, 3.6], [-2.6, 1.1, 1.6]],
+      ['1er : palier', '1st: landing', 1, [-2.55, 5.0, -3.75], [-3.7, 3.6, 1.8]],
+      ['1er : chambre', '1st: bedroom', 1, [4.7, 4.9, 0.15], [0.6, 3.4, -2.6]],
+      ['1er : salle de bain', '1st: bathroom', 1, [-2.0, 4.9, 0.7], [3.0, 3.4, 3.0]],
+      ['2e : chambre d’enfant', '2nd: child’s room', 2, [-1.35, 7.8, 0.35], [3.2, 6.3, -2.2]],
+      ['2e : bureau', '2nd: study', 2, [-1.35, 7.8, 0.85], [3.0, 6.6, 3.0]],
+      ['Grenier', 'Attic', 3, [4.3, 9.8, 0.3], [-1, 9.3, -0.5]],
+      ['Le jardin', 'Garden', -1, [8, 4.6, 19], [0, 3.6, 0]],
+    ],
     build(g, gl, L){
-      const H = HOUSE, W0 = '#E6DDCC', IN = '#E9E3D6', WOOD = '#9C7B5B';
-      // le jardin
-      floor(g, -70, -70, 70, 70, 0, '#7C9A5A');
+      const H = HOUSE, W0 = '#E6DDCC', WOOD = '#9C7B5B', top = H.h * 3;
+      // le jardin (percé sous la maison : son plancher ne clignote pas)
+      floorHole(g, -70, -70, 70, 70, 0, '#7C9A5A', [H.x0 - 0.15, H.z0 - 0.15, H.x1 + 0.15, H.z1 + 0.15]);
       floor(g, -0.7, 4.2, 0.7, 16, 0.006, '#B9A88C');
       for(let x = -12; x <= 12; x += 0.6) box(g, x, 0.45, 16, 0.08, 0.9, 0.08, '#E9E6E0'); box(g, 0, 0.75, 16, 24, 0.06, 0.04, '#E9E6E0');
       [[-9, 6, 1.3], [9, 9, 1.1], [-11, -7, 1.4], [10, -6, 1.2]].forEach(([x, z, k]) => tree(g, x, z, k));
       [[-3.2, 4.9], [3.2, 4.9]].forEach(([x, z]) => ball(g, x, 0.35, z, 0.8, 0.45, 0.45, '#557F57', 8));
       car(g, gl, 7.5, 5, '#3D5A80');
-      // la façade : des murs vus du dehors seulement (dedans, on voit les murs intérieurs)
-      const X0 = H.x0 - 0.15, X1 = H.x1 + 0.15, Z0 = H.z0 - 0.15, Z1 = H.z1 + 0.15, top = H.h * 2;
+      box(g, -6.5, 0.4, -1, 1.6, 0.05, 0.8, '#8A6A4A'); [[-7.1, -1.3], [-5.9, -1.3], [-7.1, -0.7], [-5.9, -0.7]].forEach(([x, z]) => box(g, x, 0.2, z, 0.05, 0.4, 0.05, '#6E5440'));
+      // la façade (vue du dehors), sur trois niveaux
+      const X0 = H.x0 - 0.15, X1 = H.x1 + 0.15, Z0 = H.z0 - 0.15, Z1 = H.z1 + 0.15;
       wall(g, [X0, Z1], [X1, Z1], top, W0); wall(g, [X1, Z0], [X0, Z0], top, W0); wall(g, [X0, Z0], [X0, Z1], top, W0); wall(g, [X1, Z1], [X1, Z0], top, W0);
       box(g, 0, 0.12, Z1 + 0.3, 1.8, 0.24, 0.6, '#8D9198');
-      wall(g, [-0.55, Z1 + 0.005], [0.55, Z1 + 0.005], 2.1, '#6E5440');                        // la porte d'entrée
-      [[-3, 1], [3, 1], [-3, 3.9], [3, 3.9], [0, 3.9]].forEach(([x, y]) => { wall(g, [x - 0.6, Z1 + 0.005], [x + 0.6, Z1 + 0.005], 1.3, '#3E4552', y); wall(g, [x - 0.68, Z1 + 0.01], [x + 0.68, Z1 + 0.01], 0.08, '#F4F2EE', y - 0.04); [-0.66, 0.66].forEach(d => wall(g, [x + d - 0.18, Z1 + 0.012], [x + d, Z1 + 0.012], 1.3, '#5E7F6A', y)); });
-      [[-2.5, 1], [2.5, 1], [-2.5, 3.9], [2.5, 3.9]].forEach(([z, y]) => { wall(g, [X0 - 0.005, z - 0.55], [X0 - 0.005, z + 0.55], 1.3, '#3E4552', y); wall(g, [X1 + 0.005, z + 0.55], [X1 + 0.005, z - 0.55], 1.3, '#3E4552', y); });
-      // le toit à deux pentes, et ses pignons
-      // (dans le niveau du grenier : quand on regarde un étage d'en haut, le toit s'efface)
-      prism(L[2], [[Z0 - 0.5, top], [Z1 + 0.5, top], [0, top + 2.8]], X0 - 0.4, X1 + 0.4, '#8C4A3A');
-      [[X0, 1], [X1, -1]].forEach(([x, sd]) => { const pts = [[Z0, top], [Z1, top], [0, top + 2.6]]; prism(L[2], pts, Math.min(x, x + sd * -0.02), Math.max(x, x + sd * -0.02), W0); });
-      box(L[2], 3, top + 2.4, -1, 0.6, 1.4, 0.6, '#8A7356');                                     // la cheminée
-      // ---- rez-de-chaussée (L[0]) ----
-      const g0 = L[0], hole = [-4.85, -0.4, -3.55, 3.7];
-      floor(g0, H.x0, H.z0, H.x1, H.z1, 0.004, WOOD); for(let x = H.x0 + 0.4; x < H.x1; x += 0.4) box(g0, x, 0.006, 0, 0.012, 0.004, 8, '#8C6D50');
-      wall(g0, [H.x0, H.z0], [H.x1, H.z0], H.h, IN); wall(g0, [H.x0, H.z1], [H.x0, H.z0], H.h, '#DED6C6'); wall(g0, [H.x1, H.z0], [H.x1, H.z1], H.h, '#DED6C6'); wall(g0, [H.x1, H.z1], [H.x0, H.z1], H.h, IN);
-      floorHole(g0, H.x0, H.z0, H.x1, H.z1, H.h - 0.002, '#F2EEE6', hole, true);
-      [[-3, 1], [3, 1]].forEach(([x, y]) => wall(g0, [x + 0.6, H.z1 - 0.01], [x - 0.6, H.z1 - 0.01], 1.3, '#A9C9DE', y));
-      wall(g0, [0.55, H.z1 - 0.01], [-0.55, H.z1 - 0.01], 2.1, '#7A5C42');
-      [-2.5, 2.5].forEach(z => { wall(g0, [H.x0 + 0.01, z + 0.55], [H.x0 + 0.01, z - 0.55], 1.3, '#A9C9DE', 1); wall(g0, [H.x1 - 0.01, z - 0.55], [H.x1 - 0.01, z + 0.55], 1.3, '#A9C9DE', 1); });
-      partition(g0, [0.8, H.z0], [0.8, 1.2], 0, H.h, IN, [[3.2, 4.1]]);                       // salon | cuisine
-      partition(g0, [0.8, 1.2], [H.x1, 1.2], 0, H.h, IN, [[1.2, 2.2]]);
-      stairs(g0, -4.85, -3.55, 3.7, -0.4, 0, H.h, 14, '#8A6A4A');
-      box(g0, -3.5, 1.4, 1.65, 0.05, 1.0, 4.1, '#6E5440');                                    // la rampe
-      // le salon : canapé, table basse, cheminée, tapis, bibliothèque
+      wall(g, [-0.55, Z1 + 0.005], [0.55, Z1 + 0.005], 2.1, '#6E5440');
+      for(let f = 0; f < 3; f++){ const y = f * H.h + 1;
+        [-3, 3].concat(f ? [0] : []).forEach(x => { wall(g, [x - 0.6, Z1 + 0.005], [x + 0.6, Z1 + 0.005], 1.3, '#3E4552', y); wall(g, [x - 0.68, Z1 + 0.01], [x + 0.68, Z1 + 0.01], 0.08, '#F4F2EE', y - 0.04); [-0.66, 0.66].forEach(d => wall(g, [x + d - 0.18, Z1 + 0.012], [x + d, Z1 + 0.012], 1.3, '#5E7F6A', y)); });
+        [-2.5, 2.5].forEach(z => { wall(g, [X0 - 0.005, z - 0.55], [X0 - 0.005, z + 0.55], 1.3, '#3E4552', y); wall(g, [X1 + 0.005, z + 0.55], [X1 + 0.005, z - 0.55], 1.3, '#3E4552', y); });
+        [-2.5, 2.5].forEach(x => wall(g, [x + 0.6, Z0 - 0.005], [x - 0.6, Z0 - 0.005], 1.3, '#3E4552', y));
+        box(g, 0, f * H.h + 0.02, Z1 + 0.02, 10.3, 0.12, 0.04, '#D6CDBC');
+      }
+      // le toit et la cheminée (dans le niveau du grenier : il s'efface quand on regarde un étage d'en haut)
+      prism(L[3], [[Z0 - 0.5, top], [Z1 + 0.5, top], [0, top + 2.8]], X0 - 0.4, X1 + 0.4, '#8C4A3A');
+      [[X0, 1], [X1, -1]].forEach(([x, sd]) => prism(L[3], [[Z0, top], [Z1, top], [0, top + 2.6]], Math.min(x, x - sd * 0.02), Math.max(x, x - sd * 0.02), W0));
+      box(L[3], 3, top + 2.4, -1, 0.6, 1.4, 0.6, '#8A7356');
+      // ---- les trois étages habités ----
+      const hole1 = [-4.9, -0.45, -3.7, 3.75], hole2 = [-3.62, -0.45, -2.42, 3.75], hatch = [-4.7, -3.2, -3.9, -2.4];
+      const room = (gg, y, cols, ceilHole, floorHole_) => {
+        if(floorHole_) floorHole(gg, H.x0, H.z0, H.x1, H.z1, y + 0.004, cols.f, floorHole_); else floor(gg, H.x0, H.z0, H.x1, H.z1, y + 0.004, cols.f);
+        wall(gg, [H.x0, H.z0], [H.x1, H.z0], H.h, cols.a, y); wall(gg, [H.x0, H.z1], [H.x0, H.z0], H.h, cols.b, y); wall(gg, [H.x1, H.z0], [H.x1, H.z1], H.h, cols.b, y); wall(gg, [H.x1, H.z1], [H.x0, H.z1], H.h, cols.a, y);
+        floorHole(gg, H.x0, H.z0, H.x1, H.z1, y + H.h - 0.002, '#F2EEE6', ceilHole, true);
+        box(gg, 0, y + 0.06, H.z0 + 0.02, 10, 0.12, 0.03, '#C9BFAE'); box(gg, 0, y + 0.06, H.z1 - 0.02, 10, 0.12, 0.03, '#C9BFAE');
+      };
+      const winIn = (gg, y, xs) => { xs.forEach(x => wall(gg, [x + 0.6, H.z1 - 0.01], [x - 0.6, H.z1 - 0.01], 1.3, '#A9C9DE', y + 1)); [-2.5, 2.5].forEach(z => { wall(gg, [H.x0 + 0.01, z + 0.55], [H.x0 + 0.01, z - 0.55], 1.3, '#A9C9DE', y + 1); wall(gg, [H.x1 - 0.01, z - 0.55], [H.x1 - 0.01, z + 0.55], 1.3, '#A9C9DE', y + 1); }); [-2.5, 2.5].forEach(x => wall(gg, [x - 0.6, H.z0 + 0.01], [x + 0.6, H.z0 + 0.01], 1.3, '#A9C9DE', y + 1)); };
+      // rez-de-chaussée : salon, cuisine, entrée ; l'escalier monte le long du mur gauche
+      const g0 = L[0];
+      room(g0, 0, { f:WOOD, a:'#E9E3D6', b:'#DED6C6' }, hole1, null);
+      for(let x = H.x0 + 0.4; x < H.x1; x += 0.4) box(g0, x, 0.006, 0, 0.012, 0.004, 8, '#8C6D50');
+      winIn(g0, 0, [-3, 3]); wall(g0, [0.55, H.z1 - 0.01], [-0.55, H.z1 - 0.01], 2.1, '#7A5C42');
+      stairs(g0, -4.9, -3.7, 3.7, -0.45, 0, H.h, 14, '#8A6A4A', [-3.66]);
+      partition(g0, [0.8, H.z0], [0.8, 1.2], 0, H.h, '#E9E3D6', [[3.2, 4.1]]);
+      partition(g0, [0.8, 1.2], [H.x1, 1.2], 0, H.h, '#E9E3D6', [[1.2, 2.2]]);
       floor(g0, -3.2, -3.5, 0.4, -0.3, 0.008, '#B9876A');
       box(g0, -1.4, 0.22, -3.3, 2.2, 0.44, 0.9, '#5A6B7C'); box(g0, -1.4, 0.66, -3.68, 2.2, 0.5, 0.16, '#53637A'); [-0.22, -2.58].forEach(x => box(g0, x, 0.36, -3.3, 0.2, 0.32, 0.92, '#53637A'));
       box(g0, -1.4, 0.38, -1.7, 1.1, 0.05, 0.6, '#6E5440');
-      box(g0, -4.75, 0.6, -2.0, 0.5, 1.2, 1.6, '#B9B0A0'); box(g0, -4.6, 0.45, -2.0, 0.3, 0.6, 0.9, '#2C2E33'); box(g0, -4.72, 1.25, -2.0, 0.6, 0.1, 1.8, '#9A8B7E');
       box(g0, 0.55, 1.0, -2.0, 0.4, 2.0, 1.4, '#7A5C42');
-      // la cuisine : plan de travail, évier, frigo, table et chaises
+      box(g0, -2.3, 0.3, -1.6, 0.5, 0.6, 0.5, '#B9B0A0'); cyl(g0, -2.3, 1.0, -1.6, 0.12, 0.18, 0.4, '#F2E6C9', 10);
       box(g0, 4.65, 0.45, -1.5, 0.65, 0.9, 4.8, '#E9E6E0'); box(g0, 4.65, 0.92, -1.5, 0.7, 0.05, 4.85, '#5E636C'); box(g0, 4.65, 0.93, -2.6, 0.45, 0.04, 0.6, '#9AA0A8');
-      box(g0, 4.6, 0.95, 0.6, 0.7, 1.9, 0.7, '#D9DCE0');
+      box(g0, 4.6, 0.95, 0.6, 0.7, 1.9, 0.7, '#D9DCE0'); box(g0, 4.65, 1.75, -1.5, 0.35, 0.6, 4.6, '#E9E6E0');
       box(g0, 2.6, 0.75, -1.8, 1.4, 0.05, 0.9, '#8A6A4A'); [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]].forEach(([a, b]) => box(g0, 2.6 + a, 0.37, -1.8 + b, 0.05, 0.74, 0.05, '#6E5440'));
       [[2.0, -2.55], [3.2, -2.55], [2.0, -1.05], [3.2, -1.05]].forEach(([x, z]) => { box(g0, x, 0.45, z, 0.42, 0.05, 0.42, '#7A5C42'); box(g0, x, 0.72, z + (z < -1.8 ? -0.19 : 0.19), 0.42, 0.55, 0.04, '#7A5C42'); });
       cyl(g0, 2.6, 2.9, -1.8, 0.01, 0.01, 0.7, '#2C2E33', 4); cyl(g0, 2.6, 2.2, -1.8, 0.05, 0.25, 0.2, '#2F6E4F', 10);
-      // l'entrée : porte-manteau, meuble à chaussures
       box(g0, 3.6, 0.4, 3.75, 1.2, 0.8, 0.4, '#7A5C42'); cyl(g0, 1.6, 0.9, 3.6, 0.03, 0.03, 1.8, '#3A3D44', 6);
-      // ---- premier étage (L[1]) ----
-      const g1 = L[1], y1 = H.h, hatch = [-4.6, -3.0, -3.8, -2.2];
-      floorHole(g1, H.x0, H.z0, H.x1, H.z1, y1 + 0.002, '#A68A6B', hole);
-      wall(g1, [H.x0, H.z0], [H.x1, H.z0], H.h, '#DCE3E8', y1); wall(g1, [H.x0, H.z1], [H.x0, H.z0], H.h, '#E8DED4', y1); wall(g1, [H.x1, H.z0], [H.x1, H.z1], H.h, '#E8DED4', y1); wall(g1, [H.x1, H.z1], [H.x0, H.z1], H.h, '#DCE3E8', y1);
-      floorHole(g1, H.x0, H.z0, H.x1, H.z1, y1 + H.h - 0.002, '#F2EEE6', hatch, true);
-      [[-3, 1], [3, 1], [0, 1]].forEach(([x]) => wall(g1, [x + 0.6, H.z1 - 0.01], [x - 0.6, H.z1 - 0.01], 1.3, '#A9C9DE', y1 + 1));
-      [-2.5, 2.5].forEach(z => { wall(g1, [H.x0 + 0.01, z + 0.55], [H.x0 + 0.01, z - 0.55], 1.3, '#A9C9DE', y1 + 1); wall(g1, [H.x1 - 0.01, z - 0.55], [H.x1 - 0.01, z + 0.55], 1.3, '#A9C9DE', y1 + 1); });
-      partition(g1, [-3.4, H.z0], [-3.4, H.z1], y1, H.h, '#E9E3D6', [[0.6, 1.5], [4.6, 5.5]]);                     // le palier, le long de l'escalier
-      partition(g1, [0.6, H.z0], [0.6, 0.6], y1, H.h, '#E9E3D6', []);
-      partition(g1, [-3.4, 0.6], [H.x1, 0.6], y1, H.h, '#E9E3D6', [[0.6, 1.5], [4.6, 5.5]]);
-      box(g1, -3.45, y1 + 0.5, -2.4, 0.05, 1.0, 0.0001, '#6E5440');
-      // la chambre des parents : grand lit, tables de nuit, armoire
-      box(g1, -1.4, y1 + 0.25, -2.7, 1.7, 0.5, 2.1, '#E9E4DA'); box(g1, -1.4, y1 + 0.52, -2.7, 1.66, 0.06, 2.06, '#C9503C'); box(g1, -1.4, y1 + 0.55, -3.6, 1.6, 0.12, 0.35, '#F4F2EE'); box(g1, -1.4, y1 + 0.7, -3.85, 1.8, 1.0, 0.08, '#7A5C42');
-      [-2.55, -0.25].forEach(x => box(g1, x, y1 + 0.28, -3.6, 0.45, 0.56, 0.4, '#7A5C42'));
-      box(g1, 0.25, y1 + 1.0, -1.0, 0.6, 2.0, 1.4, '#8A6A4A');
-      // la chambre d'enfant : petit lit, bureau, tapis
-      box(g1, 3.9, y1 + 0.2, -2.6, 1.0, 0.4, 2.0, '#E9E4DA'); box(g1, 3.9, y1 + 0.42, -2.3, 0.96, 0.05, 1.4, '#3D5A80');
-      box(g1, 1.6, y1 + 0.72, -3.6, 1.2, 0.05, 0.6, '#E9E6E0'); box(g1, 1.6, y1 + 0.42, -3.2, 0.42, 0.05, 0.42, '#C9503C');
-      floor(g1, 1.4, -2.2, 3.2, -0.6, y1 + 0.006, '#E3A33A');
-      // la salle de bain : baignoire, lavabo, toilettes
+      floor(g0, -0.9, 2.2, 0.9, 3.9, 0.008, '#7A3B37');
+      // premier étage : palier (avec garde-corps), chambre des parents, salle de bain ; l'escalier suivant part du palier
+      const g1 = L[1], y1 = H.h;
+      room(g1, y1, { f:'#A68A6B', a:'#DCE3E8', b:'#E8DED4' }, hole2, hole1);
+      winIn(g1, y1, [-3, 0, 3]);
+      stairs(g1, -3.62, -2.42, 3.7, -0.45, y1, H.h, 14, '#8A6A4A', [-2.38]);
+      railing(g1, [-4.9, 3.78], [-3.7, 3.78], y1); railing(g1, [-3.66, 3.75], [-3.66, -0.45], y1 - 0.0);
+      partition(g1, [-2.3, H.z0], [-2.3, H.z1], y1, H.h, '#E9E3D6', [[0.5, 1.4], [5.0, 5.9]]);
+      partition(g1, [-2.3, 0.4], [H.x1, 0.4], y1, H.h, '#E9E3D6', [[3.8, 4.7]]);
+      box(g1, 0.6, y1 + 0.25, -2.7, 1.7, 0.5, 2.1, '#E9E4DA'); box(g1, 0.6, y1 + 0.52, -2.7, 1.66, 0.06, 2.06, '#C9503C'); box(g1, 0.6, y1 + 0.55, -3.6, 1.6, 0.12, 0.35, '#F4F2EE'); box(g1, 0.6, y1 + 0.7, -3.85, 1.8, 1.0, 0.08, '#7A5C42');
+      [-0.55, 1.75].forEach(x => { box(g1, x, y1 + 0.28, -3.6, 0.45, 0.56, 0.4, '#7A5C42'); cyl(g1, x, y1 + 0.82, -3.6, 0.06, 0.12, 0.25, '#F2E6C9', 8); });
+      box(g1, 4.65, y1 + 1.0, -1.6, 0.6, 2.0, 1.4, '#8A6A4A'); floor(g1, -0.6, -1.4, 1.8, -0.2, y1 + 0.008, '#B9876A');
       box(g1, 3.9, y1 + 0.28, 3.3, 1.6, 0.56, 0.8, '#F4F2EE'); box(g1, 3.9, y1 + 0.5, 3.3, 1.45, 0.08, 0.6, '#A9C9DE');
       box(g1, 1.4, y1 + 0.8, 3.75, 0.6, 0.12, 0.42, '#F4F2EE'); box(g1, 1.4, y1 + 0.4, 3.85, 0.2, 0.8, 0.2, '#F4F2EE'); wall(g1, [1.75, H.z1 - 0.01], [1.05, H.z1 - 0.01], 0.6, '#C9D3DC', y1 + 1.1);
-      box(g1, 2.5, y1 + 0.22, 3.7, 0.4, 0.44, 0.55, '#F4F2EE');
-      // l'échelle vers le grenier
-      [-4.5, -3.9].forEach(x => box(g1, x, y1 + H.h / 2, -2.6, 0.05, H.h, 0.05, '#8A6A4A')); for(let k = 1; k < 9; k++) box(g1, -4.2, y1 + k * 0.32, -2.6, 0.6, 0.04, 0.05, '#8A6A4A');
-      // ---- le grenier (L[2]) ----
+      box(g1, 2.5, y1 + 0.22, 3.7, 0.4, 0.44, 0.55, '#F4F2EE'); floor(g1, -2.2, 0.5, 5, 4, y1 + 0.007, '#C9D3DC');
+      // deuxième étage : chambre d'enfant, bureau, et l'échelle du grenier sur le palier
       const g2 = L[2], y2 = H.h * 2;
-      floorHole(g2, H.x0, H.z0, H.x1, H.z1, y2 + 0.002, '#8A7356', hatch);
-      for(let x = H.x0 + 0.3; x < H.x1; x += 0.6) box(g2, x, y2 + 0.005, 0, 0.012, 0.004, 8, '#7A6248');
-      // les pentes du toit vues de l'intérieur, et les pignons
-      const ridge = y2 + 2.55;
-      quad(g2, [H.x0, y2, H.z0], [H.x1, y2, H.z0], [H.x1, ridge, 0], [H.x0, ridge, 0], hexRGB('#9C7B5B'));
-      quad(g2, [H.x1, y2, H.z1], [H.x0, y2, H.z1], [H.x0, ridge, 0], [H.x1, ridge, 0], hexRGB('#9C7B5B'));
-      tri(g2, [H.x0, y2, H.z1], [H.x0, y2, H.z0], [H.x0, ridge, 0], hexRGB('#B9A88C')); tri(g2, [H.x1, y2, H.z0], [H.x1, y2, H.z1], [H.x1, ridge, 0], hexRGB('#B9A88C'));
-      for(let x = H.x0 + 0.8; x < H.x1; x += 1.6){ const k = hexRGB('#7A5C42'); quad(g2, [x - 0.06, y2 + 0.01, H.z0 + 0.02], [x + 0.06, y2 + 0.01, H.z0 + 0.02], [x + 0.06, ridge - 0.02, 0.02], [x - 0.06, ridge - 0.02, 0.02], k); quad(g2, [x + 0.06, y2 + 0.01, H.z1 - 0.02], [x - 0.06, y2 + 0.01, H.z1 - 0.02], [x - 0.06, ridge - 0.02, -0.02], [x + 0.06, ridge - 0.02, -0.02], k); }
-      wall(g2, [H.x0 + 0.01, 0.5], [H.x0 + 0.01, -0.5], 0.8, '#A9C9DE', y2 + 0.8);
-      box(g2, -2.5, y2 + 0.3, -2.2, 1.0, 0.6, 0.6, '#6E5440'); box(g2, -2.5, y2 + 0.62, -2.2, 1.04, 0.06, 0.64, '#8A6A4A');
-      [[1.2, -2.4], [1.8, -2.2], [1.5, -2.3]].forEach(([x, z], k) => box(g2, x, y2 + 0.25 + (k === 2 ? 0.5 : 0), z, 0.5, 0.5, 0.5, '#B08A5A'));
-      box(g2, 2.6, y2 + 0.45, 1.4, 0.55, 0.06, 0.55, '#7A5C42'); box(g2, 2.6, y2 + 0.85, 1.65, 0.55, 0.8, 0.06, '#7A5C42');
-      cyl(g2, 0, ridge, 0, 0.01, 0.01, 0.5, '#2C2E33', 4); ball(g2, 0, ridge - 0.55, 0, 0.06, 0.08, 0.06, '#F2E6C9', 8);
-      box(g2, -1.2, y2 + 0.9, 2.4, 0.6, 1.8, 0.4, '#9AA0A8');
+      room(g2, y2, { f:'#B39C86', a:'#E8E4D9', b:'#DED8CA' }, hatch, hole2);
+      winIn(g2, y2, [-3, 0, 3]);
+      railing(g2, [-3.62, 3.78], [-2.42, 3.78], y2); railing(g2, [-2.38, 3.75], [-2.38, -0.45], y2);
+      partition(g2, [-1.6, H.z0], [-1.6, H.z1], y2, H.h, '#E9E3D6', [[0.6, 1.5], [5.6, 6.5]]);
+      partition(g2, [-1.6, 0.6], [H.x1, 0.6], y2, H.h, '#E9E3D6', []);
+      box(g2, 3.9, y2 + 0.2, -2.6, 1.0, 0.4, 2.0, '#E9E4DA'); box(g2, 3.9, y2 + 0.42, -2.3, 0.96, 0.05, 1.4, '#3D5A80');
+      box(g2, 0.6, y2 + 0.72, -3.6, 1.2, 0.05, 0.6, '#E9E6E0'); box(g2, 0.6, y2 + 0.42, -3.2, 0.42, 0.05, 0.42, '#C9503C');
+      floor(g2, 1.4, -2.2, 3.2, -0.6, y2 + 0.006, '#E3A33A'); box(g2, -0.8, y2 + 0.3, -1.2, 0.5, 0.5, 0.5, '#D9707A'); ball(g2, 2.2, y2 + 0.15, -1.4, 0.15, 0.15, 0.15, '#3D5A80', 8);
+      box(g2, 2.4, y2 + 0.74, 3.4, 1.6, 0.05, 0.7, '#6E5440'); box(g2, 2.4, y2 + 1.0, 3.6, 0.55, 0.36, 0.04, '#2C2E33'); box(g2, 2.4, y2 + 0.45, 2.8, 0.48, 0.07, 0.46, '#3A3D44'); box(g2, 2.4, y2 + 0.8, 2.56, 0.46, 0.6, 0.06, '#3A3D44');
+      box(g2, 4.75, y2 + 1.0, 2.2, 0.4, 2.0, 2.4, '#7A5C42'); [0.5, 1.0, 1.5].forEach((yy, k) => { for(let i = 0; i < 9; i++) box(g2, 4.68, y2 + yy + 0.13, 1.2 + i * 0.22, 0.22, 0.24 - (i % 3) * 0.03, 0.12, ['#9B3B33', '#3D5A80', '#C9B48F', '#2F6E4F'][(i + k) % 4]); });
+      [-4.6, -4.0].forEach(x => box(g2, x, y2 + H.h / 2, -2.8, 0.05, H.h, 0.05, '#8A6A4A')); for(let k = 1; k < 9; k++) box(g2, -4.3, y2 + k * 0.32, -2.8, 0.6, 0.04, 0.05, '#8A6A4A');
+      // le grenier
+      const g3 = L[3], y3 = H.h * 3, ridge = y3 + 2.55;
+      floorHole(g3, H.x0, H.z0, H.x1, H.z1, y3 + 0.002, '#8A7356', hatch);
+      for(let x = H.x0 + 0.3; x < H.x1; x += 0.6) box(g3, x, y3 + 0.005, 0, 0.012, 0.004, 8, '#7A6248');
+      quad(g3, [H.x0, y3, H.z0], [H.x1, y3, H.z0], [H.x1, ridge, 0], [H.x0, ridge, 0], hexRGB('#9C7B5B'));
+      quad(g3, [H.x1, y3, H.z1], [H.x0, y3, H.z1], [H.x0, ridge, 0], [H.x1, ridge, 0], hexRGB('#9C7B5B'));
+      tri(g3, [H.x0, y3, H.z1], [H.x0, y3, H.z0], [H.x0, ridge, 0], hexRGB('#B9A88C')); tri(g3, [H.x1, y3, H.z0], [H.x1, y3, H.z1], [H.x1, ridge, 0], hexRGB('#B9A88C'));
+      wall(g3, [H.x0 + 0.01, 0.5], [H.x0 + 0.01, -0.5], 0.8, '#A9C9DE', y3 + 0.8);
+      box(g3, -2.5, y3 + 0.3, -2.2, 1.0, 0.6, 0.6, '#6E5440'); box(g3, -2.5, y3 + 0.62, -2.2, 1.04, 0.06, 0.64, '#8A6A4A');
+      [[1.2, -2.4], [1.8, -2.2], [1.5, -2.3]].forEach(([x, z], k) => box(g3, x, y3 + 0.25 + (k === 2 ? 0.5 : 0), z, 0.5, 0.5, 0.5, '#B08A5A'));
+      box(g3, 2.6, y3 + 0.45, 1.4, 0.55, 0.06, 0.55, '#7A5C42'); box(g3, 2.6, y3 + 0.85, 1.65, 0.55, 0.8, 0.06, '#7A5C42');
+      cyl(g3, 0, ridge, 0, 0.01, 0.01, 0.5, '#2C2E33', 4); ball(g3, 0, ridge - 0.55, 0, 0.06, 0.08, 0.06, '#F2E6C9', 8);
+      box(g3, -1.2, y3 + 0.9, 2.4, 0.6, 1.8, 0.4, '#9AA0A8');
     },
   },
+});
+Object.assign(SET_DEF, {
   roof:{
     sky:{ top:'#6F9CC9', hor:'#E2D9CF', low:'#6E737B' }, fog:[40, 220],
     cam:{ tx:0, ty:1.2, tz:0, yaw:24, pitch:-5, dist:7.6, lens:28 },
@@ -946,11 +1096,14 @@ const SPOTS = {
   street:[ ['Sur le trottoir', 'On the sidewalk', -6.2, 0.5, 120, null, 0.14], ['En face, sur le trottoir', 'Facing, on the sidewalk', -5.0, -0.5, -60, null, 0.14], ['Au passage piéton', 'At the crosswalk', -1.6, 6.0, 90, 'walk'], ['À l’abribus, assis', 'At the bus stop, seated', 6.32, -8.4, -90, 'sit', -0.34] ],
   beach:[ ['Sur la serviette', 'On the towel', 4.8, 2.6, -150, 'sitground'], ['Allongé au soleil', 'Lying in the sun', -1.6, -0.6, 180, 'lie'], ['Au bord de l’eau', 'At the water’s edge', 1.0, -7.4, 180], ['Qui se promène', 'Taking a walk', -2.0, 2.4, -100, 'walk'] ],
   stadium:[ ['Au rond central', 'Center circle', 0.0, 0.0, 30], ['Face à face', 'Facing', 0.8, 0.6, -150], ['Devant le but', 'In front of the goal', 0.0, 44.0, 180], ['En tribune', 'In the stands', -41.0, 10.0, 90, null, 1.4] ],
-  house:[ ['Salon, sur le canapé', 'Living room, on the sofa', -1.6, -3.2, 0, 'sit'], ['Dans la cuisine', 'In the kitchen', 3.6, -1.0, 90], ['À la porte d’entrée', 'At the front door', 0.0, 3.3, 180], ['Dans l’escalier', 'On the stairs', -4.2, 1.55, 180, null, 1.66],
-    ['Chambre, sur le lit', 'Bedroom, on the bed', -1.4, -2.4, 0, 'lie', 3.45], ['Chambre, à la fenêtre', 'Bedroom, at the window', -1.0, -3.4, 0, null, 2.9], ['Chambre d’enfant', 'Child’s room', 2.4, -1.4, -60, null, 2.9], ['Au grenier', 'In the attic', 0.6, 0.2, 90, null, 5.8], ['Dans le jardin', 'In the garden', 1.6, 7.0, 180] ],
+  house:[ ['Salon, sur le canapé', 'Living room, on the sofa', -1.6, -3.2, 0, 'sit'], ['Dans la cuisine', 'In the kitchen', 3.6, -1.0, 90], ['À la porte d’entrée', 'At the front door', 0.0, 3.3, 180], ['Dans l’escalier', 'On the stairs', -4.3, 1.4, 180, null, 1.66],
+    ['1er : sur le lit', '1st: on the bed', 0.6, -2.4, 0, 'lie', 3.45], ['1er : sur le palier', '1st: on the landing', -3.0, -2.0, 90, null, 2.9], ['1er : salle de bain', '1st: bathroom', 2.6, 2.2, 180, null, 2.9],
+    ['2e : chambre d’enfant', '2nd: child’s room', 2.4, -1.4, -60, null, 5.8], ['2e : au bureau, assis', '2nd: at the desk, seated', 2.4, 2.8, 180, 'sit', 5.8 - 0.4], ['Au grenier', 'In the attic', 0.6, 0.2, 90, null, 8.7], ['Dans le jardin', 'In the garden', 1.6, 7.0, 180] ],
   roof:[ ['Au bord du toit', 'At the edge', 0.0, -6.3, 180], ['Face à face', 'Facing', 0.9, -4.8, 0], ['Près du château d’eau', 'By the water tower', -2.2, -2.2, -130], ['Assis sur le rebord', 'Sitting on the ledge', 3.0, 6.75, 180, 'sit', 0.55] ],
   warehouse:[ ['Au milieu, face à face', 'In the middle, facing', -0.8, 1.8, 120], ['En face', 'Opposite', 0.6, 1.0, -60], ['Entre les rayonnages', 'Between the racks', -5.0, 2.6, 90], ['Caché derrière une caisse', 'Hiding behind a crate', -3.0, -1.5, 180, 'crouch'] ],
   country:[ ['Au bord de la route', 'By the roadside', 4.3, 1.0, -90], ['Sur la route', 'On the road', 0.9, 3.0, 180, 'walk'], ['Près de la clôture', 'By the fence', -5.0, -1.6, 90], ['Dans le champ', 'In the field', -12.0, -6.0, 30] ],
+  airfield:[ ['Sur le tarmac', 'On the apron', -2.0, 4.0, 60], ['En face', 'Facing', 0.2, 5.4, -120], ['Dans le hangar', 'In the hangar', -22, -9, 90], ['Au bord de la piste', 'By the runway', 4.2, 20, 90], ['Sur l’aire de l’hélico', 'On the helipad', -6, 11, 180, null, 0.04], ['Au pied de la tour', 'At the tower', -35.4, 10, 90] ],
+  forest:[ ['Dans la clairière', 'In the clearing', 0.2, 0.6, 200], ['En face', 'Facing', -0.9, -0.6, 30], ['Sur le sentier', 'On the path', 1.2, -12, 0, 'walk'], ['Assis sur un rondin', 'Sitting on a log', -0.7, -3.1, 0, 'sit'], ['Sur la passerelle', 'On the footbridge', 9, 2, 90, null, 0.22], ['Dans la cabane', 'In the cabin', -6.5, 5.5, 160, null, 0.15], ['Entre les arbres', 'Among the trees', -12, -10, 40] ],
 };
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
@@ -1074,10 +1227,12 @@ function propGeo(id){
 
 /* ---------- Les véhicules qu'on pose où l'on veut (la moto) ----------
    Repère du véhicule : il regarde vers +z ; la selle du pilote est en z = -0.2, celle du passager en -0.55. */
-const VEHICLES = [['moto', 'Moto', 'Motorbike']];
+const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['heli', 'Hélicoptère', 'Helicopter'], ['plane', 'Avion', 'Plane']];
 const MOTO_COLS = ['#B4232C', '#24262B', '#3D5A80', '#E8B923'];
-function vehicleGeo(kind, col){
+function vehicleGeo(kind, col, glass){
   const g = geo(), K = '#1E2025', M = '#9AA0A8', C = col || MOTO_COLS[0];
+  if(kind === 'heli') return heliGeo(col, glass);
+  if(kind === 'plane') return planeGeo(col, glass);
   if(kind === 'moto'){
     [0.7, -0.72].forEach(z => { cyl(g, -0.06, 0.31, z, 0.31, 0.31, 0.12, '#17181B', 16, 'x'); cyl(g, -0.065, 0.31, z, 0.13, 0.13, 0.13, M, 10, 'x'); });
     prism(g, [[0.45, 0.78], [0.42, 0.98], [0.05, 1.0], [-0.02, 0.8]], -0.15, 0.15, C);                 // le réservoir
@@ -1118,3 +1273,75 @@ const GUN_SHOTS = [
   ['contre', 'Contre-plongée menaçante', 'Threatening low angle', (e, s) => [-0.3, 0.55, 1.6], (e, s) => [0, e - 0.1, 0], 28, 'pm', 'con'],
   ['large', 'Plan large de la scène', 'Wide shot of the scene', (e, s) => [2.6, 1.7, 4.6], (e, s) => [0, 1.1, 1.3], 28, 'pe'],
 ];
+
+/* ---------- L'hélicoptère et l'avion de tourisme ----------
+   Ils regardent vers +z. La cabine est vitrée (les vitres vont dans « glass ») : on voit le pilote. */
+function heliGeo(col, glass){
+  const g = geo(), C = col || '#2F6E4F', K = '#24262B', M = '#9AA0A8', G = glass;
+  prism(g, [[1.55, 0.85], [1.75, 1.25], [-1.05, 1.25], [-1.2, 0.85]], -0.82, 0.82, C);              // le bas de la cabine
+  box(g, 0, 0.87, 0.2, 1.6, 0.06, 2.6, K);                                                            // le plancher
+  prism(g, [[0.95, 2.3], [-1.15, 2.3], [-1.2, 2.42], [0.9, 2.42]], -0.8, 0.8, C);                     // le toit
+  [[-0.8, -0.74], [0.74, 0.8]].forEach(([a, b]) => { prism(g, [[-1.05, 1.25], [-1.2, 1.25], [-1.2, 2.3], [-1.05, 2.3]], a, b, C); prism(g, [[0.15, 1.25], [0.05, 1.25], [0.05, 2.3], [0.15, 2.3]], a, b, K); });
+  if(G){ prism(G, [[1.75, 1.25], [1.6, 1.8], [0.95, 2.3], [0.9, 2.3], [1.5, 1.25]], -0.78, 0.78, '#A9C4D2');
+    [[-0.79, -0.77], [0.77, 0.79]].forEach(([a, b]) => { prism(G, [[1.55, 1.25], [0.95, 2.3], [0.15, 2.3], [0.15, 1.25]], a, b, '#A9C4D2'); prism(G, [[0.05, 1.25], [0.05, 2.3], [-1.05, 2.3], [-1.05, 1.25]], a, b, '#A9C4D2'); }); }
+  cyl(g, 0, 1.85, -5.4, 0.1, 0.34, 4.3, C, 10, 'z');                                                // la poutre de queue
+  prism(g, [[-4.9, 1.85], [-5.35, 2.75], [-5.6, 2.75], [-5.5, 1.75]], -0.04, 0.04, C);                   // la dérive
+  box(g, -5.2, 1.85, 0, 1.0, 0.04, 0.4, C, Math.PI / 2);
+  cyl(g, 0.12, 2.35, -5.4, 0.04, 0.04, 0.08, K, 6, 'x'); box(g, 0.18, 2.35, -5.4, 0.02, 1.1, 0.1, K);   // le rotor de queue
+  cyl(g, 0, 2.75, -0.1, 0.07, 0.07, 0.35, M, 8); box(g, 0, 2.78, -0.1, 0.3, 0.12, 0.3, K);            // le mât
+  box(g, 0, 2.82, -0.1, 9.6, 0.03, 0.26, K, 0.35); box(g, 0, 2.82, -0.1, 9.6, 0.03, 0.26, K, 0.35 + Math.PI / 2);   // les pales
+  [-0.85, 0.85].forEach(x => { box(g, x, 0.06, 0.2, 0.08, 0.06, 3.2, K); [-0.6, 1.0].forEach(z => box(g, x * 0.92, 0.45, z, 0.05, 0.8, 0.05, K)); });   // les patins
+  [-0.33, 0.33].forEach(x => [0.55, -0.45].forEach(z => { box(g, x, 1.19, z, 0.5, 0.12, 0.5, '#3A3D44'); box(g, x, 0.98, z, 0.4, 0.3, 0.4, '#2A2C31'); box(g, x, 1.6, z - 0.28, 0.5, 0.75, 0.08, '#3A3D44'); }));   // les sièges
+  prism(g, [[1.45, 1.25], [1.45, 1.45], [1.0, 1.55], [1.0, 1.25]], -0.7, 0.7, K);                    // le tableau de bord
+  [-0.33, 0.33].forEach(x => box(g, x, 1.05, 0.95, 0.04, 0.45, 0.04, K));                            // les manches
+  return g;
+}
+function planeGeo(col, glass){
+  const g = geo(), C = col || '#E9E6E0', A = '#B4232C', K = '#24262B', M = '#9AA0A8', G = glass;
+  prism(g, [[2.25, 0.8], [2.45, 1.35], [1.35, 1.35], [-0.95, 1.35], [-4.6, 1.55], [-4.75, 1.3], [-0.95, 0.8]], -0.62, 0.62, C);   // le bas du fuselage
+  prism(g, [[-0.95, 1.35], [-4.6, 1.55], [-4.6, 1.9], [-0.95, 2.3]], -0.6, 0.6, C);                   // l'arrière, qui s'affine
+  prism(g, [[1.3, 2.3], [-0.95, 2.3], [-0.95, 2.38], [1.3, 2.38]], -0.6, 0.6, C);                    // le toit de la cabine
+  box(g, 0, 0.84, 0.2, 1.1, 0.05, 2.6, K);
+  [[-0.62, -0.57], [0.57, 0.62]].forEach(([a, b]) => { prism(g, [[0.25, 1.35], [0.15, 1.35], [0.15, 2.3], [0.25, 2.3]], a, b, C); prism(g, [[-0.85, 1.35], [-0.95, 1.35], [-0.95, 2.3], [-0.85, 2.3]], a, b, C); });
+  if(G){ prism(G, [[2.4, 1.35], [1.35, 2.3], [1.3, 2.3], [2.3, 1.35]], -0.58, 0.58, '#A9C4D2');
+    [[-0.61, -0.59], [0.59, 0.61]].forEach(([a, b]) => { prism(G, [[2.35, 1.35], [1.35, 2.3], [0.25, 2.3], [0.25, 1.35]], a, b, '#A9C4D2'); prism(G, [[0.15, 1.35], [0.15, 2.3], [-0.85, 2.3], [-0.85, 1.35]], a, b, '#A9C4D2'); }); }
+  box(g, 0, 2.42, 0.55, 11.2, 0.08, 1.5, C);                                                         // l'aile haute
+  [-5.4, 5.4].forEach(x => box(g, x, 2.42, 0.55, 0.4, 0.085, 1.52, A));
+  [-1, 1].forEach(sd => { const P = [[sd * 0.6, 0.98], [sd * 2.6, 2.36], [sd * 2.6, 2.42], [sd * 0.6, 1.06]]; prismXY(g, sd > 0 ? P : P.reverse(), 0.48, 0.54, M); });   // les haubans
+  box(g, 0, 1.75, -4.35, 3.4, 0.06, 0.8, C); prism(g, [[-3.9, 1.85], [-4.75, 2.9], [-4.95, 2.9], [-4.75, 1.6]], -0.04, 0.04, A);   // la queue
+  box(g, 0, 1.12, -1.6, 1.26, 0.1, 5, A);                                                            // la bande décorative
+  cyl(g, 0, 1.1, 2.45, 0.16, 0.06, 0.25, K, 10, 'z'); [-0.6].forEach(t => { const c = Math.cos(t), sn = Math.sin(t), P = [[-0.06, -0.95], [0.06, -0.95], [0.06, 0.95], [-0.06, 0.95]].map(([u, w]) => [u * c - w * sn, 1.1 + u * sn + w * c]); prismXY(g, P, 2.7, 2.74, K); });   // l'hélice, en biais
+  [[0, 0.25, 1.9], [-1.1, 0.3, 0.1], [1.1, 0.3, 0.1]].forEach(([x, y, z]) => { cyl(g, x - 0.06, y, z, 0.24, 0.24, 0.12, '#17181B', 12, 'x'); box(g, x, (y + 0.85) / 2, z, 0.06, 0.85 - y, 0.06, M); });   // les roues
+  [-0.27, 0.27].forEach(x => [0.5, -0.45].forEach(z => { box(g, x, 1.16, z, 0.46, 0.12, 0.48, '#3A3D44'); box(g, x, 0.96, z, 0.36, 0.28, 0.4, '#2A2C31'); box(g, x, 1.55, z - 0.27, 0.46, 0.75, 0.08, '#3A3D44'); }));
+  prism(g, [[1.6, 1.35], [1.6, 1.55], [1.05, 1.62], [1.05, 1.35]], -0.55, 0.55, K);                  // le tableau de bord
+  [-0.27, 0.27].forEach(x => { box(g, x, 1.38, 0.98, 0.04, 0.04, 0.3, K); box(g, x, 1.4, 0.83, 0.28, 0.1, 0.03, K); });   // les manches
+  return g;
+}
+/* chaque véhicule : ses couleurs, ses places (pose, position dans son repère, hauteur du bassin), ses prises de vue */
+const HELI_SHOTS = [
+  ['decol', 'Le décollage (plan large)', 'Take-off (wide)', [7, 1.6, 9], [0, 1.8, 0], 28, 'pg'],
+  ['cockpit', 'Le pilote, par la verrière', 'The pilot, through the canopy', [-0.55, 1.75, 3.7], [-0.33, 1.8, 0.55], 40, 'pr'],
+  ['epaule', 'Par-dessus l’épaule du pilote', 'Over the pilot’s shoulder', [-0.02, 2.08, 0.06], [-0.3, 1.45, 6], 24, 'am'],
+  ['hublot', 'Le passager, par la vitre', 'The passenger, through the window', [-2.3, 1.78, -0.62], [-0.33, 1.78, -0.45], 40, 'pr'],
+  ['pales', 'Contre-plongée sous les pales', 'Low angle under the blades', [2.2, 0.4, 3.2], [0, 2.4, 0], 20, 'pe', 'con'],
+  ['profil', 'De profil, en vol', 'Side on, flying', [9, 1.8, 0.4], [0, 1.6, -1], 35, 'pe'],
+  ['dessus', 'Vue aérienne', 'Aerial view', [3, 16, 6], [0, 1.2, -0.5], 35, 'pg', 'dess'],
+];
+const PLANE_SHOTS = [
+  ['piste', 'Sur la piste (plan large)', 'On the runway (wide)', [8, 1.8, 10], [0, 1.5, -0.5], 28, 'pg'],
+  ['cockpit', 'Le pilote, par le pare-brise', 'The pilot, through the windshield', [-0.75, 1.85, 4.3], [-0.27, 1.8, 0.5], 40, 'pr'],
+  ['epaule', 'Par-dessus l’épaule (le tableau de bord)', 'Over the shoulder (the panel)', [0, 2.05, 0.04], [-0.25, 1.5, 6], 24, 'am'],
+  ['aile', 'Sous l’aile, vers la cabine', 'Under the wing, at the cabin', [-3.4, 1.85, 1.3], [-0.27, 1.8, 0.4], 28, 'pm'],
+  ['profil', 'De profil, en vol', 'Side on, flying', [12, 2.2, 0], [0, 1.8, -1.2], 35, 'pe'],
+  ['sous', 'Contre-plongée sous l’aile', 'Low angle under the wing', [-2.2, 0.3, 3.4], [0, 2.3, 0], 20, 'pe', 'con'],
+  ['helice', 'L’hélice en gros plan', 'Close-up on the propeller', [1.1, 1.55, 4.6], [0, 1.15, 2.4], 35, 'gp'],
+  ['dessus', 'Vue aérienne', 'Aerial view', [3, 18, 4], [0, 1.2, -1], 35, 'pg', 'dess'],
+];
+const VEH_DEF = {
+  moto:{ fr:'Moto', en:'Motorbike', ic:'moto', cols:MOTO_COLS, label:1.9, shots:MOTO_SHOTS,
+    seats:[{ fr:'Pilote', en:'Rider', pose:'ride', x:0, z:-0.2 }, { fr:'Passager', en:'Passenger', pose:'rideBack', x:0, z:-0.55 }] },
+  heli:{ fr:'Hélicoptère', en:'Helicopter', ic:'heli', cols:['#2F6E4F', '#B4232C', '#24262B', '#E9E6E0'], label:3.3, shots:HELI_SHOTS, fly:true,
+    seats:[{ fr:'Pilote', en:'Pilot', pose:'pilot', x:-0.33, z:0.55, py:0.8 }, { fr:'Copilote', en:'Co-pilot', pose:'sit', x:0.33, z:0.55, py:0.8 }, { fr:'Passager', en:'Passenger', pose:'sit', x:-0.33, z:-0.45, py:0.8 }, { fr:'Passager 2', en:'Passenger 2', pose:'sit', x:0.33, z:-0.45, py:0.8 }] },
+  plane:{ fr:'Avion', en:'Plane', ic:'plane', cols:['#E9E6E0', '#3D5A80', '#E8B923', '#2F6E4F'], label:3.0, shots:PLANE_SHOTS, fly:true,
+    seats:[{ fr:'Pilote', en:'Pilot', pose:'pilot', x:-0.27, z:0.5, py:0.77 }, { fr:'Copilote', en:'Co-pilot', pose:'pilot', x:0.27, z:0.5, py:0.77 }, { fr:'Passager', en:'Passenger', pose:'sit', x:-0.27, z:-0.45, py:0.77 }, { fr:'Passager 2', en:'Passenger 2', pose:'sit', x:0.27, z:-0.45, py:0.77 }] },
+};

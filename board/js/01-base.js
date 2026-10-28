@@ -3,7 +3,7 @@
    Langue, petits utilitaires, icônes, logo, toasts.
    Même DA que Raging Page et Raging Draw ; la couleur de l'outil est le vert.
 ===================================================================== */
-const R3_VERSION = 'v0.5';
+const R3_VERSION = 'v0.6';
 const LS_LANG = 'raging3d_lang', LS_SCENE = 'raging3d_scene';
 
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
@@ -65,6 +65,8 @@ function icon(name, cls){
     contrast:'<circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" stroke="none"/>',
     moon:'<path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/>',
     sun:'<circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/>',
+    full:'<path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>',
+    unfull:'<path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/>',
     grid:'<rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M6 2.5v11M10 2.5v11M1.5 6.2h13M1.5 9.8h13"/>',
     board:'<rect x="1.5" y="2" width="5.5" height="4" rx=".6"/><rect x="9" y="2" width="5.5" height="4" rx=".6"/><rect x="1.5" y="9" width="5.5" height="4" rx=".6"/><rect x="9" y="9" width="5.5" height="4" rx=".6"/>',
     strip:'<rect x="1.5" y="4" width="3.6" height="6" rx=".6"/><rect x="6.2" y="4" width="3.6" height="6" rx=".6"/><rect x="10.9" y="4" width="3.6" height="6" rx=".6"/><path d="M1.5 12.6h13"/>',
@@ -75,6 +77,8 @@ function icon(name, cls){
     right:'<path d="M6 3.5 10.5 8 6 12.5"/>',
     reverse:'<path d="M2.5 5.5h9l-2.4-2.4M13.5 10.5h-9l2.4 2.4"/>',
     moto:'<circle cx="3.6" cy="11" r="2.4"/><circle cx="12.4" cy="11" r="2.4"/><path d="M3.6 11 6.6 6.6h3.6l2.2 4.4M8 6.6 6.8 4.2H5M10.4 4.4h2"/>',
+    heli:'<path d="M1.5 3.2h13M8 3.2v2"/><path d="M3.2 7.4c0-1 .8-1.8 1.8-1.8h3.6c1.6 0 3 1.3 3 3v.6c0 .9-.7 1.6-1.6 1.6H5c-1 0-1.8-.8-1.8-1.8z"/><path d="M11.6 8.2h3M14.6 6.6v3.2M4.4 13.4h6.8M5.6 10.8v2.6M9.6 10.8v2.6"/>',
+    plane:'<path d="M14.2 8c0-.7-.6-1.2-1.3-1.2H9.6L6.4 2H4.8l1.6 4.8H3.4L2.2 5H1.2l.8 3-.8 3h1l1.2-1.8h3l-1.6 4.8h1.6l3.2-4.8h3.3c.7 0 1.3-.5 1.3-1.2z"/>',
     gun:'<path d="M1.8 5h11.4v2.6H7.2l-.8 4.4H3.8l.8-4.4H1.8z"/><path d="M7 7.6c0 1.2.6 1.8 1.6 1.8"/>',
     vehicle:'<path d="M2 10.5V8.4l1.4-3.2c.2-.5.7-.8 1.2-.8h6.8c.5 0 1 .3 1.2.8L14 8.4v2.1"/><path d="M1.5 10.5h13v2h-13z"/><circle cx="4.6" cy="12.6" r=".9"/><circle cx="11.4" cy="12.6" r=".9"/>',
     stairs:'<path d="M2 14h3v-3h3V8h3V5h3V2"/>',

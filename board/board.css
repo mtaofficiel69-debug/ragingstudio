@@ -433,3 +433,27 @@ input[type=range]::-moz-range-thumb{width:12px; height:12px; border-radius:50%; 
 .qsw{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:4px 0 6px;}
 .qsw button{width:26px; height:26px; padding:0; border:0; border-radius:50%; background:var(--c); box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
 .qsw button.on{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--accent);}
+.vadd{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:10px;}
+.vadd .btn{justify-content:center; padding-left:6px; padding-right:6px;}
+.seg.seats{flex-wrap:wrap;}
+.seg.ratios{flex-wrap:wrap;}
+.seg.ratios button{gap:6px;}
+.rbox{display:inline-block; flex:none; box-sizing:border-box; border:1.4px solid currentColor; border-radius:2px; opacity:.75;}
+.seg.ratios button{flex:1 1 30%;}
+/* plein écran : l'image prend toute la place */
+.stage-area.fs{position:fixed; inset:0; z-index:200; background:#121316; padding:12px 18px 10px;}
+.stage-area:fullscreen{background:#121316; padding:12px 18px 10px;}
+.stage-area.fs .shot-head, .stage-area:fullscreen .shot-head{color:#E9ECEF;}
+.stage-area.fs .hint, .stage-area:fullscreen .hint{display:none;}
+body.fs-fake{overflow:hidden;}
+/* des volets plus calmes : le titre, une ligne d'explication, et le contenu */
+.ph{padding:16px 16px 4px;}
+.side .ph-ico{display:none;}
+.ph small{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+.sh-room{display:inline-flex; align-items:center; gap:5px; padding:0 4px 0 9px; border-radius:999px; background:var(--accent-tint); color:var(--accent-2); font-size:12.5px; font-weight:600;}
+.sh-room .icon{width:13px; height:13px;}
+.sh-room select{border:0; background:transparent; color:inherit; font:inherit; padding:4px 2px; cursor:pointer; outline:none;}
+html[data-theme="dark"] .sh-room{color:var(--accent-ink);}
+.chip.on{border-color:var(--accent); background:var(--accent-tint); color:var(--accent-2);}
+.chip small{font-size:11px; opacity:.7; margin-left:3px;}
+.pro{margin:0 0 6px; padding-left:18px; font-size:12.5px; line-height:1.55; color:var(--ink-soft);} .pro li{margin-bottom:5px;}
