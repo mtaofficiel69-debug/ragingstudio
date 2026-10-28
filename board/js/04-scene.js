@@ -1,5 +1,5 @@
 /* =====================================================================
-   RAGING 3D — LA PLANCHE DE STORYBOARD
+   RAGING BOARD — LA PLANCHE DE STORYBOARD
    Un projet = une suite de plans. Chaque plan est une image arrêtée :
    un lieu, un ou deux personnages posés, un cadrage, et ses infos
    (valeur, angle, mouvement, description). Un nouveau plan reprend le
@@ -28,7 +28,8 @@ function charFromSpawn(i, def, look){
 /* mettre un personnage dans la pose d'une place : assis sur un siège, le bassin reste à la hauteur
    du siège (même pour un enfant) ; debout sur un trottoir ou un gradin, on monte d'autant */
 function putOnSpot(ch, pose, y){
-  if(pose) applyPose(ch, pose); else if(ch.root.y < -0.1 || (ch.pose && SEATED[ch.pose])) applyPose(ch, 'stand'); else ch.root.y -= ch.gy || 0;
+  const low = ch.pose && (POSES.find(p => p.id === ch.pose) || {}).y < -0.1;
+  if(pose) applyPose(ch, pose); else if(low || ch.on) { applyPose(ch, 'stand'); delete ch.on; } else ch.root.y -= ch.gy || 0;
   ch.gy = 0;
   if(pose && SEATED[pose]) ch.root.y = seatY(ch, y != null ? y : (POSES.find(p => p.id === pose) || {}).y || 0);
   else if(y != null){ ch.gy = y; ch.root.y += y; }
@@ -36,7 +37,7 @@ function putOnSpot(ch, pose, y){
 const newInfo = () => ({ cap:'', dial:'', scene:'', size:'pe', angle:'neu', side:'tq', move:'fix', dur:2, walk:false });
 function newShot(setId){
   const def = SET_DEF[setId];
-  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:clone(def.cam), crowds:[], info:newInfo() };
+  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:clone(def.cam), crowds:[], vehicles:[], info:newInfo() };
 }
 function newDoc(setId){ return { v:2, title:L('Mon storyboard', 'My storyboard'), style:'color', shots:[newShot(setId || 'garage')] }; }
 
@@ -51,6 +52,7 @@ function fixShot(sh){
   sh.info = Object.assign(newInfo(), sh.info || {});
   if(OLD_MOVES[sh.info.move]) sh.info.move = OLD_MOVES[sh.info.move];
   if(!Array.isArray(sh.crowds)) sh.crowds = [];
+  if(!Array.isArray(sh.vehicles)) sh.vehicles = [];
   sh.chars.forEach((ch, c) => { if(ch.look == null || !CHAR_LOOK[ch.look]) ch.look = c % 2; });
   return sh;
 }
@@ -135,7 +137,7 @@ function setPlace(id){
   const s = shot(); if(!SET_DEF[id] || id === s.set) return;
   endEdit();
   const before = clone(s.cam);
-  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => charFromSpawn(i, def, ch.look)); s.cam = clone(def.cam); s.info.size = 'pe'; s.info.move = 'fix'; delete s.camEnd; s.crowds = []; });
+  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => charFromSpawn(i, def, ch.look)); s.cam = clone(def.cam); s.info.size = 'pe'; s.info.move = 'fix'; delete s.camEnd; s.crowds = []; s.vehicles = []; s.chars.forEach(ch => delete ch.on); });
   startTween(before);
   clearTimeout(R.benchT); R.benchT = setTimeout(benchmark, 600);   // un grand espace est plus lourd : on revérifie
 }
@@ -265,6 +267,56 @@ function addCrowd(kind){
 function setCrowd(k, f, v){ const c = shot().crowds[k]; if(!c) return; c[f] = v; save(); requestRender(); thumbLater(S.i); }
 function removeCrowd(k){ const s = shot(); if(!s.crowds[k]) return; edit(() => { s.crowds.splice(k, 1); S.crowd = s.crowds.length ? Math.min(k, s.crowds.length - 1) : -1; }); }
 
+/* ---------- Les véhicules posés (la moto) ----------
+   On la pose devant la caméra ; un personnage peut y monter (pilote ou passager) :
+   il suit alors la moto quand on la déplace ou qu'on la tourne. */
+function addVehicle(kind){
+  const s = shot(), c = viewCam(), y = c.yaw * D2R, d = clamp(c.dist * 0.5 + 1.5, 2, 10);
+  edit(() => {
+    s.vehicles.push({ id:uidS(), kind:kind || 'moto', col:MOTO_COLS[s.vehicles.length % MOTO_COLS.length], x:round(c.tx - Math.sin(y) * d, 2), y:0, z:round(c.tz - Math.cos(y) * d, 2), ry:round(c.yaw + 90, 0) });
+    S.veh = s.vehicles.length - 1;
+  });
+}
+function removeVehicle(k){ const s = shot(), v = s.vehicles[k]; if(!v) return; edit(() => { s.chars.forEach(ch => { if(ch.on && ch.on.v === v.id){ delete ch.on; applyPose(ch, 'stand'); } }); s.vehicles.splice(k, 1); S.veh = s.vehicles.length ? Math.min(k, s.vehicles.length - 1) : -1; }); }
+/* les personnages montés suivent leur véhicule */
+function syncRiders(sh){
+  (sh.chars || []).forEach(ch => {
+    const v = ch.on && sh.vehicles.find(x => x.id === ch.on.v); if(!v) return;
+    const z = ch.on.seat ? -0.55 : -0.2, a = (v.ry || 0) * D2R;
+    ch.root.x = v.x + Math.sin(a) * z; ch.root.z = v.z + Math.cos(a) * z; ch.root.ry = v.ry || 0;
+    ch.root.y = (v.y || 0) + (POSES.find(p => p.id === (ch.on.seat ? 'rideBack' : 'ride')).y || 0);
+  });
+}
+function mountVehicle(k, seat){
+  const s = shot(), v = s.vehicles[k], c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!v || !ch) return;
+  edit(() => {
+    s.chars.forEach(o => { if(o !== ch && o.on && o.on.v === v.id && o.on.seat === seat){ delete o.on; applyPose(o, 'stand'); o.root.x += 1.2; } });
+    applyPose(ch, seat ? 'rideBack' : 'ride'); ch.on = { v:v.id, seat:seat ? 1 : 0 }; syncRiders(s);
+  });
+}
+/* une prise de vue donnée dans le repère d'un objet (véhicule ou personnage) : on la ramène dans le monde */
+function localCam(o, ry, e, t, lens){
+  const a = (ry || 0) * D2R, W = p => [o.x + p[0] * Math.cos(a) + p[2] * Math.sin(a), (o.y || 0) + p[1], o.z - p[0] * Math.sin(a) + p[2] * Math.cos(a)];
+  return camLook(W(e), W(t), lens);
+}
+function vehShot(k, id){
+  const s = shot(), v = s.vehicles[k], P = MOTO_SHOTS.find(x => x[0] === id); if(!v || !P) return;
+  camEdit(() => { s.cam = localCam(v, v.ry, P[3], P[4], P[5]); s.info.size = P[6]; s.info.angle = P[7] || 'neu'; });
+}
+/* les prises de vue autour d'un personnage armé */
+function gunShot(id){
+  const s = shot(), c = S.sel ? S.sel.c : S.target, ch = s.chars[c], P = GUN_SHOTS.find(x => x[0] === id); if(!ch || !P) return;
+  const M = charMatrices(ch), b = bodyMarks(ch), e = b.eyes[1] - ch.root.y, sh = M4.apply(M.armR, [0, 0, 0])[1] - ch.root.y;
+  camEdit(() => {
+    if(id === 'arme'){
+      const h = M4.apply(M.handR, [0, -0.1, 0.03]), a = ch.root.ry * D2R, side = [Math.cos(a), 0, -Math.sin(a)];
+      s.cam = camLook([h[0] - side[0] * 0.5 + Math.sin(a) * 0.15, h[1] + 0.06, h[2] - side[2] * 0.5 + Math.cos(a) * 0.15], h, P[5]);
+    } else s.cam = localCam({ x:ch.root.x, y:ch.root.y, z:ch.root.z }, ch.root.ry, P[3](e, sh), P[4](e, sh), P[5]);
+    s.info.size = P[6]; s.info.angle = P[7] || 'neu';
+  });
+}
+function setProp(id){ const s = shot(), c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!ch) return; edit(() => { ch.prop = id || null; ch.propUser = true; }); }
+
 /* ---------- Le noir et blanc (pour tout le film) ---------- */
 function setStyle(st){ if(S.doc.style === st) return; edit(() => { S.doc.style = st; }); THUMBS.clear(); renderStrip(); }
 
@@ -372,7 +424,7 @@ function camEdit(fn){ const before = clone(shot().cam); edit(fn); startTween(bef
 /* ---------- Rendu ---------- */
 const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new Map(), scale:1 };
 function setMesh(id){
-  if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), glass:o.glass.p.length ? GL.mesh(o.glass) : null }; }
+  if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)) }; }
   return R.sets[id];
 }
 function initMeshes(){
@@ -383,6 +435,23 @@ function initMeshes(){
   const g = geo(), C = [0.08, 0.09, 0.11];
   for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, b = (i + 1) / 16 * Math.PI * 2; tri(g, [0, 0, 0], [Math.sin(b) * 0.36, 0, Math.cos(b) * 0.36], [Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36], C); }
   R.blob = GL.mesh(g);
+  R.props = {}; R.propsOut = {};
+  PROPS.forEach(([id]) => { R.props[id] = GL.mesh(propGeo(id)); R.propsOut[id] = GL.mesh(smoothNormals(propGeo(id))); });
+}
+/* un véhicule (forme et couleur), fabriqué une fois */
+R.veh = {};
+function vehMesh(v){ const k = v.kind + v.col; if(!R.veh[k]) R.veh[k] = GL.mesh(vehicleGeo(v.kind, v.col)); return R.veh[k]; }
+const vehMat = v => M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R));
+/* les étages qu'on dessine : vue du dehors, toute la maison ; de l'intérieur (ou de juste au-dessus),
+   seulement l'étage visé et ceux du dessous, comme une maison de poupée ouverte */
+function levelsShown(sh, cam){
+  const d = SET_DEF[sh.set]; if(!d.levels) return [];
+  const e = camEye(cam), b = d.box, inside = e[0] > b[0] && e[0] < b[2] && e[2] > b[1] && e[2] < b[3];
+  return d.levels.map(y0 => !inside || y0 <= cam.ty + 0.4);
+}
+function drawSet(SM, sh, cam, o){
+  GL.draw(SM.g, o);
+  if(SM.levels.length){ const show = levelsShown(sh, cam); SM.levels.forEach((m, i) => { if(show[i]) GL.draw(m, o); }); }
 }
 /* les foules d'un plan : celle du lieu (les tribunes du stade) et celles qu'on a posées */
 function crowdMeshes(sh){
@@ -412,6 +481,12 @@ function drawFrame(sh, w, h, clean, o){
   const gl = GL.gl; if(!gl) return;
   sh = sh || shot(); w = w || R.canvas.width; h = h || R.canvas.height;
   const final = clean || S.final;
+  // sur un petit ordinateur, pendant qu'on bouge : une image plus simple (sans contours ni filigranes) ;
+  // dès qu'on s'arrête, l'image complète revient
+  const moving = !clean && !o && (DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || _wheelSnap);
+  // on mesure le temps entre deux images quand on bouge : si l'ordinateur peine, on passe en image simplifiée
+  if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true; } }
+  const fast = moving && R.slow;
   const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh)), vp = viewProj(cam, w / h), eye = camEye(cam);
   const E = envOf(sh);
   GL.begin(w, h, vp, E.bg, E);
@@ -423,7 +498,8 @@ function drawFrame(sh, w, h, clean, o){
   const tube = final || o ? [] : chars.map((_, c) => c).filter(c => (S.hidden || []).includes(c) || (HDRAG.c === c && !HDRAG.crowd) || (DRAG.mode === 'move' && S.sel && S.sel.c === c));
   GL.view(eye, tube.map(c => M4.apply(mats[c].chest, [0, 0.12, 0])));
   const SM = setMesh(sh.set);
-  GL.draw(SM.g, { vc:true, x:tube.length ? 1 : 0 });
+  drawSet(SM, sh, cam, { vc:true, x:tube.length ? 1 : 0 });
+  (sh.vehicles || []).forEach(v => GL.draw(vehMesh(v), { m:vehMat(v), vc:true, x:tube.length ? 1 : 0 }));
   // une ombre douce sous chaque personnage (trois disques très légers, pas de calcul d'ombre)
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   chars.forEach((ch, c) => {
@@ -435,7 +511,7 @@ function drawFrame(sh, w, h, clean, o){
   GL.drawCrowds(crowdMeshes(sh), vp, eye, [Math.cos(cam.yaw * D2R), 0, -Math.sin(cam.yaw * D2R)]);
   // en travaillant : les parties cachées par le décor (mur, voiture) sont dessinées en filigrane,
   // avant les personnages, pour qu'elles n'apparaissent que là où le décor passe devant
-  if(!final){
+  if(!final && !fast){
     gl.enable(gl.BLEND); gl.depthMask(false); gl.depthFunc(gl.GREATER);
     chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.42 : 0.2, col:on ? GREEN : GHOST }); });
     gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
@@ -443,23 +519,25 @@ function drawFrame(sh, w, h, clean, o){
   const tintOf = (c, id) => final ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id && (id !== 'pelvis' || S.sel.pick)) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
   // le contour des personnages : comme un trait de crayon, d'épaisseur constante à l'écran
   const px = 2 * Math.tan(fovOf(cam.lens) / 2) / h * clamp(h / 320, 1.4, 3);
-  gl.cullFace(gl.FRONT);
-  chars.forEach((ch, c) => { const P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, col:INK, out:px }); });
+  if(!fast) gl.cullFace(gl.FRONT);
+  if(!fast) chars.forEach((ch, c) => { const P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, col:INK, out:px });
+    if(ch.prop && R.propsOut[ch.prop]) GL.draw(R.propsOut[ch.prop], { m:mats[c].handR, flat:true, col:INK, out:px }); });
   gl.cullFace(gl.BACK);
+  chars.forEach((ch, c) => { if(ch.prop && R.props[ch.prop]) GL.draw(R.props[ch.prop], { m:mats[c].handR, col:[1, 1, 1], mul:true, char:true }); });
   chars.forEach((ch, c) => {
     const P = R.parts[lookOf(ch, c).id];
     for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col:[1, 1, 1], tint, tintK:k, mul:true, char:true }); }
   });
   // les vitres, transparentes (des deux côtés)
   if(SM.glass){ gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(SM.glass, { vc:true, glass:true, a:0.2 }); gl.depthMask(true); gl.disable(gl.BLEND); gl.enable(gl.CULL_FACE); }
-  if(tube.length){
+  if(tube.length && !fast){
     gl.enable(gl.BLEND); gl.depthMask(false);
     // le décor coupé autour des personnages, remis en transparence par-dessus
-    GL.draw(SM.g, { vc:true, x:2, a:0.22 });
+    drawSet(SM, sh, cam, { vc:true, x:2, a:0.22 });
     gl.depthMask(true); gl.disable(gl.BLEND);
   }
   if(clean) GL.drawSky(vp, [0, 0, 0], [0, 0, 0], [0, 0, 0], 1, w / h);   // dans les images exportées : un léger vignettage, comme une vraie optique
-  if(!clean && w === R.canvas.width){ placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); }
+  if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); }
 }
 /* les petits ordinateurs : on mesure une fois le temps d'une image ; si c'est lent, l'image de travail
    est calculée un peu moins finement (les exports, eux, gardent toujours leur pleine taille) */
@@ -470,21 +548,33 @@ function benchmark(){
   drawFrame(); sync();
   const t1 = performance.now();
   while(n < 3){ drawFrame(); sync(); n++; }
-  const ms = (performance.now() - t1) / n, scale = ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
+  const ms = (performance.now() - t1) / n; R.slow = ms > 20;
+  const scale = ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
   if(scale !== R.scale){ R.scale = scale; fitStage(); }
   R.bench = ms;
+}
+/* une petite image dessinée hors de l'écran, deux fois plus grande puis réduite (les bords restent doux) */
+const _offC = {};
+function offscreenURL(w, h, draw, q){
+  if(!GL.gl) return '';
+  const ss = 2, W = w * ss, H = h * ss, px = GL.renderTo(W, H, () => draw(W, H));
+  const big = _offC.big || (_offC.big = document.createElement('canvas')), sm = _offC.sm || (_offC.sm = document.createElement('canvas'));
+  big.width = W; big.height = H; sm.width = w; sm.height = h;
+  const bx = big.getContext('2d'), im = bx.createImageData(W, H), row = W * 4;
+  for(let y = 0; y < H; y++) im.data.set(px.subarray((H - 1 - y) * row, (H - y) * row), y * row);   // WebGL lit de bas en haut
+  bx.putImageData(im, 0, 0);
+  const sx = sm.getContext('2d'); sx.imageSmoothingQuality = 'high'; sx.drawImage(big, 0, 0, w, h);
+  return sm.toDataURL('image/jpeg', q || 0.84);
 }
 /* vignettes de la planche : petites images, refaites seulement quand un plan change */
 const THUMBS = new Map();
 function thumbOf(i){
   const sh = S.doc.shots[i]; if(!sh || !GL.gl) return '';
-  const key = sh.id + '|' + JSON.stringify([sh.set, sh.chars, camStart(sh), sh.crowds, S.doc.style]);
-  const t = THUMBS.get(sh.id); if(t && t.key === key) return t.url;
-  const ow = R.canvas.width, oh = R.canvas.height;
-  R.canvas.width = 384; R.canvas.height = 216; drawFrame(sh, 384, 216, true);
-  const url = R.canvas.toDataURL('image/jpeg', 0.82);
-  R.canvas.width = ow; R.canvas.height = oh;
-  THUMBS.set(sh.id, { key, url }); requestRender();
+  const key = sh.id + '|' + JSON.stringify([sh.set, sh.chars, camStart(sh), sh.crowds, sh.vehicles, S.doc.style]);
+  const t = THUMBS.get(sh.id); if(t && (t.key === key || S.play || S.rec)) return t.url;
+  if(S.rec) return '';
+  const url = offscreenURL(320, 180, (w, h) => drawFrame(sh, w, h, true));
+  THUMBS.set(sh.id, { key, url });
   return url;
 }
 let _thumbT = 0;
@@ -508,7 +598,8 @@ function checkHidden(){
   const sh = shot(), cam = sh.cam, sc = 0.5, w = Math.max(1, Math.round(R.canvas.width * sc)), h = Math.max(1, Math.round(R.canvas.height * sc));
   const vp = viewProj(cam, R.canvas.width / R.canvas.height);
   GL.beginPick(w, h, vp); GL.view(camEye(cam), []);
-  GL.draw(setMesh(sh.set).g, { raw:true, col:[0, 0, 0] });
+  drawSet(setMesh(sh.set), sh, cam, { raw:true, col:[0, 0, 0] });
+  (sh.vehicles || []).forEach(v => GL.draw(vehMesh(v), { m:vehMat(v), raw:true, col:[0, 0, 0] }));
   const mats = sh.chars.map(ch => charMatrices(ch));
   sh.chars.forEach((ch, c) => { const P = R.parts[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], raw:true, col:[(c * 32 + J.idx + 1) / 255, 0, 0] }); });
   const out = [];
@@ -523,28 +614,31 @@ function checkHidden(){
     });
     if(seen && hid === seen) out.push(c);
   });
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); R.pickDirty = true;
   const sig = out.join(',');
   if(sig !== (S.hidden || []).join(',')){ S.hidden = out; if(typeof renderWarn === 'function') renderWarn(); requestRender(); }
 }
 
 /* ---------- La poignée au-dessus de la tête (comme dans les Sims) ----------
-   Un losange vert flotte au-dessus de chaque personnage : on le maintient pour
+   Une petite épingle verte (le visage de la mascotte) flotte au-dessus de chaque personnage : on la maintient pour
    déplacer le personnage, la petite flèche à côté sert à le faire tourner.
    C'est un élément de la page, posé sur l'image : il n'est jamais dans les exports. */
 function placeHandles(sh, vp, w, h, mats){
   const host = document.getElementById('handles'); if(!host) return;
-  const crowds = sh.crowds || [];
-  const sig = sh.chars.map(ch => ch.look).join(',') + '|' + crowds.length + getLang();
+  const crowds = sh.crowds || [], vehs = sh.vehicles || [];
+  const sig = sh.chars.map(ch => ch.look).join(',') + '|' + crowds.length + '|' + vehs.length + getLang();
   if(host.dataset.sig !== sig){
     host.dataset.sig = sig;
     host.innerHTML = sh.chars.map((_, c) => `<div class="hd" data-c="${c}">
-      <button class="hd-move" data-hd="move" data-c="${c}" aria-label="${esc(L('Déplacer ', 'Move ') + L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}"><svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1 22 13 12 31 2 13Z"/><path class="hl" d="M12 3.5 6 13h12Z"/></svg></button>
+      <button class="hd-move" data-hd="move" data-c="${c}" aria-label="${esc(L('Déplacer ', 'Move ') + L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}"><svg viewBox="0 0 24 30" aria-hidden="true"><path class="pin" d="M12 1.6a10.2 10.2 0 0 1 4.3 19.5L12 28.4l-4.3-7.3A10.2 10.2 0 0 1 12 1.6z"/><path class="ft" d="M6.4 8.9l4.3 1.7M17.6 9.4l-4.3 1.2" stroke-width="2.1" stroke-linecap="round"/><circle class="fe" cx="9" cy="13.4" r="2.2"/><circle class="fe" cx="15" cy="13.4" r="2.2"/><circle class="fh" cx="9.7" cy="12.7" r=".65"/><circle class="fh" cx="15.7" cy="12.7" r=".65"/><path class="ft" d="M9.6 17.4h4.6" stroke-width="1.8" stroke-linecap="round"/></svg></button>
       <button class="hd-turn" data-hd="turn" data-c="${c}" aria-label="${esc(L('Tourner ', 'Turn ') + L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
       <span class="hd-name">${esc(L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}</span>
     </div>`).join('') + crowds.map((_, k) => `<div class="hd hd-crowd" data-k="${k}">
       <button class="hd-move" data-hd="cmove" data-k="${k}" aria-label="${esc(L('Déplacer la foule', 'Move the crowd'))}">${icon('crowd')}<span>${L('Foule', 'Crowd')}</span></button>
       <button class="hd-turn" data-hd="cturn" data-k="${k}" aria-label="${esc(L('Tourner la foule', 'Turn the crowd'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
+    </div>`).join('') + vehs.map((v, k) => `<div class="hd hd-crowd hd-veh" data-k="${k}">
+      <button class="hd-move" data-hd="vmove" data-k="${k}" aria-label="${esc(L('Déplacer le véhicule', 'Move the vehicle'))}">${icon('moto')}<span>${L('Moto', 'Bike')}</span></button>
+      <button class="hd-turn" data-hd="vturn" data-k="${k}" aria-label="${esc(L('Tourner le véhicule', 'Turn the vehicle'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
     </div>`).join('');
   }
   const r = R.canvas.getBoundingClientRect(), k = r.width / w;
@@ -567,23 +661,29 @@ function placeHandles(sh, vp, w, h, mats){
     put(el, [cr.x, (cr.y || 0) + 2.3, cr.z], 18);
     el.classList.toggle('on', S.crowd === i);
   });
+  vehs.forEach((v, i) => {
+    const el = host.children[sh.chars.length + crowds.length + i]; if(!el) return;
+    put(el, [v.x, (v.y || 0) + 1.9, v.z], 18);
+    el.classList.toggle('on', S.veh === i);
+  });
 }
 const HDRAG = { c:-1, kind:null, x:0, y:0, snap:null, moved:false, crowd:false };
 function onHandleDown(e){
   const b = e.target.closest('[data-hd]'); if(!b || S.rec) return;
   e.preventDefault(); e.stopPropagation();
-  const crowd = b.dataset.hd[0] === 'c', c = crowd ? +b.dataset.k : +b.dataset.c;
-  if(crowd ? !shot().crowds[c] : !shot().chars[c]) return;
+  const t0 = b.dataset.hd[0], crowd = t0 === 'c' ? 'crowd' : t0 === 'v' ? 'veh' : false, c = crowd ? +b.dataset.k : +b.dataset.c;
+  if(crowd === 'crowd' ? !shot().crowds[c] : crowd === 'veh' ? !(shot().vehicles || [])[c] : !shot().chars[c]) return;
   b.setPointerCapture(e.pointerId);
   HDRAG.c = c; HDRAG.crowd = crowd; HDRAG.kind = crowd ? b.dataset.hd.slice(1) : b.dataset.hd; HDRAG.snap = snapshot(); HDRAG.moved = false; HDRAG.x = e.clientX; HDRAG.y = e.clientY;
-  if(crowd){ S.crowd = c; S.sel = null; if(typeof setPanel === 'function') setPanel('crowd', true); }
+  if(crowd === 'crowd'){ S.crowd = c; S.sel = null; if(typeof setPanel === 'function') setPanel('crowd', true); }
+  else if(crowd === 'veh'){ S.veh = c; S.sel = null; if(typeof setPanel === 'function') setPanel('car', true); }
   else { S.target = c; S.sel = { c, j:'pelvis' }; }
   document.body.classList.add('dragging');
   renderSide(); renderTools(); renderHint(); requestRender();
 }
 function onHandleMove(e){
   if(HDRAG.c < 0) return;
-  const o = HDRAG.crowd ? shot().crowds[HDRAG.c] : shot().chars[HDRAG.c]; if(!o) return;
+  const o = HDRAG.crowd === 'crowd' ? shot().crowds[HDRAG.c] : HDRAG.crowd === 'veh' ? shot().vehicles[HDRAG.c] : shot().chars[HDRAG.c]; if(!o) return;
   const pos = HDRAG.crowd ? o : o.root;
   if(HDRAG.kind === 'move'){
     // la souris glisse, le personnage suit sur le sol : vers la droite de l'image, ou vers le fond
@@ -602,6 +702,7 @@ function onHandleMove(e){
     const dx = e.clientX - HDRAG.x; HDRAG.x = e.clientX;
     if(dx){ pos.ry = (((pos.ry || 0) + dx * 0.8) % 360 + 540) % 360 - 180; HDRAG.moved = true; renderSide(true); }
   }
+  if(HDRAG.crowd === 'veh') syncRiders(shot());
   requestRender();
 }
 function onHandleUp(){
@@ -615,6 +716,14 @@ function onHandleUp(){
 function pickAt(px, py){
   const gl = GL.gl; if(!gl) return null;
   const sh = shot(), sc = 0.5, w = Math.max(1, Math.round(R.canvas.width * sc)), h = Math.max(1, Math.round(R.canvas.height * sc));
+  // l'image de sélection n'est refaite que si la scène a bougé depuis : survoler ne coûte presque rien
+  if(!R.pickDirty && GL.pickSize[0] === w && GL.pickSize[1] === h){
+    GL.gl.bindFramebuffer(GL.gl.FRAMEBUFFER, GL.pickFB);
+    const id0 = GL.readPick(Math.floor(px * sc), Math.floor(h - 1 - py * sc));
+    if(!id0) return null; const c0 = Math.floor((id0 - 1) / 32), J0 = JOINTS[(id0 - 1) % 32];
+    return J0 && sh.chars[c0] ? { c:c0, j:J0.id } : null;
+  }
+  R.pickDirty = false;
   GL.beginPick(w, h, viewProj(viewCam(), R.canvas.width / R.canvas.height));
   sh.chars.forEach((ch, c) => {
     const M = charMatrices(ch);
@@ -662,9 +771,29 @@ function onDown(e){
     R.canvas.style.cursor = 'grabbing';
   }
 }
+/* zoomer : on se rapproche du point visé ; tout près, au lieu de se bloquer, la caméra continue d'avancer
+   (le point visé avance avec elle) : on ne reste jamais coincé */
+const DIST_MIN = 0.6, DIST_MAX = 80;
+function zoomBy(c, f){
+  const want = c.dist * f;
+  if(want < DIST_MIN){
+    const step = Math.max(0.05, c.dist - want), y = c.yaw * D2R, p = c.pitch * D2R;
+    c.tx -= Math.sin(y) * Math.cos(p) * step; c.ty = clamp(c.ty + Math.sin(p) * step, -0.5, 30); c.tz -= Math.cos(y) * Math.cos(p) * step;
+    c.dist = Math.max(DIST_MIN, Math.min(c.dist, DIST_MIN));
+  } else c.dist = Math.min(DIST_MAX, want);
+  keepCam(c);
+}
+/* une caméra toujours valable : dans le lieu, sans valeur impossible */
+function keepCam(c){
+  const ok = ['tx', 'ty', 'tz', 'yaw', 'pitch', 'dist', 'lens'].every(k => Number.isFinite(c[k]));
+  if(!ok){ const d = SET_DEF[shot().set].cam; Object.assign(c, clone(d)); return; }
+  c.tx = clamp(c.tx, -150, 150); c.tz = clamp(c.tz, -150, 150); c.ty = clamp(c.ty, -0.5, 30);
+  c.dist = clamp(c.dist, 0.05, DIST_MAX); c.pitch = clamp(c.pitch, -89, 89); c.lens = clamp(c.lens, 10, 200);
+  if(Math.abs(c.yaw) > 3600) c.yaw = ((c.yaw % 360) + 360) % 360;
+}
 /* se décaler : la scène suit la souris, dans le plan de l'image */
 function panBy(cam, dx, dy){
-  const k = cam.dist * Math.tan(fovOf(cam.lens) / 2) * 2 / (R.canvas.getBoundingClientRect().height || 500), y = cam.yaw * D2R, p = cam.pitch * D2R;
+  const k = Math.max(cam.dist, 1.2) * Math.tan(fovOf(cam.lens) / 2) * 2 / (R.canvas.getBoundingClientRect().height || 500), y = cam.yaw * D2R, p = cam.pitch * D2R;
   cam.tx -= Math.cos(y) * dx * k; cam.tz += Math.sin(y) * dx * k;
   // vers le haut et le bas : selon l'inclinaison de la caméra, on monte ou on avance
   cam.ty = clamp(cam.ty + Math.cos(p) * dy * k, -0.5, 30);
@@ -677,7 +806,7 @@ function onMove(e){
   if(DRAG.mode === 'pinch'){
     if(DRAG.pts.size < 2) return;
     const [a, b] = [...DRAG.pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    cam.dist = clamp(DRAG.dist0 * DRAG.pinch / Math.max(d, 1), 0.35, 80);
+    zoomBy(cam, DRAG.dist0 * DRAG.pinch / Math.max(d, 1) / cam.dist);
     panBy(cam, mid[0] - DRAG.mid[0], mid[1] - DRAG.mid[1]); DRAG.mid = mid;   // deux doigts : zoomer et se décaler
     DRAG.moved = true; requestRender(); return;
   }
@@ -685,6 +814,7 @@ function onMove(e){
   if(Math.abs(dx) + Math.abs(dy) > 0) DRAG.moved = true;
   if(DRAG.mode === 'orbit'){ cam.yaw -= dx * 0.3; cam.pitch = clamp(cam.pitch + dy * 0.25, -88, 85); }
   else if(DRAG.mode === 'pan') panBy(cam, dx, dy);
+  if(DRAG.mode === 'orbit' || DRAG.mode === 'pan') keepCam(cam);
   else if(DRAG.mode === 'pose'){
     const J = JOINT[S.sel.j], v = shot().chars[S.sel.c].j[J.id], k = 0.5;
     // glisser vers le haut lève ou plie ; vers le côté, la deuxième façon de bouger
@@ -714,10 +844,11 @@ let _wheelT = 0, _wheelSnap = null;
 function onWheel(e){
   e.preventDefault(); S.tween = null;
   if(!_wheelSnap) _wheelSnap = snapshot();
-  const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015), nd = clamp(c.dist * f, 0.35, 80);
+  const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015);
   const [x, y] = canvasXY(e), g = groundAt(x, y, c.ty);
-  if(g && f < 1){ const k = (1 - nd / c.dist) * 0.5; c.tx += (g[0] - c.tx) * k; c.tz += (g[1] - c.tz) * k; }
-  c.dist = nd; requestRender();
+  // vers le point sous la souris, mais jamais plus loin que le recul actuel (sinon on part à l'horizon)
+  if(g && f < 1){ const k = (1 - f) * 0.5, dx = (g[0] - c.tx) * k, dz = (g[1] - c.tz) * k, l = Math.hypot(dx, dz), m = c.dist * 0.25; c.tx += l > m ? dx * m / l : dx; c.tz += l > m ? dz * m / l : dz; }
+  zoomBy(c, f); requestRender();
   clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350);
 }
 /* double-clic : sur un personnage, la caméra le recadre ; ailleurs, elle vise ce point du sol */
@@ -752,14 +883,14 @@ function navStep(kind, dt){
   else if(kind === 'down') c.ty = clamp(c.ty - sp * 0.6, -0.5, 8);
   else if(kind === 'turnL') c.yaw += turn;
   else if(kind === 'turnR') c.yaw -= turn;
-  else if(kind === 'in') c.dist = clamp(c.dist * Math.exp(-1.2 * dt), 0.35, 30);
-  else if(kind === 'out') c.dist = clamp(c.dist * Math.exp(1.2 * dt), 0.35, 80);
+  else if(kind === 'in') zoomBy(c, Math.exp(-1.2 * dt));
+  else if(kind === 'out') zoomBy(c, Math.exp(1.2 * dt));
 }
 function navLoop(now){
   const kinds = [...NAV.keys]; if(NAV.held) kinds.push(NAV.held);
   if(!kinds.length){ NAV.running = false; return; }
   const dt = Math.min(0.05, (now - NAV.last) / 1000); NAV.last = now;
-  kinds.forEach(k => navStep(k, dt)); drawFrame();
+  kinds.forEach(k => navStep(k, dt)); keepCam(shot().cam); drawFrame();
   requestAnimationFrame(navLoop);
 }
 function navStart(kind){
@@ -778,26 +909,39 @@ const POSE_PREV = new Map();
 function posePreview(look, pid){
   const key = look + ':' + pid + ':' + (S.doc.style || '');
   if(POSE_PREV.has(key)) return POSE_PREV.get(key);
-  const gl = GL.gl; if(!gl) return '';
+  const gl = GL.gl; if(!gl || S.rec) return '';
   const ch = newChar(0, { x:0, z:0, ry:0 }, look); applyPose(ch, pid);
   const M = charMatrices(ch), pts = Object.values(M).map(m => M4.apply(m, [0, 0, 0])).concat([M4.apply(M.head, [0, 0.26, 0]), M4.apply(M.footL, [0, -0.07, 0.2]), M4.apply(M.footR, [0, -0.07, 0.2])]);
   const lo = [0, 1, 2].map(i => Math.min(...pts.map(p => p[i]))), hi = [0, 1, 2].map(i => Math.max(...pts.map(p => p[i])));
   const c = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2], size = Math.max(hi[1] - lo[1], (hi[0] - lo[0]) * 1.25, (hi[2] - lo[2]) * 0.9, 0.6);
-  const w = 120, h = 150, lens = 50, dist = size / 2 / Math.tan(fovOf(lens) / 2) * 1.12, y = 28 * D2R, p = -8 * D2R;
+  const lens = 50, dist = size / 2 / Math.tan(fovOf(lens) / 2) * 1.12, y = 28 * D2R, p = -8 * D2R;
   const cam = camLook([c[0] + Math.sin(y) * Math.cos(p) * dist, c[1] - Math.sin(p) * dist, c[2] + Math.cos(y) * Math.cos(p) * dist], c, lens);
-  const ow = R.canvas.width, oh = R.canvas.height;
-  R.canvas.width = w; R.canvas.height = h;
-  const vp = viewProj(cam, w / h), eye = camEye(cam), bg = hexRGB('#E7EBF0');
-  GL.begin(w, h, vp, bg, { bw:S.doc.style === 'bw' }); GL.view(eye, []);
-  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-  const fy = Math.min(M4.apply(M.footL, [0, -0.065, 0])[1], M4.apply(M.footR, [0, -0.065, 0])[1]), pc = M4.apply(M.pelvis, [0, 0, 0]);
-  GL.draw(R.blob, { m:M4.mul(M4.trans(pc[0], fy + 0.004, pc[2]), [1.1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1.1, 0, 0, 0, 0, 1]), flat:true, a:0.16, col:[0.06, 0.07, 0.09] });
-  gl.depthMask(true); gl.disable(gl.BLEND);
-  const lk = CHAR_LOOK[look] || CHAR_LOOK[0], px = 2 * Math.tan(fovOf(lens) / 2) / h * 1.3;
-  gl.cullFace(gl.FRONT); for(const J of JOINTS) GL.draw(R.out[lk.id][J.id], { m:M[J.id], flat:true, col:INK, out:px }); gl.cullFace(gl.BACK);
-  for(const J of JOINTS) GL.draw(R.parts[lk.id][J.id], { m:M[J.id], col:[1, 1, 1], mul:true, char:true });
-  const url = R.canvas.toDataURL('image/jpeg', 0.85);
-  R.canvas.width = ow; R.canvas.height = oh; requestRender();
+  const url = offscreenURL(96, 120, (w, h) => {
+    const vp = viewProj(cam, w / h), eye = camEye(cam);
+    GL.begin(w, h, vp, hexRGB('#E7EBF0'), { bw:S.doc.style === 'bw' }); GL.view(eye, []);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    const fy = Math.min(M4.apply(M.footL, [0, -0.065, 0])[1], M4.apply(M.footR, [0, -0.065, 0])[1]), pc = M4.apply(M.pelvis, [0, 0, 0]);
+    GL.draw(R.blob, { m:M4.mul(M4.trans(pc[0], fy + 0.004, pc[2]), [1.1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1.1, 0, 0, 0, 0, 1]), flat:true, a:0.16, col:[0.06, 0.07, 0.09] });
+    gl.depthMask(true); gl.disable(gl.BLEND);
+    const lk = CHAR_LOOK[look] || CHAR_LOOK[0], px = 2 * Math.tan(fovOf(lens) / 2) / h * 2.2;
+    gl.cullFace(gl.FRONT); for(const J of JOINTS) GL.draw(R.out[lk.id][J.id], { m:M[J.id], flat:true, col:INK, out:px });
+    if(ch.prop) GL.draw(R.propsOut[ch.prop], { m:M.handR, flat:true, col:INK, out:px });
+    gl.cullFace(gl.BACK);
+    for(const J of JOINTS) GL.draw(R.parts[lk.id][J.id], { m:M[J.id], col:[1, 1, 1], mul:true, char:true });
+    if(ch.prop) GL.draw(R.props[ch.prop], { m:M.handR, col:[1, 1, 1], mul:true, char:true });
+  });
   POSE_PREV.set(key, url);
+  return url;
+}
+/* la vignette d'un lieu : son premier cadrage, sans personne */
+const PLACE_PREV = new Map();
+function placePreview(id){
+  const key = id + ':' + (S.doc.style || '');
+  if(PLACE_PREV.has(key)) return PLACE_PREV.get(key);
+  if(!GL.gl || S.rec) return '';
+  const sh = { id:'prev', set:id, chars:[], crowds:[], vehicles:[], cam:clone(SET_DEF[id].cam), info:newInfo() };
+  sh.cam.dist *= 1.15;
+  const url = offscreenURL(160, 90, (w, h) => drawFrame(sh, w, h, true), 0.8);
+  PLACE_PREV.set(key, url);
   return url;
 }

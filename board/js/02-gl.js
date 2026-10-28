@@ -1,5 +1,5 @@
 /* =====================================================================
-   RAGING 3D — MOTEUR
+   RAGING BOARD — MOTEUR
    Un moteur WebGL 1 minimal, écrit pour les petits ordinateurs :
    pas de textures, pas d'ombres calculées, un seul éclairage simple,
    et une image dessinée seulement quand quelque chose change.
@@ -170,7 +170,7 @@ const GL = {
     const prog = (v, f) => {
       const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); return s; };
       const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, v)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, f)); gl.linkProgram(p);
-      if(!gl.getProgramParameter(p, gl.LINK_STATUS)){ try{ console.warn('Raging 3D shader', gl.getProgramInfoLog(p)); }catch(e){} return null; }
+      if(!gl.getProgramParameter(p, gl.LINK_STATUS)){ try{ console.warn('Raging Board shader', gl.getProgramInfoLog(p)); }catch(e){} return null; }
       return p;
     };
     const p = prog(vs, fs); if(!p) return false;
@@ -257,7 +257,7 @@ const GL = {
   /* env : { fogC, fog:[début, fin], bw:noir et blanc } */
   begin(w, h, vp, bg, env){
     const gl = this.gl, L = this.loc, E = this.env = Object.assign({ fogC:bg, fog:[400, 500], bw:false }, env || {});
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.target || null); gl.viewport(0, 0, w, h);
     gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix4fv(L.uVP, false, vp);
     gl.uniform3f(L.uFogC, E.fogC[0], E.fogC[1], E.fogC[2]); gl.uniform2f(L.uFog, E.fog[0], E.fog[1]); gl.uniform1f(L.uBW, E.bw ? 1 : 0);
@@ -322,6 +322,27 @@ const GL = {
     gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix4fv(this.loc.uVP, false, vp);
     gl.uniform1f(this.loc.uBW, 0); gl.uniform2f(this.loc.uFog, 400, 500);
+  },
+  /* dessiner hors de l'écran (vignettes, petites images) : l'image principale ne change pas de taille,
+     rien ne clignote et rien n'est recalculé pour rien */
+  renderTo(w, h, fn){
+    const gl = this.gl, O = this.offRT || (this.offRT = { fb:gl.createFramebuffer(), tex:gl.createTexture(), rb:gl.createRenderbuffer(), w:0, h:0 });
+    if(O.w !== w || O.h !== h){
+      gl.bindTexture(gl.TEXTURE_2D, O.tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, O.rb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, O.fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, O.tex, 0);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, O.rb);
+      O.w = w; O.h = h;
+    }
+    this.target = O.fb;
+    try{ fn(); } finally{ this.target = null; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, O.fb);
+    const px = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return px;
   },
   readPick(x, y, keep){
     const gl = this.gl, px = new Uint8Array(4);
