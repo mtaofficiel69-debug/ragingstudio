@@ -486,7 +486,8 @@ const SET_DEF = {
       box(g, -1.25, 0.45, 0.9, 0.48, 0.06, 0.48, '#4E8C83'); box(g, -1.03, 0.75, 0.9, 0.05, 0.55, 0.48, '#4E8C83'); [[-1.45, 0.7], [-1.05, 0.7], [-1.45, 1.1], [-1.05, 1.1]].forEach(([x, z]) => box(g, x, 0.21, z, 0.03, 0.42, 0.03, MET));
       // la fenêtre et ses stores, le rideau de séparation sur son rail, le lavabo
       wall(g, [X0 + 0.01, 2.6], [X0 + 0.01, 0.6], 1.4, '#A9C6D6', 0.85); for(let y = 0.95; y < 2.25; y += 0.12) box(g, X0 + 0.04, y, 1.6, 0.01, 0.03, 2.0, '#EEF0F0');
-      box(g, -0.6, 2.6, 0, 0.03, 0.03, 4.0, '#C9CDD3'); box(g, -0.6, 1.6, -1.6, 0.04, 1.9, 0.9, '#B7D2D6');
+      box(g, -0.6, 2.6, 0, 0.03, 0.03, 4.0, '#C9CDD3'); box(g, -0.6, 1.42, -1.6, 0.04, 2.3, 0.9, '#B7D2D6');   // le rideau pend de son rail
+      [-1.95, -1.6, -1.25].forEach(z => box(g, -0.6, 2.58, z, 0.05, 0.04, 0.04, '#C9CDD3'));
       box(g, 1.75, 0.85, -2.9, 0.4, 0.12, 0.35, '#F4F6F6'); wall(g, [1.98, -3.15], [1.98, -2.65], 0.6, '#B9D3E1', 1.15);
       // le couloir : les portes, le fauteuil roulant, les sièges d'attente, le panneau
       [-2.2, 2.4].forEach(z => doorX(g, X1, z, 1.1, 2.1, '#8FB5AD', -1));
@@ -575,7 +576,7 @@ const SET_DEF = {
         [[0.55, 0], [-0.55, 0]].forEach(([dx, dz]) => { box(g, x + dx, 0.45, z + dz, 0.4, 0.05, 0.4, '#3A2A20'); box(g, x + dx * 1.35, 0.72, z + dz, 0.04, 0.5, 0.4, '#3A2A20'); box(g, x + dx, 0.22, z + dz, 0.04, 0.44, 0.04, '#2C2E33'); }); });
       doorX(g, X1, -3.7, 1.1, 2.2, '#3A2416', -1, '#2E1F17'); box(g, X1 - 0.02, 1.6, -3.7, 0.01, 0.45, 0.4, '#C9B48F');   // la porte d'entrée et sa vitre
       box(g, X1 - 0.03, 2.45, -3.7, 0.04, 0.16, 0.6, '#1E5A3A'); pixText(g, 'SORTIE', -3.7, 2.45, X1 - 0.055, -1, 0.018, '#7EE0A0', true);
-      box(g, 5.6, 0.75, 2.5, 0.6, 1.5, 0.55, '#8C1F2A'); box(g, 5.31, 1.2, 2.5, 0.02, 0.45, 0.4, '#F2D98A'); cyl(g, 5.6, 1.5, 2.5, 0.3, 0.3, 0.01, '#C9A64B', 12, 'x');
+      box(g, 5.6, 0.75, 2.5, 0.6, 1.5, 0.55, '#8C1F2A'); box(g, 5.285, 1.2, 2.5, 0.02, 0.45, 0.4, '#F2D98A'); cyl(g, 5.6, 1.5, 2.5, 0.3, 0.3, 0.01, '#C9A64B', 12, 'x');
       [-4.2, -1.4, 1.4, 4.2].forEach(x => { cyl(g, x, H, 0.4, 0.008, 0.008, 0.9, '#2C2E33', 4); cyl(g, x, 2.3, 0.4, 0.05, 0.16, 0.14, '#C9A64B', 10); ball(g, x, 2.14, 0.4, 0.045, 0.04, 0.045, '#F7E3A0', 6); });
     },
   },
@@ -1630,7 +1631,7 @@ const SPOTS = {
   parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
   diner:[ ['Dans la voiture, côté malle', 'In the car booth, back seat', -5.55, -4.02, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.55, -2.48, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
   bank:[ ['Au guichet', 'At the counter', -1.2, 2.3, 0], ['Derrière le guichet', 'Behind the counter', -1.2, 4.2, 180], ['Dans la file', 'In the queue', 0, -0.4, 0], ['À l’entrée', 'At the entrance', 0.6, -6.0, 0], ['Devant la chambre forte', 'In front of the vault', 5.8, 5.2, 180], ['Assis sur le banc', 'Sitting on the bench', -6.5, -5.75, 0, 'sit', 0.04] ],
-  hospital:[ ['Allongé dans le lit', 'Lying in the bed', -2.3, 0.15, 0, 'lie', 0.66], ['À son chevet, assis', 'At the bedside, seated', -1.27, 0.9, -90, 'sit'], ['Le médecin, debout', 'The doctor, standing', -1.2, -0.4, -90], ['Dans le couloir', 'In the corridor', 3.5, 0, 0], ['En salle d’attente', 'In the waiting area', 2.38, 1.15, 90, 'sit'], ['Devant la fenêtre', 'At the window', -3.5, 1.6, -90] ],
+  hospital:[ ['Allongé dans le lit', 'Lying in the bed', -2.3, 0.4, 0, 'lie', 0.66], ['À son chevet, assis', 'At the bedside, seated', -1.27, 0.9, -90, 'sit'], ['Le médecin, debout', 'The doctor, standing', -1.2, -0.4, -90], ['Dans le couloir', 'In the corridor', 3.5, 0, 0], ['En salle d’attente', 'In the waiting area', 2.38, 1.15, 90, 'sit'], ['Devant la fenêtre', 'At the window', -3.5, 1.6, -90] ],
   metro:[ ['Assis sur la banquette', 'Seated on the bench', 1.1, 0, -90, 'sit', -0.37], ['Assis en face', 'Seated opposite', -1.1, 0.6, 90, 'sit', -0.37], ['Debout à la barre', 'Standing at the pole', 0.25, 1.2, 0], ['Devant la porte', 'By the door', 0.9, 3, -90], ['Au bout de la rame', 'At the end of the car', 0, -6.2, 0] ],
   bar:[ ['Au comptoir', 'At the counter', -1.2, 2.15, 0, 'sit', -0.06], ['Le barman', 'The bartender', -0.8, 3.9, 180], ['Au billard', 'At the pool table', -2.7, -2.4, -90], ['Dans le box', 'In the booth', -4.3, -4.25, 90, 'sit', -0.33], ['En face, dans le box', 'Facing, in the booth', -2.9, -4.25, -90, 'sit', -0.33], ['À une table', 'At a table', 2.55, -1.5, -90, 'sit'], ['Près du juke-box', 'By the jukebox', 4.8, 2.2, 90] ],
   police:[ ['À l’accueil', 'At the front desk', -1, -3.0, 0], ['Derrière le comptoir', 'Behind the desk', -1, -1.5, 180], ['Dans la salle d’attente', 'In the waiting room', 4.4, -5.4, 0, 'sit'], ['À son bureau', 'At a desk', -3.6, 0.55, 0, 'sit'], ['Le suspect, à la table', 'The suspect, at the table', 5, 1.6, 0, 'sit'], ['L’inspecteur, en face', 'The detective, facing', 5, 3.6, 180, 'sit'], ['Dans la cellule', 'In the cell', -6.6, 5.4, 180] ],
