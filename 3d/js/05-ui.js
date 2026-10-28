@@ -1,221 +1,445 @@
 /* =====================================================================
    RAGING 3D — INTERFACE
-   À gauche : qui et où (lieu, personnages, pose). Au-dessus de l'image :
-   le cadrage en un clic (valeur, angle, focale). À droite : la fiche du plan.
-   En bas : la planche, plan par plan, comme un storyboard dessiné.
+   La même maison que Raging Draw : à gauche la colonne sombre (les étapes),
+   en haut la barre du projet, au centre l'image du plan, à droite le volet
+   de l'étape choisie, en bas le storyboard (en bande, ou en planche entière).
 ===================================================================== */
 const HUB = () => getLang() === 'fr' ? '../fr/' : '../';
+const LS_PANEL = 'raging3d_panel', LS_THEME = 'raging3d_theme';
+S.panel = lsGet(LS_PANEL) || 'place';
+S.view = 'stage';          // 'stage' : on met en scène ; 'sheet' : la planche entière, pour écrire
+S.crowd = -1;              // la foule choisie
+S.hidden = [];
 
+/* ---------- Les étapes, dans la colonne de gauche ---------- */
+const PANELS = [
+  { g:['Mise en scène', 'Staging'], items:[
+    { id:'place', n:1, ic:'place', fr:'Le lieu', en:'The place' },
+    { id:'chars', n:2, ic:'users', fr:'Les personnages', en:'The characters' },
+    { id:'pose', n:3, ic:'pose', fr:'Les poses', en:'The poses' },
+    { id:'crowd', ic:'crowd', fr:'La foule', en:'Crowds' } ] },
+  { g:['Caméra', 'Camera'], items:[
+    { id:'frame', n:4, ic:'frame', fr:'Le cadrage', en:'Framing' },
+    { id:'move', ic:'move', fr:'Le mouvement', en:'Camera move' },
+    { id:'car', ic:'car', fr:'En voiture', en:'In the car' } ] },
+  { g:['Le plan', 'The shot'], items:[
+    { id:'text', n:5, ic:'text', fr:'Ce qui se passe', en:'What happens' } ] },
+  { g:['Le film', 'The film'], items:[
+    { id:'look', ic:'contrast', fr:'Couleur ou noir et blanc', en:'Color or black & white' },
+    { id:'export', ic:'export', fr:'Exporter', en:'Export' },
+    { id:'help', ic:'help', fr:'Aide et raccourcis', en:'Help & shortcuts' } ] },
+];
+const PANEL = Object.fromEntries(PANELS.flatMap(g => g.items).map(p => [p.id, p]));
+function setPanel(id, keep){
+  if(!PANEL[id]) return;
+  if(S.panel === id && keep) return;
+  S.panel = id; lsSet(LS_PANEL, id);
+  if(S.view === 'sheet' && id !== 'text' && id !== 'export' && id !== 'look' && id !== 'help') S.view = 'stage';
+  renderUI();
+}
+
+/* ---------- La charpente de la page ---------- */
+function theme(){ const t = lsGet(LS_THEME) || lsGet('ragingdraw_theme') || lsGet('scriptmm_theme'); return t === 'dark' ? 'dark' : 'light'; }
 function renderUI(){
   const app = document.getElementById('app');
-  document.documentElement.lang = getLang();
-  if(!app.querySelector('.topbar')){
+  document.documentElement.lang = getLang(); document.documentElement.dataset.theme = theme();
+  if(!app.querySelector('.rail')){
     app.innerHTML = `
-      <header class="topbar">
-        <div class="topbar-left">
-          <a class="btn tb-back" id="tbBack" href="${HUB()}">${icon('back')}<span class="tb-lbl">Raging Studio</span></a>
-          <a class="brand" id="tbBrand" href="${HUB()}">${r3Logo(34, 'brand-logo')}${r3Wordmark()}</a>
-          <span class="tb-div"></span>
-          <input class="tb-title" id="tbTitle" spellcheck="false" maxlength="80">
+      <aside class="rail" id="rail"></aside>
+      <div class="main-col">
+        <header class="topbar" id="topbar"></header>
+        <div class="work">
+          <section class="center">
+            <div class="stage-area" id="stageArea">
+              <div class="shot-head" id="shotHead"></div>
+              <div class="stage-wrap" id="stageWrap">
+                <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="warn hidden" id="warn"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">${icon('pause')}<span id="playStopLbl"></span></button><div class="rec hidden" id="recBox"></div></div>
+              </div>
+              <div class="under" id="under"><div class="dock" id="nav"></div><div class="hint" id="hint"></div></div>
+            </div>
+            <div class="sheet-view hidden" id="sheetView"></div>
+            <div class="board" id="strip"></div>
+          </section>
+          <aside class="side" id="side"></aside>
         </div>
-        <div class="topbar-right">
-          <button class="btn tb-icon" data-act="undo" id="tbUndo">${icon('undo')}</button>
-          <button class="btn tb-icon" data-act="redo" id="tbRedo">${icon('redo')}</button>
-          <span class="tb-div"></span>
-          <div class="lang-flags" role="group" aria-label="Language / Langue"><button data-act="lang" data-l="fr">FR</button><button data-act="lang" data-l="en">EN</button></div>
-          <div class="menu-wrap">
-            <button class="btn btn-primary" data-act="exportMenu" id="tbExport">${icon('export')}<span class="tb-lbl" id="tbExportLbl"></span></button>
-            <div class="menu hidden" id="exportMenu"></div>
-          </div>
+      </div>`;
+  }
+  renderRail(); renderTop(); renderHead(); renderPanel(); renderStrip(); renderHint(); renderNav(); renderView(); fitStage();
+}
+function renderRail(){
+  const el = document.getElementById('rail'); if(!el) return;
+  const s = shot(), n = S.doc.shots.length;
+  const badge = id => id === 'chars' ? s.chars.length : id === 'crowd' ? (s.crowds.length || '') : '';
+  el.innerHTML = `<a class="rail-brand" href="${HUB()}" title="${esc(L('Retour à l’accueil de Raging Studio', 'Back to Raging Studio home'))}">${r3Logo(34, 'rail-logo')}${r3Wordmark()}</a>
+    <div class="rail-project" data-label="${esc(L('Storyboard', 'Storyboard'))}">${esc(S.doc.title || L('Sans titre', 'Untitled'))}</div>
+    <nav class="rail-nav">${PANELS.map(g => `<div class="rail-group">${esc(L(g.g[0], g.g[1]))}</div>` + g.items.map(p => {
+      const b = badge(p.id), off = p.id === 'car' && s.set !== 'taxi';
+      return `<button class="rail-item ${S.panel === p.id ? 'active' : ''} ${off ? 'dim' : ''}" data-act="panel" data-id="${p.id}" title="${esc(L(p.fr, p.en))}">${p.n ? `<i class="rn">${p.n}</i>` : icon(p.ic)}<span class="lbl">${esc(L(p.fr, p.en))}</span>${b !== '' ? `<b class="rb">${b}</b>` : ''}</button>`;
+    }).join('')).join('')}</nav>
+    <div class="rail-bottom"><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span><span>${R3_VERSION}</span></div>`;
+}
+function renderTop(){
+  const el = document.getElementById('topbar'); if(!el) return;
+  if(!el.firstChild){
+    el.innerHTML = `<div class="topbar-left">
+        <a class="ib" id="tbBack" href="${HUB()}">${icon('back')}</a>
+        <span class="tb-div"></span>
+        <input class="tb-title" id="tbTitle" spellcheck="false" maxlength="80">
+        <span class="tb-div"></span>
+        <button class="ib" data-act="undo" id="tbUndo">${icon('undo')}</button>
+        <button class="ib" data-act="redo" id="tbRedo">${icon('redo')}</button>
+        <span class="save-status" id="saveStatus"><i></i><span></span></span>
+      </div>
+      <div class="topbar-right">
+        <div class="lang-flags" role="group" aria-label="Language / Langue"><button class="lang-flag" data-act="lang" data-l="fr">FR</button><button class="lang-flag" data-act="lang" data-l="en">EN</button></div>
+        <button class="ib" data-act="theme" id="tbTheme"></button>
+        <div class="menu-wrap">
+          <button class="btn btn-primary" data-act="exportMenu" id="tbExport">${icon('export')}<span class="tb-lbl" id="tbExportLbl"></span></button>
+          <div class="menu hidden" id="exportMenu"></div>
         </div>
-      </header>
-      <div class="main">
-        <aside class="side" id="side"></aside>
-        <section class="work">
-          <div class="tools" id="tools"></div>
-          <div class="stage-wrap" id="stageWrap">
-            <div class="stage" id="stage"><canvas id="view"></canvas><div class="thirds" id="thirds"><i></i><i></i><i></i><i></i></div><div class="handles" id="handles"></div><div class="shot-no" id="shotNo"></div><div class="hint" id="hint"></div><div class="nav" id="nav"></div><div class="play-box" id="playBox"></div><div class="play-bar"><i id="playBar"></i></div><button class="play-stop" data-act="stopBoard">■ ${L('Arrêter', 'Stop')}</button><div class="rec hidden" id="recBox"></div></div>
-          </div>
-          <div class="strip" id="strip"></div>
-        </section>
-        <aside class="sheet" id="sheet"></aside>
       </div>`;
   }
   const t = document.getElementById('tbTitle'); if(document.activeElement !== t) t.value = S.doc.title;
   t.placeholder = L('Titre du storyboard', 'Storyboard title');
-  ['tbBack', 'tbBrand'].forEach(id => { const a = document.getElementById(id); a.href = HUB(); a.title = L('Retour à l’accueil de Raging Studio', 'Back to Raging Studio home'); });
+  const back = document.getElementById('tbBack'); back.href = HUB(); back.title = L('Retour à l’accueil de Raging Studio', 'Back to Raging Studio home');
   document.getElementById('tbUndo').title = L('Annuler (Ctrl+Z)', 'Undo (Ctrl+Z)'); document.getElementById('tbRedo').title = L('Rétablir (Ctrl+Y)', 'Redo (Ctrl+Y)');
-  document.querySelectorAll('.lang-flags button').forEach(b => b.classList.toggle('on', b.dataset.l === getLang()));
+  document.getElementById('tbUndo').disabled = !S.undo.length; document.getElementById('tbRedo').disabled = !S.redo.length;
+  document.querySelectorAll('.lang-flag').forEach(b => b.classList.toggle('active', b.dataset.l === getLang()));
+  const th = document.getElementById('tbTheme'); th.innerHTML = icon(theme() === 'dark' ? 'sun' : 'moon'); th.title = theme() === 'dark' ? L('Mode clair', 'Light mode') : L('Mode sombre', 'Dark mode');
   document.getElementById('tbExportLbl').textContent = L('Exporter', 'Export');
-  document.getElementById('exportMenu').innerHTML =
-    `<button data-act="exportPdf" data-per="6">${icon('new')}<span><b>${L('Planche PDF · 6 plans par page', 'PDF board · 6 shots per page')}</b><small>${L('Pour voir tout le film d’un coup d’œil', 'To see the whole film at a glance')}</small></span></button>
-     <button data-act="exportPdf" data-per="3">${icon('new')}<span><b>${L('Planche PDF · 3 grands plans par page', 'PDF board · 3 large shots per page')}</b><small>${L('Avec l’action, le dialogue et de la place pour écrire : pour le tournage', 'With action, dialogue and room to write: for the shoot')}</small></span></button>
-     <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
-     <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, chacun pendant sa durée', 'The shots one after another, each for its length')}</small></span></button>`;
-  renderSide(); renderTools(); renderStrip(); renderShotPanel(); renderHint(); renderNav(); fitStage();
+  document.getElementById('exportMenu').innerHTML = exportList();
+  renderSaved();
 }
-/* le pavé de déplacement, en bas à droite de l'image : on maintient un bouton pour bouger */
+function renderSaved(){ const el = document.getElementById('saveStatus'); if(el) el.lastChild.textContent = L('Enregistré dans ce navigateur', 'Saved in this browser'); }
+const exportList = () => `<button data-act="exportPdf" data-per="6">${icon('board')}<span><b>${L('Planche PDF · 6 plans par page', 'PDF board · 6 shots per page')}</b><small>${L('Tout le film d’un coup d’œil, avec les flèches des mouvements', 'The whole film at a glance, with camera-move arrows')}</small></span></button>
+     <button data-act="exportPdf" data-per="3">${icon('text')}<span><b>${L('Planche PDF · 3 grands plans par page', 'PDF board · 3 large shots per page')}</b><small>${L('Avec l’action, le dialogue et de la place pour écrire : pour le tournage', 'With action, dialogue and room to write: for the shoot')}</small></span></button>
+     <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
+     <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, avec leurs mouvements de caméra', 'The shots one after another, with their camera moves')}</small></span></button>`;
+
+/* ---------- Au-dessus de l'image : quel plan, et ce qu'on voit ---------- */
+function renderHead(){
+  const el = document.getElementById('shotHead'); if(!el) return;
+  const s = shot(), n = S.doc.shots.length, inf = s.info;
+  el.innerHTML = `<div class="sh-l">
+      <span class="sh-no">${L('Plan', 'Shot')} ${S.i + 1}</span><span class="sh-of">${L('sur', 'of')} ${n}</span>
+      ${inf.scene ? `<span class="sh-chip">${esc(L('Sc. ', 'Sc. ') + inf.scene)}</span>` : ''}
+      <span class="sh-chip">${esc(shotLabel('size', inf.size))}</span>
+      ${inf.move !== 'fix' ? `<span class="sh-chip mv">${icon('move')}${esc(shotLabel('move', inf.move))}${S.endEd ? ' · ' + L('cadre de fin', 'end frame') : ''}</span>` : ''}
+      <span class="sh-auto" title="${esc(L('Tout ce que tu vois dans le cadre est gardé dans ce plan. Pas besoin d’enregistrer.', 'Everything you see in the frame is kept in this shot. No need to save.'))}">${icon('check')}${L('Ce cadre est le plan', 'This frame is the shot')}</span>
+    </div>
+    <div class="sh-r">
+      <div class="seg" role="group"><button class="${S.final ? '' : 'on'}" data-act="final" data-v="0" title="${esc(L('Les meubles qui cachent un personnage deviennent transparents', 'Furniture hiding a character turns see-through'))}">${icon('eye')}${L('Vue de travail', 'Work view')}</button><button class="${S.final ? 'on' : ''}" data-act="final" data-v="1" title="${esc(L('Exactement l’image qui sera enregistrée', 'Exactly the image that will be saved'))}">${icon('image')}${L('Image finale', 'Final image')}</button></div>
+      <button class="ib ${S.grid ? 'on' : ''}" data-act="grid" title="${esc(L('Grille des tiers', 'Rule of thirds'))}">${icon('grid')}</button>
+      <span class="tb-div"></span>
+      <button class="ib" data-act="prevShot" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Plan précédent (←)', 'Previous shot (←)'))}">${icon('left')}</button>
+      <button class="ib" data-act="nextShot" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Plan suivant (→)', 'Next shot (→)'))}">${icon('right')}</button>
+    </div>`;
+  renderWarn();
+}
+/* le décor cache quelqu'un dans l'image finale : on le dit, et on propose de regarder */
+function renderWarn(){
+  const el = document.getElementById('warn'); if(!el) return;
+  const s = shot(), h = (S.hidden || []).filter(c => s.chars[c]);
+  if(!h.length || S.play){ el.classList.add('hidden'); return; }
+  const names = h.map(c => L(lookOf(s.chars[c], c).fr, lookOf(s.chars[c], c).en)).join(', ');
+  el.classList.remove('hidden');
+  el.innerHTML = `${icon('warn')}<span>${L('Dans l’image finale, le décor cache ', 'In the final image, the set hides ')}${esc(names)}</span>${S.final ? '' : `<button data-act="final" data-v="1">${L('Voir', 'See')}</button>`}`;
+}
+function renderView(){
+  const st = document.getElementById('stage'); if(!st) return;
+  st.classList.toggle('final', !!S.final);
+  document.getElementById('thirds').classList.toggle('hidden', !S.grid || !!S.final);
+  const sheet = S.view === 'sheet';
+  document.getElementById('stageArea').classList.toggle('hidden', sheet);
+  document.getElementById('sheetView').classList.toggle('hidden', !sheet);
+  if(sheet) renderSheet();
+}
+
+/* ---------- Sous l'image : se déplacer (on maintient un bouton), et l'aide du moment ---------- */
 function renderNav(){
   const el = document.getElementById('nav'); if(!el) return;
-  const hd = document.getElementById('handles'); if(hd) hd.innerHTML = '';   // refaites dans la bonne langue au prochain dessin
-  const b = (k, t, svg) => `<button data-nav="${k}" title="${esc(t)}" aria-label="${esc(t)}"><svg viewBox="0 0 16 16" aria-hidden="true">${svg}</svg></button>`;
+  const hd = document.getElementById('handles'); if(hd){ hd.innerHTML = ''; hd.dataset.sig = ''; }   // refaites dans la bonne langue au prochain dessin
+  const b = (k, t, svg) => `<button class="dk" data-nav="${k}" title="${esc(t)}" aria-label="${esc(t)}"><svg viewBox="0 0 16 16" aria-hidden="true">${svg}</svg></button>`;
   const ar = 'M8 3.5 12.5 9H3.5Z';
-  el.innerHTML = `<div class="pad">${b('fwd', L('Avancer (Z ou W)', 'Forward (W or Z)'), `<path d="${ar}"/>`)}
-      ${b('left', L('À gauche (Q ou A)', 'Left (A or Q)'), `<path d="${ar}" transform="rotate(-90 8 8)"/>`)}
-      ${b('right', L('À droite (D)', 'Right (D)'), `<path d="${ar}" transform="rotate(90 8 8)"/>`)}
-      ${b('back', L('Reculer (S)', 'Back (S)'), `<path d="${ar}" transform="rotate(180 8 8)"/>`)}</div>
-    <div class="col">${b('turnL', L('Tourner autour, à gauche', 'Orbit left'), '<path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2" fill="none"/><path d="M12 1.8v3.4H8.6" fill="none"/>')}${b('turnR', L('Tourner autour, à droite', 'Orbit right'), '<path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" fill="none"/><path d="M4 1.8v3.4h3.4" fill="none"/>')}</div>
-    <div class="col">${b('up', L('Monter (R)', 'Up (R)'), '<path d="M8 2v12M4.5 5.5 8 2l3.5 3.5" fill="none"/>')}${b('down', L('Descendre (F)', 'Down (F)'), '<path d="M8 2v12M4.5 10.5 8 14l3.5-3.5" fill="none"/>')}</div>
-    <div class="col">${b('in', L('Zoomer', 'Zoom in'), '<path d="M8 3.5v9M3.5 8h9" fill="none"/>')}${b('out', L('Dézoomer', 'Zoom out'), '<path d="M3.5 8h9" fill="none"/>')}</div>`;
-}
-
-/* ---------- À gauche, en trois étapes : le lieu, les personnages, la pose ---------- */
-function slider(label, act, i, v, min, max, step, unit){
-  return `<label class="sl"><span class="sl-h"><span>${esc(label)}</span><b>${round(v, step < 1 ? 2 : 0)}${unit || '°'}</b></span>
-    <input type="range" data-act="${act}" data-i="${i}" min="${min}" max="${max}" step="${step}" value="${v}"></label>`;
-}
-const charName = c => { const ch = shot().chars[c]; const lk = lookOf(ch, c); return esc(L(lk.fr, lk.en)); };
-/* une petite silhouette, homme ou femme, à la couleur du personnage */
-const figure = lk => `<svg class="fig" viewBox="0 0 16 20" aria-hidden="true"><circle cx="8" cy="4" r="3.2" fill="${lk.col}"/>${lk.body === 'f' ? `<path d="M8 1A3.6 3.6 0 0 1 11.6 4.6V6H4.4V4.6A3.6 3.6 0 0 1 8 1Z" fill="#6B5446"/>` : ''}<path d="${lk.body === 'f' ? 'M5.2 8h5.6l2.4 9H2.8Z' : 'M4 8h8l.8 11H3.2Z'}" fill="${lk.col}"/><path d="M8 1A3.2 3.2 0 1 1 8 7.4 3.2 3.2 0 1 1 8 1ZM4 8h8" fill="none" stroke="#00000030" stroke-width=".8"/></svg>`;
-function renderSide(onlyValues){
-  const el = document.getElementById('side'); if(!el) return;
-  const sh = shot(), sel = S.sel, chars = sh.chars;
-  if(onlyValues && el.querySelector('.sec-part')){
-    el.querySelectorAll('.sl input').forEach(inp => {
-      const i = +inp.dataset.i, act = inp.dataset.act; let v;
-      if(act === 'axis' && sel) v = chars[sel.c].j[sel.j][i];
-      else if(act === 'root' && sel) v = i === 0 ? chars[sel.c].root.ry : chars[sel.c].root.y;
-      if(v == null) return;
-      inp.value = v; inp.closest('.sl').querySelector('b').textContent = round(v, inp.step < 1 ? 2 : 0) + (act === 'root' && i === 1 ? ' m' : '°');
-    });
-    return;
-  }
-  const target = sel ? sel.c : S.target, used = chars.map(c => c.look);
-  const place = SETS.map(s => `<button class="chip-btn place ${sh.set === s.id ? 'on' : ''}" data-act="place" data-id="${s.id}"><i class="sw sw-${s.id}"></i>${esc(L(s.fr, s.en))}</button>`).join('');
-  const who = chars.map((c, i) => `<div class="who ${target === i ? 'on' : ''}">
-      <button class="who-main" data-act="pickChar" data-c="${i}">${figure(lookOf(c, i))}${charName(i)}</button>
-      ${chars.length > 1 ? `<button class="who-x" data-act="removeChar" data-c="${i}" title="${esc(L('Retirer ce personnage du plan', 'Remove this character from the shot'))}">${icon('close')}</button>` : ''}
-    </div>`).join('');
-  const add = chars.length < MAX_CHARS ? `<div class="add-row"><span>${L('Ajouter', 'Add')}</span>${CHAR_LOOK.map((lk, k) => `<button class="add-fig" data-act="addChar" data-look="${k}" ${used.includes(k) ? 'disabled' : ''} title="${esc(L(lk.fr, lk.en))}">${figure(lk)}<small>${esc(L(lk.fr, lk.en))}</small></button>`).join('')}</div>` : '';
-  const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip-btn" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
-  const pair = chars.length > 1 ? `<div class="pair"><button class="chip-btn" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip-btn" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>` : '';
-  const poses = POSES.map(p => `<button class="chip-btn" data-act="pose" data-id="${p.id}">${esc(L(p.fr, p.en))}</button>`).join('');
-  let part;
-  if(sel){
-    const J = JOINT[sel.j], v = chars[sel.c].j[sel.j], ch = chars[sel.c];
-    part = `<div class="part-h"><b>${esc(L(J.fr, J.en))}</b><span>${charName(sel.c)}</span></div>
-      ${J.ax.map((a, i) => slider(L(a[4], a[5]), 'axis', i, v[i], a[2], a[3], 1)).join('')}
-      ${sel.j === 'pelvis' ? `${slider(L('Tout le corps : tourner', 'Whole body: turn'), 'root', 0, ch.root.ry, -180, 180, 1)}
-        ${slider(L('Tout le corps : hauteur', 'Whole body: height'), 'root', 1, ch.root.y, -0.8, 1.2, 0.01, ' m')}` : ''}
-      <button class="btn btn-sm btn-ghost" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
-  } else part = `<p class="tip">${L('Pour un geste précis : clique sur une partie du corps dans l’image et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture and drag. Its settings show up here.')}</p>`;
-  el.innerHTML = `
-    <div class="sec"><h3><i class="step">1</i>${L('Le lieu', 'The place')}</h3><div class="grid2">${place}</div></div>
-    <div class="sec"><h3><i class="step">2</i>${L('Les personnages', 'The characters')}</h3>${who}${add}
-      <div class="sub-h">${L('Placer', 'Place')} <b>${charName(target)}</b></div><div class="chips">${spots}</div>${pair}</div>
-    <div class="sec"><h3><i class="step">3</i>${L('La pose de', 'Pose for')}&nbsp;<span class="for">${charName(target)}</span></h3><div class="chips">${poses}</div></div>
-    <div class="sec sec-part"><h3>${L('Partie du corps', 'Body part')}</h3>${part}</div>
-    <div class="side-foot"><button class="btn btn-sm btn-ghost" data-act="newBoard">${icon('new')}${L('Nouveau storyboard', 'New storyboard')}</button><button class="btn btn-sm btn-ghost" data-act="help">${icon('help')}${L('Aide', 'Help')}</button></div>`;
-}
-
-/* ---------- Au-dessus de l'image : le cadrage en un clic ---------- */
-function renderTools(){
-  const el = document.getElementById('tools'); if(!el) return;
-  const sh = shot(), two = sh.chars.length > 1, inf = sh.info;
-  const sizes = ['pg', 'pe', 'pa', 'pm', 'pr', 'gp', 'tgp'].concat(two ? ['am', '2p'] : [], ['pov']);
-  const btn = (k, act, on, label, title) => `<button class="${on ? 'on' : ''}" data-act="${act}" data-v="${k}" title="${esc(title)}">${esc(label)}</button>`;
-  el.innerHTML = `
-    <div class="tools-row">
-      <div class="tg"><span class="tl">${L('Cadrer', 'Frame')}</span><div class="seg2">${sh.chars.map((c, i) => `<button class="${S.target === i ? 'on' : ''}" data-act="target" data-c="${i}" title="${esc(L('Le cadrage vise ', 'Framing aims at ') + L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}${sh.chars.length > 2 ? esc(L(lookOf(c, i).fr, lookOf(c, i).en).replace(/^(\S)\S*\s/, '$1')) : charName(i)}</button>`).join('')}</div></div>
-      <div class="tg"><span class="tl">${L('Valeur', 'Size')}</span><div class="seg2">${sizes.map(k => btn(k, 'size', inf.size === k, shotLabel('size', k, true), shotLabel('size', k))).join('')}</div></div>
-    </div>
-    <div class="tools-row">
-      <div class="tg"><span class="tl">${L('Angle', 'Angle')}</span><div class="seg2">${['neu', 'plo', 'con', 'dess', 'sol', 'deb'].map(k => btn(k, 'angle', inf.angle === k, shotLabel('angle', k), shotLabel('angle', k))).join('')}</div></div>
-      <div class="tg"><span class="tl">${L('Côté', 'Side')}</span><div class="seg2">${SIDES.map(x => btn(x[0], 'side', inf.side === x[0], L(x[1], x[2]), L(x[1], x[2]))).join('')}</div></div>
-      <div class="tg"><span class="tl">${L('Focale', 'Lens')}</span><div class="seg2">${LENSES.map(l => `<button class="${Math.round(sh.cam.lens) === l ? 'on' : ''}" data-act="lens" data-l="${l}" title="${l} mm">${l}</button>`).join('')}</div></div>
-      <button class="grid-btn ${S.grid ? 'on' : ''}" data-act="grid" title="${esc(L('Grille des tiers', 'Rule of thirds'))}"><svg viewBox="0 0 16 16" class="icon" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M6 2.5v11M10 2.5v11M1.5 6.2h13M1.5 9.8h13"/></svg></button>
-    </div>`;
-  document.getElementById('thirds').classList.toggle('hidden', !S.grid);
-}
-
-/* ---------- À droite : la fiche du plan ---------- */
-const opt = (k, v) => SHOT[k].map(o => `<option value="${o[0]}" ${o[0] === v ? 'selected' : ''}>${esc(L(o[1], o[2]))}</option>`).join('');
-function renderShotPanel(){
-  const el = document.getElementById('sheet'); if(!el) return;
-  const sh = shot(), inf = sh.info, n = S.doc.shots.length;
-  document.getElementById('shotNo').textContent = (inf.scene ? L('Sc. ', 'Sc. ') + inf.scene + ' · ' : '') + L('Plan ', 'Shot ') + (S.i + 1);
-  el.innerHTML = `
-    <div class="sec">
-      <h3>${L('Plan', 'Shot')} ${S.i + 1} <span class="for">${L('sur', 'of')} ${n}</span></h3>
-      <div class="fld-row"><label class="fld"><span>${L('Scène', 'Scene')}</span><input id="fScene" data-k="scene" maxlength="40" value="${esc(inf.scene)}" placeholder="${esc(L('ex. 3', 'e.g. 3'))}"></label>
-        <label class="fld"><span>${L('Durée', 'Length')}</span><select data-act="info" data-k="dur">${[1, 1.5, 2, 3, 4, 5, 8].map(d => `<option value="${d}" ${d === inf.dur ? 'selected' : ''}>${fmtTime(d)}</option>`).join('')}</select></label></div>
-      <label class="fld"><span>${L('Ce qui se passe', 'What happens')}</span><textarea id="cap" data-k="cap" rows="3" placeholder="${esc(L('Léa entre dans le café et cherche quelqu’un.', 'Léa walks into the café, looking for someone.'))}">${esc(inf.cap)}</textarea></label>
-      <label class="fld"><span>${L('Dialogue ou son', 'Dialogue or sound')}</span><textarea id="dial" data-k="dial" rows="2" placeholder="${esc(L('LÉA : Tu es en retard.', 'LÉA: You’re late.'))}">${esc(inf.dial)}</textarea></label>
-      <label class="fld"><span>${L('Mouvement de caméra', 'Camera move')}</span><select data-act="info" data-k="move">${opt('move', inf.move)}</select></label>
-      <details class="more"><summary>${L('Valeur et angle notés', 'Noted size and angle')}</summary>
-        <p class="tip">${L('Remplis tout seuls quand tu cadres avec les boutons. Change-les ici si besoin.', 'Filled in when you frame with the buttons. Change them here if needed.')}</p>
-        <label class="fld"><span>${L('Valeur', 'Size')}</span><select data-act="info" data-k="size">${opt('size', inf.size)}</select></label>
-        <label class="fld"><span>${L('Angle', 'Angle')}</span><select data-act="info" data-k="angle">${opt('angle', inf.angle)}</select></label>
-        <p class="tip">${L('Focale', 'Lens')} : <b>${Math.round(sh.cam.lens)} mm</b></p></details>
-    </div>
-    <div class="sec">
-      <div class="acts">
-        <button class="chip-btn" data-act="dupShot">${L('Dupliquer', 'Duplicate')}</button>
-        <button class="chip-btn" data-act="moveShot" data-d="-1" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Avancer ce plan', 'Move this shot earlier'))}">←</button>
-        <button class="chip-btn" data-act="moveShot" data-d="1" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Reculer ce plan', 'Move this shot later'))}">→</button>
-        <button class="chip-btn danger" data-act="delShot" ${n < 2 ? 'disabled' : ''}>${icon('trash')}${L('Supprimer', 'Delete')}</button>
-      </div>
-    </div>`;
-}
-
-/* ---------- En bas : la planche (on glisse une vignette pour changer l'ordre) ---------- */
-const fmtDur = t => { const m = Math.floor(t / 60), s = Math.round(t % 60); return m + ':' + String(s).padStart(2, '0'); };
-function renderStrip(){
-  const el = document.getElementById('strip'); if(!el) return;
-  const two = shot().chars.length > 1, n = S.doc.shots.length;
-  el.innerHTML = `<div class="strip-h"><b>${L('Planche', 'Board')}</b><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span>
-      <span class="strip-tip">${L('Glisse une vignette pour changer l’ordre', 'Drag a thumbnail to reorder')}</span>
-      <button class="btn btn-sm btn-play" data-act="playBoard">${icon('play')}${L('Lire le storyboard', 'Play the storyboard')}</button></div>
-    <div class="cards" id="cards">${S.doc.shots.map((s, i) => `<button class="shot-card ${i === S.i ? 'on' : ''}" data-act="goShot" data-i="${i}" draggable="true">
-        <span class="sc-img"><img src="${thumbOf(i)}" alt="" draggable="false"><span class="sc-n">${i + 1}</span>${s.info.scene ? `<span class="sc-sc">${esc(L('Sc. ', 'Sc. ') + s.info.scene)}</span>` : ''}<span class="sc-d">${fmtTime(s.info.dur || 2)}</span></span>
-        <span class="sc-t"><b>${esc(shotLabel('size', s.info.size, true))}</b>${esc(s.info.cap || L('Sans description', 'No description'))}</span></button>`).join('')}
-      <div class="add-col">
-        <button class="add-shot" data-act="addShot" title="${esc(L('Reprend le plan actuel (touche N)', 'Starts from the current shot (N key)'))}">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span></button>
-        ${two ? `<button class="add-shot rev" data-act="addReverse" title="${esc(L('Le plan suivant, par-dessus l’épaule de l’autre personnage', 'The next shot, over the other character’s shoulder'))}">⇄<span>${L('Contrechamp', 'Reverse shot')}</span></button>` : ''}
-      </div></div>`;
-  const on = el.querySelector('.shot-card.on'); if(on) on.scrollIntoView({ block:'nearest', inline:'nearest' });
+  el.innerHTML = `${b('left', L('À gauche (Q ou A)', 'Left (A or Q)'), `<path d="${ar}" transform="rotate(-90 8 8)"/>`)}${b('fwd', L('Avancer (Z ou W)', 'Forward (W or Z)'), `<path d="${ar}"/>`)}${b('back', L('Reculer (S)', 'Back (S)'), `<path d="${ar}" transform="rotate(180 8 8)"/>`)}${b('right', L('À droite (D)', 'Right (D)'), `<path d="${ar}" transform="rotate(90 8 8)"/>`)}
+    <span class="dk-sep"></span>${b('turnL', L('Tourner autour, à gauche', 'Orbit left'), '<path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2" fill="none"/><path d="M12 1.8v3.4H8.6" fill="none"/>')}${b('turnR', L('Tourner autour, à droite', 'Orbit right'), '<path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" fill="none"/><path d="M4 1.8v3.4h3.4" fill="none"/>')}
+    <span class="dk-sep"></span>${b('up', L('Monter (R)', 'Up (R)'), '<path d="M8 2v12M4.5 5.5 8 2l3.5 3.5" fill="none"/>')}${b('down', L('Descendre (F)', 'Down (F)'), '<path d="M8 2v12M4.5 10.5 8 14l3.5-3.5" fill="none"/>')}
+    <span class="dk-sep"></span>${b('in', L('Zoomer', 'Zoom in'), '<path d="M8 3.5v9M3.5 8h9" fill="none"/>')}${b('out', L('Dézoomer', 'Zoom out'), '<path d="M3.5 8h9" fill="none"/>')}`;
 }
 function renderHint(){
   const el = document.getElementById('hint'); if(!el) return;
   let t;
   if(S.play) t = L('Lecture du storyboard · Échap ou clic pour arrêter', 'Playing the storyboard · Esc or click to stop');
+  else if(S.endEd) t = L('Tu règles l’image de FIN du mouvement : cadre-la comme tu veux, puis reviens au début dans le volet.', 'You are setting the END frame of the move: frame it as you like, then go back to the start in the panel.');
   else if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer le personnage', 'drag to move the character') : L('glisse pour bouger', 'drag to move'));
-  else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer le personnage sur le sol', 'Drag to move the character on the floor') : L('Glisse à gauche ou à droite pour le faire tourner', 'Drag left or right to turn them');
+  else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer sur le sol', 'Drag to move on the floor') : L('Glisse à gauche ou à droite pour faire tourner', 'Drag left or right to turn');
   else if(S.sel) t = L('Glisse la partie verte pour la bouger · Clique dans le vide pour désélectionner', 'Drag the green part to move it · Click empty space to deselect');
-  else t = L('Losange vert : maintiens-le pour déplacer un personnage · Glisse dans le vide : tourner · Clic droit + glisser : se décaler · Molette : avancer · Double-clic : viser', 'Green diamond: hold it to move a character · Drag empty space: orbit · Right-click + drag: pan · Wheel: move in · Double-click: aim');
-  el.textContent = t;
+  else t = L('Losange vert : maintiens-le pour déplacer · Glisse dans le vide : tourner · Clic droit : se décaler · Molette : avancer · Double-clic : viser', 'Green diamond: hold to move · Drag empty space: orbit · Right-click: pan · Wheel: move in · Double-click: aim');
+  el.innerHTML = `<i></i>${esc(t)}`;
+}
+
+/* ---------- Le volet de droite : le contenu de l'étape choisie ---------- */
+const charName = c => { const ch = shot().chars[c]; const lk = lookOf(ch, c); return esc(L(lk.fr, lk.en)); };
+/* une petite silhouette, à la couleur des habits du personnage (les enfants sont plus petits) */
+const figure = lk => {
+  const kid = lk.age === 'kid', k = kid ? 0.78 : 1, oy = kid ? 4.4 : 0, f = lk.body === 'f';
+  const T = (x, y) => `${(8 + (x - 8) * k).toFixed(2)} ${(y * k + oy).toFixed(2)}`;
+  const body = lk.skirt ? `M${T(5.3, 8)}L${T(10.7, 8)}L${T(12.6, 15)}L${T(3.4, 15)}Z` : `M${T(4.3, 8)}L${T(11.7, 8)}L${T(11.4, 13.5)}L${T(4.6, 13.5)}Z`;
+  const legs = `M${T(5.4, 13)}L${T(7.6, 13)}L${T(7.4, 19.5)}L${T(5.4, 19.5)}ZM${T(8.4, 13)}L${T(10.6, 13)}L${T(10.6, 19.5)}L${T(8.6, 19.5)}Z`;
+  const hair = lk.hairStyle === 'bald' ? '' : `<path d="M${T(4.6, 4.3)}A${(3.4 * k).toFixed(2)} ${(3.4 * k).toFixed(2)} 0 0 1 ${T(11.4, 4.3)}L${T(11.4, f && lk.hairStyle === 'long' ? 7.6 : 4.6)}L${T(4.6, f && lk.hairStyle === 'long' ? 7.6 : 4.6)}Z" fill="${lk.hair}"/>`;
+  return `<svg class="fig" viewBox="0 0 16 20" aria-hidden="true"><path d="${legs}" fill="${lk.skirt || lk.shorts ? lk.skin : lk.bottom}"/><path d="${body}" fill="${lk.top}"/><circle cx="8" cy="${(4.6 * k + oy).toFixed(2)}" r="${(3.2 * k).toFixed(2)}" fill="${lk.skin}"/>${hair}${lk.hairStyle === 'bun' ? `<circle cx="8" cy="${(1.2 * k + oy).toFixed(2)}" r="${(1.3 * k).toFixed(2)}" fill="${lk.hair}"/>` : ''}</svg>`;
+};
+const ph = (ic, title, sub) => `<div class="ph"><div class="ph-ico">${icon(ic)}</div><div><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
+const lbl = t => `<div class="fly-lbl">${t}</div>`;
+function slider(label, act, i, v, min, max, step, unit){
+  return `<label class="fr"><span class="fl">${esc(label)}</span><input type="range" data-act="${act}" data-i="${i}" min="${min}" max="${max}" step="${step}" value="${v}"><b class="fv">${round(v, step < 1 ? 2 : 0)}${unit == null ? '°' : unit}</b></label>`;
+}
+function renderSide(onlyValues){
+  const el = document.getElementById('side'); if(!el) return;
+  if(onlyValues){
+    const sh = shot(), sel = S.sel;
+    el.querySelectorAll('.fr input').forEach(inp => {
+      const i = +inp.dataset.i, act = inp.dataset.act; let v;
+      if(act === 'axis' && sel) v = sh.chars[sel.c].j[sel.j][i];
+      else if(act === 'root' && sel) v = i === 0 ? sh.chars[sel.c].root.ry : sh.chars[sel.c].root.y;
+      else if(act === 'crowdSet' && sh.crowds[S.crowd]) v = sh.crowds[S.crowd][inp.dataset.f];
+      if(v == null) return;
+      inp.value = v; const b = inp.parentNode.querySelector('.fv'); if(b) b.textContent = round(v, inp.step < 1 ? 2 : 0) + (inp.dataset.unit != null ? inp.dataset.unit : act === 'root' && i === 1 ? ' m' : '°');
+    });
+    return;
+  }
+  renderPanel();
+}
+let _panelQ = false;
+function renderPanel(){
+  const el = document.getElementById('side'); if(!el) return;
+  const fn = PANEL_HTML[S.panel] || PANEL_HTML.place;
+  const keep = el.querySelector('.side-body'), top = keep ? keep.scrollTop : 0, same = el.dataset.p === S.panel;
+  el.innerHTML = `<div class="side-body">${fn()}</div>`;
+  el.dataset.p = S.panel;
+  if(same) el.querySelector('.side-body').scrollTop = top;
+  renderRail();
+}
+function renderTools(){ renderHead(); renderPanel(); renderView(); }
+function renderShotPanel(){ renderHead(); if(S.panel === 'text' || S.panel === 'move') renderPanel(); renderTop(); }
+
+/* les vignettes des valeurs de plan : un cadre et la silhouette à la taille du plan */
+function sizeGlyph(k){
+  const P = { pg:[18, 13, 0.28], pe:[18, 12, 0.62], pa:[18, 17, 1.05], pm:[18, 21, 1.4], pr:[18, 27, 1.9], gp:[18, 40, 3.1], tgp:[18, 60, 5.2] }[k];
+  const fig = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><circle cx="0" cy="-12.5" r="3.1"/><path d="M-4.6-8.4h9.2l.6 8.4h-2.2l-.4 8.4h-2.4l-.7-6.6-.7 6.6h-2.4l-.4-8.4h-2.2z"/></g>`;
+  let inner;
+  if(P) inner = fig(P[0], P[1], P[2]);
+  else if(k === 'am') inner = `<path d="M-2 26c2-8 7-10 12-10s9 3 10 10z" opacity=".45"/>${fig(25, 21, 1.15)}`;
+  else if(k === '2p') inner = fig(12, 19, 0.95) + fig(24, 19, 0.95);
+  else if(k === 'pov') inner = `<path d="M5 12s5-6 13-6 13 6 13 6-5 6-13 6S5 12 5 12z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="12" r="3.2"/>`;
+  else inner = fig(18, 12, 0.6);
+  return `<svg class="sg" viewBox="0 0 36 22" aria-hidden="true"><rect x=".75" y=".75" width="34.5" height="20.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".5"/><clipPath id="sgc"><rect x="1" y="1" width="34" height="20" rx="2"/></clipPath><g clip-path="url(#sgc)" fill="currentColor">${inner}</g></svg>`;
+}
+/* les petits schémas des angles et des mouvements */
+const ANGLE_G = { neu:'M3 11h14M13 7.5l4 3.5-4 3.5', plo:'M3 4l13 9M11.5 13.6h4.8v-4.8', con:'M3 17l13-9M11.5 7.4h4.8v4.8', dess:'M11 2v15M7 13l4 4 4-4', sol:'M2 16h16M4 13h11M12 10l3 3-3 3', deb:'M4 5l12 3-2 9-12-3z' };
+const MOVE_G = { fix:'M6 6h8v8H6z', in:'M3 10h10M10 6.5l3.5 3.5-3.5 3.5M16 4v12', out:'M17 10H7M10 6.5 6.5 10l3.5 3.5M3 4v12', panR:'M3 13a9 9 0 0 1 14-3M14 6.5l3 3.5-4 1', panL:'M17 13a9 9 0 0 0-14-3M6 6.5 3 10l4 1',
+  tiltU:'M7 17a9 9 0 0 1 3-14M6.5 6 10 3l3 3.5', tiltD:'M7 3a9 9 0 0 0 3 14M6.5 14 10 17l3-3.5', travR:'M2 15h16M3 10h11M11 6.5l3.5 3.5-3.5 3.5', travL:'M2 15h16M17 10H6M9 6.5 5.5 10 9 13.5',
+  zoomIn:'M3 3l4 4M17 3l-4 4M3 17l4-4M17 17l-4-4M7 4v3H4M13 4v3h3M7 16v-3H4M13 16v-3h3', zoomOut:'M7 7 3 3M13 7l4-4M7 13l-4 4M13 13l4 4M3 6V3h3M17 6V3h-3M3 14v3h3M17 14v3h-3', orbit:'M3 12c0-3 3-5 7-5s7 2 7 5-3 5-7 5M6 16.5 10 17l-1.5 3',
+  grue:'M10 17V5M6.5 8.5 10 5l3.5 3.5M5 17h10', grueD:'M10 3v12M6.5 11.5 10 15l3.5-3.5M5 3h10', drone:'M4 15l10-9M10 6h4v4M3 18h6', epa:'M2 10c2-3 3 3 5 0s3 3 5 0 3 3 6 0', end:'M3 10h11M10 6.5l3.5 3.5-3.5 3.5M16.5 6v8' };
+const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-hidden="true"><path d="${d}"/></svg>`;
+
+const PANEL_HTML = {
+  place(){
+    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall']], [L('Dans la rue', 'Outdoors'), ['alley', 'taxi', 'park']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country']]];
+    return ph('place', L('Le lieu', 'The place'), L('Où se passe le plan. Les personnages s’y placent tout seuls, à des places toutes prêtes.', 'Where the shot happens. Characters go to ready-made spots by themselves.')) +
+      `<div class="pb">${groups.map(([t, ids]) => lbl(t) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}"></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+  },
+  chars(){
+    const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
+    const rows = chars.map((c, i) => `<div class="crow ${t === i ? 'on' : ''}"><button class="crow-main" data-act="pickChar" data-c="${i}" title="${esc(L('La caméra va vers ', 'The camera goes to ') + L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}<span>${charName(i)}</span>${t === i ? `<em>${L('cadré', 'framed')}</em>` : ''}</button>${chars.length > 1 ? `<button class="ib sm danger" data-act="removeChar" data-c="${i}" title="${esc(L('Retirer du plan', 'Remove from the shot'))}">${icon('close')}</button>` : ''}</div>`).join('');
+    const add = `<div class="figs">${CHAR_LOOK.map((lk, k) => `<button class="fig-t" data-act="addChar" data-look="${k}" ${used.includes(k) || chars.length >= MAX_CHARS ? 'disabled' : ''} title="${esc(L(lk.fr, lk.en))}">${figure(lk)}<small>${esc(L(lk.fr, lk.en))}</small></button>`).join('')}</div>`;
+    const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
+    return ph('users', L('Les personnages', 'The characters'), L('Jusqu’à six par plan. Clique un nom : la caméra va vers lui. Maintiens le losange vert au-dessus de sa tête pour le déplacer.', 'Up to six per shot. Click a name: the camera goes to them. Hold the green diamond above their head to move them.')) +
+      `<div class="pb">${lbl(L('Dans ce plan', 'In this shot'))}${rows}
+      ${lbl(L('Ajouter', 'Add') + ` <span class="cnt">${chars.length} / ${MAX_CHARS}</span>`)}${add}
+      ${lbl(L('Placer ', 'Place ') + charName(t))}<div class="chips">${spots}</div>
+      ${chars.length > 1 ? lbl(L('À plusieurs', 'Together')) + `<div class="chips"><button class="chip" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>` : ''}</div>`;
+  },
+  pose(){
+    const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, ch = chars[t], look = ch ? ch.look : 0, sel = S.sel;
+    const who = chars.length > 1 ? `<div class="seg wide">${chars.map((c, i) => `<button class="${t === i ? 'on' : ''}" data-act="pickChar" data-c="${i}" title="${esc(L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}</button>`).join('')}</div>` : '';
+    const tiles = POSES.map(p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img src="${posePreview(look, p.id)}" alt=""><span>${esc(L(p.fr, p.en))}</span></button>`).join('');
+    let part;
+    if(sel && chars[sel.c]){
+      const J = JOINT[sel.j], v = chars[sel.c].j[sel.j], c2 = chars[sel.c];
+      part = `<div class="part-h"><b>${esc(L(J.fr, J.en))}</b><span>${charName(sel.c)}</span></div>
+        ${J.ax.map((a, i) => slider(L(a[4], a[5]), 'axis', i, v[i], a[2], a[3], 1)).join('')}
+        ${sel.j === 'pelvis' ? `${slider(L('Tout le corps : tourner', 'Whole body: turn'), 'root', 0, c2.root.ry, -180, 180, 1)}${slider(L('Tout le corps : hauteur', 'Whole body: height'), 'root', 1, c2.root.y, -0.9, 2, 0.01, ' m')}` : ''}
+        <button class="btn btn-sm" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
+    } else part = `<p class="fly-note">${L('Pour un geste précis : clique sur une partie du corps dans l’image (un bras, la tête…) et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture (an arm, the head…) and drag. Its settings show up here.')}</p>`;
+    return ph('pose', L('Les poses de ', 'Poses for ') + charName(t), L('Une pose en un clic, puis les retouches à la main si besoin.', 'One click for a pose, then hand touch-ups if needed.')) +
+      `<div class="pb">${who}<div class="poses">${tiles}</div>${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
+  },
+  crowd(){
+    const sh = shot(), cr = sh.crowds, k = cr[S.crowd] ? S.crowd : -1, c = cr[k];
+    const kinds = CROWD_KIND.map(([id, fr, en]) => `<button class="ptile sm" data-act="addCrowd" data-kind="${id}">${icon('plus')}<span>${esc(L(fr, en))}</span></button>`).join('');
+    const list = cr.map((x, i) => `<div class="crow ${i === k ? 'on' : ''}"><button class="crow-main" data-act="pickCrowd" data-k="${i}">${icon('crowd')}<span>${L('Foule', 'Crowd')} ${i + 1}</span><em>${esc(L(...CROWD_KIND.find(q => q[0] === x.kind).slice(1)))}</em></button><button class="ib sm danger" data-act="removeCrowd" data-k="${i}" title="${esc(L('Retirer', 'Remove'))}">${icon('close')}</button></div>`).join('');
+    const sl = (f, label, min, max, step, unit) => `<label class="fr"><span class="fl">${esc(label)}</span><input type="range" data-act="crowdSet" data-f="${f}" data-unit="${unit}" min="${min}" max="${max}" step="${step}" value="${c[f]}"><b class="fv">${round(c[f], step < 1 ? 1 : 0)}${unit}</b></label>`;
+    const set = c ? lbl(L('Réglages de la foule ', 'Crowd settings ') + (k + 1)) + `<div class="seg wide">${CROWD_KIND.map(([id, fr, en]) => `<button class="${c.kind === id ? 'on' : ''}" data-act="crowdKind" data-kind="${id}">${esc(L(fr, en))}</button>`).join('')}</div>` +
+      sl('w', L('Largeur', 'Width'), 2, 40, 0.5, ' m') + sl('d', L('Profondeur', 'Depth'), 1, 20, 0.5, ' m') + sl('dens', L('Densité', 'Density'), 0.2, 3, 0.1, '') + sl('ry', L('Tourner', 'Turn'), -180, 180, 1, '°') + sl('y', L('Hauteur du sol', 'Ground height'), 0, 6, 0.05, ' m') +
+      `<div class="pbtns"><button class="btn btn-sm" data-act="crowdShuffle">${icon('reset')}${L('Autres têtes', 'Other faces')}</button></div>` : '';
+    return ph('crowd', L('La foule', 'Crowds'), L('Des silhouettes plates, toujours tournées vers la caméra (comme les tribunes des jeux de foot) : on peut en mettre des centaines, n’importe où, sans ralentir l’ordinateur.', 'Flat cut-outs that always face the camera (like stadium crowds in football games): hundreds of them, anywhere, without slowing the computer.')) +
+      `<div class="pb">${lbl(L('Ajouter une foule devant la caméra', 'Add a crowd in front of the camera'))}<div class="ptiles three">${kinds}</div>
+      ${cr.length ? lbl(L('Dans ce plan', 'In this shot')) + list : `<p class="fly-note">${L('Pas encore de foule dans ce plan. Une fois posée, déplace-la avec sa poignée « Foule » dans l’image.', 'No crowd in this shot yet. Once added, move it with its “Crowd” handle in the picture.')}</p>`}${set}
+      <p class="fly-note">${L('Elles ne bougent pas et ne se posent pas : pour un personnage qui agit, ajoute plutôt un personnage.', 'They don’t move or pose: for someone who acts, add a character instead.')}</p></div>`;
+  },
+  frame(){
+    const sh = shot(), inf = sh.info, two = sh.chars.length > 1;
+    const sizes = ['pg', 'pe', 'pa', 'pm', 'pr', 'gp', 'tgp'].concat(two ? ['am', '2p'] : [], ['pov']);
+    const who = `<div class="seg wide">${sh.chars.map((c, i) => `<button class="${S.target === i ? 'on' : ''}" data-act="target" data-c="${i}" title="${esc(L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}${sh.chars.length <= 3 ? `<span>${charName(i)}</span>` : ''}</button>`).join('')}</div>`;
+    const st = sizes.map(k => `<button class="size-t ${inf.size === k ? 'on' : ''}" data-act="size" data-v="${k}" title="${esc(shotLabel('size', k))}">${sizeGlyph(k)}<b>${esc(shotLabel('size', k, true))}</b><small>${esc(shotLabel('size', k))}</small></button>`).join('');
+    const an = ['neu', 'plo', 'con', 'dess', 'sol', 'deb'].map(k => `<button class="ang-t ${inf.angle === k ? 'on' : ''}" data-act="angle" data-v="${k}">${glyph(ANGLE_G[k])}<span>${esc(shotLabel('angle', k))}</span></button>`).join('');
+    return ph('frame', L('Le cadrage', 'Framing'), L('Choisis sur qui, puis la valeur : la caméra se place toute seule. Tu peux ensuite la bouger à la main.', 'Pick who, then the size: the camera places itself. You can then move it by hand.')) +
+      `<div class="pb">${lbl(L('Sur qui', 'On whom'))}${who}
+      ${lbl(L('La valeur du plan', 'Shot size'))}<div class="sizes">${st}</div>
+      ${lbl(L('L’angle', 'Angle'))}<div class="angs">${an}</div>
+      ${lbl(L('Le côté', 'Side'))}<div class="seg wide">${SIDES.map(x => `<button class="${inf.side === x[0] ? 'on' : ''}" data-act="side" data-v="${x[0]}">${esc(L(x[1], x[2]))}</button>`).join('')}</div>
+      ${lbl(L('La focale', 'Lens'))}<div class="seg wide">${LENSES.map(l => `<button class="${Math.round(sh.cam.lens) === l ? 'on' : ''}" data-act="lens" data-l="${l}">${l} mm</button>`).join('')}</div>
+      <p class="fly-note">${L('24 mm : grand angle, on voit large. 85 mm : téléobjectif, le fond se rapproche.', '24 mm: wide angle, you see a lot. 85 mm: telephoto, the background comes closer.')}</p>
+      ${two ? `<div class="pbtns"><button class="btn btn-sm" data-act="addReverse">${icon('reverse')}${L('Faire le contrechamp (nouveau plan)', 'Make the reverse shot (new shot)')}</button></div>` : ''}</div>`;
+  },
+  move(){
+    const sh = shot(), inf = sh.info, m = inf.move, walk = sh.chars.some(c => c.pose === 'walk' || c.pose === 'run');
+    const tiles = SHOT.move.map(o => `<button class="ang-t ${m === o[0] ? 'on' : ''}" data-act="info" data-k="move" data-v="${o[0]}">${glyph(MOVE_G[o[0]] || MOVE_G.fix)}<span>${esc(L(o[1], o[2]))}</span></button>`).join('');
+    const end = m === 'end' ? lbl(L('Le cadre de fin', 'The end frame')) + `<div class="seg wide"><button class="${S.endEd ? '' : 'on'}" data-act="editEnd" data-v="0">${L('Début', 'Start')}</button><button class="${S.endEd ? 'on' : ''}" data-act="editEnd" data-v="1">${L('Fin', 'End')}</button></div>
+      <p class="fly-note">${L('Choisis « Fin », cadre l’image d’arrivée avec les outils habituels, puis reviens sur « Début ». La caméra ira de l’une à l’autre.', 'Pick “End”, frame the final image with the usual tools, then go back to “Start”. The camera will travel from one to the other.')}</p>` : '';
+    return ph('move', L('Le mouvement de caméra', 'Camera move'), L('Le cadre du plan est le point de départ. Le mouvement se voit à la lecture du storyboard et dans l’animatique, et une flèche le montre sur le PDF.', 'The shot’s frame is the starting point. The move plays in the storyboard preview and the animatic, and an arrow shows it on the PDF.')) +
+      `<div class="pb"><div class="angs moves">${tiles}</div>${end}
+      ${lbl(L('Les personnages', 'Characters'))}<label class="ftog"><span>${L('Ceux qui marchent ou courent avancent pendant le plan', 'Walking or running characters move forward during the shot')}</span><input type="checkbox" data-act="walk" ${inf.walk ? 'checked' : ''}><i class="tg"></i></label>
+      ${!walk ? `<p class="fly-note">${L('Donne la pose « Marche » ou « Course » à un personnage pour l’animer.', 'Give a character the “Walking” or “Running” pose to animate them.')}</p>` : ''}
+      ${lbl(L('Durée du plan', 'Shot length'))}<div class="seg wide">${[1, 2, 3, 4, 5, 8].map(d => `<button class="${d === inf.dur ? 'on' : ''}" data-act="dur" data-v="${d}">${fmtTime(d)}</button>`).join('')}</div>
+      <div class="pbtns"><button class="btn btn-sm btn-play" data-act="previewShot">${icon('play')}${L('Voir ce plan bouger', 'Watch this shot move')}</button></div></div>`;
+  },
+  car(){
+    const sh = shot();
+    if(sh.set !== 'taxi') return ph('car', L('En voiture', 'In the car'), L('Des prises de vue toutes prêtes à l’intérieur et autour du taxi.', 'Ready-made shots inside and around the taxi.')) +
+      `<div class="pb"><p class="fly-note">${L('Ce plan n’est pas dans le taxi. Passe dans le lieu « Taxi » pour les utiliser : les vitres sont transparentes, on voit les passagers.', 'This shot isn’t in the taxi. Switch to the “Taxi” place to use them: the windows are see-through, you can see the passengers.')}</p><div class="pbtns"><button class="btn btn-primary btn-sm" data-act="place" data-id="taxi">${icon('car')}${L('Aller dans le taxi', 'Go to the taxi')}</button></div></div>`;
+    return ph('car', L('En voiture', 'In the car'), L('Des prises de vue de voiture toutes prêtes. Elles visent le conducteur au volant et le passager à l’arrière.', 'Ready-made car shots. They aim at the driver at the wheel and the passenger in the back.')) +
+      `<div class="pb"><div class="pbtns"><button class="btn btn-sm" data-act="carSetup">${icon('users')}${L('Installer : conducteur et passager', 'Seat the driver and the passenger')}</button></div>
+      ${lbl(L('Prises de vue', 'Shots'))}<div class="cars">${CAR_SHOTS.map(p => `<button class="car-t" data-act="carShot" data-id="${p[0]}">${sizeGlyph(p[6])}<span>${esc(L(p[1], p[2]))}</span></button>`).join('')}</div></div>`;
+  },
+  text(){
+    const sh = shot(), inf = sh.info, n = S.doc.shots.length;
+    return ph('text', L('Plan ', 'Shot ') + (S.i + 1) + ' : ' + L('ce qui se passe', 'what happens'), L('Ce texte accompagne l’image sur la planche PDF et pendant la lecture.', 'This text goes with the picture on the PDF board and during playback.')) +
+      `<div class="pb"><div class="g2"><label class="fld"><span>${L('Scène', 'Scene')}</span><input id="fScene" data-k="scene" maxlength="40" value="${esc(inf.scene)}" placeholder="${esc(L('ex. 3', 'e.g. 3'))}"></label>
+        <label class="fld"><span>${L('Durée', 'Length')}</span><select data-act="info" data-k="dur">${[1, 1.5, 2, 3, 4, 5, 8].map(d => `<option value="${d}" ${d === inf.dur ? 'selected' : ''}>${fmtTime(d)}</option>`).join('')}</select></label></div>
+      <label class="fld"><span>${L('L’action', 'Action')}</span><textarea id="cap" data-k="cap" rows="4" placeholder="${esc(L('Léa entre dans le café et cherche quelqu’un.', 'Léa walks into the café, looking for someone.'))}">${esc(inf.cap)}</textarea></label>
+      <label class="fld"><span>${L('Dialogue ou son', 'Dialogue or sound')}</span><textarea id="dial" data-k="dial" rows="3" placeholder="${esc(L('LÉA : Tu es en retard.', 'LÉA: You’re late.'))}">${esc(inf.dial)}</textarea></label>
+      ${lbl(L('Noté sur la planche', 'Noted on the board'))}<p class="fly-note">${esc(shotLabel('size', inf.size))} · ${esc(shotLabel('angle', inf.angle))} · ${esc(shotLabel('move', inf.move))} · ${Math.round(sh.cam.lens)} mm</p>
+      ${lbl(L('Ce plan', 'This shot'))}<div class="pbtns"><button class="btn btn-sm" data-act="dupShot">${icon('copy')}${L('Dupliquer', 'Duplicate')}</button><button class="btn btn-sm" data-act="moveShot" data-d="-1" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Avancer ce plan', 'Move this shot earlier'))}">${icon('left')}</button><button class="btn btn-sm" data-act="moveShot" data-d="1" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Reculer ce plan', 'Move this shot later'))}">${icon('right')}</button><button class="btn btn-sm danger" data-act="delShot" ${n < 2 ? 'disabled' : ''}>${icon('trash')}${L('Supprimer', 'Delete')}</button></div>
+      <div class="pbtns"><button class="btn btn-sm" data-act="sheetView">${icon('board')}${L('Écrire tous les plans d’un coup (planche)', 'Write all shots at once (board view)')}</button></div></div>`;
+  },
+  look(){
+    const st = S.doc.style || 'color';
+    const prev = k => { if(!GL.gl) return ''; const o = S.doc.style; S.doc.style = k; const u = renderShotURL(S.i, 320, 180, 'image/jpeg', 0.8); S.doc.style = o; return u; };
+    return ph('contrast', L('Couleur ou noir et blanc', 'Color or black & white'), L('Pour tout le film : la planche, les images et l’animatique suivent ce choix.', 'For the whole film: the board, the images and the animatic follow this choice.')) +
+      `<div class="pb"><div class="looks"><button class="look-t ${st === 'color' ? 'on' : ''}" data-act="style" data-v="color"><img src="${prev('color')}" alt=""><span>${L('Couleur', 'Color')}</span></button><button class="look-t ${st === 'bw' ? 'on' : ''}" data-act="style" data-v="bw"><img src="${prev('bw')}" alt=""><span>${L('Noir et blanc', 'Black & white')}</span></button></div>
+      <p class="fly-note">${L('En noir et blanc, les personnages gardent un trait sombre autour d’eux, leurs habits ont des clartés différentes, et le décor est un peu adouci : on les distingue toujours du fond.', 'In black & white, characters keep a dark outline, their clothes have different brightness, and the set is slightly softened: they always stand out from the background.')}</p>
+      ${lbl(L('Aides à l’image', 'Picture aids'))}<label class="ftog"><span>${L('Grille des tiers', 'Rule of thirds')}</span><input type="checkbox" data-act="gridTog" ${S.grid ? 'checked' : ''}><i class="tg"></i></label>
+      <label class="ftog"><span>${L('Image finale (sans transparence ni poignées)', 'Final image (no see-through, no handles)')}</span><input type="checkbox" data-act="finalTog" ${S.final ? 'checked' : ''}><i class="tg"></i></label></div>`;
+  },
+  export(){
+    return ph('export', L('Exporter', 'Export'), L('Tout est fait dans ton navigateur : rien n’est envoyé en ligne.', 'Everything happens in your browser: nothing is sent online.')) + `<div class="pb"><div class="xlist">${exportList()}</div></div>`;
+  },
+  help(){
+    return ph('help', L('Ton storyboard, sans savoir dessiner', 'Your storyboard, no drawing skills needed'), '') + `<div class="pb"><ol class="how">
+      <li><b>${L('Un plan = une image', 'One shot = one picture')}</b>${L('Ce que tu vois dans le cadre est le plan en cours (son numéro est au-dessus de l’image). Il s’enregistre tout seul.', 'What you see in the frame is the current shot (its number is above the picture). It saves by itself.')}</li>
+      <li><b>${L('Installe la scène', 'Set the scene')}</b>${L('À gauche, dans l’ordre : le lieu, les personnages, leurs poses.', 'On the left, in order: the place, the characters, their poses.')}</li>
+      <li><b>${L('Cadre', 'Frame')}</b>${L('« Le cadrage » : sur qui, la valeur, l’angle. La caméra se place. Puis « Le mouvement » si la caméra bouge.', '“Framing”: who, the size, the angle. The camera places itself. Then “Camera move” if the camera moves.')}</li>
+      <li><b>${L('Écris', 'Write')}</b>${L('« Ce qui se passe » : l’action et le dialogue du plan.', '“What happens”: the action and dialogue of the shot.')}</li>
+      <li><b>${L('Plan suivant', 'Next shot')}</b>${L('« Nouveau plan », en bas : il reprend celui-ci, tu ne changes que ce qui bouge. « Contrechamp » fait l’angle inverse.', '“New shot”, at the bottom: it starts from this one, you only change what moves. “Reverse shot” makes the opposite angle.')}</li>
+      <li><b>${L('Relis, exporte', 'Review, export')}</b>${L('« Lire le storyboard » le fait défiler avec les mouvements. Puis la planche PDF ou l’animatique.', '“Play the storyboard” runs it with the moves. Then the PDF board or the animatic.')}</li></ol>
+      ${lbl(L('Dans l’image', 'In the picture'))}<p class="fly-note">${L('Losange vert au-dessus d’une tête : maintiens-le pour déplacer · flèche ronde : tourner · clic sur un bras, la tête… : poser à la main · glisser dans le vide : tourner autour · clic droit : se décaler · molette : avancer · double-clic : viser.', 'Green diamond above a head: hold to move · round arrow: turn · click an arm, the head…: pose by hand · drag empty space: orbit · right-click: pan · wheel: move in · double-click: aim.')}</p>
+      ${lbl(L('Raccourcis', 'Shortcuts'))}<p class="fly-note keys">${L('← → plan précédent ou suivant · ZQSD / WASD se déplacer · R F monter, descendre · N nouveau plan · Espace lire · Ctrl+Z annuler · Échap désélectionner', '← → previous or next shot · WASD / ZQSD move · R F up, down · N new shot · Space play · Ctrl+Z undo · Esc deselect')}</p>
+      <div class="pbtns"><button class="btn btn-sm" data-act="intro">${icon('help')}${L('Revoir l’accueil', 'See the welcome again')}</button><button class="btn btn-sm" data-act="newBoard">${icon('new')}${L('Nouveau storyboard', 'New storyboard')}</button></div></div>`;
+  },
+};
+
+/* ---------- En bas : le storyboard (on glisse une vignette pour changer l'ordre) ---------- */
+const fmtDur = t => { const m = Math.floor(t / 60), s = Math.round(t % 60); return m + ':' + String(s).padStart(2, '0'); };
+function renderStrip(){
+  const el = document.getElementById('strip'); if(!el) return;
+  const two = shot().chars.length > 1, n = S.doc.shots.length;
+  el.innerHTML = `<div class="board-h"><b>${L('Storyboard', 'Storyboard')}</b><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span>
+      <div class="seg"><button class="${S.view === 'stage' ? 'on' : ''}" data-act="stageView" title="${esc(L('Mettre en scène le plan choisi', 'Stage the chosen shot'))}">${icon('strip')}${L('Bande', 'Strip')}</button><button class="${S.view === 'sheet' ? 'on' : ''}" data-act="sheetView" title="${esc(L('Tous les plans en grand, pour écrire', 'All shots large, for writing'))}">${icon('board')}${L('Planche', 'Board')}</button></div>
+      <span class="grow"></span>
+      <button class="btn btn-sm btn-play" data-act="playBoard">${icon('play')}${L('Lire le storyboard', 'Play the storyboard')}</button>
+      <button class="btn btn-sm btn-primary" data-act="addShot" title="${esc(L('Reprend le plan actuel (touche N)', 'Starts from the current shot (N key)'))}">${icon('plus')}${L('Nouveau plan', 'New shot')}</button></div>
+    <div class="cards" id="cards">${S.doc.shots.map((s, i) => `<button class="shot-card ${i === S.i ? 'on' : ''}" data-act="goShot" data-i="${i}" draggable="true">
+        <span class="sc-img"><img data-thumb="${i}" src="${thumbOf(i)}" alt="" draggable="false"><span class="sc-n">${i + 1}</span>${s.info.scene ? `<span class="sc-sc">${esc(L('Sc. ', 'Sc. ') + s.info.scene)}</span>` : ''}${s.info.move !== 'fix' ? `<span class="sc-mv" title="${esc(shotLabel('move', s.info.move))}">${glyph(MOVE_G[s.info.move] || MOVE_G.fix)}</span>` : ''}<span class="sc-d">${fmtTime(s.info.dur || 2)}</span>${i === S.i ? `<span class="sc-now">${L('en cours', 'editing')}</span>` : ''}</span>
+        <span class="sc-t"><b>${esc(shotLabel('size', s.info.size, true))}</b>${esc(s.info.cap || L('Sans action', 'No action yet'))}</span></button>`).join('')}
+      <div class="add-col">
+        <button class="add-shot" data-act="addShot">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span><small>${L('copie du plan ', 'copy of shot ') + (S.i + 1)}</small></button>
+        ${two ? `<button class="add-shot rev" data-act="addReverse" title="${esc(L('Le plan suivant, par-dessus l’épaule de l’autre personnage', 'The next shot, over the other character’s shoulder'))}">${icon('reverse')}<span>${L('Contrechamp', 'Reverse shot')}</span></button>` : ''}
+      </div>
+      ${n === 1 ? `<p class="board-tip">${L('Ton premier plan est prêt. Quand l’image te plaît, clique sur « Nouveau plan » : il reprend celui-ci, tu changes juste ce qui bouge.', 'Your first shot is ready. When you like the picture, click “New shot”: it starts from this one, you only change what moves.')}</p>` : ''}</div>`;
+  const on = el.querySelector('.shot-card.on'); if(on && on.scrollIntoView) on.scrollIntoView({ block:'nearest', inline:'nearest' });
+  if(S.view === 'sheet') renderSheet();
+}
+/* la planche entière : chaque plan en grand, avec son texte modifiable sur place */
+function renderSheet(){
+  const el = document.getElementById('sheetView'); if(!el || S.view !== 'sheet') return;
+  el.innerHTML = `<div class="sv-h"><b>${esc(S.doc.title || 'Storyboard')}</b><span>${L('Clique sur une image pour la mettre en scène. Écris directement sous chaque plan.', 'Click a picture to stage it. Write right under each shot.')}</span></div>
+    <div class="sv-grid">${S.doc.shots.map((s, i) => `<article class="sv-card ${i === S.i ? 'on' : ''}">
+      <button class="sv-img" data-act="stageShot" data-i="${i}" title="${esc(L('Mettre en scène ce plan', 'Stage this shot'))}"><img data-thumb="${i}" src="${thumbOf(i)}" alt=""><span class="sc-n">${i + 1}</span>${s.info.move !== 'fix' ? `<span class="sc-mv">${glyph(MOVE_G[s.info.move] || MOVE_G.fix)}</span>` : ''}</button>
+      <div class="sv-meta"><b>${(s.info.scene ? esc(L('Sc. ', 'Sc. ') + s.info.scene) + ' · ' : '') + L('Plan ', 'Shot ') + (i + 1)}</b><span>${esc(shotLabel('size', s.info.size))} · ${esc(shotLabel('angle', s.info.angle))}${s.info.move !== 'fix' ? ' · ' + esc(shotLabel('move', s.info.move)) : ''} · ${fmtTime(s.info.dur || 2)}</span></div>
+      <textarea data-sv="cap" data-i="${i}" rows="3" placeholder="${esc(L('L’action…', 'Action…'))}">${esc(s.info.cap)}</textarea>
+      <textarea data-sv="dial" data-i="${i}" rows="2" class="dl" placeholder="${esc(L('Dialogue ou son…', 'Dialogue or sound…'))}">${esc(s.info.dial)}</textarea>
+    </article>`).join('')}
+    <button class="sv-add" data-act="addShotEnd">${icon('plus')}<span>${L('Nouveau plan à la fin', 'New shot at the end')}</span></button></div>`;
 }
 
 /* ---------- L'image : toujours en 16:9, comme le film ---------- */
 function fitStage(){
   if(!R.canvas) return;
   const wrap = document.getElementById('stageWrap'), st = document.getElementById('stage'); if(!wrap || !st) return;
-  const W = wrap.clientWidth - 24, H = wrap.clientHeight - 24;
+  const W = wrap.clientWidth - 8, H = wrap.clientHeight - 8;
+  if(W <= 0 || H <= 0) return;
   let w = W, h = W * 9 / 16; if(h > H){ h = H; w = H * 16 / 9; }
   st.style.width = Math.max(160, Math.floor(w)) + 'px'; st.style.height = Math.max(90, Math.floor(h)) + 'px';
   if(S.rec) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5) * (R.scale || 1);
   R.canvas.width = Math.round(Math.max(160, w) * dpr); R.canvas.height = Math.round(Math.max(90, h) * dpr);
   requestRender();
 }
 
 /* ---------- Exports ---------- */
-function renderShotURL(i, w, h, type, q){
+function renderShotURL(i, w, h, type, q, arrows){
   const ow = R.canvas.width, oh = R.canvas.height;
   R.canvas.width = w; R.canvas.height = h; drawFrame(S.doc.shots[i], w, h, true);
-  const u = R.canvas.toDataURL(type || 'image/jpeg', q || 0.88);
+  let u;
+  if(arrows && S.doc.shots[i].info.move !== 'fix'){
+    // la flèche du mouvement, dessinée par-dessus l'image (comme sur un storyboard dessiné)
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const x = cv.getContext('2d'); x.drawImage(R.canvas, 0, 0); moveArrow(x, w, h, S.doc.shots[i].info.move);
+    u = cv.toDataURL(type || 'image/jpeg', q || 0.88);
+  } else u = R.canvas.toDataURL(type || 'image/jpeg', q || 0.88);
   R.canvas.width = ow; R.canvas.height = oh; requestRender();
   return u;
+}
+/* les flèches des mouvements de caméra, au trait blanc cerné de sombre */
+function moveArrow(x, w, h, m){
+  const k = w / 960;
+  x.save(); x.lineCap = 'round'; x.lineJoin = 'round';
+  const stroke = path => { x.strokeStyle = 'rgba(20,22,28,.75)'; x.lineWidth = 9 * k; path(); x.stroke(); x.strokeStyle = '#fff'; x.lineWidth = 4.5 * k; path(); x.stroke(); };
+  const head = (ax, ay, ang) => () => { x.beginPath(); x.moveTo(ax - Math.cos(ang - 0.5) * 22 * k, ay - Math.sin(ang - 0.5) * 22 * k); x.lineTo(ax, ay); x.lineTo(ax - Math.cos(ang + 0.5) * 22 * k, ay - Math.sin(ang + 0.5) * 22 * k); };
+  const line = (a, b, c, d) => { stroke(() => { x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); }); stroke(head(c, d, Math.atan2(d - b, c - a))); };
+  const cx = w / 2, cy = h / 2;
+  if(m === 'panR' || m === 'travR') line(w * 0.3, h * (m === 'panR' ? 0.16 : 0.86), w * 0.7, h * (m === 'panR' ? 0.16 : 0.86));
+  else if(m === 'panL' || m === 'travL') line(w * 0.7, h * (m === 'panL' ? 0.16 : 0.86), w * 0.3, h * (m === 'panL' ? 0.16 : 0.86));
+  else if(m === 'tiltU' || m === 'grue' || m === 'drone') line(w * 0.92, h * 0.72, w * 0.92, h * 0.28);
+  else if(m === 'tiltD' || m === 'grueD') line(w * 0.92, h * 0.28, w * 0.92, h * 0.72);
+  else if(m === 'in' || m === 'zoomIn') [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => line(cx + a * w * 0.44, cy + b * h * 0.4, cx + a * w * 0.32, cy + b * h * 0.26));
+  else if(m === 'out' || m === 'zoomOut') [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => line(cx + a * w * 0.32, cy + b * h * 0.26, cx + a * w * 0.44, cy + b * h * 0.4));
+  else if(m === 'orbit'){ stroke(() => { x.beginPath(); x.ellipse(cx, h * 0.84, w * 0.26, h * 0.07, 0, Math.PI * 0.1, Math.PI * 0.95); }); stroke(head(cx - w * 0.255, h * 0.852, Math.PI * 0.55)); }
+  else if(m === 'epa') stroke(() => { x.beginPath(); for(let i = 0; i <= 40; i++){ const t = i / 40; x.lineTo(w * (0.3 + 0.4 * t), h * 0.86 + Math.sin(t * 18) * 7 * k); } });
+  else if(m === 'end') line(w * 0.32, h * 0.86, w * 0.68, h * 0.86);
+  x.restore();
 }
 function exportImage(){
   fetch(renderShotURL(S.i, 1920, 1080, 'image/png')).then(r => r.blob()).then(b => {
@@ -240,10 +464,11 @@ function loadPdf(){
   });
   return _pdfLib;
 }
-const pdfText = s => String(s || '').replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/…/g, '...').replace(/[–—]/g, '-').replace(/ | /g, ' ');
+const pdfText = s => String(s || '').replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/…/g, '...').replace(/[–—]/g, '-').replace(/ | /g, ' ');
 /* la planche PDF : 6 plans par page (vue d'ensemble), ou 3 grands plans par page avec la place d'écrire */
 async function exportPdf(per){
   per = per === 3 ? 3 : 6;
+  endEdit();
   let jsPDF;
   try{ jsPDF = await loadPdf(); }catch(e){ toast(L('Impossible de charger l’outil PDF : vérifie ta connexion.', 'Could not load the PDF tool: check your connection.'), 'warn'); return; }
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
@@ -267,7 +492,7 @@ async function exportPdf(per){
       if(per === 6){
         const cols = 3, gx = 8, gy = 10, cw = (W - 2 * M - (cols - 1) * gx) / cols, ih = cw * 9 / 16, ch = (H - 2 * M - 16 - gy) / 2;
         const x = M + (k % cols) * (cw + gx), y = M + 16 + Math.floor(k / cols) * (ch + gy);
-        doc.addImage(renderShotURL(i, 960, 540, 'image/jpeg', 0.86), 'JPEG', x, y, cw, ih);
+        doc.addImage(renderShotURL(i, 960, 540, 'image/jpeg', 0.86, true), 'JPEG', x, y, cw, ih);
         doc.setDrawColor(35, 38, 46); doc.setLineWidth(0.3); doc.rect(x, y, cw, ih); badge(i, x, y);
         doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(35, 38, 46); doc.text(pdfText(title), x, y + ih + 5);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(23, 122, 79); doc.text(pdfText(meta(s)), x, y + ih + 9.2, { maxWidth:cw });
@@ -277,7 +502,7 @@ async function exportPdf(per){
         else ruled(x, y + ih + 14, cw, 3, lines.length);
       } else {
         const rh = (H - 2 * M - 16) / 3, ih = rh - 6, iw = ih * 16 / 9, x = M, y = M + 15 + k * rh, tx = x + iw + 8, tw = W - M - tx;
-        doc.addImage(renderShotURL(i, 1280, 720, 'image/jpeg', 0.86), 'JPEG', x, y, iw, ih);
+        doc.addImage(renderShotURL(i, 1280, 720, 'image/jpeg', 0.86, true), 'JPEG', x, y, iw, ih);
         doc.setDrawColor(35, 38, 46); doc.setLineWidth(0.3); doc.rect(x, y, iw, ih); badge(i, x, y);
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(35, 38, 46); doc.text(pdfText(title), tx, y + 5);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(23, 122, 79); doc.text(pdfText(meta(s)), tx, y + 10.5, { maxWidth:tw });
@@ -297,59 +522,68 @@ async function exportPdf(per){
   toast(L('Planche PDF enregistrée.', 'PDF board saved.'));
 }
 
-/* ---------- Lire le storyboard dans l'outil : chaque plan pendant sa durée, avec sa description ---------- */
-function playBoard(){
+/* ---------- Lire le storyboard dans l'outil : chaque plan pendant sa durée, avec son mouvement ---------- */
+function playBoard(only){
   if(S.play){ stopBoard(); return; }
-  const shots = S.doc.shots, starts = []; let total = 0; shots.forEach(s => { starts.push(total); total += s.info.dur || 2; });
-  S.play = { t0:performance.now(), from:S.i, last:-1 }; S.sel = null; S.hover = null;
+  endEdit();
+  const all = S.doc.shots, idx = only != null ? [only] : all.map((_, i) => i), starts = []; let total = 0;
+  idx.forEach(i => { starts.push(total); total += all[i].info.dur || 2; });
+  S.play = { from:S.i, last:-1 }; S.sel = null; S.hover = null;
   const st = document.getElementById('stage'); st.classList.add('playing');
-  const box = document.getElementById('playBox');
-  const t0 = S.play.t0 - starts[S.i] * 1000;
+  document.getElementById('playStopLbl').textContent = L('Arrêter', 'Stop');
+  const box = document.getElementById('playBox'), first = only != null ? 0 : Math.max(0, idx.indexOf(S.i));
+  const t0 = performance.now() - starts[first] * 1000;
   const step = now => {
     if(!S.play) return;
     const t = (now - t0) / 1000;
     if(t >= total){ stopBoard(); return; }
-    let i = 0; while(i + 1 < shots.length && starts[i + 1] <= t) i++;
+    let k = 0; while(k + 1 < idx.length && starts[k + 1] <= t) k++;
+    const i = idx[k], s = all[i];
     if(i !== S.play.last){
-      S.play.last = i; const s = shots[i];
+      S.play.last = i;
       box.innerHTML = `<b>${(s.info.scene ? L('Sc. ', 'Sc. ') + esc(s.info.scene) + ' · ' : '') + L('Plan ', 'Shot ') + (i + 1)}</b>${s.info.cap ? `<span>${esc(s.info.cap)}</span>` : ''}${s.info.dial ? `<i>${esc(s.info.dial)}</i>` : ''}`;
-      document.querySelectorAll('.shot-card').forEach((c, k) => c.classList.toggle('now', k === i));
+      document.querySelectorAll('.shot-card').forEach((c, j) => c.classList.toggle('now', j === i));
     }
-    drawFrame(shots[i], null, null, true);
+    drawFrame(s, null, null, true, frameAt(s, t - starts[k]));
     document.getElementById('playBar').style.width = (t / total * 100) + '%';
     requestAnimationFrame(step);
   };
-  requestAnimationFrame(step); renderStrip(); renderHint();
+  requestAnimationFrame(step); renderHint(); renderWarn();
 }
 function stopBoard(){
   if(!S.play) return;
   S.play = null;
   document.getElementById('stage').classList.remove('playing');
   document.querySelectorAll('.shot-card.now').forEach(c => c.classList.remove('now'));
-  renderStrip(); renderHint(); requestRender();
+  renderHint(); renderWarn(); requestRender();
 }
 
-/* ---------- La première visite : trois étapes, puis on n'en parle plus ---------- */
+/* ---------- La première visite : les étapes, puis on n'en parle plus ---------- */
 function showIntro(force){
   if(!force && lsGet('raging3d_intro')) return;
-  const st = document.getElementById('stage'); if(!st || st.querySelector('.intro')) return;
-  const el = document.createElement('div'); el.className = 'intro';
-  el.innerHTML = `<div class="intro-card"><h3>${L('Ton storyboard en 3D, sans dessiner', 'Your storyboard in 3D, no drawing')}</h3>
-    <ol><li><b>${L('Installe', 'Set up')}</b>${L('Choisis un lieu, ajoute tes personnages, place-les.', 'Pick a place, add your characters, place them.')}</li>
-      <li><b>${L('Cadre', 'Frame')}</b>${L('Clique sur une valeur de plan au-dessus de l’image : la caméra se place.', 'Click a shot size above the picture: the camera places itself.')}</li>
-      <li><b>${L('Enchaîne', 'Keep going')}</b>${L('« Nouveau plan » reprend le plan actuel. Puis exporte la planche en PDF.', '“New shot” starts from the current one. Then export the board as a PDF.')}</li></ol>
-    <button class="btn btn-primary" data-act="introOk">${L('C’est parti', 'Let’s go')}</button></div>`;
-  st.appendChild(el);
+  if(document.querySelector('.intro')) return;
+  const bd = document.createElement('div'); bd.className = 'modal-bd intro';
+  const st = (ic, t, d) => `<li><span class="ph-ico">${icon(ic)}</span><span><b>${t}</b>${d}</span></li>`;
+  bd.innerHTML = `<div class="modal intro-card" role="dialog" aria-modal="true">
+    <div class="ph intro-h">${r3Logo(44, 'rail-logo')}<div><b>${L('Ton storyboard en 3D, sans dessiner', 'Your storyboard in 3D, no drawing')}</b><small>${L('Chaque image du storyboard est un « plan ». Tu en fais un, puis le suivant.', 'Each picture of the storyboard is a “shot”. You make one, then the next.')}</small></div></div>
+    <ol class="intro-steps">
+      ${st('place', L('Installe', 'Set up'), L('À gauche : le lieu, les personnages, leurs poses.', 'On the left: the place, the characters, their poses.'))}
+      ${st('frame', L('Cadre', 'Frame'), L('« Le cadrage » : choisis la valeur du plan, la caméra se place. Ce que tu vois dans le cadre, c’est ton plan : il s’enregistre tout seul.', '“Framing”: pick a shot size, the camera places itself. What you see in the frame is your shot: it saves by itself.'))}
+      ${st('plus', L('Enchaîne', 'Keep going'), L('« Nouveau plan », en bas : il reprend le plan actuel, tu changes juste ce qui bouge. Puis « Lire le storyboard » et la planche PDF.', '“New shot”, at the bottom: it starts from the current one, you only change what moves. Then “Play the storyboard” and the PDF board.'))}
+    </ol>
+    <div class="modal-f"><button class="btn btn-primary" data-act="introOk">${L('C’est parti', 'Let’s go')}</button></div></div>`;
+  document.body.appendChild(bd);
 }
 
 function videoType(){
   const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
   return window.MediaRecorder ? types.find(t => MediaRecorder.isTypeSupported(t)) : null;
 }
-/* l'animatique : chaque plan reste à l'écran pendant sa durée, puis on coupe au suivant */
+/* l'animatique : chaque plan reste à l'écran pendant sa durée, avec son mouvement, puis on coupe au suivant */
 function exportVideo(){
   const type = videoType();
   if(!type || !R.canvas.captureStream){ toast(L('Ce navigateur ne sait pas enregistrer de vidéo. Essaie avec Chrome, Edge ou Firefox.', 'This browser can’t record video. Try Chrome, Edge or Firefox.'), 'warn'); return; }
+  endEdit();
   const ow = R.canvas.width, oh = R.canvas.height, w = 1280, h = 720, shots = S.doc.shots;
   const starts = []; let total = 0; shots.forEach(s => { starts.push(total); total += s.info.dur || 2; });
   R.canvas.width = w; R.canvas.height = h;
@@ -366,15 +600,14 @@ function exportVideo(){
     toast(L('Animatique enregistrée (', 'Animatic saved (') + ext.toUpperCase() + ').');
   };
   box.classList.remove('hidden');
-  const t0 = performance.now(); let last = -1;
-  drawFrame(shots[0], w, h, true); rec.start(200);
+  const t0 = performance.now();
+  drawFrame(shots[0], w, h, true, frameAt(shots[0], 0)); rec.start(200);
   const step = now => {
     if(!S.rec) return;
     if(S.rec.cancel){ rec.stop(); return; }
     const t = Math.min(total, (now - t0) / 1000);
     let i = 0; while(i + 1 < shots.length && starts[i + 1] <= t) i++;
-    drawFrame(shots[i], w, h, true);   // on redessine à chaque image : la vidéo garde son rythme
-    if(i !== last){ last = i; }
+    drawFrame(shots[i], w, h, true, frameAt(shots[i], t - starts[i]));   // on redessine à chaque image : la vidéo garde son rythme
     box.innerHTML = `<span class="rec-dot"></span>${L('Animatique', 'Animatic')} · ${L('plan', 'shot')} ${i + 1} / ${shots.length} · ${fmtTime(t)}<button class="btn btn-sm" data-act="cancelRec">${L('Annuler', 'Cancel')}</button>`;
     if(t >= total){ setTimeout(() => rec.stop(), 150); return; }
     requestAnimationFrame(step);
@@ -382,25 +615,7 @@ function exportVideo(){
   requestAnimationFrame(step);
 }
 
-/* ---------- Aide, confirmation ---------- */
-function showHelp(){
-  const bd = document.createElement('div'); bd.className = 'modal-bd';
-  bd.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><div class="modal-h"><h3>${L('Ton storyboard, sans savoir dessiner', 'Your storyboard, no drawing skills needed')}</h3><button class="btn btn-ghost btn-sm" data-act="closeModal">${icon('close')}</button></div>
-    <ol class="how">
-      <li><b>${L('Le lieu', 'The place')}</b>${L('À gauche, étape 1 : garage, bureau, salon, café, couloir, ruelle, taxi ou parc.', 'On the left, step 1: garage, office, living room, café, hallway, alley, taxi or park.')}</li>
-      <li><b>${L('Les personnages', 'The characters')}</b>${L('Étape 2 : ajoute jusqu’à quatre personnages (deux hommes, deux femmes), puis « Placer » pour les mettre à un endroit tout prêt : au volant, au comptoir, sur le canapé…', 'Step 2: add up to four characters (two men, two women), then “Place” to put them in a ready-made spot: at the wheel, at the counter, on the sofa…')}</li>
-      <li><b>${L('La pose', 'The pose')}</b>${L('Étape 3 : une pose rapide (assis, course, bras croisés…). Pour un geste précis, clique sur une partie du corps et glisse.', 'Step 3: a quick pose (sitting, running, arms crossed…). For a precise gesture, click a body part and drag.')}</li>
-      <li><b>${L('Déplacer un personnage', 'Move a character')}</b>${L('Maintiens le losange vert au-dessus de sa tête ; la petite flèche à côté le fait tourner. Le losange n’apparaît jamais dans les exports.', 'Hold the green diamond above their head; the small arrow next to it turns them. The diamond never shows in exports.')}</li>
-      <li><b>${L('Cadrer', 'Frame')}</b>${L('Au-dessus de l’image : sur qui, la valeur (du plan général au très gros plan, amorce, plan à deux, subjectif), l’angle, le côté (face, trois-quarts, profil, dos) et la focale.', 'Above the picture: on whom, the size (from extreme wide to extreme close-up, over the shoulder, two-shot, point of view), the angle, the side (front, three-quarter, profile, back) and the lens.')}</li>
-      <li><b>${L('Se promener', 'Move around')}</b>${L('Glisse dans le vide pour tourner, clic droit + glisser pour te décaler, molette pour avancer, double-clic pour viser. ZQSD ou WASD pour marcher, R et F pour monter et descendre.', 'Drag empty space to orbit, right-click + drag to pan, wheel to move in, double-click to aim. WASD or ZQSD to walk, R and F to go up and down.')}</li>
-      <li><b>${L('Décrire', 'Describe')}</b>${L('À droite : la scène, ce qui se passe, le dialogue, le mouvement de caméra et la durée.', 'On the right: the scene, what happens, the dialogue, the camera move and the length.')}</li>
-      <li><b>${L('Enchaîner', 'Keep going')}</b>${L('« Nouveau plan » reprend le plan actuel. « Contrechamp » fait le plan inverse. Glisse les vignettes pour changer l’ordre, et « Lire le storyboard » pour le voir défiler.', '“New shot” starts from the current one. “Reverse shot” makes the opposite angle. Drag thumbnails to reorder, and “Play the storyboard” to watch it.')}</li>
-      <li><b>${L('Exporter', 'Export')}</b>${L('La planche en PDF (6 ou 3 plans par page), l’image d’un plan, ou l’animatique en vidéo.', 'The board as a PDF (6 or 3 shots per page), the image of a shot, or the animatic as a video.')}</li>
-    </ol>
-    <p class="keys">${L('Raccourcis : ← → plan précédent ou suivant · ZQSD / WASD et ↑ ↓ se déplacer · R F monter, descendre · N nouveau plan · Espace lire le storyboard · Ctrl+Z annuler · Échap désélectionner', 'Shortcuts: ← → previous or next shot · WASD / ZQSD and ↑ ↓ move · R F up, down · N new shot · Space play the storyboard · Ctrl+Z undo · Esc deselect')}</p></div>`;
-  document.body.appendChild(bd);
-  bd.addEventListener('click', e => { if(e.target === bd || e.target.closest('[data-act="closeModal"]')) bd.remove(); });
-}
+/* ---------- Confirmation ---------- */
 function ask(title, msg, okLabel){
   return new Promise(res => {
     const bd = document.createElement('div'); bd.className = 'modal-bd';
@@ -414,34 +629,55 @@ function ask(title, msg, okLabel){
     setTimeout(() => bd.querySelector('.btn-primary').focus(), 30);
   });
 }
+function showHelp(){ setPanel('help'); }
 
 /* ---------- Actions ---------- */
 const ACT = {
   undo, redo,
   lang:b => setLang(b.dataset.l),
+  theme:() => { lsSet(LS_THEME, theme() === 'dark' ? 'light' : 'dark'); renderUI(); },
+  panel:b => setPanel(b.dataset.id),
   exportMenu:() => document.getElementById('exportMenu').classList.toggle('hidden'),
   exportPdf:b => { closeMenus(); exportPdf(+b.dataset.per); },
   exportImage:() => { closeMenus(); exportImage(); },
   exportVideo:() => { closeMenus(); exportVideo(); },
   cancelRec:() => { if(S.rec) S.rec.cancel = true; },
-  place:b => setPlace(b.dataset.id),
-  pickChar:b => { S.sel = { c:+b.dataset.c, j:'pelvis' }; S.target = +b.dataset.c; renderSide(); renderTools(); requestRender(); },
+  place:b => { setPlace(b.dataset.id); if(S.panel === 'car' && b.dataset.id === 'taxi') renderPanel(); },
+  pickChar:b => focusChar(+b.dataset.c),
   addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), faceThem, lookAt:lookAtOther,
   spot:b => placeAt(+b.dataset.k), side:b => frameSide(b.dataset.v),
-  playBoard, stopBoard, introOk:() => { lsSet('raging3d_intro', '1'); const i = document.querySelector('.intro'); if(i) i.remove(); },
+  playBoard:() => playBoard(), stopBoard, previewShot:() => playBoard(S.i),
+  introOk:() => { lsSet('raging3d_intro', '1'); const i = document.querySelector('.intro'); if(i) i.remove(); },
+  intro:() => showIntro(true),
   pose:b => setPose(b.dataset.id),
   resetPart,
-  target:b => { S.target = +b.dataset.c; renderTools(); renderSide(); },
+  target:b => focusChar(+b.dataset.c),
   size:b => frameSize(b.dataset.v),
   angle:b => frameAngle(b.dataset.v),
   lens:b => setLens(+b.dataset.l),
-  grid:() => { S.grid = !S.grid; renderTools(); },
+  grid:() => { S.grid = !S.grid; renderHead(); renderView(); if(S.panel === 'look') renderPanel(); },
+  final:b => setFinal(b.dataset.v === '1'),
   goShot:b => goShot(+b.dataset.i),
+  prevShot:() => goShot(S.i - 1), nextShot:() => goShot(S.i + 1),
+  stageShot:b => { S.view = 'stage'; goShot(+b.dataset.i); renderUI(); },
+  stageView:() => { S.view = 'stage'; renderUI(); },
+  sheetView:() => { S.view = 'sheet'; renderUI(); },
   addShot, addReverse, dupShot, delShot,
+  addShotEnd:() => { goShot(S.doc.shots.length - 1); addShot(); },
   moveShot:b => moveShot(+b.dataset.d),
+  info:b => { const k = b.dataset.k, v = b.dataset.v; if(k === 'move' && v !== 'end') endEdit(); edit(() => { shot().info[k] = v; }); renderStrip(); },
+  dur:b => { edit(() => { shot().info.dur = +b.dataset.v; }); renderStrip(); },
+  editEnd:b => editEnd(b.dataset.v === '1'),
+  style:b => setStyle(b.dataset.v),
+  carSetup, carShot:b => carShot(b.dataset.id),
+  addCrowd:b => addCrowd(b.dataset.kind),
+  pickCrowd:b => { S.crowd = +b.dataset.k; renderPanel(); requestRender(); },
+  removeCrowd:b => removeCrowd(+b.dataset.k),
+  crowdKind:b => { const c = shot().crowds[S.crowd]; if(!c) return; edit(() => { c.kind = b.dataset.kind; }); },
+  crowdShuffle:() => { const c = shot().crowds[S.crowd]; if(!c) return; edit(() => { c.seed = 1 + Math.floor(Math.random() * 9999); }); },
   newBoard:async () => {
     if(!await ask(L('Nouveau storyboard ?', 'New storyboard?'), L('Le storyboard actuel sera remplacé. Tu pourras revenir en arrière avec Annuler.', 'The current storyboard will be replaced. You can go back with Undo.'), L('Nouveau storyboard', 'New storyboard'))) return;
-    pushUndo(); S.doc = newDoc(shot().set); S.i = 0; S.sel = null; S.target = 0; THUMBS.clear(); changed(true);
+    endEdit(); pushUndo(); S.doc = newDoc(shot().set); S.i = 0; S.sel = null; S.target = 0; THUMBS.clear(); changed(true);
   },
   help:showHelp,
 };
@@ -457,14 +693,19 @@ function bindEvents(){
   let sliderSnap = null, capSnap = null;
   document.addEventListener('input', e => {
     const t = e.target;
-    if(t.id === 'tbTitle'){ S.doc.title = t.value; save(); return; }
-    // les champs du plan : scène, ce qui se passe, dialogue
+    if(t.id === 'tbTitle'){ S.doc.title = t.value; save(); const p = document.querySelector('.rail-project'); if(p) p.textContent = t.value || L('Sans titre', 'Untitled'); return; }
+    // les champs du plan : scène, action, dialogue
     if(t.id === 'cap' || t.id === 'dial' || t.id === 'fScene'){
       if(!capSnap) capSnap = snapshot(); shot().info[t.dataset.k] = t.value; save();
       const card = document.querySelector(`.shot-card[data-i="${S.i}"]`);
-      if(card && t.id === 'cap') card.querySelector('.sc-t').lastChild.textContent = t.value || L('Sans description', 'No description');
-      if(t.id === 'fScene') document.getElementById('shotNo').textContent = (t.value ? L('Sc. ', 'Sc. ') + t.value + ' · ' : '') + L('Plan ', 'Shot ') + (S.i + 1);
+      if(card && t.id === 'cap') card.querySelector('.sc-t').lastChild.textContent = t.value || L('Sans action', 'No action yet');
       return;
+    }
+    // la planche entière : on écrit sous chaque plan, sans changer de plan
+    if(t.dataset.sv){ if(!capSnap) capSnap = snapshot(); const s = S.doc.shots[+t.dataset.i]; if(s){ s.info[t.dataset.sv] = t.value; save(); } return; }
+    if(t.dataset.act === 'crowdSet'){
+      if(!sliderSnap) sliderSnap = snapshot();
+      setCrowd(S.crowd, t.dataset.f, +t.value); renderSide(true); return;
     }
     if((t.dataset.act === 'axis' || t.dataset.act === 'root') && S.sel){
       if(!sliderSnap) sliderSnap = snapshot();
@@ -476,16 +717,19 @@ function bindEvents(){
   });
   document.addEventListener('change', e => {
     const t = e.target;
-    if(t.dataset.act === 'axis' || t.dataset.act === 'root'){ pushUndo(sliderSnap); sliderSnap = null; changed(); }
-    if((t.id === 'cap' || t.id === 'dial' || t.id === 'fScene') && capSnap){ pushUndo(capSnap); capSnap = null; if(t.id === 'fScene') renderStrip(); }
-    if(t.dataset.act === 'info'){ const k = t.dataset.k; edit(() => { shot().info[k] = k === 'dur' ? +t.value : t.value; }); renderStrip(); }
+    if(t.dataset.act === 'axis' || t.dataset.act === 'root' || t.dataset.act === 'crowdSet'){ pushUndo(sliderSnap); sliderSnap = null; changed(); }
+    if((t.id === 'cap' || t.id === 'dial' || t.id === 'fScene' || t.dataset.sv) && capSnap){ pushUndo(capSnap); capSnap = null; if(t.id === 'fScene' || t.dataset.sv) { renderStrip(); renderHead(); } }
+    if(t.dataset.act === 'info' && t.tagName === 'SELECT'){ const k = t.dataset.k; edit(() => { shot().info[k] = k === 'dur' ? +t.value : t.value; }); renderStrip(); }
+    if(t.dataset.act === 'walk') edit(() => { shot().info.walk = t.checked; });
+    if(t.dataset.act === 'gridTog'){ S.grid = t.checked; renderHead(); renderView(); }
+    if(t.dataset.act === 'finalTog') setFinal(t.checked);
   });
   const c = R.canvas;
   c.addEventListener('pointerdown', onDown); c.addEventListener('pointermove', onMove); c.addEventListener('pointerup', onUp); c.addEventListener('pointercancel', onUp);
   c.addEventListener('pointerleave', () => { if(!DRAG.mode && S.hover){ S.hover = null; requestRender(); renderHint(); } });
   c.addEventListener('wheel', onWheel, { passive:false });
   c.addEventListener('dblclick', onDblClick);
-  // la planche : glisser une vignette pour la changer de place
+  // le storyboard : glisser une vignette pour la changer de place
   const strip = document.getElementById('strip'); let dragFrom = -1;
   strip.addEventListener('dragstart', e => { const c = e.target.closest('.shot-card'); if(!c) return; dragFrom = +c.dataset.i; c.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try{ e.dataTransfer.setData('text/plain', String(dragFrom)); }catch(err){} });
   const dropIndex = e => { const cards = [...strip.querySelectorAll('.shot-card')]; for(let i = 0; i < cards.length; i++){ const r = cards[i].getBoundingClientRect(); if(e.clientX < r.left + r.width / 2) return i; } return cards.length; };
@@ -493,7 +737,7 @@ function bindEvents(){
   const dragEnd = () => { dragFrom = -1; strip.querySelectorAll('.drag, .drop-l, .drop-r').forEach(c => c.classList.remove('drag', 'drop-l', 'drop-r')); };
   strip.addEventListener('drop', e => { if(dragFrom < 0) return; e.preventDefault(); const f = dragFrom, k = dropIndex(e); dragEnd(); dropShot(f, k); });
   strip.addEventListener('dragend', dragEnd);
-  // la poignée au-dessus des têtes
+  // les poignées au-dessus des têtes (et des foules)
   const hd = document.getElementById('handles');
   hd.addEventListener('pointerdown', onHandleDown);
   document.addEventListener('pointermove', onHandleMove);
@@ -508,21 +752,24 @@ function bindEvents(){
   window.addEventListener('blur', () => { if(NAV.keys.size){ NAV.keys.clear(); navEnd(); } });
   c.addEventListener('contextmenu', e => e.preventDefault());
   window.addEventListener('resize', fitStage);
+  if(window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(document.getElementById('stageWrap'));
   document.addEventListener('keydown', e => {
     const tag = (e.target.tagName || '').toLowerCase();
-    if((tag === 'input' && e.target.type !== 'range') || tag === 'textarea' || tag === 'select') return;
+    if((tag === 'input' && e.target.type !== 'range' && e.target.type !== 'checkbox') || tag === 'textarea' || tag === 'select') return;
+    if(document.querySelector('.modal-bd')){ if(e.key === 'Escape'){ const i = document.querySelector('.intro'); if(i) ACT.introOk(); } return; }
     const mod = e.ctrlKey || e.metaKey;
     if(mod && e.key.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if(mod && e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); return; }
     if(mod) return;
+    if(S.view === 'sheet') return;
     const nk = NAV_KEYS[e.key.toLowerCase()];
     if(nk){ e.preventDefault(); if(!NAV.keys.has(nk)){ NAV.keys.add(nk); navStart(); } return; }
     if(e.key === 'ArrowRight'){ e.preventDefault(); goShot(S.i + 1); }
     else if(e.key === 'ArrowLeft'){ e.preventDefault(); goShot(S.i - 1); }
     else if(e.key.toLowerCase() === 'n'){ e.preventDefault(); addShot(); }
     else if(e.key === 'Escape' && S.play){ stopBoard(); }
-    else if(e.key === ' ' && e.target === document.body){ e.preventDefault(); playBoard(); }
-    else if(e.key === 'Escape'){ if(S.sel){ S.sel = null; renderSide(); renderHint(); requestRender(); } closeMenus(); }
+    else if(e.key === ' ' && (e.target === document.body || tag === 'button')){ e.preventDefault(); playBoard(); }
+    else if(e.key === 'Escape'){ if(S.sel){ S.sel = null; renderPanel(); renderHint(); requestRender(); } closeMenus(); }
   });
 }
 
@@ -536,5 +783,5 @@ function bindEvents(){
     document.getElementById('stage').innerHTML = `<div class="nogl"><b>${L('La 3D n’est pas disponible dans ce navigateur.', '3D isn’t available in this browser.')}</b>${L('Raging 3D a besoin de WebGL. Essaie avec une version récente de Chrome, Edge ou Firefox, ou active l’accélération matérielle dans les réglages du navigateur.', 'Raging 3D needs WebGL. Try a recent Chrome, Edge or Firefox, or turn on hardware acceleration in your browser settings.')}</div>`;
     return;
   }
-  initMeshes(); bindEvents(); fitStage(); renderStrip(); renderHint(); showIntro();
+  initMeshes(); bindEvents(); renderUI(); fitStage(); benchmark(); showIntro();
 })();

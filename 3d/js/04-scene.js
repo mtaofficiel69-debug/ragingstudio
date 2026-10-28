@@ -22,24 +22,36 @@ const shot = () => S.doc.shots[S.i];
 function charFromSpawn(i, def, look){
   const sp = def.spawn[i] || def.spawn[i % def.spawn.length];
   const ch = newChar(i, sp, look);
-  if(sp.pose) applyPose(ch, sp.pose);
-  if(sp.y != null) ch.root.y = sp.y;
+  putOnSpot(ch, sp.pose, sp.y);
   return ch;
 }
-const newInfo = () => ({ cap:'', dial:'', scene:'', size:'pe', angle:'neu', side:'tq', move:'fix', dur:2 });
+/* mettre un personnage dans la pose d'une place : assis sur un siège, le bassin reste à la hauteur
+   du siège (même pour un enfant) ; debout sur un trottoir ou un gradin, on monte d'autant */
+function putOnSpot(ch, pose, y){
+  if(pose) applyPose(ch, pose); else if(ch.root.y < -0.1 || (ch.pose && SEATED[ch.pose])) applyPose(ch, 'stand'); else ch.root.y -= ch.gy || 0;
+  ch.gy = 0;
+  if(pose && SEATED[pose]) ch.root.y = seatY(ch, y != null ? y : (POSES.find(p => p.id === pose) || {}).y || 0);
+  else if(y != null){ ch.gy = y; ch.root.y += y; }
+}
+const newInfo = () => ({ cap:'', dial:'', scene:'', size:'pe', angle:'neu', side:'tq', move:'fix', dur:2, walk:false });
 function newShot(setId){
   const def = SET_DEF[setId];
-  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:clone(def.cam), info:newInfo() };
+  return { id:uidS(), set:setId, chars:[charFromSpawn(0, def, 0)], cam:clone(def.cam), crowds:[], info:newInfo() };
 }
-function newDoc(setId){ return { v:2, title:L('Mon storyboard', 'My storyboard'), shots:[newShot(setId || 'garage')] }; }
+function newDoc(setId){ return { v:2, title:L('Mon storyboard', 'My storyboard'), style:'color', shots:[newShot(setId || 'garage')] }; }
 
 /* ---------- Sauvegarde automatique (dans le navigateur) ---------- */
 let _saveT = 0;
-function save(){ clearTimeout(_saveT); _saveT = setTimeout(() => lsSet(LS_SCENE, JSON.stringify({ doc:S.doc, i:S.i })), 250); }
+function save(){ clearTimeout(_saveT); _saveT = setTimeout(() => { lsSet(LS_SCENE, docJSON()); if(typeof renderSaved === 'function') renderSaved(); }, 250); }
+/* le projet tel qu'on l'enregistre : si on règle le cadre de fin d'un mouvement, on remet chaque cadre à sa place */
+function docJSON(){ const sw = S.endEd && shot(); if(sw) swapEnd(sw); const t = JSON.stringify({ doc:S.doc, i:S.i }); if(sw) swapEnd(sw); return t; }
 /* les plans d'avant gardent tout : on complète seulement ce qui manque */
+const OLD_MOVES = { pan:'panR', tilt:'tiltU', trav:'in', zoom:'zoomIn', stea:'in' };
 function fixShot(sh){
   sh.info = Object.assign(newInfo(), sh.info || {});
-  sh.chars.forEach((ch, c) => { if(ch.look == null) ch.look = c % 2; });
+  if(OLD_MOVES[sh.info.move]) sh.info.move = OLD_MOVES[sh.info.move];
+  if(!Array.isArray(sh.crowds)) sh.crowds = [];
+  sh.chars.forEach((ch, c) => { if(ch.look == null || !CHAR_LOOK[ch.look]) ch.look = c % 2; });
   return sh;
 }
 function load(){
@@ -47,9 +59,9 @@ function load(){
     const o = JSON.parse(lsGet(LS_SCENE) || 'null'); if(!o) return false;
     // version 2 : la planche ; version 1 (la toute première) : chaque clé devient un plan
     const d = o.doc || o;
-    if(d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set])){ d.shots.forEach(fixShot); S.doc = d; S.i = clamp(o.i || 0, 0, d.shots.length - 1); return true; }
+    if(d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set])){ d.shots.forEach(fixShot); if(!d.style) d.style = 'color'; S.doc = d; S.i = clamp(o.i || 0, 0, d.shots.length - 1); return true; }
     if(d.v === 1 && SET_DEF[d.set] && Array.isArray(d.keys) && d.keys.length){
-      S.doc = { v:2, title:d.title, shots:d.keys.map(k => fixShot({ id:uidS(), set:d.set, chars:k.chars, cam:k.cam })) };
+      S.doc = { v:2, title:d.title, style:'color', shots:d.keys.map(k => fixShot({ id:uidS(), set:d.set, chars:k.chars, cam:k.cam })) };
       S.i = 0; return true;
     }
   }catch(e){}
@@ -57,27 +69,27 @@ function load(){
 }
 
 /* ---------- Annuler / rétablir ---------- */
-function snapshot(){ return JSON.stringify({ doc:S.doc, i:S.i }); }
+function snapshot(){ return docJSON(); }
 function pushUndo(snap){ S.undo.push(snap || snapshot()); if(S.undo.length > 80) S.undo.shift(); S.redo = []; }
-function restore(str){ const o = JSON.parse(str); S.doc = o.doc; S.i = clamp(o.i, 0, S.doc.shots.length - 1); S.sel = null; S.target = 0; THUMBS.clear(); changed(true); }
+function restore(str){ endEdit(); const o = JSON.parse(str); S.doc = o.doc; S.i = clamp(o.i, 0, S.doc.shots.length - 1); S.sel = null; S.target = 0; THUMBS.clear(); changed(true); }
 function undo(){ if(!S.undo.length) return; S.redo.push(snapshot()); restore(S.undo.pop()); }
 function redo(){ if(!S.redo.length) return; S.undo.push(snapshot()); restore(S.redo.pop()); }
 /* après chaque changement : on enregistre, on redessine, on met à jour la vignette */
 function changed(all){
   if(S.target >= shot().chars.length) S.target = 0;
-  save(); if(all){ renderUI(); } else { renderSide(); renderShotPanel(); renderTools(); }
+  save(); if(all){ renderUI(); } else { renderPanel(); renderHead(); renderTop(); }
   requestRender(); thumbLater(S.i, all);
 }
 /* un changement fait d'un coup (bouton) : annulable */
 function edit(fn){ pushUndo(); fn(); changed(); }
 
 /* ---------- Les plans ---------- */
-function goShot(i){ if(i === S.i || !S.doc.shots[i]) return; S.i = i; S.sel = null; S.hover = null; S.target = 0; S.tween = null; save(); renderUI(); requestRender(); }
+function goShot(i){ if(i === S.i || !S.doc.shots[i]) return; endEdit(); S.i = i; S.hidden = []; S.sel = null; S.hover = null; S.target = 0; S.tween = null; save(); renderUI(); requestRender(); }
 function addShot(){
-  pushUndo();
-  const n = clone(shot()); n.id = uidS(); n.info.cap = ''; n.info.dial = '';
+  endEdit(); pushUndo();
+  const n = clone(shot()); n.id = uidS(); n.info.cap = ''; n.info.dial = ''; n.info.move = 'fix'; delete n.camEnd;
   S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.sel = null; changed(true);
-  toast(L('Nouveau plan : il reprend le précédent. Change le cadrage ou la pose.', 'New shot: it starts from the previous one. Change the framing or the pose.'));
+  toast(L('Plan ', 'Shot ') + (S.i + 1) + L(' créé : il reprend le plan d’avant. Change le cadrage ou la pose.', ' created: it starts from the previous one. Change the framing or the pose.'));
 }
 /* le personnage le plus proche d'un autre : celui à qui il parle */
 function otherOf(c, chars){
@@ -88,16 +100,16 @@ function otherOf(c, chars){
 /* contrechamp : le plan suivant, vu par-dessus l'épaule de l'autre personnage */
 function addReverse(){
   const s = shot(); if(s.chars.length < 2) return;
-  pushUndo();
-  const n = clone(s); n.id = uidS(); n.info = Object.assign({}, s.info, { cap:'', dial:'', size:'am', angle:'neu' });
+  endEdit(); pushUndo();
+  const n = clone(s); n.id = uidS(); n.info = Object.assign({}, s.info, { cap:'', dial:'', size:'am', angle:'neu', move:'fix' }); delete n.camEnd;
   const back = S.target, front = otherOf(back, n.chars);
   n.cam = frameOTS(n.chars[front], n.chars[back], s.cam.lens >= 50 ? s.cam.lens : 50);
   S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.target = front; S.sel = null; changed(true);
 }
-function dupShot(){ pushUndo(); const n = clone(shot()); n.id = uidS(); S.doc.shots.splice(S.i + 1, 0, n); S.i++; changed(true); }
+function dupShot(){ endEdit(); pushUndo(); const n = clone(shot()); n.id = uidS(); S.doc.shots.splice(S.i + 1, 0, n); S.i++; changed(true); }
 function delShot(){
   if(S.doc.shots.length < 2){ toast(L('Il faut garder au moins un plan.', 'You need to keep at least one shot.')); return; }
-  pushUndo(); S.doc.shots.splice(S.i, 1); S.i = Math.min(S.i, S.doc.shots.length - 1); S.sel = null; THUMBS.clear(); changed(true);
+  endEdit(); pushUndo(); S.doc.shots.splice(S.i, 1); S.i = Math.min(S.i, S.doc.shots.length - 1); S.sel = null; THUMBS.clear(); changed(true);
 }
 function moveShot(d){
   const j = S.i + d; if(j < 0 || j >= S.doc.shots.length) return;
@@ -106,7 +118,7 @@ function moveShot(d){
 /* glisser-déposer dans la planche : le plan « from » va à la place « to » */
 function dropShot(from, to){
   const a = S.doc.shots; if(from === to || !a[from] || to < 0 || to > a.length) return;
-  pushUndo(); const [m] = a.splice(from, 1); const k = to > from ? to - 1 : to; a.splice(k, 0, m); S.i = k; changed(true);
+  endEdit(); pushUndo(); const [m] = a.splice(from, 1); const k = to > from ? to - 1 : to; a.splice(k, 0, m); S.i = k; changed(true);
 }
 const totalDur = () => S.doc.shots.reduce((t, s) => t + (s.info.dur || 2), 0);
 
@@ -121,19 +133,20 @@ function removeChar(c){
 }
 function setPlace(id){
   const s = shot(); if(!SET_DEF[id] || id === s.set) return;
-  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => charFromSpawn(i, def, ch.look)); s.cam = clone(def.cam); s.info.size = 'pe'; });
+  endEdit();
+  const before = clone(s.cam);
+  edit(() => { const def = SET_DEF[id]; s.set = id; s.chars = s.chars.map((ch, i) => charFromSpawn(i, def, ch.look)); s.cam = clone(def.cam); s.info.size = 'pe'; s.info.move = 'fix'; delete s.camEnd; s.crowds = []; });
+  startTween(before);
+  clearTimeout(R.benchT); R.benchT = setTimeout(benchmark, 600);   // un grand espace est plus lourd : on revérifie
 }
 /* une place toute prête du lieu : le personnage y va, avec la pose qui va avec */
 function placeAt(k){
   const s = shot(), sp = (SPOTS[s.set] || [])[k], c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!sp || !ch) return;
-  edit(() => {
-    if(sp[5]) applyPose(ch, sp[5]); else if(ch.root.y < -0.1) applyPose(ch, 'stand');
-    ch.root.x = sp[2]; ch.root.z = sp[3]; ch.root.ry = sp[4]; if(sp[6] != null) ch.root.y = sp[6];
-  });
+  edit(() => { putOnSpot(ch, sp[5], sp[6]); ch.root.x = sp[2]; ch.root.z = sp[3]; ch.root.ry = sp[4]; });
 }
 function setPose(pid){
   const s = shot(), c = S.sel ? S.sel.c : S.target, ch = s.chars[c]; if(!ch) return;
-  edit(() => { const keep = { x:ch.root.x, z:ch.root.z, ry:ch.root.ry }; applyPose(ch, pid); Object.assign(ch.root, keep); });
+  edit(() => { const keep = { x:ch.root.x, z:ch.root.z, ry:ch.root.ry }; applyPose(ch, pid); Object.assign(ch.root, keep); ch.root.y += ch.gy || 0; });
 }
 function resetPart(){
   if(!S.sel) return;
@@ -211,6 +224,125 @@ function setLens(l){
   });
 }
 
+/* ---------- Changer de personnage : la caméra le suit, en glissant ---------- */
+function focusChar(c){
+  const s = shot(); if(!s.chars[c]) return;
+  const same = S.target === c;
+  S.target = c; S.sel = { c, j:'pelvis' };
+  const k = s.info.size;
+  if(!same && (FRAMES[k] || k === 'am' || k === '2p' || k === 'pov')) frameSize(k);
+  else { renderSide(); renderTools(); requestRender(); }
+}
+
+/* ---------- En voiture : des prises de vue toutes prêtes dans le taxi ---------- */
+function carSetup(){
+  const s = shot(); if(s.set !== 'taxi') return;
+  edit(() => {
+    const sp = SPOTS.taxi;
+    if(s.chars[0]){ putOnSpot(s.chars[0], sp[0][5], sp[0][6]); Object.assign(s.chars[0].root, { x:sp[0][2], z:sp[0][3], ry:sp[0][4] }); }
+    if(s.chars[1]){ putOnSpot(s.chars[1], sp[1][5], sp[1][6]); Object.assign(s.chars[1].root, { x:sp[1][2], z:sp[1][3], ry:sp[1][4] }); }
+  });
+}
+function carShot(id){
+  const s = shot(), P = CAR_SHOTS.find(x => x[0] === id); if(!P || s.set !== 'taxi') return;
+  camEdit(() => { s.cam = camLook(P[3], P[4], P[5]); s.info.size = P[6]; s.info.angle = id === 'dessus' ? 'dess' : 'neu'; });
+}
+
+/* ---------- La foule ----------
+   Une foule est un rectangle rempli de silhouettes plates, toujours tournées vers la caméra :
+   on peut en mettre partout (une terrasse, un trottoir, une salle de concert) pour presque rien. */
+const CROWD_KIND = [['stand', 'Debout', 'Standing'], ['cheer', 'Qui applaudit', 'Cheering'], ['mix', 'Mélangée', 'Mixed']];
+function addCrowd(kind){
+  const s = shot(), c = viewCam(), y = c.yaw * D2R;
+  // devant la caméra, un peu plus loin que ce qu'elle vise
+  const d = clamp(c.dist * 0.6 + 3, 3, 14);
+  edit(() => {
+    s.crowds.push({ x:round(c.tx - Math.sin(y) * d, 2), z:round(c.tz - Math.cos(y) * d, 2), y:0, ry:round(c.yaw, 0), w:8, d:3, dens:1, kind:kind || 'stand', seed:1 + Math.floor(Math.random() * 9999) });
+    S.crowd = s.crowds.length - 1; S.sel = null;
+  });
+  if(typeof setPanel === 'function') setPanel('crowd');
+}
+function setCrowd(k, f, v){ const c = shot().crowds[k]; if(!c) return; c[f] = v; save(); requestRender(); thumbLater(S.i); }
+function removeCrowd(k){ const s = shot(); if(!s.crowds[k]) return; edit(() => { s.crowds.splice(k, 1); S.crowd = s.crowds.length ? Math.min(k, s.crowds.length - 1) : -1; }); }
+
+/* ---------- Le noir et blanc (pour tout le film) ---------- */
+function setStyle(st){ if(S.doc.style === st) return; edit(() => { S.doc.style = st; }); THUMBS.clear(); renderStrip(); }
+
+/* ---------- Le mouvement de caméra : on le voit à la lecture et dans l'animatique ----------
+   Le cadre du plan est le point de départ ; le mouvement en part. « Vers un cadre de fin » :
+   on règle soi-même l'image d'arrivée. */
+function camStart(sh){ return S.endEd && sh === shot() && sh.camEnd ? sh.camEnd : sh.cam; }
+function camFinish(sh){ return S.endEd && sh === shot() ? sh.cam : sh.camEnd; }
+function swapEnd(sh){ const t = sh.cam; sh.cam = sh.camEnd; sh.camEnd = t; }
+/* régler la fin : la caméra montre (et on modifie) l'image d'arrivée */
+function editEnd(on){
+  const s = shot();
+  if(on === !!S.endEd) return;
+  const before = clone(s.cam);
+  if(on){
+    if(!s.camEnd){ s.camEnd = clone(s.cam); s.camEnd.dist = clamp(s.cam.dist * 0.7, 0.4, 28); }
+    swapEnd(s); S.endEd = true;
+  } else { swapEnd(s); S.endEd = false; }
+  startTween(before); renderUI(); requestRender();
+}
+function endEdit(){ if(S.endEd){ const s = shot(); if(s) swapEnd(s); S.endEd = false; } }
+const easeIO = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+function camAt(sh, k, t){
+  const a = camStart(sh), m = sh.info.move, e = easeIO(clamp(k, 0, 1)), c = Object.assign({}, a);
+  const eye = camEye(a);
+  // tourner sur place (la caméra ne bouge pas, elle pivote)
+  const pivot = (dy, dp) => {
+    c.yaw = a.yaw + dy; c.pitch = clamp(a.pitch + dp, -88, 85);
+    const y = c.yaw * D2R, p = c.pitch * D2R;
+    c.tx = eye[0] - c.dist * Math.cos(p) * Math.sin(y); c.ty = eye[1] + c.dist * Math.sin(p); c.tz = eye[2] - c.dist * Math.cos(p) * Math.cos(y);
+  };
+  const side = v => { const y = a.yaw * D2R, d = Math.max(0.8, a.dist * 0.3) * v; c.tx = a.tx + Math.cos(y) * d; c.tz = a.tz - Math.sin(y) * d; };
+  if(m === 'panR') pivot(-18 * e, 0);
+  else if(m === 'panL') pivot(18 * e, 0);
+  else if(m === 'tiltU') pivot(0, 10 * e);
+  else if(m === 'tiltD') pivot(0, -10 * e);
+  else if(m === 'in') c.dist = Math.max(0.45, a.dist * (1 - 0.35 * e));
+  else if(m === 'out') c.dist = a.dist * (1 + 0.45 * e);
+  else if(m === 'travR') side(e);
+  else if(m === 'travL') side(-e);
+  else if(m === 'zoomIn') c.lens = a.lens * (1 + 0.8 * e);
+  else if(m === 'zoomOut') c.lens = Math.max(14, a.lens / (1 + 0.6 * e));
+  else if(m === 'orbit') c.yaw = a.yaw + 35 * e;
+  else if(m === 'grue') c.pitch = clamp(a.pitch - 22 * e, -88, 85);
+  else if(m === 'grueD') c.pitch = clamp(a.pitch + 16 * e, -88, 85);
+  else if(m === 'drone'){ c.dist = a.dist * (1 + 1.2 * e); c.pitch = clamp(a.pitch - 25 * e, -88, 85); }
+  else if(m === 'epa'){ const s = t || 0; c.yaw += Math.sin(s * 4.1) * 0.7 + Math.sin(s * 9.3) * 0.25; c.pitch += Math.sin(s * 5.3 + 1) * 0.5; c.roll = (a.roll || 0) + Math.sin(s * 3.1) * 0.6; }
+  else if(m === 'end'){
+    const b = camFinish(sh); if(!b) return c;
+    for(const f of ['tx', 'ty', 'tz', 'pitch', 'dist', 'lens', 'roll']) c[f] = (a[f] || 0) + ((b[f] || 0) - (a[f] || 0)) * e;
+    c.yaw = a.yaw + ((((b.yaw - a.yaw) % 360) + 540) % 360 - 180) * e;
+  }
+  return c;
+}
+/* les personnages qui marchent ou courent avancent pendant le plan, en balançant bras et jambes */
+const MIRROR = { thighL:'thighR', thighR:'thighL', shinL:'shinR', shinR:'shinL', footL:'footR', footR:'footL', armL:'armR', armR:'armL', foreL:'foreR', foreR:'foreL', handL:'handR', handR:'handL' };
+function animChars(sh, t){
+  if(!sh.info.walk || !sh.chars.some(ch => ch.pose === 'walk' || ch.pose === 'run')) return null;
+  return sh.chars.map(ch => {
+    if(ch.pose !== 'walk' && ch.pose !== 'run') return ch;
+    const run = ch.pose === 'run', o = clone(ch), m = {};
+    for(const k in ch.j) m[k] = (ch.j[MIRROR[k] || k] || []).slice();
+    ['spine', 'chest', 'head'].forEach(k => { if(m[k]) { m[k][1] = -(m[k][1] || 0); if(m[k][2] != null) m[k][2] = -m[k][2]; } });
+    const w = (1 - Math.cos(t * Math.PI * 2 * (run ? 1.45 : 0.95))) / 2;
+    for(const k in o.j) o.j[k] = o.j[k].map((v, i) => v + ((m[k][i] || 0) - v) * w);
+    const d = t * (run ? 3.2 : 1.25) * bodyScale(lookOf(ch)), y = ch.root.ry * D2R;
+    o.root.x += Math.sin(y) * d; o.root.z += Math.cos(y) * d;
+    o.root.y += Math.abs(Math.sin(t * Math.PI * 2 * (run ? 1.45 : 0.95))) * (run ? 0.05 : 0.02);
+    return o;
+  });
+}
+/* une image du plan à l'instant t (en secondes depuis son début) */
+function frameAt(sh, t){ const k = t / (sh.info.dur || 2); return { cam:camAt(sh, k, t), chars:animChars(sh, t) }; }
+
+/* ---------- L'image finale ----------
+   Un bouton montre exactement ce qui sera enregistré : sans transparence, sans poignées, sans grille. */
+function setFinal(on){ S.final = on == null ? !S.final : on; renderTools(); if(typeof renderView === 'function') renderView(); requestRender(); }
+
 /* ---------- Caméra ---------- */
 function camEye(c){
   const y = c.yaw * D2R, p = c.pitch * D2R;
@@ -218,8 +350,8 @@ function camEye(c){
 }
 function viewProj(c, aspect){
   const e = camEye(c), r = (c.roll || 0) * D2R;
-  // le débullé tourne l'image autour de l'axe de la caméra
-  return M4.mul(M4.persp(fovOf(c.lens), aspect, 0.05, 80), M4.mul(M4.rz(r), M4.lookAt(e, [c.tx, c.ty, c.tz], [0, 1, 0])));
+  // le débullé tourne l'image autour de l'axe de la caméra ; on voit loin dans les grands espaces
+  return M4.mul(M4.persp(fovOf(c.lens), aspect, 0.06, 320), M4.mul(M4.rz(r), M4.lookAt(e, [c.tx, c.ty, c.tz], [0, 1, 0])));
 }
 /* la caméra glisse jusqu'au nouveau cadrage au lieu de sauter (un quart de seconde) */
 const TWEEN_MS = 320;
@@ -238,62 +370,119 @@ function viewCam(sh){
 function camEdit(fn){ const before = clone(shot().cam); edit(fn); startTween(before); }
 
 /* ---------- Rendu ---------- */
-const R = { canvas:null, sets:{}, parts:{}, blob:null, raf:0 };
-function setMesh(id){ if(!R.sets[id]) R.sets[id] = GL.mesh(setGeo(id)); return R.sets[id]; }
+const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new Map(), scale:1 };
+function setMesh(id){
+  if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), glass:o.glass.p.length ? GL.mesh(o.glass) : null }; }
+  return R.sets[id];
+}
 function initMeshes(){
-  CHAR_LOOK.forEach(lk => { R.parts[lk.id] = {}; JOINTS.forEach(J => R.parts[lk.id][J.id] = GL.mesh(partGeo(J.id, lk))); });
+  CHAR_LOOK.forEach(lk => {
+    R.parts[lk.id] = {}; R.out[lk.id] = {};
+    JOINTS.forEach(J => { GEO_K = 0.8; R.parts[lk.id][J.id] = GL.mesh(partGeo(J.id, lk)); GEO_K = 0.55; R.out[lk.id][J.id] = GL.mesh(smoothNormals(partGeo(J.id, lk, true))); GEO_K = 1; });
+  });
   const g = geo(), C = [0.08, 0.09, 0.11];
   for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, b = (i + 1) / 16 * Math.PI * 2; tri(g, [0, 0, 0], [Math.sin(b) * 0.36, 0, Math.cos(b) * 0.36], [Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36], C); }
   R.blob = GL.mesh(g);
+}
+/* les foules d'un plan : celle du lieu (les tribunes du stade) et celles qu'on a posées */
+function crowdMeshes(sh){
+  const out = [], get = (key, make) => {
+    let m = R.crowds.get(key);
+    if(!m){ m = GL.crowdMesh(crowdData(make())); R.crowds.set(key, m);
+      if(R.crowds.size > 48){ const k = R.crowds.keys().next().value; GL.freeCrowd(R.crowds.get(k)); R.crowds.delete(k); } }
+    out.push(m);
+  };
+  const def = SET_DEF[sh.set]; if(def.crowd) get('set:' + sh.set, def.crowd);
+  (sh.crowds || []).forEach(c => get(JSON.stringify(c), () => crowdSprites(c)));
+  return out;
 }
 function requestRender(){
   if(R.raf || S.rec || S.play) return;
   R.raf = requestAnimationFrame(() => { R.raf = 0; drawFrame(); if(S.tween || NAV.held) requestRender(); });
 }
-const BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552');
-/* dessine un plan ; « clean » : l'image du film, sans aide (exports, vignettes) */
-function drawFrame(sh, w, h, clean){
+const BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552'), INK = hexRGB('#1B1E24');
+/* l'ambiance du lieu : le fond, le ciel, la brume, et le noir et blanc du film */
+function envOf(sh){
+  const d = SET_DEF[sh.set], bg = d.bg ? hexRGB(d.bg) : BG;
+  return { bg, sky:d.sky, fogC:d.sky ? hexRGB(d.sky.hor) : bg, fog:d.fog || [400, 500], bw:S.doc && S.doc.style === 'bw' };
+}
+/* dessine un plan ; « clean » : l'image du film, sans aide (exports, vignettes).
+   « o » (lecture, animatique) : { cam, chars } pour une image en mouvement. */
+function drawFrame(sh, w, h, clean, o){
   const gl = GL.gl; if(!gl) return;
   sh = sh || shot(); w = w || R.canvas.width; h = h || R.canvas.height;
-  const cam = clean ? sh.cam : viewCam(sh), vp = viewProj(cam, w / h), eye = camEye(cam);
-  GL.begin(w, h, vp, SET_DEF[sh.set].bg ? hexRGB(SET_DEF[sh.set].bg) : BG);
+  const final = clean || S.final;
+  const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh)), vp = viewProj(cam, w / h), eye = camEye(cam);
+  const E = envOf(sh);
+  GL.begin(w, h, vp, E.bg, E);
+  if(E.sky) GL.drawSky(vp, hexRGB(E.sky.top), hexRGB(E.sky.hor), hexRGB(E.sky.low), 0, w / h);
   // en travaillant, le décor qui cache un personnage devient transparent ; à l'export, il reste en place
-  const mats = sh.chars.map(ch => charMatrices(ch));
-  GL.view(eye, clean ? [] : mats.map(M => M4.apply(M.chest, [0, 0.12, 0])));
-  GL.draw(setMesh(sh.set), { vc:true, x:1 });
+  const chars = (o && o.chars) || sh.chars, mats = chars.map(ch => charMatrices(ch));
+  // on ne perce le décor que pour ceux qu'il cache vraiment (vérifié à l'arrêt), et pour celui qu'on déplace :
+  // sur un petit ordinateur, c'est autant de calcul en moins
+  const tube = final || o ? [] : chars.map((_, c) => c).filter(c => (S.hidden || []).includes(c) || (HDRAG.c === c && !HDRAG.crowd) || (DRAG.mode === 'move' && S.sel && S.sel.c === c));
+  GL.view(eye, tube.map(c => M4.apply(mats[c].chest, [0, 0.12, 0])));
+  const SM = setMesh(sh.set);
+  GL.draw(SM.g, { vc:true, x:tube.length ? 1 : 0 });
+  // une ombre douce sous chaque personnage (trois disques très légers, pas de calcul d'ombre)
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-  const ground = sh.set === 'taxi' ? 0.305 : 0.006;
-  sh.chars.forEach(ch => GL.draw(R.blob, { m:M4.trans(ch.root.x, ground, ch.root.z), flat:true, a:0.22, col:[0.06, 0.07, 0.09] }));
+  chars.forEach((ch, c) => {
+    const M = mats[c], fy = Math.min(M4.apply(M.footL, [0, -0.065, 0.05])[1], M4.apply(M.footR, [0, -0.065, 0.05])[1]), k = bodyScale(lookOf(ch, c));
+    const p = M4.apply(M.pelvis, [0, 0, 0]);
+    [[1.25, 0.07], [0.9, 0.09], [0.55, 0.11]].forEach(([r, a]) => GL.draw(R.blob, { m:M4.mul(M4.trans(p[0], Math.max(0, fy) + 0.008, p[2]), [r * k, 0, 0, 0, 0, 1, 0, 0, 0, 0, r * k, 0, 0, 0, 0, 1]), flat:true, a, col:[0.06, 0.07, 0.09] }));
+  });
   gl.depthMask(true); gl.disable(gl.BLEND);
+  GL.drawCrowds(crowdMeshes(sh), vp, eye, [Math.cos(cam.yaw * D2R), 0, -Math.sin(cam.yaw * D2R)]);
   // en travaillant : les parties cachées par le décor (mur, voiture) sont dessinées en filigrane,
   // avant les personnages, pour qu'elles n'apparaissent que là où le décor passe devant
-  if(!clean){
+  if(!final){
     gl.enable(gl.BLEND); gl.depthMask(false); gl.depthFunc(gl.GREATER);
-    sh.chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = R.parts[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.42 : 0.2, col:on ? GREEN : GHOST }); });
+    chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.42 : 0.2, col:on ? GREEN : GHOST }); });
     gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
   }
-  const tintOf = (c, id) => clean ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
-  sh.chars.forEach((ch, c) => {
-    const lk = lookOf(ch, c), col = hexRGB(lk.col), P = R.parts[lk.id];
-    for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col, tint, tintK:k, mul:true, char:true }); }
+  const tintOf = (c, id) => final ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id && (id !== 'pelvis' || S.sel.pick)) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
+  // le contour des personnages : comme un trait de crayon, d'épaisseur constante à l'écran
+  const px = 2 * Math.tan(fovOf(cam.lens) / 2) / h * clamp(h / 320, 1.4, 3);
+  gl.cullFace(gl.FRONT);
+  chars.forEach((ch, c) => { const P = R.out[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, col:INK, out:px }); });
+  gl.cullFace(gl.BACK);
+  chars.forEach((ch, c) => {
+    const P = R.parts[lookOf(ch, c).id];
+    for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col:[1, 1, 1], tint, tintK:k, mul:true, char:true }); }
   });
-  if(!clean){
+  // les vitres, transparentes (des deux côtés)
+  if(SM.glass){ gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(SM.glass, { vc:true, glass:true, a:0.2 }); gl.depthMask(true); gl.disable(gl.BLEND); gl.enable(gl.CULL_FACE); }
+  if(tube.length){
     gl.enable(gl.BLEND); gl.depthMask(false);
     // le décor coupé autour des personnages, remis en transparence par-dessus
-    GL.draw(setMesh(sh.set), { vc:true, x:2, a:0.22 });
+    GL.draw(SM.g, { vc:true, x:2, a:0.22 });
     gl.depthMask(true); gl.disable(gl.BLEND);
-    if(w === R.canvas.width) placeHandles(sh, vp, w, h, mats);
   }
+  if(clean) GL.drawSky(vp, [0, 0, 0], [0, 0, 0], [0, 0, 0], 1, w / h);   // dans les images exportées : un léger vignettage, comme une vraie optique
+  if(!clean && w === R.canvas.width){ placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); }
+}
+/* les petits ordinateurs : on mesure une fois le temps d'une image ; si c'est lent, l'image de travail
+   est calculée un peu moins finement (les exports, eux, gardent toujours leur pleine taille) */
+function benchmark(){
+  const gl = GL.gl; if(!gl || !R.canvas) return;
+  let n = 0;
+  const px = new Uint8Array(4), sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  drawFrame(); sync();
+  const t1 = performance.now();
+  while(n < 3){ drawFrame(); sync(); n++; }
+  const ms = (performance.now() - t1) / n, scale = ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
+  if(scale !== R.scale){ R.scale = scale; fitStage(); }
+  R.bench = ms;
 }
 /* vignettes de la planche : petites images, refaites seulement quand un plan change */
 const THUMBS = new Map();
 function thumbOf(i){
   const sh = S.doc.shots[i]; if(!sh || !GL.gl) return '';
-  const key = sh.id + '|' + JSON.stringify([sh.set, sh.chars, sh.cam]);
+  const key = sh.id + '|' + JSON.stringify([sh.set, sh.chars, camStart(sh), sh.crowds, S.doc.style]);
   const t = THUMBS.get(sh.id); if(t && t.key === key) return t.url;
   const ow = R.canvas.width, oh = R.canvas.height;
-  R.canvas.width = 320; R.canvas.height = 180; drawFrame(sh, 320, 180, true);
-  const url = R.canvas.toDataURL('image/jpeg', 0.8);
+  R.canvas.width = 384; R.canvas.height = 216; drawFrame(sh, 384, 216, true);
+  const url = R.canvas.toDataURL('image/jpeg', 0.82);
   R.canvas.width = ow; R.canvas.height = oh;
   THUMBS.set(sh.id, { key, url }); requestRender();
   return url;
@@ -303,10 +492,40 @@ function thumbLater(i, all){
   clearTimeout(_thumbT);
   _thumbT = setTimeout(() => {
     if(all){ renderStrip(); return; }
-    const card = document.querySelector(`.shot-card[data-i="${i}"]`); if(!card) return;
-    card.querySelector('img').src = thumbOf(i);
-    card.querySelector('.sc-t b').textContent = shotLabel('size', S.doc.shots[i].info.size, true);
+    document.querySelectorAll(`[data-thumb="${i}"]`).forEach(img => img.src = thumbOf(i));
+    const card = document.querySelector(`.shot-card[data-i="${i}"]`); if(card){ const b = card.querySelector('.sc-t b'); if(b) b.textContent = shotLabel('size', S.doc.shots[i].info.size, true); }
   }, all ? 0 : 200);
+}
+
+/* ---------- Le décor cache-t-il quelqu'un dans l'image finale ? ----------
+   En travaillant, on voit à travers les meubles ; l'image du film, elle, les garde.
+   On vérifie (sur une petite image, seulement quand on s'arrête de bouger) si la tête
+   ou le corps d'un personnage disparaît derrière le décor, pour prévenir. */
+let _hidT = 0;
+function hiddenLater(){ clearTimeout(_hidT); _hidT = setTimeout(checkHidden, 380); }
+function checkHidden(){
+  const gl = GL.gl; if(!gl || S.play || S.rec || DRAG.mode || HDRAG.c >= 0) return;
+  const sh = shot(), cam = sh.cam, sc = 0.5, w = Math.max(1, Math.round(R.canvas.width * sc)), h = Math.max(1, Math.round(R.canvas.height * sc));
+  const vp = viewProj(cam, R.canvas.width / R.canvas.height);
+  GL.beginPick(w, h, vp); GL.view(camEye(cam), []);
+  GL.draw(setMesh(sh.set).g, { raw:true, col:[0, 0, 0] });
+  const mats = sh.chars.map(ch => charMatrices(ch));
+  sh.chars.forEach((ch, c) => { const P = R.parts[lookOf(ch, c).id]; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], raw:true, col:[(c * 32 + J.idx + 1) / 255, 0, 0] }); });
+  const out = [];
+  sh.chars.forEach((ch, c) => {
+    const pts = [['head', M4.apply(mats[c].head, [0, 0.12, 0.05])], ['body', M4.apply(mats[c].chest, [0, 0.12, 0.08])]];
+    let hid = 0, seen = 0;
+    pts.forEach(([what, p]) => {
+      const q = M4.apply(vp, p); if(q[2] < -1 || q[2] > 1 || Math.abs(q[0]) > 0.98 || Math.abs(q[1]) > 0.98) return;
+      seen++;
+      const id = GL.readPick(Math.floor((q[0] + 1) / 2 * w), Math.floor((q[1] + 1) / 2 * h), true);
+      if(id === 0) hid++;
+    });
+    if(seen && hid === seen) out.push(c);
+  });
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  const sig = out.join(',');
+  if(sig !== (S.hidden || []).join(',')){ S.hidden = out; if(typeof renderWarn === 'function') renderWarn(); requestRender(); }
 }
 
 /* ---------- La poignée au-dessus de la tête (comme dans les Sims) ----------
@@ -315,57 +534,73 @@ function thumbLater(i, all){
    C'est un élément de la page, posé sur l'image : il n'est jamais dans les exports. */
 function placeHandles(sh, vp, w, h, mats){
   const host = document.getElementById('handles'); if(!host) return;
-  const sig = sh.chars.map(ch => ch.look).join(',') + getLang();
-  if(host.dataset.sig !== sig){ host.dataset.sig = sig; host.innerHTML = '';
-  }
-  if(host.children.length !== sh.chars.length) host.innerHTML = sh.chars.map((_, c) => `<div class="hd" data-c="${c}">
+  const crowds = sh.crowds || [];
+  const sig = sh.chars.map(ch => ch.look).join(',') + '|' + crowds.length + getLang();
+  if(host.dataset.sig !== sig){
+    host.dataset.sig = sig;
+    host.innerHTML = sh.chars.map((_, c) => `<div class="hd" data-c="${c}">
       <button class="hd-move" data-hd="move" data-c="${c}" aria-label="${esc(L('Déplacer ', 'Move ') + L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}"><svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1 22 13 12 31 2 13Z"/><path class="hl" d="M12 3.5 6 13h12Z"/></svg></button>
       <button class="hd-turn" data-hd="turn" data-c="${c}" aria-label="${esc(L('Tourner ', 'Turn ') + L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
+      <span class="hd-name">${esc(L(lookOf(sh.chars[c], c).fr, lookOf(sh.chars[c], c).en))}</span>
+    </div>`).join('') + crowds.map((_, k) => `<div class="hd hd-crowd" data-k="${k}">
+      <button class="hd-move" data-hd="cmove" data-k="${k}" aria-label="${esc(L('Déplacer la foule', 'Move the crowd'))}">${icon('crowd')}<span>${L('Foule', 'Crowd')}</span></button>
+      <button class="hd-turn" data-hd="cturn" data-k="${k}" aria-label="${esc(L('Tourner la foule', 'Turn the crowd'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.6v3h3"/></svg></button>
     </div>`).join('');
+  }
   const r = R.canvas.getBoundingClientRect(), k = r.width / w;
-  sh.chars.forEach((ch, c) => {
-    const el = host.children[c], top = M4.apply(mats[c].head, [0, 0.62, 0]);
+  const put = (el, p, minY) => {
+    const clip = [vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12], vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13], vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15]];
     // derrière la caméra : on cache la poignée
-    const clip = [vp[0] * top[0] + vp[4] * top[1] + vp[8] * top[2] + vp[12], vp[1] * top[0] + vp[5] * top[1] + vp[9] * top[2] + vp[13], vp[3] * top[0] + vp[7] * top[1] + vp[11] * top[2] + vp[15]];
     if(clip[2] <= 0.05){ el.style.display = 'none'; return; }
     const x = (clip[0] / clip[2] + 1) / 2 * w * k, y = (1 - clip[1] / clip[2]) / 2 * h * k;
     el.style.display = x < -20 || y < -40 || x > r.width + 20 || y > r.height + 20 ? 'none' : '';
-    el.style.transform = `translate(${Math.round(x)}px, ${Math.round(clamp(y, 18, r.height - 10))}px)`;
+    el.style.transform = `translate(${Math.round(x)}px, ${Math.round(clamp(y, minY, r.height - 10))}px)`;
+  };
+  sh.chars.forEach((ch, c) => {
+    const el = host.children[c]; if(!el) return;
+    put(el, M4.apply(mats[c].head, [0, 0.62, 0]), 18);
     el.classList.toggle('on', (S.sel && S.sel.c === c) || S.target === c);
-    el.classList.toggle('busy', HDRAG.c === c);
+    el.classList.toggle('busy', HDRAG.c === c && !HDRAG.crowd);
+  });
+  crowds.forEach((cr, i) => {
+    const el = host.children[sh.chars.length + i]; if(!el) return;
+    put(el, [cr.x, (cr.y || 0) + 2.3, cr.z], 18);
+    el.classList.toggle('on', S.crowd === i);
   });
 }
-const HDRAG = { c:-1, kind:null, x:0, y:0, snap:null, moved:false };
+const HDRAG = { c:-1, kind:null, x:0, y:0, snap:null, moved:false, crowd:false };
 function onHandleDown(e){
   const b = e.target.closest('[data-hd]'); if(!b || S.rec) return;
   e.preventDefault(); e.stopPropagation();
-  const c = +b.dataset.c, ch = shot().chars[c]; if(!ch) return;
+  const crowd = b.dataset.hd[0] === 'c', c = crowd ? +b.dataset.k : +b.dataset.c;
+  if(crowd ? !shot().crowds[c] : !shot().chars[c]) return;
   b.setPointerCapture(e.pointerId);
-  HDRAG.c = c; HDRAG.kind = b.dataset.hd; HDRAG.snap = snapshot(); HDRAG.moved = false; HDRAG.x = e.clientX;
-  S.target = c; S.sel = { c, j:'pelvis' };
-  HDRAG.y = e.clientY;
+  HDRAG.c = c; HDRAG.crowd = crowd; HDRAG.kind = crowd ? b.dataset.hd.slice(1) : b.dataset.hd; HDRAG.snap = snapshot(); HDRAG.moved = false; HDRAG.x = e.clientX; HDRAG.y = e.clientY;
+  if(crowd){ S.crowd = c; S.sel = null; if(typeof setPanel === 'function') setPanel('crowd', true); }
+  else { S.target = c; S.sel = { c, j:'pelvis' }; }
   document.body.classList.add('dragging');
   renderSide(); renderTools(); renderHint(); requestRender();
 }
 function onHandleMove(e){
   if(HDRAG.c < 0) return;
-  const ch = shot().chars[HDRAG.c]; if(!ch) return;
+  const o = HDRAG.crowd ? shot().crowds[HDRAG.c] : shot().chars[HDRAG.c]; if(!o) return;
+  const pos = HDRAG.crowd ? o : o.root;
   if(HDRAG.kind === 'move'){
     // la souris glisse, le personnage suit sur le sol : vers la droite de l'image, ou vers le fond
     const dx = e.clientX - HDRAG.x, dy = e.clientY - HDRAG.y; HDRAG.x = e.clientX; HDRAG.y = e.clientY;
     if(dx || dy){
       const c = viewCam(), eye = camEye(c), y = c.yaw * D2R;
-      const vx = ch.root.x - eye[0], vy = 1.0 + ch.root.y - eye[1], vz = ch.root.z - eye[2], d = Math.hypot(vx, vy, vz) || 1;
+      const vx = pos.x - eye[0], vy = 1.0 + (pos.y || 0) - eye[1], vz = pos.z - eye[2], d = Math.hypot(vx, vy, vz) || 1;
       const k = d * 2 * Math.tan(fovOf(c.lens) / 2) / (R.canvas.getBoundingClientRect().height || 500);
       const depth = 1 / clamp(Math.abs(vy) / d + 0.25, 0.35, 1);     // vu de haut, un pixel vers le fond fait moins de chemin
-      const rx = Math.cos(y), rz = -Math.sin(y), fx = -Math.sin(y), fz = -Math.cos(y);
-      ch.root.x = clamp(ch.root.x + (rx * dx - fx * dy * depth) * k, -12, 12);
-      ch.root.z = clamp(ch.root.z + (rz * dx - fz * dy * depth) * k, -14, 12);
+      const rx = Math.cos(y), rz = -Math.sin(y), fx = -Math.sin(y), fz = -Math.cos(y), lim = HDRAG.crowd ? 120 : 60;
+      pos.x = clamp(pos.x + (rx * dx - fx * dy * depth) * k, -lim, lim);
+      pos.z = clamp(pos.z + (rz * dx - fz * dy * depth) * k, -lim, lim);
       HDRAG.moved = true;
     }
   } else {
     const dx = e.clientX - HDRAG.x; HDRAG.x = e.clientX;
-    if(dx){ ch.root.ry = ((ch.root.ry + dx * 0.8) % 360 + 540) % 360 - 180; HDRAG.moved = true; renderSide(true); }
+    if(dx){ pos.ry = (((pos.ry || 0) + dx * 0.8) % 360 + 540) % 360 - 180; HDRAG.moved = true; renderSide(true); }
   }
   requestRender();
 }
@@ -384,7 +619,7 @@ function pickAt(px, py){
   sh.chars.forEach((ch, c) => {
     const M = charMatrices(ch);
     const P = R.parts[lookOf(ch, c).id];
-    for(const J of JOINTS){ const id = c * 32 + J.idx + 1; GL.draw(P[J.id], { m:M[J.id], flat:true, col:[id / 255, 0, 0] }); }
+    for(const J of JOINTS){ const id = c * 32 + J.idx + 1; GL.draw(P[J.id], { m:M[J.id], raw:true, col:[id / 255, 0, 0] }); }
   });
   const id = GL.readPick(Math.floor(px * sc), Math.floor(h - 1 - py * sc));
   if(!id) return null;
@@ -418,7 +653,8 @@ function onDown(e){
   DRAG.x = e.clientX; DRAG.y = e.clientY; DRAG.moved = false;
   const hit = e.button === 0 && !e.shiftKey ? pickAt(x, y) : null;
   if(hit){
-    S.sel = hit; S.target = hit.c; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
+    S.sel = Object.assign(hit, { pick:true }); S.target = hit.c; S.crowd = -1; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
+    if(DRAG.mode === 'pose' && S.panel !== 'pose'){ S.panel = 'pose'; lsSet(LS_PANEL, 'pose'); }
     if(DRAG.mode === 'move'){ const ch = shot().chars[hit.c], g = groundAt(x, y, 0); DRAG.grab = g ? [ch.root.x - g[0], ch.root.z - g[1]] : null; }
     renderSide(); renderTools(); renderHint(); requestRender();
   } else {
@@ -431,7 +667,7 @@ function panBy(cam, dx, dy){
   const k = cam.dist * Math.tan(fovOf(cam.lens) / 2) * 2 / (R.canvas.getBoundingClientRect().height || 500), y = cam.yaw * D2R, p = cam.pitch * D2R;
   cam.tx -= Math.cos(y) * dx * k; cam.tz += Math.sin(y) * dx * k;
   // vers le haut et le bas : selon l'inclinaison de la caméra, on monte ou on avance
-  cam.ty = clamp(cam.ty + Math.cos(p) * dy * k, -0.5, 8);
+  cam.ty = clamp(cam.ty + Math.cos(p) * dy * k, -0.5, 30);
   cam.tx -= Math.sin(y) * Math.sin(p) * dy * k; cam.tz -= Math.cos(y) * Math.sin(p) * dy * k;
 }
 function onMove(e){
@@ -441,7 +677,7 @@ function onMove(e){
   if(DRAG.mode === 'pinch'){
     if(DRAG.pts.size < 2) return;
     const [a, b] = [...DRAG.pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    cam.dist = clamp(DRAG.dist0 * DRAG.pinch / Math.max(d, 1), 0.35, 30);
+    cam.dist = clamp(DRAG.dist0 * DRAG.pinch / Math.max(d, 1), 0.35, 80);
     panBy(cam, mid[0] - DRAG.mid[0], mid[1] - DRAG.mid[1]); DRAG.mid = mid;   // deux doigts : zoomer et se décaler
     DRAG.moved = true; requestRender(); return;
   }
@@ -459,7 +695,7 @@ function onMove(e){
   }
   else if(DRAG.mode === 'move'){
     const [x, y] = canvasXY(e), g = groundAt(x, y, 0), ch = shot().chars[S.sel.c];
-    if(g && DRAG.grab){ ch.root.x = clamp(g[0] + DRAG.grab[0], -12, 12); ch.root.z = clamp(g[1] + DRAG.grab[1], -14, 12); }
+    if(g && DRAG.grab){ ch.root.x = clamp(g[0] + DRAG.grab[0], -60, 60); ch.root.z = clamp(g[1] + DRAG.grab[1], -60, 60); }
   }
   requestRender();
 }
@@ -478,7 +714,7 @@ let _wheelT = 0, _wheelSnap = null;
 function onWheel(e){
   e.preventDefault(); S.tween = null;
   if(!_wheelSnap) _wheelSnap = snapshot();
-  const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015), nd = clamp(c.dist * f, 0.35, 30);
+  const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015), nd = clamp(c.dist * f, 0.35, 80);
   const [x, y] = canvasXY(e), g = groundAt(x, y, c.ty);
   if(g && f < 1){ const k = (1 - nd / c.dist) * 0.5; c.tx += (g[0] - c.tx) * k; c.tz += (g[1] - c.tz) * k; }
   c.dist = nd; requestRender();
@@ -512,12 +748,12 @@ function navStep(kind, dt){
   else if(kind === 'back'){ c.tx -= fx * sp; c.tz -= fz * sp; }
   else if(kind === 'left'){ c.tx -= rx * sp; c.tz -= rz * sp; }
   else if(kind === 'right'){ c.tx += rx * sp; c.tz += rz * sp; }
-  else if(kind === 'up') c.ty = clamp(c.ty + sp * 0.6, -0.5, 8);
+  else if(kind === 'up') c.ty = clamp(c.ty + sp * 0.6, -0.5, 30);
   else if(kind === 'down') c.ty = clamp(c.ty - sp * 0.6, -0.5, 8);
   else if(kind === 'turnL') c.yaw += turn;
   else if(kind === 'turnR') c.yaw -= turn;
   else if(kind === 'in') c.dist = clamp(c.dist * Math.exp(-1.2 * dt), 0.35, 30);
-  else if(kind === 'out') c.dist = clamp(c.dist * Math.exp(1.2 * dt), 0.35, 30);
+  else if(kind === 'out') c.dist = clamp(c.dist * Math.exp(1.2 * dt), 0.35, 80);
 }
 function navLoop(now){
   const kinds = [...NAV.keys]; if(NAV.held) kinds.push(NAV.held);
@@ -534,4 +770,34 @@ function navStart(kind){
 function navEnd(){
   if(NAV.held || NAV.keys.size) return;
   if(NAV.snap){ pushUndo(NAV.snap); NAV.snap = null; changed(); }
+}
+
+/* ---------- Les petites images des poses (dans le volet) ----------
+   Chaque pose est dessinée une fois, avec le personnage choisi, puis gardée. */
+const POSE_PREV = new Map();
+function posePreview(look, pid){
+  const key = look + ':' + pid + ':' + (S.doc.style || '');
+  if(POSE_PREV.has(key)) return POSE_PREV.get(key);
+  const gl = GL.gl; if(!gl) return '';
+  const ch = newChar(0, { x:0, z:0, ry:0 }, look); applyPose(ch, pid);
+  const M = charMatrices(ch), pts = Object.values(M).map(m => M4.apply(m, [0, 0, 0])).concat([M4.apply(M.head, [0, 0.26, 0]), M4.apply(M.footL, [0, -0.07, 0.2]), M4.apply(M.footR, [0, -0.07, 0.2])]);
+  const lo = [0, 1, 2].map(i => Math.min(...pts.map(p => p[i]))), hi = [0, 1, 2].map(i => Math.max(...pts.map(p => p[i])));
+  const c = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2], size = Math.max(hi[1] - lo[1], (hi[0] - lo[0]) * 1.25, (hi[2] - lo[2]) * 0.9, 0.6);
+  const w = 120, h = 150, lens = 50, dist = size / 2 / Math.tan(fovOf(lens) / 2) * 1.12, y = 28 * D2R, p = -8 * D2R;
+  const cam = camLook([c[0] + Math.sin(y) * Math.cos(p) * dist, c[1] - Math.sin(p) * dist, c[2] + Math.cos(y) * Math.cos(p) * dist], c, lens);
+  const ow = R.canvas.width, oh = R.canvas.height;
+  R.canvas.width = w; R.canvas.height = h;
+  const vp = viewProj(cam, w / h), eye = camEye(cam), bg = hexRGB('#E7EBF0');
+  GL.begin(w, h, vp, bg, { bw:S.doc.style === 'bw' }); GL.view(eye, []);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+  const fy = Math.min(M4.apply(M.footL, [0, -0.065, 0])[1], M4.apply(M.footR, [0, -0.065, 0])[1]), pc = M4.apply(M.pelvis, [0, 0, 0]);
+  GL.draw(R.blob, { m:M4.mul(M4.trans(pc[0], fy + 0.004, pc[2]), [1.1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1.1, 0, 0, 0, 0, 1]), flat:true, a:0.16, col:[0.06, 0.07, 0.09] });
+  gl.depthMask(true); gl.disable(gl.BLEND);
+  const lk = CHAR_LOOK[look] || CHAR_LOOK[0], px = 2 * Math.tan(fovOf(lens) / 2) / h * 1.3;
+  gl.cullFace(gl.FRONT); for(const J of JOINTS) GL.draw(R.out[lk.id][J.id], { m:M[J.id], flat:true, col:INK, out:px }); gl.cullFace(gl.BACK);
+  for(const J of JOINTS) GL.draw(R.parts[lk.id][J.id], { m:M[J.id], col:[1, 1, 1], mul:true, char:true });
+  const url = R.canvas.toDataURL('image/jpeg', 0.85);
+  R.canvas.width = ow; R.canvas.height = oh; requestRender();
+  POSE_PREV.set(key, url);
+  return url;
 }
