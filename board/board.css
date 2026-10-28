@@ -1,5 +1,5 @@
 /* =====================================================================
-   RAGING 3D — même direction artistique que Raging Page et Raging Draw :
+   RAGING BOARD — même direction artistique que Raging Page et Raging Draw :
    mêmes couleurs de fond, mêmes typographies (Inter, Fraunces pour le nom),
    même colonne sombre, mêmes boutons, mêmes volets. La couleur de l'outil est le vert.
 ===================================================================== */
@@ -69,7 +69,7 @@ html[data-theme="dark"] .seg button.on{background:#2A2C32;}
 
 /* ---------- Le nom ---------- */
 .mm-word{display:inline-flex; align-items:center; line-height:0; white-space:nowrap; user-select:none;}
-.mm-word svg{display:block; height:1em; width:4.125em;}
+.mm-word svg{display:block; height:1em; width:5.405em;}
 .mm-word .w1{fill:var(--ink);} .mm-word .w2{fill:var(--accent);}
 
 /* ---------- La colonne sombre ---------- */
@@ -170,20 +170,22 @@ html[data-theme="dark"] .sh-chip.mv{color:var(--accent-ink);}
 /* ---------- Les poignées au-dessus des têtes (jamais dans les exports : elles sont hors de l'image 3D) ---------- */
 .handles{position:absolute; inset:0; pointer-events:none; overflow:hidden;}
 .hd{position:absolute; left:0; top:0; width:0; height:0; pointer-events:none;}
-.hd-move{position:absolute; left:-15px; top:-40px; width:30px; height:40px; padding:0; border:0; background:transparent; pointer-events:auto; cursor:grab; touch-action:none; animation:bob 2.4s ease-in-out infinite;}
-.hd-move svg{display:block; width:30px; height:40px; filter:drop-shadow(0 3px 4px rgba(15,77,49,.35));}
-.hd-move path{fill:#7FD1A8; stroke:#fff; stroke-width:1.6; stroke-linejoin:round;}
-.hd-move .hl{fill:#ffffff8c; stroke:none;}
-.hd.on .hd-move path:first-child{fill:var(--accent);}
-.hd-move:hover{animation-play-state:paused;}
-.hd-move:hover svg{transform:scale(1.12);}
-.hd.busy .hd-move{cursor:grabbing; animation:none;}
-.hd-turn{position:absolute; left:14px; top:-30px; width:22px; height:22px; padding:0; display:grid; place-items:center; border:1.5px solid #fff; border-radius:50%; background:#ffffffe6; color:var(--accent-2); pointer-events:auto; cursor:ew-resize; touch-action:none; box-shadow:0 2px 5px rgba(16,24,40,.25); opacity:0; transition:opacity .15s;}
+.hd-move{position:absolute; left:-11px; top:-31px; width:22px; height:28px; padding:0; border:0; background:transparent; pointer-events:auto; cursor:grab; touch-action:none; opacity:.72; transform-origin:50% 100%; transform:scale(.86); transition:opacity .15s, transform .15s;}
+.hd-move svg{display:block; width:22px; height:28px; overflow:visible; filter:drop-shadow(0 2px 3px rgba(15,77,49,.3));}
+.hd-move .pin{fill:#FCFDFE; stroke:#22A06B; stroke-width:1.7; stroke-linejoin:round;}
+.hd-move .ft{fill:none; stroke:#0F4D31;} .hd-move .fe{fill:#0F4D31;} .hd-move .fh{fill:#FCFDFE;}
+.hd:hover .hd-move, .hd.busy .hd-move{opacity:1; transform:scale(1.08);}
+.hd.on .hd-move{opacity:1; transform:scale(1);}
+.hd.on .hd-move .pin{fill:#22A06B; stroke:#FCFDFE;}
+.hd.on .hd-move .ft{stroke:#FCFDFE;} .hd.on .hd-move .fe{fill:#FCFDFE;} .hd.on .hd-move .fh{fill:#0F4D31;}
+.hd.busy .hd-move{cursor:grabbing;}
+.hd-turn{position:absolute; left:12px; top:-30px; width:20px; height:20px; padding:0; display:grid; place-items:center; border:1.5px solid #fff; border-radius:50%; background:#ffffffe6; color:var(--accent-2); pointer-events:auto; cursor:ew-resize; touch-action:none; box-shadow:0 2px 5px rgba(16,24,40,.25); opacity:0; transition:opacity .15s;}
 .hd-turn svg{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;}
 .hd:hover .hd-turn, .hd.on .hd-turn, .hd.busy .hd-turn{opacity:1;}
-.hd-name{position:absolute; left:0; top:-62px; transform:translateX(-50%); padding:2px 8px; border-radius:999px; background:#23262Ed9; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; opacity:0; transition:opacity .15s; pointer-events:none;}
+.hd-name{position:absolute; left:0; top:-52px; transform:translateX(-50%); padding:2px 8px; border-radius:999px; background:#23262Ed9; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; opacity:0; transition:opacity .15s; pointer-events:none;}
 .hd:hover .hd-name, .hd.busy .hd-name{opacity:1;}
-.hd-crowd .hd-move{left:-34px; top:-30px; width:auto; height:28px; display:flex; align-items:center; gap:6px; padding:0 11px; border-radius:999px; background:#fff; color:var(--accent-2); font-size:12px; font-weight:700; box-shadow:0 3px 10px rgba(15,77,49,.3), inset 0 0 0 1.5px #7FD1A8; animation:none;}
+.hd-crowd .hd-move{left:-34px; top:-30px; width:auto; height:28px; display:flex; align-items:center; gap:6px; padding:0 11px; border-radius:999px; background:#fff; color:var(--accent-2); font-size:12px; font-weight:700; box-shadow:0 3px 10px rgba(15,77,49,.25), inset 0 0 0 1.5px #7FD1A8; opacity:.85; transform:none; height:24px; padding:0 9px; font-size:11.5px;}
+.hd-crowd:hover .hd-move, .hd-crowd.on .hd-move{opacity:1; transform:none;}
 .hd-crowd .hd-move .icon{width:15px; height:15px;}
 .hd-crowd.on .hd-move{background:var(--accent); color:#fff; box-shadow:0 3px 10px rgba(15,77,49,.35);}
 .hd-crowd .hd-turn{left:44px; top:-27px;}
@@ -214,7 +216,10 @@ body.dragging, body.dragging *{cursor:grabbing !important; user-select:none;}
 .ptile.sm{align-items:center; justify-content:center; flex-direction:row; gap:5px; padding:10px 4px; font-size:12px; text-align:center; color:var(--accent-2);}
 .ptile.sm span{padding:0;}
 .ptile.sm .icon{color:var(--accent); width:13px; height:13px;}
-.sw{display:block; height:44px; border-radius:7px; box-shadow:inset 0 0 0 1px #0000001a;}
+.sw{display:block; aspect-ratio:16/9; border-radius:7px; box-shadow:inset 0 0 0 1px #0000001a; background-size:cover !important; background-position:center !important;}
+.sw-house{background:linear-gradient(160deg, #86B3D9 0 35%, #8C4A3A 35% 52%, #E6DDCC 52% 80%, #7C9A5A 80%);}
+.sw-roof{background:linear-gradient(160deg, #6F9CC9 0 45%, #A6ACB4 45% 60%, #8D9198 60%);}
+.sw-warehouse{background:linear-gradient(160deg, #6E737B 0 25%, #9AA0A8 25% 60%, #E3B53A 60% 64%, #8A8E95 64%);}
 .sw-garage{background:linear-gradient(160deg, #A8ADB5 0 55%, #8D9198 55%);}
 .sw-office{background:linear-gradient(160deg, #E6E2DA 0 55%, #7A5C42 55%);}
 .sw-alley{background:linear-gradient(160deg, #9DB3C8 0 22%, #9A8B7E 22% 70%, #2F6E4F 70%);}
@@ -422,3 +427,9 @@ input[type=range]::-moz-range-thumb{width:12px; height:12px; border-radius:50%; 
   .sh-r .seg button{font-size:0; gap:0;} .sh-r .seg button .icon{width:16px; height:16px;}
   .shot-card{width:156px;}
 }
+
+/* ---------- Poses rangées par familles, couleurs de la moto ---------- */
+.pose-g{margin:14px 0 2px; font-size:11.5px; font-weight:600; color:var(--ink-soft);}
+.qsw{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:4px 0 6px;}
+.qsw button{width:26px; height:26px; padding:0; border:0; border-radius:50%; background:var(--c); box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);}
+.qsw button.on{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--accent);}

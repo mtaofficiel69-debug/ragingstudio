@@ -1,5 +1,5 @@
 /* =====================================================================
-   RAGING 3D — INTERFACE
+   RAGING BOARD — INTERFACE
    La même maison que Raging Draw : à gauche la colonne sombre (les étapes),
    en haut la barre du projet, au centre l'image du plan, à droite le volet
    de l'étape choisie, en bas le storyboard (en bande, ou en planche entière).
@@ -9,6 +9,7 @@ const LS_PANEL = 'raging3d_panel', LS_THEME = 'raging3d_theme';
 S.panel = lsGet(LS_PANEL) || 'place';
 S.view = 'stage';          // 'stage' : on met en scène ; 'sheet' : la planche entière, pour écrire
 S.crowd = -1;              // la foule choisie
+S.veh = -1;                // le véhicule choisi
 S.hidden = [];
 
 /* ---------- Les étapes, dans la colonne de gauche ---------- */
@@ -21,7 +22,7 @@ const PANELS = [
   { g:['Caméra', 'Camera'], items:[
     { id:'frame', n:4, ic:'frame', fr:'Le cadrage', en:'Framing' },
     { id:'move', ic:'move', fr:'Le mouvement', en:'Camera move' },
-    { id:'car', ic:'car', fr:'En voiture', en:'In the car' } ] },
+    { id:'car', ic:'car', fr:'Les véhicules', en:'Vehicles' } ] },
   { g:['Le plan', 'The shot'], items:[
     { id:'text', n:5, ic:'text', fr:'Ce qui se passe', en:'What happens' } ] },
   { g:['Le film', 'The film'], items:[
@@ -69,11 +70,11 @@ function renderUI(){
 function renderRail(){
   const el = document.getElementById('rail'); if(!el) return;
   const s = shot(), n = S.doc.shots.length;
-  const badge = id => id === 'chars' ? s.chars.length : id === 'crowd' ? (s.crowds.length || '') : '';
+  const badge = id => id === 'chars' ? s.chars.length : id === 'crowd' ? (s.crowds.length || '') : id === 'car' ? ((s.vehicles || []).length || '') : '';
   el.innerHTML = `<a class="rail-brand" href="${HUB()}" title="${esc(L('Retour à l’accueil de Raging Studio', 'Back to Raging Studio home'))}">${r3Logo(34, 'rail-logo')}${r3Wordmark()}</a>
     <div class="rail-project" data-label="${esc(L('Storyboard', 'Storyboard'))}">${esc(S.doc.title || L('Sans titre', 'Untitled'))}</div>
     <nav class="rail-nav">${PANELS.map(g => `<div class="rail-group">${esc(L(g.g[0], g.g[1]))}</div>` + g.items.map(p => {
-      const b = badge(p.id), off = p.id === 'car' && s.set !== 'taxi';
+      const b = badge(p.id), off = false;
       return `<button class="rail-item ${S.panel === p.id ? 'active' : ''} ${off ? 'dim' : ''}" data-act="panel" data-id="${p.id}" title="${esc(L(p.fr, p.en))}">${p.n ? `<i class="rn">${p.n}</i>` : icon(p.ic)}<span class="lbl">${esc(L(p.fr, p.en))}</span>${b !== '' ? `<b class="rb">${b}</b>` : ''}</button>`;
     }).join('')).join('')}</nav>
     <div class="rail-bottom"><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span><span>${R3_VERSION}</span></div>`;
@@ -174,7 +175,7 @@ function renderHint(){
   else if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer le personnage', 'drag to move the character') : L('glisse pour bouger', 'drag to move'));
   else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer sur le sol', 'Drag to move on the floor') : L('Glisse à gauche ou à droite pour faire tourner', 'Drag left or right to turn');
   else if(S.sel) t = L('Glisse la partie verte pour la bouger · Clique dans le vide pour désélectionner', 'Drag the green part to move it · Click empty space to deselect');
-  else t = L('Losange vert : maintiens-le pour déplacer · Glisse dans le vide : tourner · Clic droit : se décaler · Molette : avancer · Double-clic : viser', 'Green diamond: hold to move · Drag empty space: orbit · Right-click: pan · Wheel: move in · Double-click: aim');
+  else t = L('Épingle verte : maintiens-la pour déplacer · Glisse dans le vide : tourner · Clic droit : se décaler · Molette : avancer · Double-clic : viser', 'Green pin: hold to move · Drag empty space: orbit · Right-click: pan · Wheel: move in · Double-click: aim');
   el.innerHTML = `<i></i>${esc(t)}`;
 }
 
@@ -219,6 +220,20 @@ function renderPanel(){
   el.dataset.p = S.panel;
   if(same) el.querySelector('.side-body').scrollTop = top;
   renderRail();
+  fillPlacePreviews(); fillPosePreviews();
+}
+/* les vignettes des lieux se dessinent une par une, sans bloquer l'interface */
+let _ppT = 0;
+function fillPlacePreviews(){
+  clearTimeout(_ppT);
+  const el = [...document.querySelectorAll('[data-pp]')].find(e => !e.style.backgroundImage); if(!el || S.play || S.rec || !GL.gl) return;
+  _ppT = setTimeout(() => { el.style.backgroundImage = `url(${placePreview(el.dataset.pp)})`; fillPlacePreviews(); }, 16);
+}
+let _pvT = 0;
+function fillPosePreviews(){
+  clearTimeout(_pvT);
+  const el = document.querySelector('img[data-pv]'); if(!el || S.play || S.rec || !GL.gl) return;
+  _pvT = setTimeout(() => { const [lk, pid] = el.dataset.pv.split(':'); el.src = posePreview(+lk, pid); el.removeAttribute('data-pv'); fillPosePreviews(); }, 12);
 }
 function renderTools(){ renderHead(); renderPanel(); renderView(); }
 function renderShotPanel(){ renderHead(); if(S.panel === 'text' || S.panel === 'move') renderPanel(); renderTop(); }
@@ -245,16 +260,17 @@ const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-
 
 const PANEL_HTML = {
   place(){
-    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall']], [L('Dans la rue', 'Outdoors'), ['alley', 'taxi', 'park']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country']]];
+    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse']], [L('La maison de campagne, tous ses étages', 'The country house, every floor'), ['house']], [L('Dans la rue', 'Outdoors'), ['alley', 'taxi', 'park', 'roof']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country']]];
+    const fl = SET_DEF[sh.set].floors ? lbl(L('Aller à l’étage', 'Go to a floor')) + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip" data-act="floor" data-k="${k}">${icon('stairs')}${esc(L(f[0], f[1]))}</button>`).join('')}</div><p class="fly-note">${L('La caméra va à l’étage ; ceux du dessus s’effacent, comme une maison de poupée qu’on ouvre.', 'The camera goes to that floor; the floors above fade away, like opening a dollhouse.')}</p>` : '';
     return ph('place', L('Le lieu', 'The place'), L('Où se passe le plan. Les personnages s’y placent tout seuls, à des places toutes prêtes.', 'Where the shot happens. Characters go to ready-made spots by themselves.')) +
-      `<div class="pb">${groups.map(([t, ids]) => lbl(t) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}"></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+      `<div class="pb">${fl}${groups.map(([t, ids]) => lbl(t) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
   },
   chars(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
     const rows = chars.map((c, i) => `<div class="crow ${t === i ? 'on' : ''}"><button class="crow-main" data-act="pickChar" data-c="${i}" title="${esc(L('La caméra va vers ', 'The camera goes to ') + L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}<span>${charName(i)}</span>${t === i ? `<em>${L('cadré', 'framed')}</em>` : ''}</button>${chars.length > 1 ? `<button class="ib sm danger" data-act="removeChar" data-c="${i}" title="${esc(L('Retirer du plan', 'Remove from the shot'))}">${icon('close')}</button>` : ''}</div>`).join('');
     const add = `<div class="figs">${CHAR_LOOK.map((lk, k) => `<button class="fig-t" data-act="addChar" data-look="${k}" ${used.includes(k) || chars.length >= MAX_CHARS ? 'disabled' : ''} title="${esc(L(lk.fr, lk.en))}">${figure(lk)}<small>${esc(L(lk.fr, lk.en))}</small></button>`).join('')}</div>`;
     const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
-    return ph('users', L('Les personnages', 'The characters'), L('Jusqu’à six par plan. Clique un nom : la caméra va vers lui. Maintiens le losange vert au-dessus de sa tête pour le déplacer.', 'Up to six per shot. Click a name: the camera goes to them. Hold the green diamond above their head to move them.')) +
+    return ph('users', L('Les personnages', 'The characters'), L('Jusqu’à six par plan. Clique un nom : la caméra va vers lui. Maintiens l’épingle verte au-dessus de sa tête pour le déplacer.', 'Up to six per shot. Click a name: the camera goes to them. Hold the green pin above their head to move them.')) +
       `<div class="pb">${lbl(L('Dans ce plan', 'In this shot'))}${rows}
       ${lbl(L('Ajouter', 'Add') + ` <span class="cnt">${chars.length} / ${MAX_CHARS}</span>`)}${add}
       ${lbl(L('Placer ', 'Place ') + charName(t))}<div class="chips">${spots}</div>
@@ -263,7 +279,10 @@ const PANEL_HTML = {
   pose(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, ch = chars[t], look = ch ? ch.look : 0, sel = S.sel;
     const who = chars.length > 1 ? `<div class="seg wide">${chars.map((c, i) => `<button class="${t === i ? 'on' : ''}" data-act="pickChar" data-c="${i}" title="${esc(L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}</button>`).join('')}</div>` : '';
-    const tiles = POSES.map(p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img src="${posePreview(look, p.id)}" alt=""><span>${esc(L(p.fr, p.en))}</span></button>`).join('');
+    const tile = p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img ${POSE_PREV.has(look + ':' + p.id + ':' + (S.doc.style || '')) ? `src="${POSE_PREV.get(look + ':' + p.id + ':' + (S.doc.style || ''))}"` : `data-pv="${look}:${p.id}"`} alt=""><span>${esc(L(p.fr, p.en))}</span></button>`;
+    const tiles = POSE_GROUPS.map(([g, fr, en]) => `<div class="pose-g">${esc(L(fr, en))}</div><div class="poses">${POSES.filter(p => p.g === g).map(tile).join('')}</div>`).join('');
+    const prop = ch ? `${lbl(L('Dans la main', 'In hand'))}<div class="seg wide"><button class="${!ch.prop ? 'on' : ''}" data-act="prop" data-id="">${L('Rien', 'Nothing')}</button>${PROPS.map(([id, fr, en]) => `<button class="${ch.prop === id ? 'on' : ''}" data-act="prop" data-id="${id}">${id === 'gun' ? icon('gun') : ''}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
+    const gun = ch && ch.prop === 'gun' ? lbl(L('Prises de vue avec l’arme', 'Shots with the gun')) + `<div class="cars">${GUN_SHOTS.map(P => `<button class="car-t" data-act="gunShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
     let part;
     if(sel && chars[sel.c]){
       const J = JOINT[sel.j], v = chars[sel.c].j[sel.j], c2 = chars[sel.c];
@@ -273,7 +292,7 @@ const PANEL_HTML = {
         <button class="btn btn-sm" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
     } else part = `<p class="fly-note">${L('Pour un geste précis : clique sur une partie du corps dans l’image (un bras, la tête…) et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture (an arm, the head…) and drag. Its settings show up here.')}</p>`;
     return ph('pose', L('Les poses de ', 'Poses for ') + charName(t), L('Une pose en un clic, puis les retouches à la main si besoin.', 'One click for a pose, then hand touch-ups if needed.')) +
-      `<div class="pb">${who}<div class="poses">${tiles}</div>${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
+      `<div class="pb">${who}${tiles}${prop}${gun}${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
   },
   crowd(){
     const sh = shot(), cr = sh.crowds, k = cr[S.crowd] ? S.crowd : -1, c = cr[k];
@@ -316,12 +335,16 @@ const PANEL_HTML = {
       <div class="pbtns"><button class="btn btn-sm btn-play" data-act="previewShot">${icon('play')}${L('Voir ce plan bouger', 'Watch this shot move')}</button></div></div>`;
   },
   car(){
-    const sh = shot();
-    if(sh.set !== 'taxi') return ph('car', L('En voiture', 'In the car'), L('Des prises de vue toutes prêtes à l’intérieur et autour du taxi.', 'Ready-made shots inside and around the taxi.')) +
-      `<div class="pb"><p class="fly-note">${L('Ce plan n’est pas dans le taxi. Passe dans le lieu « Taxi » pour les utiliser : les vitres sont transparentes, on voit les passagers.', 'This shot isn’t in the taxi. Switch to the “Taxi” place to use them: the windows are see-through, you can see the passengers.')}</p><div class="pbtns"><button class="btn btn-primary btn-sm" data-act="place" data-id="taxi">${icon('car')}${L('Aller dans le taxi', 'Go to the taxi')}</button></div></div>`;
-    return ph('car', L('En voiture', 'In the car'), L('Des prises de vue de voiture toutes prêtes. Elles visent le conducteur au volant et le passager à l’arrière.', 'Ready-made car shots. They aim at the driver at the wheel and the passenger in the back.')) +
-      `<div class="pb"><div class="pbtns"><button class="btn btn-sm" data-act="carSetup">${icon('users')}${L('Installer : conducteur et passager', 'Seat the driver and the passenger')}</button></div>
-      ${lbl(L('Prises de vue', 'Shots'))}<div class="cars">${CAR_SHOTS.map(p => `<button class="car-t" data-act="carShot" data-id="${p[0]}">${sizeGlyph(p[6])}<span>${esc(L(p[1], p[2]))}</span></button>`).join('')}</div></div>`;
+    const sh = shot(), vs = sh.vehicles || [], k = vs[S.veh] ? S.veh : vs.length ? 0 : -1, v = vs[k], t = S.sel ? S.sel.c : S.target;
+    const taxi = sh.set === 'taxi'
+      ? lbl(L('Le taxi', 'The taxi')) + `<div class="pbtns"><button class="btn btn-sm" data-act="carSetup">${icon('users')}${L('Installer : conducteur et passager', 'Seat the driver and the passenger')}</button></div><div class="cars">${CAR_SHOTS.map(p => `<button class="car-t" data-act="carShot" data-id="${p[0]}">${sizeGlyph(p[6])}<span>${esc(L(p[1], p[2]))}</span></button>`).join('')}</div>`
+      : lbl(L('Le taxi', 'The taxi')) + `<p class="fly-note">${L('Le taxi est un lieu à part : ses vitres sont transparentes et dix prises de vue sont prêtes à l’intérieur.', 'The taxi is a place of its own: see-through windows and ten ready-made shots inside.')}</p><div class="pbtns"><button class="btn btn-sm" data-act="place" data-id="taxi">${icon('car')}${L('Aller dans le taxi', 'Go to the taxi')}</button></div>`;
+    const list = vs.map((x, i) => `<div class="crow ${i === k ? 'on' : ''}"><button class="crow-main" data-act="pickVeh" data-k="${i}">${icon('moto')}<span>${L('Moto', 'Motorbike')} ${i + 1}</span><em>${esc(sh.chars.filter(c => c.on && c.on.v === x.id).map((c, j) => L(lookOf(c).fr, lookOf(c).en)).join(', '))}</em></button><button class="ib sm danger" data-act="removeVeh" data-k="${i}" title="${esc(L('Retirer', 'Remove'))}">${icon('close')}</button></div>`).join('');
+    const set = v ? `<div class="qsw">${MOTO_COLS.map(c => `<button class="${v.col === c ? 'on' : ''}" style="--c:${c}" data-act="vehCol" data-c="${c}" aria-label="${c}"></button>`).join('')}</div>
+      <div class="pbtns"><button class="btn btn-sm" data-act="mount" data-seat="0">${icon('moto')}${L('Mettre ', 'Put ') + charName(t) + L(' au guidon', ' at the handlebars')}</button><button class="btn btn-sm" data-act="mount" data-seat="1">${L('Passager', 'Passenger')}</button></div>
+      ${lbl(L('Prises de vue de la moto', 'Motorbike shots'))}<div class="cars">${MOTO_SHOTS.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
+    return ph('car', L('Les véhicules', 'Vehicles'), L('Le taxi, et une moto à poser où tu veux (rue, campagne, ruelle…). Un personnage monte dessus en un clic, et la moto a ses prises de vue toutes prêtes.', 'The taxi, and a motorbike to put anywhere (street, countryside, alley…). A character gets on in one click, and the bike has its own ready-made shots.')) +
+      `<div class="pb">${lbl(L('La moto', 'The motorbike'))}<div class="pbtns"><button class="btn btn-sm btn-play" data-act="addVeh">${icon('plus')}${L('Ajouter une moto devant la caméra', 'Add a motorbike in front of the camera')}</button></div>${list}${set}${taxi}</div>`;
   },
   text(){
     const sh = shot(), inf = sh.info, n = S.doc.shots.length;
@@ -336,7 +359,7 @@ const PANEL_HTML = {
   },
   look(){
     const st = S.doc.style || 'color';
-    const prev = k => { if(!GL.gl) return ''; const o = S.doc.style; S.doc.style = k; const u = renderShotURL(S.i, 320, 180, 'image/jpeg', 0.8); S.doc.style = o; return u; };
+    const prev = k => { if(!GL.gl) return ''; const o = S.doc.style; S.doc.style = k; const u = offscreenURL(240, 135, (w, h) => drawFrame(shot(), w, h, true), 0.8); S.doc.style = o; return u; };
     return ph('contrast', L('Couleur ou noir et blanc', 'Color or black & white'), L('Pour tout le film : la planche, les images et l’animatique suivent ce choix.', 'For the whole film: the board, the images and the animatic follow this choice.')) +
       `<div class="pb"><div class="looks"><button class="look-t ${st === 'color' ? 'on' : ''}" data-act="style" data-v="color"><img src="${prev('color')}" alt=""><span>${L('Couleur', 'Color')}</span></button><button class="look-t ${st === 'bw' ? 'on' : ''}" data-act="style" data-v="bw"><img src="${prev('bw')}" alt=""><span>${L('Noir et blanc', 'Black & white')}</span></button></div>
       <p class="fly-note">${L('En noir et blanc, les personnages gardent un trait sombre autour d’eux, leurs habits ont des clartés différentes, et le décor est un peu adouci : on les distingue toujours du fond.', 'In black & white, characters keep a dark outline, their clothes have different brightness, and the set is slightly softened: they always stand out from the background.')}</p>
@@ -354,7 +377,7 @@ const PANEL_HTML = {
       <li><b>${L('Écris', 'Write')}</b>${L('« Ce qui se passe » : l’action et le dialogue du plan.', '“What happens”: the action and dialogue of the shot.')}</li>
       <li><b>${L('Plan suivant', 'Next shot')}</b>${L('« Nouveau plan », en bas : il reprend celui-ci, tu ne changes que ce qui bouge. « Contrechamp » fait l’angle inverse.', '“New shot”, at the bottom: it starts from this one, you only change what moves. “Reverse shot” makes the opposite angle.')}</li>
       <li><b>${L('Relis, exporte', 'Review, export')}</b>${L('« Lire le storyboard » le fait défiler avec les mouvements. Puis la planche PDF ou l’animatique.', '“Play the storyboard” runs it with the moves. Then the PDF board or the animatic.')}</li></ol>
-      ${lbl(L('Dans l’image', 'In the picture'))}<p class="fly-note">${L('Losange vert au-dessus d’une tête : maintiens-le pour déplacer · flèche ronde : tourner · clic sur un bras, la tête… : poser à la main · glisser dans le vide : tourner autour · clic droit : se décaler · molette : avancer · double-clic : viser.', 'Green diamond above a head: hold to move · round arrow: turn · click an arm, the head…: pose by hand · drag empty space: orbit · right-click: pan · wheel: move in · double-click: aim.')}</p>
+      ${lbl(L('Dans l’image', 'In the picture'))}<p class="fly-note">${L('Épingle verte au-dessus d’une tête : maintiens-la pour déplacer · flèche ronde : tourner · clic sur un bras, la tête… : poser à la main · glisser dans le vide : tourner autour · clic droit : se décaler · molette : avancer · double-clic : viser.', 'Green pin above a head: hold to move · round arrow: turn · click an arm, the head…: pose by hand · drag empty space: orbit · right-click: pan · wheel: move in · double-click: aim.')}</p>
       ${lbl(L('Raccourcis', 'Shortcuts'))}<p class="fly-note keys">${L('← → plan précédent ou suivant · ZQSD / WASD se déplacer · R F monter, descendre · N nouveau plan · Espace lire · Ctrl+Z annuler · Échap désélectionner', '← → previous or next shot · WASD / ZQSD move · R F up, down · N new shot · Space play · Ctrl+Z undo · Esc deselect')}</p>
       <div class="pbtns"><button class="btn btn-sm" data-act="intro">${icon('help')}${L('Revoir l’accueil', 'See the welcome again')}</button><button class="btn btn-sm" data-act="newBoard">${icon('new')}${L('Nouveau storyboard', 'New storyboard')}</button></div></div>`;
   },
@@ -516,7 +539,7 @@ async function exportPdf(per){
       }
     }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(92, 98, 112);
-    doc.text('Raging 3D · ragingstudio.com/3d', M, H - 6);
+    doc.text('Raging Board · ragingstudio.com/board', M, H - 6);
   }
   doc.save(safeName(S.doc.title) + ' - storyboard.pdf');
   toast(L('Planche PDF enregistrée.', 'PDF board saved.'));
@@ -579,8 +602,72 @@ function videoType(){
   const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
   return window.MediaRecorder ? types.find(t => MediaRecorder.isTypeSupported(t)) : null;
 }
-/* l'animatique : chaque plan reste à l'écran pendant sa durée, avec son mouvement, puis on coupe au suivant */
-function exportVideo(){
+/* une petite bibliothèque chargée seulement au moment de s'en servir (l'outil reste léger) */
+const _libs = {};
+function loadLib(name, urls){
+  if(window[name]) return Promise.resolve(window[name]);
+  if(_libs[name]) return _libs[name];
+  return _libs[name] = new Promise((res, rej) => {
+    const next = k => {
+      if(k >= urls.length){ delete _libs[name]; rej(new Error(name)); return; }
+      const s = document.createElement('script'); s.src = urls[k];
+      s.onload = () => window[name] ? res(window[name]) : next(k + 1); s.onerror = () => next(k + 1);
+      document.head.appendChild(s);
+    };
+    next(0);
+  });
+}
+/* l'animatique, image par image : chaque image est calculée pour son instant exact (30 par seconde),
+   puis encodée en MP4. Même sur un vieil ordinateur, la vidéo est fluide et dure le bon temps :
+   l'export prend juste un peu plus longtemps. */
+async function exportVideoFrames(){
+  const Mux = await loadLib('Mp4Muxer', ['https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.js', 'https://unpkg.com/mp4-muxer@5.2.1/build/mp4-muxer.js']);
+  const w = 1280, h = 720, fps = 30, shots = S.doc.shots;
+  let codec = null;
+  for(const c of ['avc1.4d0028', 'avc1.42001f', 'avc1.640028']){ try{ const r = await VideoEncoder.isConfigSupported({ codec:c, width:w, height:h, bitrate:6e6, framerate:fps }); if(r.supported){ codec = c; break; } }catch(e){} }
+  if(!codec) throw new Error('codec');
+  const starts = []; let total = 0; shots.forEach(s => { starts.push(total); total += s.info.dur || 2; });
+  const n = Math.max(1, Math.round(total * fps));
+  const muxer = new Mux.Muxer({ target:new Mux.ArrayBufferTarget(), video:{ codec:'avc', width:w, height:h, frameRate:fps }, fastStart:'in-memory' });
+  let fail = null;
+  const enc = new VideoEncoder({ output:(chunk, meta) => muxer.addVideoChunk(chunk, meta), error:e => { fail = e; } });
+  enc.configure({ codec, width:w, height:h, bitrate:6e6, framerate:fps, latencyMode:'quality' });
+  const ow = R.canvas.width, oh = R.canvas.height, box = document.getElementById('recBox');
+  S.rec = { cancel:false }; box.classList.remove('hidden');
+  R.canvas.width = w; R.canvas.height = h;
+  try{
+    for(let f = 0; f < n; f++){
+      if(S.rec.cancel || fail) break;
+      const t = f / fps; let i = 0; while(i + 1 < shots.length && starts[i + 1] <= t) i++;
+      drawFrame(shots[i], w, h, true, frameAt(shots[i], t - starts[i]));
+      const vf = new VideoFrame(R.canvas, { timestamp:Math.round(f * 1e6 / fps), duration:Math.round(1e6 / fps) });
+      enc.encode(vf, { keyFrame:f % (fps * 2) === 0 }); vf.close();
+      if(f % 6 === 0 || enc.encodeQueueSize > 6){
+        box.innerHTML = `<span class="rec-dot"></span>${L('Animatique', 'Animatic')} · ${Math.round(f / n * 100)} %<button class="btn btn-sm" data-act="cancelRec">${L('Annuler', 'Cancel')}</button>`;
+        await new Promise(r => setTimeout(r, 0));
+        while(enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 4));
+      }
+    }
+    if(fail) throw fail;
+    if(S.rec.cancel){ enc.close(); return true; }
+    await enc.flush(); muxer.finalize();
+    downloadBlob(new Blob([muxer.target.buffer], { type:'video/mp4' }), safeName(S.doc.title) + ' - ' + L('animatique', 'animatic') + '.mp4');
+    toast(L('Animatique enregistrée (MP4, 30 images par seconde).', 'Animatic saved (MP4, 30 frames per second).'));
+    return true;
+  } finally {
+    S.rec = null; box.classList.add('hidden'); R.canvas.width = ow; R.canvas.height = oh; requestRender();
+  }
+}
+async function exportVideo(){
+  if(S.rec) return;
+  endEdit();
+  if(window.VideoEncoder && window.VideoFrame){
+    try{ if(await exportVideoFrames()) return; }catch(e){ console.warn('Raging Board animatic', e); }
+  }
+  exportVideoLive();
+}
+/* l'ancienne façon (navigateurs sans WebCodecs) : on filme l'image en direct */
+function exportVideoLive(){
   const type = videoType();
   if(!type || !R.canvas.captureStream){ toast(L('Ce navigateur ne sait pas enregistrer de vidéo. Essaie avec Chrome, Edge ou Firefox.', 'This browser can’t record video. Try Chrome, Edge or Firefox.'), 'warn'); return; }
   endEdit();
@@ -670,6 +757,11 @@ const ACT = {
   editEnd:b => editEnd(b.dataset.v === '1'),
   style:b => setStyle(b.dataset.v),
   carSetup, carShot:b => carShot(b.dataset.id),
+  floor:b => { const f = SET_DEF[shot().set].floors[+b.dataset.k]; if(f) camEdit(() => { shot().cam = clone(f[2]); shot().info.size = 'pe'; }); },
+  addVeh:() => addVehicle('moto'), removeVeh:b => removeVehicle(+b.dataset.k), pickVeh:b => { S.veh = +b.dataset.k; renderPanel(); requestRender(); },
+  vehCol:b => { const v = shot().vehicles[S.veh]; if(v) edit(() => { v.col = b.dataset.c; }); },
+  mount:b => mountVehicle(S.veh < 0 ? 0 : S.veh, +b.dataset.seat), vehShot:b => vehShot(S.veh < 0 ? 0 : S.veh, b.dataset.id),
+  gunShot:b => gunShot(b.dataset.id), prop:b => setProp(b.dataset.id),
   addCrowd:b => addCrowd(b.dataset.kind),
   pickCrowd:b => { S.crowd = +b.dataset.k; renderPanel(); requestRender(); },
   removeCrowd:b => removeCrowd(+b.dataset.k),
@@ -780,7 +872,7 @@ function bindEvents(){
   renderUI();
   R.canvas = document.getElementById('view');
   if(!GL.init(R.canvas)){
-    document.getElementById('stage').innerHTML = `<div class="nogl"><b>${L('La 3D n’est pas disponible dans ce navigateur.', '3D isn’t available in this browser.')}</b>${L('Raging 3D a besoin de WebGL. Essaie avec une version récente de Chrome, Edge ou Firefox, ou active l’accélération matérielle dans les réglages du navigateur.', 'Raging 3D needs WebGL. Try a recent Chrome, Edge or Firefox, or turn on hardware acceleration in your browser settings.')}</div>`;
+    document.getElementById('stage').innerHTML = `<div class="nogl"><b>${L('La 3D n’est pas disponible dans ce navigateur.', '3D isn’t available in this browser.')}</b>${L('Raging Board a besoin de WebGL. Essaie avec une version récente de Chrome, Edge ou Firefox, ou active l’accélération matérielle dans les réglages du navigateur.', 'Raging Board needs WebGL. Try a recent Chrome, Edge or Firefox, or turn on hardware acceleration in your browser settings.')}</div>`;
     return;
   }
   initMeshes(); bindEvents(); renderUI(); fitStage(); benchmark(); showIntro();

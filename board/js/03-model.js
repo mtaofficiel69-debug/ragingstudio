@@ -1,5 +1,5 @@
 /* =====================================================================
-   RAGING 3D — MODÈLE
+   RAGING BOARD — MODÈLE
    Le squelette d'un homme (proportions d'un adulte de 1,78 m), les poses
    rapides, et les quatre lieux. Tout est fait de formes simples, sans texture.
 ===================================================================== */
@@ -226,32 +226,56 @@ function charMatrices(ch){
   return out;
 }
 
-/* ---------- Poses rapides (valeurs par articulation, dans l'ordre de ses réglages) ---------- */
+/* ---------- Poses rapides (valeurs par articulation, dans l'ordre de ses réglages) ----------
+   Les gestes où les mains doivent tomber juste (le volant, le guidon, l'arme, la tête) ont été
+   calculés : on a cherché les angles des bras qui posent la paume exactement sur la cible. */
+const POSE_GROUPS = [['move', 'Debout et en mouvement', 'Standing and moving'], ['seat', 'Assis, à genoux, au sol', 'Seated, kneeling, on the ground'], ['gest', 'Les gestes', 'Gestures'], ['gun', 'Avec un pistolet', 'With a handgun'], ['moto', 'À moto', 'On a motorbike']];
 const POSES = [
-  { id:'stand', fr:'Debout', en:'Standing', j:{}, y:0 },
-  { id:'walk', fr:'Marche', en:'Walking', y:-0.015, j:{ thighL:[24, 0, 0], shinL:[8], footL:[-8], thighR:[-18, 0, 0], shinR:[26], footR:[10], armL:[-18, 6, 0], foreL:[12, 0], armR:[20, 6, 0], foreR:[22, 0], spine:[4, 6, 0] } },
-  { id:'run', fr:'Course', en:'Running', y:-0.2, j:{ thighL:[60, 0, 0], shinL:[80], footL:[-10], thighR:[-28, 0, 0], shinR:[70], footR:[30], spine:[14, 8, 0], chest:[6, 0, 0], armL:[-35, 8, 0], foreL:[95, 0], armR:[50, 8, 0], foreR:[95, 0] } },
-  { id:'sit', fr:'Assis', en:'Sitting', y:-0.4, j:{ thighL:[90, 6, 0], shinL:[88], thighR:[90, 6, 0], shinR:[88], armL:[22, 8, 0], foreL:[58, 0], armR:[22, 8, 0], foreR:[58, 0], spine:[6, 0, 0] } },
-  { id:'crouch', fr:'Accroupi', en:'Crouching', y:-0.62, j:{ thighL:[115, 10, 0], shinL:[135], footL:[-25], thighR:[115, 10, 0], shinR:[135], footR:[-25], spine:[28, 0, 0], chest:[12, 0, 0], head:[-30, 0, 0], armL:[40, 10, 0], foreL:[40, 0], armR:[40, 10, 0], foreR:[40, 0] } },
-  { id:'drive', fr:'Au volant', en:'Driving', y:-0.35, j:{ thighL:[90, 8, 0], shinL:[25], footL:[-12], thighR:[90, 8, 0], shinR:[25], footR:[-12], armL:[62, 14, 0], foreL:[48, 0], armR:[62, 14, 0], foreR:[48, 0], spine:[-4, 0, 0] } },
-  { id:'cross', fr:'Bras croisés', en:'Arms crossed', y:0, j:{ armR:[10, 40, 90], foreR:[90, 0], armL:[15, 50, -90], foreL:[90, 0], head:[-4, 0, 0] } },
-  { id:'hips', fr:'Mains sur les hanches', en:'Hands on hips', y:0, j:{ armR:[-35, 0, 90], foreR:[70, 0], armL:[-35, 0, -90], foreL:[70, 0], chest:[-4, 0, 0] } },
-  { id:'point', fr:'Pointer', en:'Pointing', y:0, j:{ armR:[88, 8, 0], foreR:[4, 0], head:[0, -12, 0], chest:[0, -10, 0], handR:[-8, 0] } },
-  { id:'wave', fr:'Saluer', en:'Waving', y:0, j:{ armR:[105, -10, -90], foreR:[80, 0], handR:[-10, 0], head:[-4, -6, 0] } },
-  { id:'think', fr:'Réfléchir', en:'Thinking', y:0, j:{ armR:[35, 20, 60], foreR:[130, 0], armL:[15, 50, -90], foreL:[90, 0], head:[10, 0, 4] } },
-  { id:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ armR:[65, 35, 30], foreR:[150, 0], handR:[-10, 0], head:[6, 0, -10] } },
-  { id:'up', fr:'Mains en l’air', en:'Hands up', y:0, j:{ armL:[150, 28, 0], foreL:[38, 0], armR:[150, 28, 0], foreR:[38, 0], head:[-8, 0, 0] } },
-  { id:'sitground', fr:'Assis par terre', en:'Sitting on the ground', y:-0.83, j:{ thighL:[120, 10, 0], shinL:[83], footL:[10], thighR:[120, 10, 0], shinR:[83], footR:[10], spine:[10, 0, 0], armL:[55, 12, 0], foreL:[25, 0], armR:[55, 12, 0], foreR:[25, 0] } },
-  { id:'lie', fr:'Allongé', en:'Lying down', y:-0.83, j:{ pelvis:[-90, 0], head:[10, 0, 0], armL:[0, 10, 0], armR:[0, 10, 0] } },
+  { id:'stand', g:'move', fr:'Debout', en:'Standing', j:{}, y:0 },
+  { id:'walk', g:'move', fr:'Marche', en:'Walking', y:-0.015, j:{ thighL:[24, 0, 0], shinL:[8], footL:[-8], thighR:[-18, 0, 0], shinR:[26], footR:[10], armL:[-18, 6, 0], foreL:[12, 0], armR:[20, 6, 0], foreR:[22, 0], spine:[4, 6, 0] } },
+  { id:'run', g:'move', fr:'Course', en:'Running', y:-0.2, j:{ thighL:[60, 0, 0], shinL:[80], footL:[-10], thighR:[-28, 0, 0], shinR:[70], footR:[30], spine:[14, 8, 0], chest:[6, 0, 0], armL:[-35, 8, 0], foreL:[95, 0], armR:[50, 8, 0], foreR:[95, 0] } },
+  { id:'sit', g:'seat', fr:'Assis', en:'Sitting', y:-0.4, j:{ thighL:[90, 6, 0], shinL:[88], thighR:[90, 6, 0], shinR:[88], armL:[22, 8, 0], foreL:[58, 0], armR:[22, 8, 0], foreR:[58, 0], spine:[6, 0, 0] } },
+  { id:'crouch', g:'seat', fr:'Accroupi', en:'Crouching', y:-0.62, j:{ thighL:[115, 10, 0], shinL:[135], footL:[-25], thighR:[115, 10, 0], shinR:[135], footR:[-25], spine:[28, 0, 0], chest:[12, 0, 0], head:[-30, 0, 0], armL:[40, 10, 0], foreL:[40, 0], armR:[40, 10, 0], foreR:[40, 0] } },
+  { id:'drive', g:'seat', fr:'Au volant', en:'Driving', y:-0.35, j:{ thighL:[90, 8, 0], shinL:[25], footL:[-12], thighR:[90, 8, 0], shinR:[25], footR:[-12], armL:[42, -15, -10], foreL:[69, 28], armR:[42, -15, 10], foreR:[69, -28], spine:[-4, 0, 0] } },
+  { id:'cross', g:'move', fr:'Bras croisés', en:'Arms crossed', y:0, j:{ armR:[10, 40, 90], foreR:[90, 0], armL:[15, 50, -90], foreL:[90, 0], head:[-4, 0, 0] } },
+  { id:'hips', g:'move', fr:'Mains sur les hanches', en:'Hands on hips', y:0, j:{ armR:[-35, 0, 90], foreR:[70, 0], armL:[-35, 0, -90], foreL:[70, 0], chest:[-4, 0, 0] } },
+  { id:'point', g:'gest', fr:'Pointer', en:'Pointing', y:0, j:{ armR:[88, 8, 0], foreR:[4, 0], head:[0, -12, 0], chest:[0, -10, 0], handR:[-8, 0] } },
+  { id:'wave', g:'gest', fr:'Saluer', en:'Waving', y:0, j:{ armR:[105, -10, -90], foreR:[80, 0], handR:[-10, 0], head:[-4, -6, 0] } },
+  { id:'think', g:'gest', fr:'Réfléchir', en:'Thinking', y:0, j:{ armR:[35, 20, 60], foreR:[130, 0], armL:[15, 50, -90], foreL:[90, 0], head:[10, 0, 4] } },
+  { id:'phone', g:'gest', prop:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ armR:[65, 35, 30], foreR:[150, 0], handR:[-10, 0], head:[6, 0, -10] } },
+  { id:'up', g:'gest', fr:'Mains en l’air', en:'Hands up', y:0, j:{ armL:[150, 28, 0], foreL:[38, 0], armR:[150, 28, 0], foreR:[38, 0], head:[-8, 0, 0] } },
+  { id:'sitground', g:'seat', fr:'Assis par terre', en:'Sitting on the ground', y:-0.83, j:{ thighL:[120, 10, 0], shinL:[83], footL:[10], thighR:[120, 10, 0], shinR:[83], footR:[10], spine:[10, 0, 0], armL:[55, 12, 0], foreL:[25, 0], armR:[55, 12, 0], foreR:[25, 0] } },
+  { id:'lie', g:'seat', fr:'Allongé', en:'Lying down', y:-0.83, j:{ pelvis:[-90, 0], head:[10, 0, 0], armL:[0, 10, 0], armR:[0, 10, 0] } },
+  { id:'aim2', fr:'Viser à deux mains', en:'Two-handed aim', g:'gun', prop:'gun', y:0, j:{ head:[6,  0,  0], armL:[50,  -10,  0], foreL:[70,  -19], handL:[0,  0], armR:[61,  -15,  0], foreR:[55,  14], handR:[0,  0] } },
+  { id:'aim1', fr:'Viser à une main', en:'One-handed aim', g:'gun', prop:'gun', y:0, j:{ chest:[0,  -8,  0], head:[0,  8,  0], armR:[92,  -15,  -10], foreR:[5,  39], handR:[0,  0] } },
+  { id:'gunDown', fr:'Arme baissée', en:'Gun lowered', g:'gun', prop:'gun', y:0, j:{ head:[10,  0,  0], armL:[7,  -7,  15], foreL:[56,  -44], handL:[0,  0], armR:[10,  -15,  -1], foreR:[55,  8], handR:[0,  0] } },
+  { id:'crouchAim', fr:'Accroupi, en joue', en:'Crouched, aiming', g:'gun', prop:'gun', y:-0.62, j:{ thighL:[115,  10,  0], shinL:[135], footL:[-25], thighR:[115,  10,  0], shinR:[135], footR:[-25], spine:[12,  0,  0], chest:[0,  0,  0], head:[-14,  0,  0], armL:[68,  -15,  -22], foreL:[75,  19], armR:[76,  -3,  23], foreR:[60,  -6], handL:[0,  0], handR:[0,  0] } },
+  { id:'kneel', fr:'À genoux', en:'Kneeling', g:'seat', y:-0.47, j:{ thighL:[0,  6,  0], shinL:[92], footL:[30], thighR:[0,  6,  0], shinR:[92], footR:[30], armL:[0,  -12,  55], foreL:[1,  79], handL:[-1,  0], armR:[0,  -12,  -55], foreR:[1,  -79], handR:[-1,  0] } },
+  { id:'kneelHands', fr:'À genoux, mains sur la tête', en:'Kneeling, hands on head', g:'gun', prop:'gun', y:-0.47, j:{ thighL:[0,  6,  0], shinL:[92], footL:[30], thighR:[0,  6,  0], shinR:[92], footR:[30], head:[12,  0,  0], armL:[100,  -11,  -52], foreL:[103,  0], handL:[0,  0], armR:[100,  -11,  53], foreR:[103,  0], handR:[0,  0] } },
+  { id:'oneKnee', fr:'Un genou à terre', en:'One knee down', g:'seat', y:-0.47, j:{ thighL:[0,  4,  0], shinL:[92], footL:[30], thighR:[88,  4,  0], shinR:[88], footR:[0], armL:[0,  -14,  50], foreL:[0,  76], handL:[-1,  0], armR:[32,  -15,  -15], foreR:[2,  21], handR:[0,  0] } },
+  { id:'handshake', fr:'Serrer la main', en:'Handshake', g:'gest', y:0, j:{ armR:[34,  -15,  0], foreR:[18,  -13], handR:[0,  0] } },
+  { id:'hug', fr:'Prendre dans ses bras', en:'Hugging', g:'gest', y:0, j:{ head:[0,  25,  6], armL:[42,  -14,  0], foreL:[78,  -11], handL:[0,  0], armR:[33,  -8,  6], foreR:[82,  9], handR:[0,  0] } },
+  { id:'drink', fr:'Boire', en:'Drinking', g:'gest', y:0, j:{ head:[-12,  0,  0], armR:[54,  -4,  45], foreR:[123,  0], handR:[0,  0] } },
+  { id:'shout', fr:'Crier (mains en porte-voix)', en:'Shouting', g:'gest', y:0, j:{ head:[-14,  0,  0], chest:[-4,  0,  0], armL:[59,  -4,  -45], foreL:[127,  0], handL:[0,  0], armR:[59,  -4,  45], foreR:[127,  0], handR:[0,  0] } },
+  { id:'readPhone', fr:'Regarder son téléphone', en:'Looking at the phone', g:'gest', y:0, j:{ head:[32,  0,  0], armL:[-9,  -15,  9], foreL:[88,  -26], handL:[0,  0], armR:[-2,  -7,  -21], foreR:[85,  45], handR:[0,  0] } },
+  { id:'pocket', fr:'Mains dans les poches', en:'Hands in pockets', g:'move', y:0, j:{ armL:[0,  -15,  15], foreL:[17,  58], handL:[0,  0], armR:[0,  -15,  -15], foreR:[17,  -58], handR:[0,  0] } },
+  { id:'punch', fr:'Coup de poing', en:'Punching', g:'gest', y:0, j:{ spine:[4,  -14,  0], chest:[4,  -10,  0], thighR:[-10,  0,  0], thighL:[14,  0,  0], shinL:[10], armL:[40,  -2,  31], foreL:[142,  -30], handL:[0,  0], armR:[102,  -15,  21], foreR:[3,  26], handR:[0,  0] } },
+  { id:'guard', fr:'En garde', en:'On guard', g:'gest', y:0, j:{ thighL:[16,  4,  0], thighR:[-12,  4,  0], shinR:[12], spine:[6,  0,  0], head:[6,  0,  0], armL:[57,  -8,  0], foreL:[101,  -15], handL:[0,  0], armR:[49,  -12,  15], foreR:[111,  0], handR:[0,  0] } },
+  { id:'headInHands', fr:'La tête dans les mains', en:'Head in hands', g:'seat', y:-0.4, j:{ thighL:[90,  6,  0], shinL:[88], thighR:[90,  6,  0], shinR:[88], armL:[42,  7,  -45], foreL:[133,  0], armR:[42,  7,  45], foreR:[133,  0], spine:[24,  0,  0], chest:[14,  0,  0], head:[28,  0,  0], handL:[0,  0], handR:[0,  0] } },
+  { id:'lookBack', fr:'Se retourner', en:'Looking back', g:'move', y:0, j:{ chest:[0,  30,  0], spine:[0,  18,  0], head:[0,  70,  0], armL:[8,  8,  0], armR:[-8,  8,  0] } },
+  { id:'ride', fr:'À moto (pilote)', en:'Riding (driver)', g:'moto', y:-0.02, j:{ spine:[16,  0,  0], chest:[10,  0,  0], head:[-22,  0,  0], armL:[76,  10,  0], foreL:[6,  32], handL:[0,  0], armR:[76,  10,  0], foreR:[6,  -32], handR:[0,  0], thighL:[71,  13,  0], shinL:[114], footL:[-37], thighR:[71,  13,  0], shinR:[114], footR:[-37] } },
+  { id:'rideBack', fr:'À moto (passager)', en:'Riding (passenger)', g:'moto', y:0.02, j:{ spine:[10,  0,  0], head:[-10,  0,  0], thighL:[68,  21,  0], thighR:[68,  21,  0], shinL:[117], shinR:[117], armL:[27,  27,  2], foreL:[65,  -80], handL:[0,  0], armR:[27,  27,  -2], foreR:[65,  80], handR:[0,  0], footL:[-27], footR:[-27] } },
 ];
 function applyPose(ch, pid){
   const P = POSES.find(p => p.id === pid); if(!P) return;
   ch.j = blankPose(); ch.pose = pid;
+  // l'accessoire va avec la pose (le pistolet pour viser, le téléphone pour appeler), sinon on garde celui qu'on a choisi
+  ch.prop = P.prop || (pid === 'phone' || pid === 'readPhone' ? 'phone' : ch.propUser ? ch.prop : null);
   for(const k in P.j) ch.j[k] = P.j[k].slice();
   ch.root.y = (P.y || 0) * bodyScale(lookOf(ch));    // un enfant plus petit descend moins pour s'asseoir
 }
 /* assis sur un vrai siège (canapé, banc, voiture) : le bassin reste à la hauteur du siège, quelle que soit la taille */
-const SEATED = { sit:1, drive:1 };
+const SEATED = { sit:1, drive:1, headInHands:1 };
 function seatY(ch, adultY){ return 0.94 + adultY - 0.94 * bodyScale(lookOf(ch)); }
 
 /* ---------- Les lieux ----------
@@ -271,6 +295,9 @@ const SETS = [
   { id:'beach', fr:'Plage', en:'Beach', big:true },
   { id:'stadium', fr:'Stade', en:'Stadium', big:true },
   { id:'country', fr:'Campagne', en:'Countryside', big:true },
+  { id:'house', fr:'Maison de campagne', en:'Country house' },
+  { id:'roof', fr:'Toit d’immeuble', en:'Rooftop' },
+  { id:'warehouse', fr:'Entrepôt', en:'Warehouse' },
 ];
 const SET_DEF = {
   garage:{
@@ -691,6 +718,192 @@ Object.assign(SET_DEF, {
     },
   },
 });
+/* ---------- La maison de campagne, avec tous ses étages ----------
+   Rez-de-chaussée (salon, cuisine, entrée, escalier), premier étage (deux chambres, salle de bain),
+   grenier sous le toit, et le jardin autour. Chaque étage est dessiné à part : quand la caméra
+   vise un étage, ceux du dessus ne sont pas dessinés (comme une maison de poupée qu'on ouvre). */
+const HOUSE = { x0:-5, x1:5, z0:-4, z1:4, h:2.9 };
+/* un mur intérieur épais (visible des deux côtés), avec des ouvertures [début, fin] le long du mur */
+function partition(g, a, b, y0, h, col, gaps){
+  const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), ry = Math.atan2(dx, dz);
+  const cuts = [[0, 0]].concat((gaps || []).map(([s, e]) => [s, e]), [[len, len]]);
+  for(let i = 0; i < cuts.length - 1; i++){
+    const s = cuts[i][1], e = cuts[i + 1][0]; if(e - s < 0.02) continue;
+    const m = (s + e) / 2; box(g, a[0] + dx / len * m, y0 + h / 2, a[1] + dz / len * m, 0.1, h, e - s, col, ry);
+  }
+  (gaps || []).forEach(([s, e]) => { const m = (s + e) / 2; box(g, a[0] + dx / len * m, y0 + h - 0.35, a[1] + dz / len * m, 0.1, 0.7, e - s, col, ry); });   // le linteau au-dessus des portes
+}
+/* un plancher percé (la trémie d'un escalier) : des bandes autour du trou */
+function floorHole(g, x0, z0, x1, z1, y, col, hole, down){
+  const [hx0, hz0, hx1, hz1] = hole;
+  floor(g, x0, z0, x1, hz0, y, col, down); floor(g, x0, hz1, x1, z1, y, col, down);
+  floor(g, x0, hz0, hx0, hz1, y, col, down); floor(g, hx1, hz0, x1, hz1, y, col, down);
+}
+function stairs(g, x0, x1, zStart, zEnd, y0, rise, n, col){
+  const run = (zEnd - zStart) / n, st = rise / n;
+  for(let i = 0; i < n; i++){ const zc = zStart + run * (i + 0.5), top = y0 + st * (i + 1); box(g, (x0 + x1) / 2, (y0 + top) / 2, zc, x1 - x0, top - y0, Math.abs(run) + 0.01, col); }
+}
+Object.assign(SET_DEF, {
+  house:{
+    sky:{ top:'#86B3D9', hor:'#E3E9E8', low:'#8FA27C' }, fog:[45, 200],
+    levels:[0, 2.9, 5.8], box:[-5.2, -4.2, 5.2, 4.2],
+    cam:{ tx:-1.6, ty:1.0, tz:-2.4, yaw:32, pitch:-10, dist:3.6, lens:24 },
+    // la caméra toute prête de chaque étage
+    floors:[['Rez-de-chaussée', 'Ground floor', { tx:-1.6, ty:1.0, tz:-2.4, yaw:32, pitch:-10, dist:3.6, lens:24 }], ['Premier étage', 'First floor', { tx:-1.4, ty:3.6, tz:-2.7, yaw:28, pitch:-18, dist:3.4, lens:24 }],
+      ['Grenier', 'Attic', { tx:-1, ty:6.4, tz:-0.5, yaw:81, pitch:-5, dist:5.4, lens:24 }], ['Le jardin', 'Garden', { tx:0, ty:2.6, tz:0, yaw:22, pitch:-6, dist:17, lens:28 }]],
+    build(g, gl, L){
+      const H = HOUSE, W0 = '#E6DDCC', IN = '#E9E3D6', WOOD = '#9C7B5B';
+      // le jardin
+      floor(g, -70, -70, 70, 70, 0, '#7C9A5A');
+      floor(g, -0.7, 4.2, 0.7, 16, 0.006, '#B9A88C');
+      for(let x = -12; x <= 12; x += 0.6) box(g, x, 0.45, 16, 0.08, 0.9, 0.08, '#E9E6E0'); box(g, 0, 0.75, 16, 24, 0.06, 0.04, '#E9E6E0');
+      [[-9, 6, 1.3], [9, 9, 1.1], [-11, -7, 1.4], [10, -6, 1.2]].forEach(([x, z, k]) => tree(g, x, z, k));
+      [[-3.2, 4.9], [3.2, 4.9]].forEach(([x, z]) => ball(g, x, 0.35, z, 0.8, 0.45, 0.45, '#557F57', 8));
+      car(g, gl, 7.5, 5, '#3D5A80');
+      // la façade : des murs vus du dehors seulement (dedans, on voit les murs intérieurs)
+      const X0 = H.x0 - 0.15, X1 = H.x1 + 0.15, Z0 = H.z0 - 0.15, Z1 = H.z1 + 0.15, top = H.h * 2;
+      wall(g, [X0, Z1], [X1, Z1], top, W0); wall(g, [X1, Z0], [X0, Z0], top, W0); wall(g, [X0, Z0], [X0, Z1], top, W0); wall(g, [X1, Z1], [X1, Z0], top, W0);
+      box(g, 0, 0.12, Z1 + 0.3, 1.8, 0.24, 0.6, '#8D9198');
+      wall(g, [-0.55, Z1 + 0.005], [0.55, Z1 + 0.005], 2.1, '#6E5440');                        // la porte d'entrée
+      [[-3, 1], [3, 1], [-3, 3.9], [3, 3.9], [0, 3.9]].forEach(([x, y]) => { wall(g, [x - 0.6, Z1 + 0.005], [x + 0.6, Z1 + 0.005], 1.3, '#3E4552', y); wall(g, [x - 0.68, Z1 + 0.01], [x + 0.68, Z1 + 0.01], 0.08, '#F4F2EE', y - 0.04); [-0.66, 0.66].forEach(d => wall(g, [x + d - 0.18, Z1 + 0.012], [x + d, Z1 + 0.012], 1.3, '#5E7F6A', y)); });
+      [[-2.5, 1], [2.5, 1], [-2.5, 3.9], [2.5, 3.9]].forEach(([z, y]) => { wall(g, [X0 - 0.005, z - 0.55], [X0 - 0.005, z + 0.55], 1.3, '#3E4552', y); wall(g, [X1 + 0.005, z + 0.55], [X1 + 0.005, z - 0.55], 1.3, '#3E4552', y); });
+      // le toit à deux pentes, et ses pignons
+      // (dans le niveau du grenier : quand on regarde un étage d'en haut, le toit s'efface)
+      prism(L[2], [[Z0 - 0.5, top], [Z1 + 0.5, top], [0, top + 2.8]], X0 - 0.4, X1 + 0.4, '#8C4A3A');
+      [[X0, 1], [X1, -1]].forEach(([x, sd]) => { const pts = [[Z0, top], [Z1, top], [0, top + 2.6]]; prism(L[2], pts, Math.min(x, x + sd * -0.02), Math.max(x, x + sd * -0.02), W0); });
+      box(L[2], 3, top + 2.4, -1, 0.6, 1.4, 0.6, '#8A7356');                                     // la cheminée
+      // ---- rez-de-chaussée (L[0]) ----
+      const g0 = L[0], hole = [-4.85, -0.4, -3.55, 3.7];
+      floor(g0, H.x0, H.z0, H.x1, H.z1, 0.004, WOOD); for(let x = H.x0 + 0.4; x < H.x1; x += 0.4) box(g0, x, 0.006, 0, 0.012, 0.004, 8, '#8C6D50');
+      wall(g0, [H.x0, H.z0], [H.x1, H.z0], H.h, IN); wall(g0, [H.x0, H.z1], [H.x0, H.z0], H.h, '#DED6C6'); wall(g0, [H.x1, H.z0], [H.x1, H.z1], H.h, '#DED6C6'); wall(g0, [H.x1, H.z1], [H.x0, H.z1], H.h, IN);
+      floorHole(g0, H.x0, H.z0, H.x1, H.z1, H.h - 0.002, '#F2EEE6', hole, true);
+      [[-3, 1], [3, 1]].forEach(([x, y]) => wall(g0, [x + 0.6, H.z1 - 0.01], [x - 0.6, H.z1 - 0.01], 1.3, '#A9C9DE', y));
+      wall(g0, [0.55, H.z1 - 0.01], [-0.55, H.z1 - 0.01], 2.1, '#7A5C42');
+      [-2.5, 2.5].forEach(z => { wall(g0, [H.x0 + 0.01, z + 0.55], [H.x0 + 0.01, z - 0.55], 1.3, '#A9C9DE', 1); wall(g0, [H.x1 - 0.01, z - 0.55], [H.x1 - 0.01, z + 0.55], 1.3, '#A9C9DE', 1); });
+      partition(g0, [0.8, H.z0], [0.8, 1.2], 0, H.h, IN, [[3.2, 4.1]]);                       // salon | cuisine
+      partition(g0, [0.8, 1.2], [H.x1, 1.2], 0, H.h, IN, [[1.2, 2.2]]);
+      stairs(g0, -4.85, -3.55, 3.7, -0.4, 0, H.h, 14, '#8A6A4A');
+      box(g0, -3.5, 1.4, 1.65, 0.05, 1.0, 4.1, '#6E5440');                                    // la rampe
+      // le salon : canapé, table basse, cheminée, tapis, bibliothèque
+      floor(g0, -3.2, -3.5, 0.4, -0.3, 0.008, '#B9876A');
+      box(g0, -1.4, 0.22, -3.3, 2.2, 0.44, 0.9, '#5A6B7C'); box(g0, -1.4, 0.66, -3.68, 2.2, 0.5, 0.16, '#53637A'); [-0.22, -2.58].forEach(x => box(g0, x, 0.36, -3.3, 0.2, 0.32, 0.92, '#53637A'));
+      box(g0, -1.4, 0.38, -1.7, 1.1, 0.05, 0.6, '#6E5440');
+      box(g0, -4.75, 0.6, -2.0, 0.5, 1.2, 1.6, '#B9B0A0'); box(g0, -4.6, 0.45, -2.0, 0.3, 0.6, 0.9, '#2C2E33'); box(g0, -4.72, 1.25, -2.0, 0.6, 0.1, 1.8, '#9A8B7E');
+      box(g0, 0.55, 1.0, -2.0, 0.4, 2.0, 1.4, '#7A5C42');
+      // la cuisine : plan de travail, évier, frigo, table et chaises
+      box(g0, 4.65, 0.45, -1.5, 0.65, 0.9, 4.8, '#E9E6E0'); box(g0, 4.65, 0.92, -1.5, 0.7, 0.05, 4.85, '#5E636C'); box(g0, 4.65, 0.93, -2.6, 0.45, 0.04, 0.6, '#9AA0A8');
+      box(g0, 4.6, 0.95, 0.6, 0.7, 1.9, 0.7, '#D9DCE0');
+      box(g0, 2.6, 0.75, -1.8, 1.4, 0.05, 0.9, '#8A6A4A'); [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]].forEach(([a, b]) => box(g0, 2.6 + a, 0.37, -1.8 + b, 0.05, 0.74, 0.05, '#6E5440'));
+      [[2.0, -2.55], [3.2, -2.55], [2.0, -1.05], [3.2, -1.05]].forEach(([x, z]) => { box(g0, x, 0.45, z, 0.42, 0.05, 0.42, '#7A5C42'); box(g0, x, 0.72, z + (z < -1.8 ? -0.19 : 0.19), 0.42, 0.55, 0.04, '#7A5C42'); });
+      cyl(g0, 2.6, 2.9, -1.8, 0.01, 0.01, 0.7, '#2C2E33', 4); cyl(g0, 2.6, 2.2, -1.8, 0.05, 0.25, 0.2, '#2F6E4F', 10);
+      // l'entrée : porte-manteau, meuble à chaussures
+      box(g0, 3.6, 0.4, 3.75, 1.2, 0.8, 0.4, '#7A5C42'); cyl(g0, 1.6, 0.9, 3.6, 0.03, 0.03, 1.8, '#3A3D44', 6);
+      // ---- premier étage (L[1]) ----
+      const g1 = L[1], y1 = H.h, hatch = [-4.6, -3.0, -3.8, -2.2];
+      floorHole(g1, H.x0, H.z0, H.x1, H.z1, y1 + 0.002, '#A68A6B', hole);
+      wall(g1, [H.x0, H.z0], [H.x1, H.z0], H.h, '#DCE3E8', y1); wall(g1, [H.x0, H.z1], [H.x0, H.z0], H.h, '#E8DED4', y1); wall(g1, [H.x1, H.z0], [H.x1, H.z1], H.h, '#E8DED4', y1); wall(g1, [H.x1, H.z1], [H.x0, H.z1], H.h, '#DCE3E8', y1);
+      floorHole(g1, H.x0, H.z0, H.x1, H.z1, y1 + H.h - 0.002, '#F2EEE6', hatch, true);
+      [[-3, 1], [3, 1], [0, 1]].forEach(([x]) => wall(g1, [x + 0.6, H.z1 - 0.01], [x - 0.6, H.z1 - 0.01], 1.3, '#A9C9DE', y1 + 1));
+      [-2.5, 2.5].forEach(z => { wall(g1, [H.x0 + 0.01, z + 0.55], [H.x0 + 0.01, z - 0.55], 1.3, '#A9C9DE', y1 + 1); wall(g1, [H.x1 - 0.01, z - 0.55], [H.x1 - 0.01, z + 0.55], 1.3, '#A9C9DE', y1 + 1); });
+      partition(g1, [-3.4, H.z0], [-3.4, H.z1], y1, H.h, '#E9E3D6', [[0.6, 1.5], [4.6, 5.5]]);                     // le palier, le long de l'escalier
+      partition(g1, [0.6, H.z0], [0.6, 0.6], y1, H.h, '#E9E3D6', []);
+      partition(g1, [-3.4, 0.6], [H.x1, 0.6], y1, H.h, '#E9E3D6', [[0.6, 1.5], [4.6, 5.5]]);
+      box(g1, -3.45, y1 + 0.5, -2.4, 0.05, 1.0, 0.0001, '#6E5440');
+      // la chambre des parents : grand lit, tables de nuit, armoire
+      box(g1, -1.4, y1 + 0.25, -2.7, 1.7, 0.5, 2.1, '#E9E4DA'); box(g1, -1.4, y1 + 0.52, -2.7, 1.66, 0.06, 2.06, '#C9503C'); box(g1, -1.4, y1 + 0.55, -3.6, 1.6, 0.12, 0.35, '#F4F2EE'); box(g1, -1.4, y1 + 0.7, -3.85, 1.8, 1.0, 0.08, '#7A5C42');
+      [-2.55, -0.25].forEach(x => box(g1, x, y1 + 0.28, -3.6, 0.45, 0.56, 0.4, '#7A5C42'));
+      box(g1, 0.25, y1 + 1.0, -1.0, 0.6, 2.0, 1.4, '#8A6A4A');
+      // la chambre d'enfant : petit lit, bureau, tapis
+      box(g1, 3.9, y1 + 0.2, -2.6, 1.0, 0.4, 2.0, '#E9E4DA'); box(g1, 3.9, y1 + 0.42, -2.3, 0.96, 0.05, 1.4, '#3D5A80');
+      box(g1, 1.6, y1 + 0.72, -3.6, 1.2, 0.05, 0.6, '#E9E6E0'); box(g1, 1.6, y1 + 0.42, -3.2, 0.42, 0.05, 0.42, '#C9503C');
+      floor(g1, 1.4, -2.2, 3.2, -0.6, y1 + 0.006, '#E3A33A');
+      // la salle de bain : baignoire, lavabo, toilettes
+      box(g1, 3.9, y1 + 0.28, 3.3, 1.6, 0.56, 0.8, '#F4F2EE'); box(g1, 3.9, y1 + 0.5, 3.3, 1.45, 0.08, 0.6, '#A9C9DE');
+      box(g1, 1.4, y1 + 0.8, 3.75, 0.6, 0.12, 0.42, '#F4F2EE'); box(g1, 1.4, y1 + 0.4, 3.85, 0.2, 0.8, 0.2, '#F4F2EE'); wall(g1, [1.75, H.z1 - 0.01], [1.05, H.z1 - 0.01], 0.6, '#C9D3DC', y1 + 1.1);
+      box(g1, 2.5, y1 + 0.22, 3.7, 0.4, 0.44, 0.55, '#F4F2EE');
+      // l'échelle vers le grenier
+      [-4.5, -3.9].forEach(x => box(g1, x, y1 + H.h / 2, -2.6, 0.05, H.h, 0.05, '#8A6A4A')); for(let k = 1; k < 9; k++) box(g1, -4.2, y1 + k * 0.32, -2.6, 0.6, 0.04, 0.05, '#8A6A4A');
+      // ---- le grenier (L[2]) ----
+      const g2 = L[2], y2 = H.h * 2;
+      floorHole(g2, H.x0, H.z0, H.x1, H.z1, y2 + 0.002, '#8A7356', hatch);
+      for(let x = H.x0 + 0.3; x < H.x1; x += 0.6) box(g2, x, y2 + 0.005, 0, 0.012, 0.004, 8, '#7A6248');
+      // les pentes du toit vues de l'intérieur, et les pignons
+      const ridge = y2 + 2.55;
+      quad(g2, [H.x0, y2, H.z0], [H.x1, y2, H.z0], [H.x1, ridge, 0], [H.x0, ridge, 0], hexRGB('#9C7B5B'));
+      quad(g2, [H.x1, y2, H.z1], [H.x0, y2, H.z1], [H.x0, ridge, 0], [H.x1, ridge, 0], hexRGB('#9C7B5B'));
+      tri(g2, [H.x0, y2, H.z1], [H.x0, y2, H.z0], [H.x0, ridge, 0], hexRGB('#B9A88C')); tri(g2, [H.x1, y2, H.z0], [H.x1, y2, H.z1], [H.x1, ridge, 0], hexRGB('#B9A88C'));
+      for(let x = H.x0 + 0.8; x < H.x1; x += 1.6){ const k = hexRGB('#7A5C42'); quad(g2, [x - 0.06, y2 + 0.01, H.z0 + 0.02], [x + 0.06, y2 + 0.01, H.z0 + 0.02], [x + 0.06, ridge - 0.02, 0.02], [x - 0.06, ridge - 0.02, 0.02], k); quad(g2, [x + 0.06, y2 + 0.01, H.z1 - 0.02], [x - 0.06, y2 + 0.01, H.z1 - 0.02], [x - 0.06, ridge - 0.02, -0.02], [x + 0.06, ridge - 0.02, -0.02], k); }
+      wall(g2, [H.x0 + 0.01, 0.5], [H.x0 + 0.01, -0.5], 0.8, '#A9C9DE', y2 + 0.8);
+      box(g2, -2.5, y2 + 0.3, -2.2, 1.0, 0.6, 0.6, '#6E5440'); box(g2, -2.5, y2 + 0.62, -2.2, 1.04, 0.06, 0.64, '#8A6A4A');
+      [[1.2, -2.4], [1.8, -2.2], [1.5, -2.3]].forEach(([x, z], k) => box(g2, x, y2 + 0.25 + (k === 2 ? 0.5 : 0), z, 0.5, 0.5, 0.5, '#B08A5A'));
+      box(g2, 2.6, y2 + 0.45, 1.4, 0.55, 0.06, 0.55, '#7A5C42'); box(g2, 2.6, y2 + 0.85, 1.65, 0.55, 0.8, 0.06, '#7A5C42');
+      cyl(g2, 0, ridge, 0, 0.01, 0.01, 0.5, '#2C2E33', 4); ball(g2, 0, ridge - 0.55, 0, 0.06, 0.08, 0.06, '#F2E6C9', 8);
+      box(g2, -1.2, y2 + 0.9, 2.4, 0.6, 1.8, 0.4, '#9AA0A8');
+    },
+  },
+  roof:{
+    sky:{ top:'#6F9CC9', hor:'#E2D9CF', low:'#6E737B' }, fog:[40, 220],
+    cam:{ tx:0, ty:1.2, tz:0, yaw:24, pitch:-5, dist:7.6, lens:28 },
+    build(g, gl){
+      // le toit de l'immeuble, posé à hauteur zéro : la ville est en dessous
+      floor(g, -9, -7, 9, 7, 0, '#8D9198');
+      for(let x = -8.5; x < 9; x += 1.5) box(g, x, 0.003, 0, 0.02, 0.004, 14, '#7E838B');
+      [[-9, -7, 9, -7], [9, -7, 9, 7], [9, 7, -9, 7], [-9, 7, -9, -7]].forEach(([a, b, c, d]) => { const mx = (a + c) / 2, mz = (b + d) / 2, along = a === c; box(g, mx, 0.55, mz, along ? 0.3 : Math.abs(c - a) + 0.3, 1.1, along ? Math.abs(d - b) + 0.3 : 0.3, '#A6ACB4'); });
+      box(g, 0, -15.01, 0, 18.2, 30, 14.2, '#9A8B7E');
+      for(let y = -3; y > -30; y -= 3) for(let x = -7.5; x <= 7.5; x += 2.2){ wall(g, [x - 0.5, 7.11], [x + 0.5, 7.11], 1.4, '#3E4552', y); wall(g, [x + 0.5, -7.11], [x - 0.5, -7.11], 1.4, '#3E4552', y); }
+      // le château d'eau, la cage d'escalier, les climatiseurs, l'antenne, la verrière
+      [[-4.6, -3.8], [-3.2, -3.8], [-4.6, -2.4], [-3.2, -2.4]].forEach(([x, z]) => box(g, x, 1.2, z, 0.14, 2.4, 0.14, '#5E636C'));
+      cyl(g, -3.9, 4.3, -3.1, 1.2, 1.2, 1.9, '#8A6A4A', 14); cyl(g, -3.9, 5.1, -3.1, 0.05, 1.3, 0.8, '#5E636C', 14);
+      box(g, 5.6, 1.4, -4.2, 2.6, 2.8, 2.4, '#B9B0A0'); wall(g, [5.0, -2.99], [6.0, -2.99], 2.1, '#5E636C');
+      [[2.6, 4.6], [4.0, 4.6], [5.4, 4.6]].forEach(([x, z]) => { box(g, x, 0.45, z, 1.1, 0.9, 0.8, '#C9CDD2'); cyl(g, x, 0.92, z, 0.3, 0.3, 0.02, '#5E636C', 10); });
+      cyl(g, 7.6, 5.5, 5.6, 0.04, 0.05, 5.5, '#2C2E33', 6); box(g, 7.6, 4.5, 5.6, 1.2, 0.03, 0.03, '#2C2E33'); box(g, 7.6, 5.1, 5.6, 0.8, 0.03, 0.03, '#2C2E33');
+      prism(g, [[-1.2, 0.1], [1.2, 0.1], [0.9, 0.55], [-0.9, 0.55]], -6.2, -3.8, '#5E636C'); if(gl) prism(gl, [[-1.0, 0.56], [1.0, 0.56], [0.85, 0.6], [-0.85, 0.6]], -6.1, -3.9, '#A9C4D2');
+      box(g, 1.2, 0.22, -4.6, 1.8, 0.44, 0.6, '#8A6A4A');
+      // la ville autour : des immeubles plus bas et plus hauts, avec leurs fenêtres
+      const cols = ['#B39C86', '#8E7E72', '#A6ACB4', '#C9B9A3', '#9A8B7E', '#BFA58A'];
+      for(let i = 0; i < 26; i++){
+        const a = i / 26 * Math.PI * 2, r = 30 + (i * 7) % 18, x = Math.cos(a) * r, z = Math.sin(a) * r, h = 10 + (i * 13) % 34 - 16, w = 9 + (i * 5) % 7, d = 9 + (i * 3) % 6;
+        box(g, x, -30 + (h + 30) / 2, z, w, h + 30, d, cols[i % 6]);
+        for(let y = -1; y < h - 1; y += 3.2) for(let k = -w / 2 + 1.2; k < w / 2 - 0.8; k += 2.0){
+          const f = [x + k, z + d / 2 + 0.02], b2 = [x + k + 1.0, z + d / 2 + 0.02]; wall(g, f, b2, 1.4, '#3E4552', y);
+          wall(g, [x + k + 1.0, z - d / 2 - 0.02], [x + k, z - d / 2 - 0.02], 1.4, '#3E4552', y);
+        }
+      }
+    },
+  },
+  warehouse:{
+    fog:[400, 500],
+    cam:{ tx:0, ty:1.1, tz:0.8, yaw:79, pitch:-9, dist:9.8, lens:24 },
+    build(g, gl){
+      const X = 12, Z = 8, Hh = 8;
+      floor(g, -X, -Z, X, Z, 0, '#8A8E95');
+      for(let x = -X + 2; x < X; x += 4) box(g, x, 0.003, 0, 0.02, 0.004, 2 * Z, '#7E828A');
+      [[-X + 1, -Z + 1.5, X - 1, -Z + 1.5], [-X + 1, Z - 1.5, X - 1, Z - 1.5]].forEach(([a, b, c]) => box(g, 0, 0.004, b, 2 * X - 2, 0.006, 0.12, '#E3B53A'));
+      wall(g, [-X, -Z], [X, -Z], Hh, '#9AA0A8'); wall(g, [-X, Z], [-X, -Z], Hh, '#8D9198'); wall(g, [X, -Z], [X, Z], Hh, '#8D9198'); wall(g, [X, Z], [-X, Z], Hh, '#9AA0A8');
+      floor(g, -X, -Z, X, Z, Hh, '#6E737B', true);
+      for(let x = -X + 3; x < X; x += 6) box(g, x, Hh - 0.3, 0, 0.3, 0.5, 2 * Z, '#5E636C');
+      for(let x = -X + 3; x < X; x += 6) box(g, x, Hh - 0.02, 0, 1.4, 0.01, 2 * Z - 2, '#C9D3DC');
+      // les portes à rideau, les poteaux, les rayonnages chargés de caisses et de palettes
+      [-6, 2].forEach(x => { wall(g, [x, -Z + 0.02], [x + 4, -Z + 0.02], 4.5, '#7A7F88'); for(let i = 0; i < 15; i++) wall(g, [x, -Z + 0.03], [x + 4, -Z + 0.03], 0.025, '#6A6F77', 0.15 + i * 0.3); });
+      for(let x = -X + 3; x < X; x += 6) [-Z + 4, Z - 4].forEach(z => box(g, x, Hh / 2, z, 0.3, Hh, 0.3, '#E3B53A'));
+      const crate = ['#B08A5A', '#9A7A55', '#8A6A4A', '#3D5A80', '#2F6E4F'];
+      [[-8, 4.5], [-2, 4.5], [4, 4.5], [-8, -3.2], [4, -3.2]].forEach(([cx, cz], r) => {
+        [-0.55, 0.55].forEach(dz => [0, 1.6, 3.2].forEach(y => box(g, cx, y + 0.05, cz + dz * 1.6, 4.4, 0.1, 0.1, '#C9503C')));
+        [-2.15, 0, 2.15].forEach(dx => [-1, 1].forEach(dz => box(g, cx + dx, 2.4, cz + dz * 0.88, 0.1, 4.8, 0.1, '#3D5A80')));
+        [0.1, 1.7, 3.3].forEach((y, k) => { for(let i = 0; i < 3; i++) if((i + k + r) % 4 !== 3) box(g, cx - 1.4 + i * 1.4, y + 0.45, cz, 1.2, 0.8, 1.4, crate[(i + k + r) % 5]); });
+      });
+      // au milieu : des palettes, des caisses en pile, un chariot élévateur, une table et des chaises
+      [[1.5, 0.5], [2.6, 0.9]].forEach(([x, z]) => { box(g, x, 0.07, z, 1.2, 0.14, 1.0, '#8A6A4A'); box(g, x, 0.5, z, 1.1, 0.7, 0.9, '#B08A5A'); });
+      box(g, -3.0, 0.45, -0.6, 1.0, 0.9, 1.0, '#9A7A55'); box(g, -3.0, 1.3, -0.6, 0.8, 0.8, 0.8, '#B08A5A');
+      { const fx = -9.4; box(g, fx, 0.6, 0.8, 1.2, 0.9, 2.0, '#E3B53A'); box(g, fx, 1.6, 1.2, 1.1, 1.2, 0.05, '#2C2E33'); box(g, fx, 2.2, 0.6, 1.2, 0.06, 1.3, '#2C2E33'); [fx - 0.5, fx + 0.5].forEach(x => box(g, x, 1.4, -0.35, 0.08, 2.8, 0.08, '#2C2E33')); [[-0.4], [0.4]].forEach(([d]) => box(g, fx + d, 0.1, -0.9, 0.1, 0.05, 1.0, '#5E636C'));
+      [[fx - 0.45, 1.5], [fx + 0.45, 1.5], [fx - 0.45, 0.1], [fx + 0.45, 0.1]].forEach(([x, z]) => cyl(g, x - 0.1, 0.25, z, 0.25, 0.25, 0.2, '#17181B', 10, 'x')); }
+      box(g, -6.0, 0.75, 0.6, 1.6, 0.05, 0.9, '#6E5440'); [[-6.7, 0.25], [-5.3, 0.25], [-6.7, 0.95], [-5.3, 0.95]].forEach(([x, z]) => box(g, x, 0.37, z, 0.05, 0.74, 0.05, '#5B4532'));
+      [[-6.6, -0.3], [-5.4, -0.3]].forEach(([x, z]) => { box(g, x, 0.45, z, 0.42, 0.05, 0.42, '#3A3D44'); box(g, x, 0.75, z - 0.2, 0.42, 0.55, 0.04, '#3A3D44'); });
+      cyl(g, -6.0, Hh, 0.6, 0.01, 0.01, Hh - 2.6, '#2C2E33', 4); cyl(g, -6.0, 2.6, 0.6, 0.08, 0.45, 0.3, '#5E636C', 12);
+      [-4, 4].forEach(x => [-3, 3].forEach(z => { cyl(g, x, Hh, z, 0.01, 0.01, 2, '#2C2E33', 4); cyl(g, x, Hh - 2, z, 0.1, 0.5, 0.3, '#5E636C', 12); }));
+    },
+  },
+});
 /* un hasard qui donne toujours la même suite (la foule ne bouge pas d'une image à l'autre) */
 function seeded(n){ let s = (n * 9301 + 49297) % 233280 || 1; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
 const CROWD_TINTS = ['#C9503C', '#3D5A80', '#E3A33A', '#2F6E4F', '#7C6A8E', '#B4593A', '#4A6A8A', '#D9707A', '#8A7356', '#5E636C', '#E9E4DA', '#2E3A4E'].map(hexRGB);
@@ -733,11 +946,15 @@ const SPOTS = {
   street:[ ['Sur le trottoir', 'On the sidewalk', -6.2, 0.5, 120, null, 0.14], ['En face, sur le trottoir', 'Facing, on the sidewalk', -5.0, -0.5, -60, null, 0.14], ['Au passage piéton', 'At the crosswalk', -1.6, 6.0, 90, 'walk'], ['À l’abribus, assis', 'At the bus stop, seated', 6.32, -8.4, -90, 'sit', -0.34] ],
   beach:[ ['Sur la serviette', 'On the towel', 4.8, 2.6, -150, 'sitground'], ['Allongé au soleil', 'Lying in the sun', -1.6, -0.6, 180, 'lie'], ['Au bord de l’eau', 'At the water’s edge', 1.0, -7.4, 180], ['Qui se promène', 'Taking a walk', -2.0, 2.4, -100, 'walk'] ],
   stadium:[ ['Au rond central', 'Center circle', 0.0, 0.0, 30], ['Face à face', 'Facing', 0.8, 0.6, -150], ['Devant le but', 'In front of the goal', 0.0, 44.0, 180], ['En tribune', 'In the stands', -41.0, 10.0, 90, null, 1.4] ],
+  house:[ ['Salon, sur le canapé', 'Living room, on the sofa', -1.6, -3.2, 0, 'sit'], ['Dans la cuisine', 'In the kitchen', 3.6, -1.0, 90], ['À la porte d’entrée', 'At the front door', 0.0, 3.3, 180], ['Dans l’escalier', 'On the stairs', -4.2, 1.55, 180, null, 1.66],
+    ['Chambre, sur le lit', 'Bedroom, on the bed', -1.4, -2.4, 0, 'lie', 3.45], ['Chambre, à la fenêtre', 'Bedroom, at the window', -1.0, -3.4, 0, null, 2.9], ['Chambre d’enfant', 'Child’s room', 2.4, -1.4, -60, null, 2.9], ['Au grenier', 'In the attic', 0.6, 0.2, 90, null, 5.8], ['Dans le jardin', 'In the garden', 1.6, 7.0, 180] ],
+  roof:[ ['Au bord du toit', 'At the edge', 0.0, -6.3, 180], ['Face à face', 'Facing', 0.9, -4.8, 0], ['Près du château d’eau', 'By the water tower', -2.2, -2.2, -130], ['Assis sur le rebord', 'Sitting on the ledge', 3.0, 6.75, 180, 'sit', 0.55] ],
+  warehouse:[ ['Au milieu, face à face', 'In the middle, facing', -0.8, 1.8, 120], ['En face', 'Opposite', 0.6, 1.0, -60], ['Entre les rayonnages', 'Between the racks', -5.0, 2.6, 90], ['Caché derrière une caisse', 'Hiding behind a crate', -3.0, -1.5, 180, 'crouch'] ],
   country:[ ['Au bord de la route', 'By the roadside', 4.3, 1.0, -90], ['Sur la route', 'On the road', 0.9, 3.0, 180, 'walk'], ['Près de la clôture', 'By the fence', -5.0, -1.6, 90], ['Dans le champ', 'In the field', -12.0, -6.0, 30] ],
 };
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
-function setGeo(id){ const g = geo(), gl = geo(); SET_DEF[id].build(g, gl); return { g, glass:gl }; }
+function setGeo(id){ const g = geo(), gl = geo(), L = (SET_DEF[id].levels || []).map(() => geo()); SET_DEF[id].build(g, gl, L); return { g, glass:gl, levels:L }; }
 
 /* ---------- Le vocabulaire du storyboard (le même que dans Raging Page) ---------- */
 const SHOT = {
@@ -836,3 +1053,68 @@ function camLook(e, t, lens){
   const vx = e[0] - t[0], vy = e[1] - t[1], vz = e[2] - t[2], dist = Math.hypot(vx, vy, vz) || 1;
   return { tx:t[0], ty:t[1], tz:t[2], yaw:Math.atan2(vx, vz) / D2R, pitch:-Math.asin(vy / dist) / D2R, dist, lens, roll:0 };
 }
+
+/* ---------- Les accessoires, tenus dans la main droite ----------
+   Dans le repère de la main, les doigts vont vers le bas (-y) : le canon prolonge la main,
+   la crosse descend dans la paume. */
+const PROPS = [['gun', 'Pistolet', 'Handgun'], ['phone', 'Téléphone', 'Phone']];
+function propGeo(id){
+  const g = geo(), K = '#23252B', Kl = '#3A3D44';
+  if(id === 'gun'){
+    box(g, 0, -0.1, 0.034, 0.028, 0.19, 0.034, K);           // la culasse et le canon
+    box(g, 0, -0.04, -0.012, 0.025, 0.04, 0.085, Kl);         // la crosse, dans la paume
+    box(g, 0, -0.072, 0.0, 0.006, 0.035, 0.03, K);            // le pontet
+    box(g, 0, -0.192, 0.034, 0.012, 0.006, 0.012, '#111214');  // la bouche du canon
+  } else if(id === 'phone'){
+    box(g, 0, -0.085, 0.03, 0.07, 0.14, 0.012, '#1E2026');
+    box(g, 0, -0.085, 0.0365, 0.062, 0.128, 0.002, '#2E3846');
+  }
+  return g;
+}
+
+/* ---------- Les véhicules qu'on pose où l'on veut (la moto) ----------
+   Repère du véhicule : il regarde vers +z ; la selle du pilote est en z = -0.2, celle du passager en -0.55. */
+const VEHICLES = [['moto', 'Moto', 'Motorbike']];
+const MOTO_COLS = ['#B4232C', '#24262B', '#3D5A80', '#E8B923'];
+function vehicleGeo(kind, col){
+  const g = geo(), K = '#1E2025', M = '#9AA0A8', C = col || MOTO_COLS[0];
+  if(kind === 'moto'){
+    [0.7, -0.72].forEach(z => { cyl(g, -0.06, 0.31, z, 0.31, 0.31, 0.12, '#17181B', 16, 'x'); cyl(g, -0.065, 0.31, z, 0.13, 0.13, 0.13, M, 10, 'x'); });
+    prism(g, [[0.45, 0.78], [0.42, 0.98], [0.05, 1.0], [-0.02, 0.8]], -0.15, 0.15, C);                 // le réservoir
+    prism(g, [[-0.02, 0.8], [0.0, 0.86], [-0.62, 0.9], [-0.72, 0.84], [-0.72, 0.78]], -0.14, 0.14, '#24262B');   // la selle
+    prism(g, [[0.42, 0.5], [0.45, 0.78], [-0.02, 0.8], [-0.3, 0.45]], -0.1, 0.1, K);                   // le cadre et le moteur
+    box(g, 0, 0.42, 0.02, 0.26, 0.24, 0.36, M);                                                         // le moteur
+    prism(g, [[-0.62, 0.78], [-0.6, 0.86], [-0.98, 0.8], [-0.95, 0.74]], -0.13, 0.13, C);             // le garde-boue arrière
+    prism(g, [[0.88, 0.55], [0.86, 0.62], [0.5, 0.66], [0.52, 0.58]], -0.1, 0.1, C);                 // le garde-boue avant
+    [0.075, -0.075].forEach(x => { const a = [x, 0.31, 0.7], b = [x, 1.0, 0.44]; const n = 6;
+      for(let i = 0; i < n; i++){ const t0 = i / n, t1 = (i + 1) / n; box(g, x, a[1] + (b[1] - a[1]) * (t0 + t1) / 2, a[2] + (b[2] - a[2]) * (t0 + t1) / 2, 0.035, (b[1] - a[1]) / n + 0.01, 0.04, M); } });
+    box(g, 0, 1.03, 0.46, 0.72, 0.03, 0.03, K);                                                         // le guidon
+    [0.33, -0.33].forEach(x => cyl(g, x - 0.05, 1.03, 0.46, 0.022, 0.022, 0.1, '#2C2E33', 8, 'x'));
+    cyl(g, 0, 0.92, 0.6, 0.09, 0.09, 0.05, '#FBF6DF', 12, 'z'); box(g, 0, 0.92, 0.57, 0.2, 0.18, 0.06, C);   // le phare
+    box(g, 0, 0.82, -0.98, 0.1, 0.05, 0.03, '#C2453B');                                                // le feu arrière
+    cyl(g, 0.16, 0.36, -0.15, 0.04, 0.05, 0.7, M, 8, 'z');                                             // l'échappement
+    [0.17, -0.17].forEach(x => box(g, x, 0.38, 0.17, 0.08, 0.02, 0.04, K));                           // les repose-pieds
+  }
+  return g;
+}
+/* les prises de vue de la moto, dans son repère : [id, fr, en, œil, cible, focale, valeur, angle] */
+const MOTO_SHOTS = [
+  ['face', 'De face, le pilote arrive', 'Head-on, rider coming', [0.4, 1.2, 5.5], [0, 1.2, 0], 35, 'pe'],
+  ['prof', 'De profil (travelling)', 'Side on (tracking)', [4.2, 1.0, 0.1], [0, 1.0, 0], 35, 'pe'],
+  ['dos', 'De dos, on suit la moto', 'From behind, following', [0.5, 1.6, -4.5], [0, 1.1, 0.5], 35, 'pe'],
+  ['gp', 'Gros plan du pilote', 'Close-up of the rider', [0.9, 1.55, 1.5], [0, 1.5, -0.1], 50, 'gp'],
+  ['sol', 'Au ras du sol, la roue', 'Ground level, the wheel', [0.9, 0.25, 2.2], [0, 0.55, 0.4], 24, 'pm', 'sol'],
+  ['epaule', 'Par-dessus l’épaule du pilote', 'Over the rider’s shoulder', [-0.25, 1.78, -0.75], [0.1, 1.1, 5], 24, 'am'],
+  ['guidon', 'Caméra sur le guidon', 'Handlebar camera', [0, 1.22, 0.62], [0, 1.5, -0.12], 24, 'gp'],
+  ['dessus', 'Vue de dessus', 'From above', [0.3, 7, 0.3], [0, 0.8, 0], 28, 'pg', 'dess'],
+];
+/* les prises de vue d'un personnage qui tient une arme, dans son repère (x : sa gauche, z : devant lui).
+   « e » et « s » : la hauteur des yeux et des épaules ; « H » : la main qui tient l'arme. */
+const GUN_SHOTS = [
+  ['canon', 'Le canon vers la caméra', 'Barrel at the camera', (e, s) => [-0.12, e, 1.7], (e, s) => [-0.05, e - 0.08, 0], 35, 'pm'],
+  ['epaule', 'Par-dessus l’épaule du tireur', 'Over the shooter’s shoulder', (e, s) => [-0.38, e + 0.1, -0.65], (e, s) => [-0.12, e - 0.15, 4], 35, 'am'],
+  ['arme', 'Gros plan sur l’arme', 'Close-up on the gun', null, null, 50, 'tgp'],
+  ['profil', 'Le tireur de profil', 'The shooter in profile', (e, s) => [-2.6, s, 0.35], (e, s) => [0, s, 0.35], 35, 'pa'],
+  ['contre', 'Contre-plongée menaçante', 'Threatening low angle', (e, s) => [-0.3, 0.55, 1.6], (e, s) => [0, e - 0.1, 0], 28, 'pm', 'con'],
+  ['large', 'Plan large de la scène', 'Wide shot of the scene', (e, s) => [2.6, 1.7, 4.6], (e, s) => [0, 1.1, 1.3], 28, 'pe'],
+];
