@@ -258,9 +258,15 @@ const GL = {
           else if(mt < 3.5){ c = base * (0.45 + 0.35 * d) + vec3(0.6) * pow(nh, 40.0) + vec3(0.16) * pow(1.0 - f, 3.0); }   // métal
           else if(mt < 4.5){ c = mix(c, vec3(ls), 0.06); c += vec3(0.42) * pow(nh, 60.0); c = mix(c, vec3(0.78, 0.84, 0.9) * (0.65 + 0.35 * n.y), pow(1.0 - f, 4.0) * 0.32); }   // carrosserie
           else if(mt < 5.5) c = mix(c, base * 1.18 + vec3(0.08, 0.06, 0.0), night);                           // une lampe : allumée la nuit
-          else if(night > 0.05){                                                                                // une fenêtre d'immeuble : la nuit, certaines sont éclairées
+          else if(mt < 6.5){ if(night > 0.05){                                                                  // une fenêtre d'immeuble : la nuit, certaines sont éclairées
             float r = fract(sin(dot(floor(vW.xz * 0.9) + floor(vW.y * 0.7) * 7.0, vec2(12.9898, 78.233))) * 43758.5);
             if(r > 0.5) c = mix(c, vec3(1.0, 0.82, 0.52) * (0.85 + 0.3 * r), night);
+          } }
+          else if(mt < 7.5){                                                                                    // une fenêtre allumée la nuit, toute entière : une lumière chaude qui varie d'une fenêtre à l'autre (plus froide dans un train)
+            float t = fract(dot(vC, vec3(37.1, 17.3, 5.7)));
+            vec3 L = mix(vec3(1.0, 0.78, 0.48), vec3(1.0, 0.88, 0.68), t) * (0.8 + 0.2 * t);
+            L = mix(L, vec3(0.68, 0.72, 0.74), step(0.5, dot(vC, vec3(0.3333))));
+            c = mix(c, L, night);
           }
           if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
           // dedans aussi, un peu de profondeur : le fond d'une grande pièce recule à peine, le premier plan ressort
@@ -271,7 +277,7 @@ const GL = {
           // les bords des meubles et des objets, vus de biais, s'assombrissent un peu : chaque forme se détache de ce qui est derrière
           if(mt < 0.5 || (mt > 2.5 && mt < 4.5)) c *= 1.0 - 0.4 * pow(1.0 - f, 2.5); else if(mt < 1.5) c *= 1.0 - 0.1 * pow(1.0 - f, 3.0);
         }
-        if(uChar > 0.5) c *= uGradeC; else if(floor(vM + 0.5) < 4.5) c *= uGrade; else c *= mix(uGrade, vec3(1.0), clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0));   // le moment de la journée : jour, fin de journée, nuit (les personnages restent lisibles, les lampes et les fenêtres s'allument)
+        if(uChar > 0.5) c *= uGradeC; else if(floor(vM + 0.5) < 4.5 || floor(vM + 0.5) > 7.5) c *= uGrade; else c *= mix(uGrade, vec3(1.0), clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0));   // le moment de la journée : jour, fin de journée, nuit (les personnages restent lisibles, les lampes et les fenêtres s'allument)
         float a = uA;
         if(uGlass > 0.5){ c = mix(vC, vec3(0.92, 0.96, 1.0), pow(1.0 - f, 2.0) * 0.6); a = uA + pow(1.0 - f, 3.0) * 0.35; }
         if(uFog.x < 300.0) c = mix(c, uFogC, clamp((distance(vW, uEye) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0) * 0.82);   // la brume au loin (dehors)
