@@ -19,14 +19,14 @@ let _libThumbT = 0;
 let _saveFail = false, _bakAsked = {};
 function persistDoc(json){
   let ok = true; try{ localStorage.setItem(docKey(S.docId), json); }catch(err){ ok = false; }
-  if(!ok && !_saveFail) toast(L('Le navigateur est plein : ce storyboard n’est plus enregistré ici. Garde-le en fichier tout de suite.', 'The browser is full: this storyboard is no longer saved here. Keep it as a file right now.'), 'warn', [L('Enregistrer le fichier', 'Save the file'), () => exportBoardFile(S.docId)]);
+  if(!ok && !_saveFail) toast(L('Navigateur plein : ce storyboard n’est plus enregistré', 'Browser full: this storyboard is no longer saved'), 'warn', [L('Enregistrer le fichier', 'Save the file'), () => exportBoardFile(S.docId)]);
   _saveFail = !ok;
   const lib = libGet(), e = lib.find(x => x.id === S.docId) || (lib.unshift({ id:S.docId }), lib[0]);
   Object.assign(e, { title:S.doc.title || '', n:S.doc.shots.length, dur:docDur(S.doc), upd:Date.now() });
   if(!e.seen) e.seen = Date.now();
   if(ok && !_bakAsked[S.docId] && S.doc.shots.length >= 6 && Date.now() - (e.bak || e.seen) > 3 * 864e5){
     _bakAsked[S.docId] = true;
-    toast(L('Ton storyboard n’existe que dans ce navigateur. Une copie en fichier, au cas où ?', 'Your storyboard only lives in this browser. A copy as a file, just in case?'), 'warn', [L('Enregistrer une copie', 'Save a copy'), () => exportBoardFile(S.docId)]);
+    toast(L('Une copie de secours en fichier ?', 'A backup copy as a file?'), 'warn', [L('Enregistrer une copie', 'Save a copy'), () => exportBoardFile(S.docId)]);
   }
   libSet(lib);
   clearTimeout(_libThumbT); _libThumbT = setTimeout(() => { const l = libGet(), x = l.find(y => y.id === S.docId); if(!x || !S.doc) return; const u = thumbOf(0); if(u){ x.thumb = u; libSet(l); } }, 1200);

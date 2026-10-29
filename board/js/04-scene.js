@@ -92,7 +92,7 @@ function addShot(){
   endEdit(); pushUndo();
   const n = clone(shot()); n.id = uidS(); n.info.cap = ''; n.info.dial = ''; n.info.move = 'fix'; n.info.trans = 'cut'; delete n.camEnd;
   S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.sel = null; changed(true);
-  toast(L('Plan ', 'Shot ') + (S.i + 1) + L(' créé : il reprend le plan d’avant. Change le cadrage ou la pose.', ' created: it starts from the previous one. Change the framing or the pose.'));
+  toast(L('Plan ', 'Shot ') + (S.i + 1) + L(' créé', ' created'));
 }
 /* le personnage le plus proche d'un autre : celui à qui il parle */
 function otherOf(c, chars){
@@ -506,8 +506,8 @@ function importPhoto(file){
     const kept = await photoPut(id, url);
     const s = shot(); if(s.set !== 'photo') setPlace('photo');
     edit(() => { s.photo = id; }); THUMBS.clear(); renderUI(); requestRender();
-    toast(kept ? L('Ta photo est le décor de ce plan. Place les personnages, puis cale la caméra sur la photo.', 'Your photo is this shot’s set. Place the characters, then line the camera up with the photo.')
-      : L('Photo posée, mais ce navigateur ne peut pas la garder : enregistre le fichier .rboard pour ne pas la perdre.', 'Photo placed, but this browser can’t keep it: save the .rboard file so you don’t lose it.'), kept ? '' : 'warn');
+    toast(kept ? L('Photo posée comme décor', 'Photo set as the background')
+      : L('Photo posée, mais non gardée par ce navigateur : enregistre le fichier .rboard', 'Photo placed but not kept by this browser: save the .rboard file'), kept ? '' : 'warn');
   }; im.onerror = () => toast(L('Cette image ne s’ouvre pas.', 'This image can’t be opened.'), 'warn'); im.src = r.result; };
   r.readAsDataURL(file);
 }
@@ -935,7 +935,7 @@ function drawFrame(sh, w, h, clean, o){
     chars.forEach((ch, c) => { const on = S.sel && S.sel.c === c, P = lookMesh(lookOf(ch, c)).out; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], flat:true, a:on ? 0.5 : 0.34, col:on ? GREEN : GHOST_C }); });
     gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
   }
-  const tintOf = (c, id) => final ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id && (id !== 'pelvis' || S.sel.pick)) ? [GREEN, 0.72] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.45] : [null, 0];
+  const tintOf = (c, id) => final ? [null, 0] : (S.sel && S.sel.c === c && S.sel.j === id && (id !== 'pelvis' || S.sel.pick)) ? [GREEN, 0.42] : (S.hover && S.hover.c === c && S.hover.j === id) ? [GREEN_L, 0.26] : [null, 0];
   // le contour des personnages : comme un trait de crayon, d'épaisseur constante à l'écran
   const px = 2 * Math.tan(fovOf(cam.lens) / 2) / h * clamp(h / 280, 1.7, 3.4);
   if(!fast) gl.cullFace(gl.FRONT);
@@ -1204,7 +1204,7 @@ function onDown(e){
   if(hit){
     S.sel = Object.assign(hit, { pick:true }); S.target = hit.c; S.crowd = -1; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
     // attraper une main ou un pied : tout le membre suit (Alt garde l'ancienne façon, articulation par articulation)
-    DRAG.ik = DRAG.mode === 'pose' && IK_CHAIN[hit.j] && !e.altKey && S.ikOn !== false ? ikStart(hit.c, hit.j) : null;
+    DRAG.ik = DRAG.mode === 'pose' ? ikStart(hit.c, hit.j, e.altKey, x, y) : null;
     if(DRAG.mode === 'pose' && S.panel !== 'pose'){ S.panel = 'pose'; lsSet(LS_PANEL, 'pose'); }
     if(DRAG.mode === 'move'){ const ch = shot().chars[hit.c], g = groundAt(x, y, 0); DRAG.grab = g ? [ch.root.x - g[0], ch.root.z - g[1]] : null; }
     renderSide(); renderTools(); renderHint(); requestRender();
@@ -1260,14 +1260,6 @@ function onMove(e){
   else if(DRAG.mode === 'pose' && DRAG.ik){
     const [x, y] = canvasXY(e); ikDrag(DRAG.ik, x, y); renderSide(true);
   }
-  else if(DRAG.mode === 'pose'){
-    const J = JOINT[S.sel.j], v = shot().chars[S.sel.c].j[J.id], k = 0.5;
-    // glisser vers le haut lève ou plie ; vers le côté, la deuxième façon de bouger
-    const a0 = J.ax[0], up = (a0[4] === 'Hocher' || a0[4] === 'Pencher') ? dy : -dy;
-    v[0] = clamp(v[0] + up * k, a0[2], a0[3]);
-    if(J.ax[1]) v[1] = clamp(v[1] + dx * k * (J.ax[1][0] === 'y' ? 1 : -1), J.ax[1][2], J.ax[1][3]);
-    renderSide(true);
-  }
   else if(DRAG.mode === 'move'){
     const [x, y] = canvasXY(e), g = groundAt(x, y, 0), ch = shot().chars[S.sel.c];
     if(g && DRAG.grab){ ch.root.x = clamp(g[0] + DRAG.grab[0], -60, 60); ch.root.z = clamp(g[1] + DRAG.grab[1], -60, 60); }
@@ -1319,42 +1311,75 @@ function hoverCheck(e){
   if(!same){ S.hover = h; requestRender(); renderHint(); }
 }
 
-/* ---------- Poser à la main : on attrape une main (ou un pied) et le membre entier suit ----------
-   Le point attrapé glisse dans un plan face à la caméra ; on cherche les angles de l'épaule, du coude et du
-   poignet (ou de la hanche, du genou et de la cheville) qui l'y amènent, sans sortir des limites du corps.
-   Quelques dizaines d'essais par mouvement de souris : fluide même sur un vieil ordinateur. */
-const IK_CHAIN = { handL:['armL', 'foreL', 'handL'], handR:['armR', 'foreR', 'handR'], foreL:['armL', 'foreL'], foreR:['armR', 'foreR'],
-  footL:['thighL', 'shinL', 'footL'], footR:['thighR', 'shinR', 'footR'], shinL:['thighL', 'shinL'], shinR:['thighR', 'shinR'] };
-const IK_PT = { handL:[0, -0.075, 0.012], handR:[0, -0.075, 0.012], footL:[0, -0.05, 0.06], footR:[0, -0.05, 0.06], foreL:[0, -0.25, 0], foreR:[0, -0.25, 0], shinL:[0, -0.4, 0], shinR:[0, -0.4, 0] };
-function ikStart(c, j){
-  const ch = shot().chars[c], M = charMatrices(ch), p = M4.apply(M[j], IK_PT[j]), cam = viewCam(), e = camEye(cam);
-  const n = [cam.tx - e[0], cam.ty - e[1], cam.tz - e[2]], l = Math.hypot(...n) || 1;
-  return { c, j, chain:IK_CHAIN[j], p0:p, n:n.map(v => v / l) };
-}
+/* ---------- Poser à la main : on attrape une partie du corps, et le point attrapé suit la souris ----------
+   Chaque partie entraîne ce qui la porte : la main entraîne le bras, l'avant-bras plie le coude et l'épaule,
+   la tête se tourne vers où on la tire, le torse se penche et pivote. Avec Alt, seule l'articulation saisie bouge.
+   Le point saisi glisse dans un plan face à la caméra ; on cherche les angles qui l'y amènent sans sortir des
+   limites du corps, en changeant le moins possible (et presque jamais en vrillant un membre sur lui-même).
+   Quelques centaines de petits essais par mouvement de souris : fluide même sur un vieil ordinateur. */
+const IK_CHAIN = { head:['head'], chest:['spine', 'chest'], spine:['spine'],
+  armL:['armL'], foreL:['armL', 'foreL'], handL:['armL', 'foreL', 'handL'], armR:['armR'], foreR:['armR', 'foreR'], handR:['armR', 'foreR', 'handR'],
+  thighL:['thighL'], shinL:['thighL', 'shinL'], footL:['thighL', 'shinL', 'footL'], thighR:['thighR'], shinR:['thighR', 'shinR'], footR:['thighR', 'shinR', 'footR'] };
+// où l'on peut saisir chaque partie (un segment, dans le repère de la partie) : on prend le point le plus proche de la souris.
+// La tête et le torse se saisissent en avant du visage : tirer vers le côté les fait tourner, vers le haut les fait se redresser.
+// (un levier d'une cinquantaine de centimètres : un petit geste, une rotation mesurée)
+const IK_SEG = { head:[[0, 0.1, 0.5], [0, 0.1, 0.5]], chest:[[0, 0.25, 0.5], [0, 0.25, 0.5]], spine:[[0, 0.12, 0.5], [0, 0.12, 0.5]],
+  armL:[[0, -0.08, 0], [0, -0.28, 0]], foreL:[[0, -0.06, 0], [0, -0.25, 0]], handL:[[0, -0.04, 0.01], [0, -0.09, 0.01]],
+  armR:[[0, -0.08, 0], [0, -0.28, 0]], foreR:[[0, -0.06, 0], [0, -0.25, 0]], handR:[[0, -0.04, 0.01], [0, -0.09, 0.01]],
+  thighL:[[0, -0.12, 0], [0, -0.42, 0]], shinL:[[0, -0.06, 0], [0, -0.4, 0]], footL:[[0, -0.05, 0.02], [0, -0.05, 0.12]],
+  thighR:[[0, -0.12, 0], [0, -0.42, 0]], shinR:[[0, -0.06, 0], [0, -0.4, 0]], footR:[[0, -0.05, 0.02], [0, -0.05, 0.12]] };
 function rayAt(x, y){
   const w = R.canvas.width, h = R.canvas.height, inv = M4.invert(viewProj(viewCam(), w / h)), nx = x / w * 2 - 1, ny = 1 - y / h * 2;
   const a = M4.apply(inv, [nx, ny, -1]), b = M4.apply(inv, [nx, ny, 1]); return [a, [b[0] - a[0], b[1] - a[1], b[2] - a[2]]];
 }
+function ikStart(c, j, one, x, y){
+  const ch = shot().chars[c]; if(!ch || !IK_CHAIN[j]) return null;
+  const M = charMatrices(ch), [A, B] = IK_SEG[j], a = M4.apply(M[j], A), b = M4.apply(M[j], B);
+  // le point du segment le plus proche du rayon de la souris : c'est lui qu'on tient
+  let t = 1;
+  if(x != null){
+    const [o, d] = rayAt(x, y), u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w0 = [a[0] - o[0], a[1] - o[1], a[2] - o[2]];
+    const A1 = u[0] * u[0] + u[1] * u[1] + u[2] * u[2], B1 = u[0] * d[0] + u[1] * d[1] + u[2] * d[2], C1 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    const D1 = u[0] * w0[0] + u[1] * w0[1] + u[2] * w0[2], E1 = d[0] * w0[0] + d[1] * w0[1] + d[2] * w0[2], den = A1 * C1 - B1 * B1;
+    t = den > 1e-9 ? clamp((B1 * E1 - C1 * D1) / den, 0, 1) : 0.5;
+  }
+  const pt = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
+  const w = R.canvas.width, h = R.canvas.height, vp = viewProj(viewCam(), w / h), q = M4.apply(vp, M4.apply(M[j], pt));
+  // l'écart entre le curseur et le point saisi, au moment où on l'attrape (on ne le fait pas sauter sous la souris)
+  return { c, j, chain:one ? [j] : IK_CHAIN[j], pt, vp, h, off:x != null ? [q[0] - (x / w * 2 - 1), q[1] - (1 - y / h * 2)] : [0, 0] };
+}
 function ikDrag(K, x, y){
   const ch = shot().chars[K.c]; if(!ch) return;
-  const [o, d] = rayAt(x, y), den = d[0] * K.n[0] + d[1] * K.n[1] + d[2] * K.n[2]; if(Math.abs(den) < 1e-6) return;
-  const t = ((K.p0[0] - o[0]) * K.n[0] + (K.p0[1] - o[1]) * K.n[1] + (K.p0[2] - o[2]) * K.n[2]) / den, T = [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t];
-  ikSolve(ch, K.j, K.chain, T);
+  const w = R.canvas.width;
+  ikSolve(ch, K.j, K.chain, [x / w * 2 - 1 + K.off[0], 1 - y / K.h * 2 + K.off[1]], K.pt, K.vp, K.h);
 }
-function ikSolve(ch, j, chain, T){
-  const free = []; chain.forEach(id => JOINT[id].ax.forEach((a, i) => free.push([id, i])));
-  const orig = {}; chain.forEach(id => orig[id] = (ch.j[id] || []).slice());
-  const err = () => { const M = charMatrices(ch), q = M4.apply(M[j], IK_PT[j]); let e = (q[0] - T[0]) ** 2 + (q[1] - T[1]) ** 2 + (q[2] - T[2]) ** 2;
-    for(const [id, i] of free) e += 0.0000015 * ((ch.j[id][i] || 0) - (orig[id][i] || 0)) ** 2; return e; };
-  let best = err(), step = 8, n = 0;
-  while(step > 0.5 && n < 260){
+/* ce qui coûte le plus : vriller un membre sur lui-même, pencher la tête ou le buste de côté, casser le poignet.
+   On ne le fait que si rien d'autre n'amène le point sous la souris. */
+const ikCost = (id, i) => { const a = JOINT[id].ax[i], trunk = id === 'head' || id === 'chest' || id === 'spine';
+  if(a[0] === 'y') return trunk ? 0.000002 : 0.00006;
+  if(a[0] === 'z' && trunk) return 0.00006;
+  if(id === 'handL' || id === 'handR') return 0.00002;
+  return 0.0000015; };
+// un bras ou une jambe qui part derrière le corps : possible, mais seulement si on le demande vraiment
+const BACK = { armL:0, armR:0, thighL:0, thighR:0 };
+/* le point saisi doit rester sous le curseur, à l'écran : la profondeur est libre (elle bouge le moins possible) */
+function ikSolve(ch, j, chain, T, pt, vp, h){
+  // l'articulation la plus proche de la main qui tient travaille d'abord : on attrape l'avant-bras, le coude plie
+  const free = []; chain.forEach((id, n) => { ch.j[id] = ch.j[id] || []; JOINT[id].ax.forEach((a, i) => free.push([id, i, ikCost(id, i) * (1 + (chain.length - 1 - n) * 2), BACK[id] === i])); });
+  const orig = {}; chain.forEach(id => orig[id] = ch.j[id].slice());
+  const k = h / 2 / 250;     // écart à l'écran : en quarts de millier de pixels, à l'échelle des angles
+  const err = () => { const M = charMatrices(ch), q = M4.apply(vp, M4.apply(M[j], pt)); let e = ((q[0] - T[0]) * k) ** 2 + ((q[1] - T[1]) * k) ** 2;
+    for(const [id, i, wt, back] of free){ const v = ch.j[id][i] || 0; e += wt * (v - (orig[id][i] || 0)) ** 2; if(back && v < 0) e += 0.00003 * v * v; } return e; };
+  // de grands pas d'abord (on ne reste pas coincé), puis de plus en plus fins
+  let best = err(), step = 16, n = 0;
+  while(step > 0.5 && n < 360){
     let better = false;
     for(const [id, i] of free){ const lim = JOINT[id].ax[i];
       for(const dd of [step, -step]){ const old = ch.j[id][i] || 0; ch.j[id][i] = clamp(old + dd, lim[2], lim[3]); n++;
         const e = err(); if(e < best - 1e-9){ best = e; better = true; } else ch.j[id][i] = old; } }
     if(!better) step /= 2;
   }
-  chain.forEach(id => ch.j[id] = ch.j[id].map(v => Math.round(v * 10) / 10));
+  chain.forEach(id => ch.j[id] = ch.j[id].map(v => Math.round((v || 0) * 10) / 10));
 }
 /* ---------- Se déplacer : le pavé à l'écran et le clavier (ZQSD ou WASD, flèches haut et bas) ----------
    On maintient un bouton ou une touche : la caméra avance tant qu'on appuie. */

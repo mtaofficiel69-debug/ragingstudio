@@ -190,7 +190,7 @@ const GL = {
         if(distance(vW, uEye) < 0.3 && uX > 0.5) discard;   // rien ne colle à l'objectif
         // une arête dont les deux faces tournent le dos à la caméra (un mur vu de derrière) ne se trace pas
         if(uLine > 0.5){ vec3 v = uEye - vW; if(dot(vN, v) < 0.0 && dot(vN2, v) < 0.0) discard; }
-        if(uFlat > 0.5){ float la = uLine > 0.5 ? 1.0 - smoothstep(10.0, 42.0, distance(vW, uEye)) : 1.0; gl_FragColor = vec4(uBW > 0.5 && uFlat < 1.5 ? bw(vC, 0.0) : vC, uA * la); return; }
+        if(uFlat > 0.5){ float la = uLine > 0.5 ? (1.0 - smoothstep(10.0, 42.0, distance(vW, uEye))) * (vM < 0.5 ? 1.7 : vM < 1.5 ? 0.75 : 1.0) : 1.0; gl_FragColor = vec4(uBW > 0.5 && uFlat < 1.5 ? bw(vC, 0.0) : vC, uA * la); return; }
         vec3 n = normalize(vN);
         if(!gl_FrontFacing) n = -n;
         float d = max(dot(n, uL), 0.0), h = 0.5 + 0.5 * n.y, f = max(dot(n, normalize(uEye - vW)), 0.0);
@@ -217,7 +217,7 @@ const GL = {
           // le feuillage vit, le métal brille, les carrosseries ont un vernis (quelques calculs, sans texture ni ombre)
           float mt = floor(vM + 0.5), ls = dot(c, vec3(0.299, 0.587, 0.114)), night = clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0);
           vec3 hv = normalize(uL + normalize(uEye - vW)); float nh = max(dot(n, hv), 0.0);
-          if(mt < 0.5){ c = mix(c, vec3(ls), 0.14); c += vec3(0.07) * pow(nh, 24.0); }                          // objets, meubles
+          if(mt < 0.5){ c = mix(c, vec3(ls), 0.06); c = mix(c, c * c * (3.0 - 2.0 * c), 0.25); c += vec3(0.07) * pow(nh, 24.0); }   // objets, meubles : des couleurs et des valeurs un peu plus franches
           else if(mt < 1.5){ c = mix(c, vec3(ls), 0.32); c = mix(c, vec3(0.5, 0.51, 0.53), 0.09); }             // architecture
           else if(mt < 2.5){                                                                                     // feuillage
             float v = sin(vW.x * 1.9 + vW.y * 0.7) * sin(vW.z * 1.6 - vW.y * 0.9);
@@ -231,6 +231,13 @@ const GL = {
             if(r > 0.5) c = mix(c, vec3(1.0, 0.82, 0.52) * (0.85 + 0.3 * r), night);
           }
           if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
+          // dedans aussi, un peu de profondeur : le fond d'une grande pièce recule à peine, le premier plan ressort
+          else c *= 1.0 - 0.1 * smoothstep(6.0, 18.0, distance(vW, uEye));
+          // la lumière vient d'en haut : le sol reste un peu dans l'ombre, ce qui s'élève (plateaux, assises, comptoirs) s'éclaire.
+          // Un meuble se détache ainsi du sol, même de la même couleur.
+          if(mt < 1.5) c *= mix(0.9, 1.1, smoothstep(0.02, 1.0, vW.y - uFloor));
+          // les bords des meubles et des objets, vus de biais, s'assombrissent un peu : chaque forme se détache de ce qui est derrière
+          if(mt < 0.5 || (mt > 2.5 && mt < 4.5)) c *= 1.0 - 0.4 * pow(1.0 - f, 2.5); else if(mt < 1.5) c *= 1.0 - 0.1 * pow(1.0 - f, 3.0);
         }
         if(uChar > 0.5) c *= uGradeC; else if(floor(vM + 0.5) < 4.5) c *= uGrade; else c *= mix(uGrade, vec3(1.0), clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0));   // le moment de la journée : jour, fin de journée, nuit (les personnages restent lisibles, les lampes et les fenêtres s'allument)
         float a = uA;
@@ -540,11 +547,11 @@ function edgeLines(g, minDeg){
     const i0 = t * 9, n = [g.n[i0], g.n[i0 + 1], g.n[i0 + 2]];
     for(const [a, b] of [[0, 3], [3, 6], [6, 0]]){
       const k = key(i0 + a, i0 + b); let r = map.get(k);
-      if(!r){ r = { i:i0 + a, j:i0 + b, n:[] }; map.set(k, r); }
-      r.n.push(n);
+      if(!r){ r = { i:i0 + a, j:i0 + b, n:[], m:9 }; map.set(k, r); }
+      r.n.push(n); if(g.m && g.m.length) r.m = Math.min(r.m, g.m[t * 3] || 0);
     }
   }
-  const out = { p:[], n:[], c:[] };
+  const out = { p:[], n:[], c:[], m:[] };
   for(const r of map.values()){
     let keep = r.n.length === 1;
     if(!keep) for(let x = 0; x < r.n.length && !keep; x++) for(let y = x + 1; y < r.n.length; y++){ const a = r.n[x], b = r.n[y]; if(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] < cosT){ keep = true; break; } }
@@ -552,6 +559,7 @@ function edgeLines(g, minDeg){
     out.p.push(g.p[r.i], g.p[r.i + 1], g.p[r.i + 2], g.p[r.j], g.p[r.j + 1], g.p[r.j + 2]);
     const a = r.n[0], b = r.n[r.n.length - 1];
     out.n.push(a[0], a[1], a[2], a[0], a[1], a[2]); out.c.push(b[0], b[1], b[2], b[0], b[1], b[2]);   // les normales des deux faces
+    const mt = r.m === 9 ? 0 : r.m; out.m.push(mt, mt);                                              // la matière : un meuble garde un trait plus net qu'un mur
   }
   return out;
 }

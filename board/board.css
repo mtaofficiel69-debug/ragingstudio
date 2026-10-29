@@ -712,11 +712,6 @@ body.imm-clean .hplan{display:none;}
 /* le nom du personnage */
 .name-f{display:flex; flex-direction:column; gap:4px; margin:10px 0 2px;}
 /* « Ton propre lieu » : importer la photo de son vrai décor */
-.myplace{display:flex; flex-direction:column; gap:7px; margin:0 0 14px; padding:12px; border:1px dashed var(--accent); border-radius:12px; background:var(--accent-tint);}
-.myplace.on{border-style:solid;}
-.mp-t{display:flex; align-items:center; gap:7px; color:var(--accent-ink);} .mp-t .icon{width:16px; height:16px;} .mp-t b{font-size:13.5px;}
-.myplace p{margin:0; font-size:12px; line-height:1.4; color:var(--ink-soft);}
-.myplace .btn{align-self:flex-start;}
 #view.drop{outline:3px dashed var(--accent); outline-offset:-6px;}
 /* importer un scénario */
 .modal.imp{width:min(600px, 100%);}
@@ -752,3 +747,47 @@ body.imm-clean .hplan{display:none;}
 .swc:focus-visible{outline:none; box-shadow:var(--focus-ring);}
 .swc.any{background:conic-gradient(#e0533d, #e3a33a, #5e7f6a, #3f6e7a, #7a5a9a, #e0533d); overflow:hidden;}
 .swc.any input{position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; padding:0; border:0;}
+
+/* ---------- R20 : les volets dans la DA de Raging Studio (comme Raging Draw) ----------
+   Un titre de section court, en gras, sans majuscules forcées ; une ligne grise d'information sous le titre du volet ;
+   plus de paragraphes d'explication (ils sont dans les infobulles). */
+.fly-lbl{margin:18px 0 9px; font-size:13.5px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--ink);}
+.fly-lbl .cnt{font-size:12px; font-weight:500; color:var(--ink-soft);}
+.lbl-sub{font-style:normal; font-weight:400; font-size:12px; color:var(--ink-soft);}
+.side .pb > .fly-lbl:not(:first-child){margin-top:18px; padding-top:16px;}
+.side .ph small{font-size:12.5px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+/* « Ma photo » : une ligne, comme « Commencer avec une photo » dans Draw */
+.myplace{width:100%; display:flex; align-items:center; gap:11px; margin:2px 0 4px; padding:10px 12px; border:1px solid var(--hair); border-radius:10px; background:var(--surface); color:var(--ink); font:inherit; text-align:left; cursor:pointer;}
+.myplace:hover{border-color:var(--accent);}
+.myplace.on{border-color:var(--accent); background:var(--accent-tint);}
+.myplace > .icon{width:15px; height:15px; margin-left:auto; color:var(--ink-soft);}
+.mp-ic{flex:none; width:32px; height:32px; display:grid; place-items:center; border-radius:9px; background:var(--accent-tint); color:var(--accent);}
+.mp-ic .icon{width:16px; height:16px;}
+.mp-t{display:flex; flex-direction:column; min-width:0;}
+.mp-t b{font-size:13.5px; font-weight:600;}
+.mp-t small{font-size:12px; color:var(--ink-soft);}
+/* une indication courte : une icône et une ligne */
+.empty-n{display:flex; align-items:center; gap:9px; margin:4px 0; padding:10px 12px; border-radius:10px; background:var(--surface-soft); font-size:12.5px; line-height:1.4; color:var(--ink-soft);}
+.empty-n .icon{flex:none; width:16px; height:16px; color:var(--accent);}
+.meta-n{margin:0; font-size:12.5px; color:var(--ink-soft);}
+.ftog > span small{display:block; font-size:11.5px; color:var(--ink-soft);}
+/* l'aide : des lignes « geste — effet », comme une carte de raccourcis */
+.kv{display:grid; grid-template-columns:auto 1fr; gap:0; margin:0; font-size:12.5px;}
+.kv dt, .kv dd{margin:0; padding:6px 0; border-bottom:1px solid var(--hair);}
+.kv dt{padding-right:12px; color:var(--ink); font-weight:500; white-space:nowrap;}
+.kv dd{color:var(--ink-soft); text-align:right;}
+.kv dt:last-of-type, .kv dd:last-of-type{border-bottom:0;}
+.how{gap:8px; font-size:12.5px;}
+.how b{display:inline; margin-right:5px;}
+.board-tip b{display:block; color:var(--ink); font-weight:600;}
+.rcp{padding:8px 9px;}
+.rcp b{font-size:12px;}
+/* les sous-groupes (debout, assis… / les classiques, l'objectif…) : même famille, un cran plus discrets */
+.pose-g, .mv-g{text-transform:none !important; letter-spacing:0 !important; font-size:12px !important; font-weight:600 !important; color:var(--ink-soft) !important;}
+.side .pb > .angs.moves:first-child, .side .pb > .angs.moves{margin-top:14px;}
+.kv{grid-template-columns:minmax(0, 1.1fr) minmax(0, 1fr);}
+.kv dt{white-space:normal;}
+.kv dd{text-align:left;}
+.who-n{font-size:12px; font-weight:500; margin-left:5px;}
+.side .pose-g{font-size:13.5px !important; color:var(--ink) !important;}
+.imp-ext{margin-left:6px; font-size:11.5px; color:var(--ink-soft); font-weight:400;}
