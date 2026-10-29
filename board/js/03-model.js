@@ -78,7 +78,16 @@ function outfitLook(base, oid){
   if(!lk){ lk = Object.assign({}, base); for(const k in o) if(!['id', 'fr', 'en', 'body'].includes(k)) lk[k] = o[k]; lk.id = key; lk.col = lk.top; _outfitLooks.set(key, lk); }
   return lk;
 }
-const lookOf = (ch, c) => { const base = CHAR_LOOK[ch && ch.look != null ? ch.look : (c || 0) % 2] || CHAR_LOOK[0]; return ch && ch.outfit ? outfitLook(base, ch.outfit) : base; };
+/* les expressions du visage : les sourcils, les yeux et la bouche changent (le reste du corps est le même) */
+const EXPRS = [['neutral', 'Neutre', 'Neutral'], ['happy', 'Joie', 'Happy'], ['sad', 'Tristesse', 'Sad'], ['angry', 'Colère', 'Angry'], ['surprised', 'Surprise', 'Surprised'], ['scared', 'Peur', 'Scared'], ['shout', 'Cri', 'Shouting']];
+const _exprLooks = new Map();
+function exprLook(lk, e){
+  if(!e || e === 'neutral') return lk;
+  const key = lk.id + '_e_' + e; let o = _exprLooks.get(key);
+  if(!o){ o = Object.assign({}, lk, { expr:e, id:key }); _exprLooks.set(key, o); }
+  return o;
+}
+const lookOf = (ch, c) => { const base = CHAR_LOOK[ch && ch.look != null ? ch.look : (c || 0) % 2] || CHAR_LOOK[0]; return exprLook(ch && ch.outfit ? outfitLook(base, ch.outfit) : base, ch && ch.expr); };
 /* les articulations qui bougent selon la silhouette ; « head » grossit la tête (les enfants),
    « stoop » voûte un peu le dos (les aînés) */
 const BODY = {
@@ -123,31 +132,36 @@ function partGeo(id, look, bare){
       break;
     }
     case 'spine': {
-      { const wb = f ? 0.24 : 0.28, wt = f ? 0.26 : 0.3, d = f ? 0.17 : 0.18; prismXY(g, [[-wb / 2, 0], [wb / 2, 0], [wt / 2, 0.2], [-wt / 2, 0.2]], -d / 2, d / 2, TOP); }
+      const wbS = f ? 0.25 : 0.29, wtS = f ? 0.26 : 0.305, dS = f ? 0.175 : 0.185, dT = f ? 0.19 : 0.2;
+      taper8(g, -0.02, 0.21, wbS / 2, dS / 2, wtS / 2, dT / 2, TOP);   // le ventre, arrondi
+      // le devant du ventre suit la pente du volume : ce qu'on pose dessus (chemise, cravate, boutons) reste bien visible
+      const zAt = y => dS / 2 + (dT - dS) / 2 * (y + 0.02) / 0.23 + 0.003;
+      const flat = (x0, x1, y0, y1, col) => quad(g, [x0, y0, zAt(y0)], [x1, y0, zAt(y0)], [x1, y1, zAt(y1)], [x0, y1, zAt(y1)], col);
       if(!bare && (lk.wear === 'suit' || lk.wear === 'coat' || lk.wear === 'cardigan')){
-        { const z = (f ? 0.085 : 0.09) + 0.0006; quad(g, [-0.035, 0.0, z], [0.035, 0.0, z], [0.035, 0.2, z], [-0.035, 0.2, z], IN); }         // le devant de la chemise
-        if(lk.wear === 'cardigan') [0.04, 0.12].forEach(y => box(g, 0.05, y, f ? 0.086 : 0.091, 0.014, 0.014, 0.006, dark(TOP, 0.6)));
+        flat(-0.035, 0.035, 0.0, 0.2, IN);         // le devant de la chemise
+        if(lk.wear === 'cardigan') [0.04, 0.12].forEach(y => box(g, 0.05, y, zAt(y), 0.014, 0.014, 0.006, dark(TOP, 0.6)));
       }
       if(!bare){
-        const zf = (f ? 0.085 : 0.09) + 0.002, d = f ? 0.17 : 0.18, wb = f ? 0.24 : 0.28;
+        const d = dS + 0.01, wb = wbS;
         // la veste : deux boutons ; le pull : la bande côtelée ; la robe : une fine ceinture ; le trench : sa ceinture et sa boucle
-        if(lk.wear === 'suit') [0.035, 0.105].forEach(y => ball(g, 0.042, y, zf, 0.011, 0.011, 0.005, dark(TOP, 0.5), 6));
+        if(lk.wear === 'suit') [0.035, 0.105].forEach(y => ball(g, 0.042, y, zAt(y), 0.011, 0.011, 0.005, dark(TOP, 0.5), 6));
         if(lk.wear === 'sweater') box(g, 0, 0.022, 0, wb + 0.014, 0.044, d + 0.014, dark(TOP, 0.82));
         if(lk.wear === 'tee' || lk.wear === 'blouse') box(g, 0, 0.012, 0, wb + 0.01, 0.024, d + 0.01, dark(TOP, 0.9));
         if(lk.wear === 'dress') box(g, 0, 0.03, 0, wb + 0.012, 0.03, d + 0.012, dark(TOP, 0.6));
-        if(lk.wear === 'coat'){ box(g, 0, 0.03, 0, wb + 0.018, 0.04, d + 0.018, dark(TOP, 0.78)); box(g, 0, 0.03, zf + 0.008, 0.05, 0.05, 0.008, metal); box(g, 0, 0.03, zf + 0.011, 0.03, 0.026, 0.006, dark(TOP, 0.78)); }
-        if(lk.wear === 'blouse') [0.05, 0.13].forEach(y => ball(g, 0, y, zf, 0.009, 0.009, 0.004, [0.95, 0.94, 0.9], 6));
-        if(lk.wear === 'cardigan') [1, -1].forEach(sd => box(g, sd * 0.07, 0.04, zf + 0.002, 0.07, 0.055, 0.006, dark(TOP, 0.82)));   // les poches
+        if(lk.wear === 'coat'){ box(g, 0, 0.03, 0, wb + 0.018, 0.04, d + 0.018, dark(TOP, 0.78)); box(g, 0, 0.03, (d + 0.018) / 2 + 0.004, 0.05, 0.05, 0.008, metal); box(g, 0, 0.03, (d + 0.018) / 2 + 0.007, 0.03, 0.026, 0.006, dark(TOP, 0.78)); }
+        if(lk.wear === 'blouse') [0.05, 0.13].forEach(y => ball(g, 0, y, zAt(y), 0.009, 0.009, 0.004, [0.95, 0.94, 0.9], 6));
+        if(lk.wear === 'cardigan') [1, -1].forEach(sd => box(g, sd * 0.07, 0.04, zAt(0.04) + 0.002, 0.07, 0.055, 0.006, dark(TOP, 0.82)));   // les poches
       }
-      if(!bare && tie) quad(g, [-0.018, 0.0, 0.0912], [0.018, 0.0, 0.0912], [0.012, 0.2, 0.0912], [-0.012, 0.2, 0.0912], H(lk.tie));
+      if(!bare && tie){ const y0 = 0.0, y1 = 0.2; quad(g, [-0.018, y0, zAt(y0) + 0.001], [0.018, y0, zAt(y0) + 0.001], [0.012, y1, zAt(y1) + 0.001], [-0.012, y1, zAt(y1) + 0.001], H(lk.tie)); }
       break;
     }
     case 'chest': {
       { const wb = f ? 0.27 : 0.31, wt = f ? 0.33 : 0.39, d = f ? 0.2 : 0.22;
-        prismXY(g, [[-wb / 2, -0.01], [wb / 2, -0.01], [wt / 2, 0.2], [wt / 2 - 0.035, 0.27], [-wt / 2 + 0.035, 0.27], [-wt / 2, 0.2]], -d / 2 + 0.005, d / 2 + 0.005, TOP); }
-      ball(g, sx, 0.228, 0, 0.058, 0.058, 0.058, TOP, 10); ball(g, -sx, 0.228, 0, 0.058, 0.058, 0.058, TOP, 10);
+        taper8(g, -0.015, 0.2, wb / 2, (f ? 0.19 : 0.2) / 2, wt / 2, d / 2, TOP, 0.4, 0.005);              // la poitrine, arrondie
+        taper8(g, 0.2, 0.275, wt / 2, d / 2, wt / 2 - 0.05, d / 2 - 0.035, TOP, 0.45, 0.005); }           // les épaules qui descendent vers le cou
+      ball(g, sx, 0.218, 0, 0.054, 0.056, 0.056, TOP, 10); ball(g, -sx, 0.218, 0, 0.054, 0.056, 0.056, TOP, 10);
       cyl(g, 0, 0.34, 0, f ? 0.045 : 0.05, f ? 0.05 : 0.055, 0.08, SK, 10);
-      if(f && !kid) ball(g, 0, 0.115, 0.08, 0.125, 0.052, 0.03, TOP, 10);
+      if(f && !kid) ball(g, 0, 0.12, 0.042, 0.13, 0.068, 0.07, TOP, 14);   // la poitrine, un volume doux (plus de bosse en lentille)
       const zf = (f ? 0.1 : 0.11) + 0.0055;
       if(!bare){
         if(lk.wear === 'suit' || lk.wear === 'coat' || lk.wear === 'cardigan'){
@@ -173,14 +187,23 @@ function partGeo(id, look, bare){
       if(!bare){
         // les yeux : le blanc, puis l'iris ; les sourcils, posés sur le front ; la bouche
         const zs = (x, y) => 0.106 * Math.sqrt(Math.max(0, 1 - (x / 0.097) ** 2 - ((y - 0.125) / 0.118) ** 2)) + 0.003;
+        // l'expression : la hauteur des sourcils (côté nez, côté tempe), l'ouverture des yeux, la forme de la bouche
+        const EX = { neutral:[0, 0, 1], happy:[0.003, 0.004, 0.78], sad:[0.011, -0.005, 0.9], angry:[-0.011, 0.005, 0.72], surprised:[0.015, 0.013, 1.35], scared:[0.016, 0.006, 1.3], shout:[-0.007, 0.003, 0.95] }[lk.expr || 'neutral'] || [0, 0, 1];
         [0.036, -0.036].forEach(x => {
-          ball(g, x, 0.128, 0.092, 0.019, 0.013, 0.012, [0.96, 0.95, 0.93], 8);
-          ball(g, x, 0.128, 0.1, 0.0085, 0.0095, 0.007, [0.17, 0.13, 0.11], 8);
+          ball(g, x, 0.128, 0.092, 0.019, 0.013 * EX[2], 0.012, [0.96, 0.95, 0.93], 8);
+          ball(g, x, 0.128, 0.1, 0.0085, Math.min(0.0095, 0.0095 * EX[2] + 0.001), 0.007, [0.17, 0.13, 0.11], 8);
           const s = x > 0 ? 1 : -1, xi = x - 0.021 * s, xo = x + 0.021 * s;
-          const P = [[xi, 0.152], [xo, 0.157], [xo, 0.165], [xi, 0.162]].map(([a, b]) => [a, b, zs(a, b)]);
+          const P = [[xi, 0.152 + EX[0]], [xo, 0.157 + EX[1]], [xo, 0.165 + EX[1]], [xi, 0.162 + EX[0]]].map(([a, b]) => [a, b, zs(a, b)]);
           if(s > 0) quad(g, P[0], P[1], P[2], P[3], BROW); else quad(g, P[0], P[3], P[2], P[1], BROW);
         });
-        ball(g, 0, 0.054, 0.101, f ? 0.023 : 0.026, 0.007, 0.01, LIP, 8);
+        const mw = f ? 0.023 : 0.026, IN_ = [0.32, 0.12, 0.12], E_ = lk.expr || 'neutral';
+        if(E_ === 'happy'){ ball(g, 0, 0.049, 0.103, mw * 0.8, 0.007, 0.01, LIP, 8); [1, -1].forEach(sd => { ball(g, sd * mw * 0.85, 0.056, 0.1, 0.011, 0.0065, 0.009, LIP, 6); ball(g, sd * 0.052, 0.07, 0.085, 0.022, 0.016, 0.02, dark(SK, 0.97), 6); }); }   // le sourire
+        else if(E_ === 'sad'){ ball(g, 0, 0.057, 0.103, mw * 0.65, 0.006, 0.01, LIP, 8); [1, -1].forEach(sd => ball(g, sd * mw * 0.75, 0.049, 0.099, 0.01, 0.006, 0.009, LIP, 6)); }
+        else if(E_ === 'angry'){ ball(g, 0, 0.053, 0.102, mw * 0.85, 0.005, 0.01, LIP, 8); [1, -1].forEach(sd => ball(g, sd * mw * 0.85, 0.05, 0.099, 0.008, 0.005, 0.008, LIP, 6)); }
+        else if(E_ === 'surprised'){ ball(g, 0, 0.05, 0.1, 0.017, 0.02, 0.011, LIP, 8); ball(g, 0, 0.05, 0.104, 0.012, 0.015, 0.009, IN_, 8); }   // la bouche en O
+        else if(E_ === 'scared'){ ball(g, 0, 0.051, 0.1, 0.022, 0.013, 0.011, LIP, 8); ball(g, 0, 0.051, 0.104, 0.017, 0.008, 0.009, IN_, 8); }
+        else if(E_ === 'shout'){ ball(g, 0, 0.048, 0.099, 0.024, 0.025, 0.012, LIP, 8); ball(g, 0, 0.048, 0.104, 0.019, 0.02, 0.01, IN_, 8); }
+        else ball(g, 0, 0.054, 0.101, mw, 0.007, 0.01, LIP, 8);
         if(lk.stache) ball(g, 0, 0.068, 0.106, 0.034, 0.009, 0.012, HAIR, 8);
         if(lk.glasses){ const K = [0.2, 0.2, 0.22];
           [0.037, -0.037].forEach(x => { box(g, x, 0.144, 0.113, 0.042, 0.005, 0.005, K); box(g, x, 0.112, 0.113, 0.042, 0.005, 0.005, K); box(g, x - 0.02, 0.128, 0.113, 0.005, 0.036, 0.005, K); box(g, x + 0.02, 0.128, 0.113, 0.005, 0.036, 0.005, K); });
@@ -456,7 +479,7 @@ const SETS = [
 const SET_DEF = {
   // l'hôpital : une chambre (le lit médicalisé, la perfusion, le moniteur) et son couloir
   hospital:{
-    cam:{ tx:-1.6, ty:0.95, tz:0.4, yaw:-125, pitch:-12, dist:3.6, lens:24 },
+    cam:{ tx:-2.0, ty:0.8, tz:-2.2, yaw:33, pitch:-8, dist:6.0, lens:24 },
     roomH:2.8,
     rooms:[['La chambre', 'The room', 0, [-4, -3.5, 2, 3.5]], ['Le couloir', 'The corridor', 0, [2, -3.5, 5, 3.5]]],
     build(g, gl){
@@ -468,27 +491,68 @@ const SET_DEF = {
       // la plinthe et la main courante du couloir
       [[X0, Z0, X1, Z0], [X1, Z1, X0, Z1]].forEach(([a, b, c, d]) => box(g, (a + c) / 2, 0.06, b + (b < 0 ? 0.02 : -0.02), Math.abs(c - a), 0.12, 0.02, '#8FA7A2'));
       [[-3.4, -2.95], [-1.45, 1.65], [3.15, 3.4]].forEach(([z0, z1]) => box(g, X1 - 0.05, 0.95, (z0 + z1) / 2, 0.05, 0.05, z1 - z0, '#C9CDD3'));   // la main courante s'arrête aux portes
-      // le lit médicalisé : le cadre en métal, le matelas, le dossier relevé, les barrières, les roulettes
-      const bx = -2.3, bz = 0.4;
-      box(g, bx, 0.45, bz, 1.0, 0.12, 2.1, MET); box(g, bx, 0.58, bz, 0.92, 0.16, 2.0, '#F4F6F6');
-      box(g, bx, 0.62, bz + 0.35, 0.94, 0.08, 1.3, '#9FC3D6');   // le drap bleu clair
-      box(g, bx, 0.82, bz - 0.85, 0.92, 0.5, 0.12, '#F4F6F6'); box(g, bx, 0.75, bz - 0.78, 0.55, 0.14, 0.3, '#FFFFFF');
-      box(g, bx, 0.7, bz - 1.07, 1.0, 0.7, 0.05, '#A7B0B8'); box(g, bx, 0.62, bz + 1.07, 1.0, 0.45, 0.05, '#A7B0B8');
-      [-1, 1].forEach(sd => { box(g, bx + sd * 0.52, 0.8, bz - 0.2, 0.03, 0.04, 1.0, MET); [-0.6, 0.2].forEach(dz => box(g, bx + sd * 0.5, 0.65, bz + dz, 0.025, 0.3, 0.03, MET)); });
-      [[-0.4, -0.95], [0.4, -0.95], [-0.4, 0.95], [0.4, 0.95]].forEach(([x, z]) => { box(g, bx + x, 0.22, bz + z, 0.04, 0.36, 0.04, MET); cyl(g, bx + x, 0.06, bz + z, 0.05, 0.05, 0.03, '#2C2E33', 8, 'x'); });
-      // la perfusion, le moniteur, la table de chevet, la chaise des visiteurs
-      cyl(g, -1.45, 1.9, -0.6, 0.015, 0.015, 1.9, MET, 6); cyl(g, -1.45, 0.04, -0.6, 0.22, 0.22, 0.04, '#7E858C', 8);
-      box(g, -1.45, 1.72, -0.6, 0.14, 0.22, 0.05, '#CFE6F0');
-      box(g, -3.15, 0.5, -0.9, 0.05, 1.0, 0.05, '#7E858C'); box(g, -3.15, 1.2, -0.9, 0.08, 0.38, 0.5, '#2C2E33'); box(g, -3.105, 1.2, -0.9, 0.005, 0.3, 0.42, '#16302A');
-      box(g, -3.1, 1.22, -0.9, 0.003, 0.02, 0.36, '#4ED38A');
-      box(g, -3.45, 0.38, 0.8, 0.45, 0.76, 0.45, '#E6E8E8'); box(g, -3.45, 0.79, 0.8, 0.48, 0.04, 0.48, '#C9CFCF');
-      // la chaise du visiteur, tournée vers le lit
-      box(g, -1.25, 0.45, 0.9, 0.48, 0.06, 0.48, '#4E8C83'); box(g, -1.03, 0.75, 0.9, 0.05, 0.55, 0.48, '#4E8C83'); [[-1.45, 0.7], [-1.05, 0.7], [-1.45, 1.1], [-1.05, 1.1]].forEach(([x, z]) => box(g, x, 0.21, z, 0.03, 0.42, 0.03, MET));
-      // la fenêtre et ses stores, le rideau de séparation sur son rail, le lavabo
-      wall(g, [X0 + 0.01, 2.6], [X0 + 0.01, 0.6], 1.4, '#A9C6D6', 0.85); for(let y = 0.95; y < 2.25; y += 0.12) box(g, X0 + 0.04, y, 1.6, 0.01, 0.03, 2.0, '#EEF0F0');
-      box(g, -0.6, 2.78, 0, 0.05, 0.04, 4.0, '#C9CDD3'); box(g, -0.6, 1.5, -1.6, 0.04, 2.46, 0.9, '#B7D2D6');   // la tringle collée au plafond, le rideau qui en pend
-      [-1.95, -1.6, -1.25].forEach(z => box(g, -0.6, 2.75, z, 0.05, 0.03, 0.04, '#C9CDD3'));
-      box(g, 1.75, 0.85, -2.9, 0.4, 0.12, 0.35, '#F4F6F6'); box(g, 1.8, 0.4, -2.9, 0.14, 0.8, 0.14, '#E6E8E8'); wall(g, [1.98, -3.15], [1.98, -2.65], 0.6, '#B9D3E1', 1.15);
+      // ---- la chambre ----
+      // la plinthe et la bande de protection à hauteur de lit, tout autour
+      [[X0 + 0.012, -3.49, X0 + 0.012, 3.49, 'z'], [-3.99, Z0 + 0.012, 1.99, Z0 + 0.012, 'x'], [-3.99, Z1 - 0.012, 1.99, Z1 - 0.012, 'x']].forEach(([a, b, c, d, ax]) => {
+        if(ax === 'z'){ box(g, a, 0.06, (b + d) / 2, 0.02, 0.12, d - b, '#8FA7A2'); box(g, a, 0.92, (b + d) / 2, 0.02, 0.1, d - b, '#C7D6D2'); }
+        else { box(g, (a + c) / 2, 0.06, b, c - a, 0.12, 0.02, '#8FA7A2'); box(g, (a + c) / 2, 0.92, b, c - a, 0.1, 0.02, '#C7D6D2'); } });
+      // le lit médicalisé, la tête contre le mur du fond : un vrai châssis sur roulettes, le matelas,
+      // la couverture repliée, l'oreiller, la tête et le pied de lit, une barrière relevée
+      const bx = -2.0, bz = -2.4, BL = 1.95, BW = 0.88, MT = 0.62, PAN = '#E7EAEC';
+      box(g, bx, 0.34, bz, BW, 0.08, BL, MET);                                                          // le châssis
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => { const x = bx + sx * (BW / 2 - 0.08), z = bz + sz * (BL / 2 - 0.1);
+        box(g, x, 0.2, z, 0.05, 0.22, 0.05, MET); box(g, x, 0.085, z, 0.035, 0.03, 0.08, '#5A6068'); cyl(g, x - 0.02, 0.055, z, 0.05, 0.05, 0.04, '#2C2E33', 10, 'x'); });
+      box(g, bx, 0.43, bz, BW - 0.04, 0.1, BL - 0.04, '#C9CFD4');                                       // le sommier
+      box(g, bx, MT - 0.08, bz, BW, 0.16, BL, '#F4F6F6');                                              // le matelas (dessus à 0,62)
+      box(g, bx, MT - 0.02, bz + 0.33, BW + 0.04, 0.08, 1.3, '#9FC3D6');                                // la couverture (sur les jambes)
+      box(g, bx, MT + 0.025, bz - 0.29, BW + 0.05, 0.03, 0.14, '#F7F8F8');                              // le drap replié par-dessus
+      ball(g, bx, MT + 0.06, bz - 0.68, 0.32, 0.065, 0.16, '#FFFFFF', 10);                              // l'oreiller
+      box(g, bx, 0.78, bz - BL / 2 - 0.035, BW + 0.08, 0.72, 0.05, PAN); cyl(g, bx - BW / 2 - 0.04, 1.14, bz - BL / 2 - 0.035, 0.035, 0.035, BW + 0.08, '#B9C0C8', 10, 'x');   // la tête de lit
+      box(g, bx, 0.62, bz + BL / 2 + 0.035, BW + 0.08, 0.48, 0.05, PAN); cyl(g, bx - BW / 2 - 0.04, 0.86, bz + BL / 2 + 0.035, 0.03, 0.03, BW + 0.08, '#B9C0C8', 10, 'x');   // le pied de lit
+      box(g, bx + 0.12, 0.66, bz + BL / 2 + 0.065, 0.26, 0.32, 0.015, '#3D5A80'); box(g, bx + 0.12, 0.66, bz + BL / 2 + 0.074, 0.22, 0.27, 0.005, '#F4F2EE');   // la fiche du patient
+      // la barrière relevée, côté fenêtre : deux tubes portés par deux montants fixés au châssis
+      [MT + 0.13, MT + 0.26].forEach(y => cyl(g, bx - BW / 2 - 0.03, y, bz - 0.85, 0.016, 0.016, 1.0, '#B9C0C8', 8, 'z'));
+      [-0.8, 0.1].forEach(dz => box(g, bx - BW / 2 - 0.03, 0.62, bz + dz, 0.03, 0.56, 0.03, '#B9C0C8'));
+      // le panneau de tête au mur (prises, oxygène, lampe de lecture)
+      box(g, bx, 1.45, Z0 + 0.04, 1.6, 0.24, 0.06, '#E3E8E6'); box(g, bx, 1.45, Z0 + 0.075, 1.56, 0.03, 0.01, '#8FB5AD');
+      [-0.55, -0.4, 0.4, 0.55].forEach(dx => box(g, bx + dx, 1.4, Z0 + 0.075, 0.07, 0.07, 0.01, '#F4F6F6'));
+      cyl(g, bx + 0.2, 1.42, Z0 + 0.12, 0.025, 0.025, 0.1, '#2F6E4F', 8); box(g, bx + 0.2, 1.42, Z0 + 0.09, 0.03, 0.03, 0.04, '#C9CDD3');
+      box(g, bx - 0.55, 1.7, Z0 + 0.12, 0.03, 0.03, 0.2, '#B9C0C8'); cyl(g, bx - 0.55, 1.72, Z0 + 0.26, 0.04, 0.08, 0.1, '#F2E6C9', 10);
+      // la perfusion : pied à roulettes, mât, crochet, poche
+      [0, Math.PI / 2].forEach(a => box(g, -1.35, 0.03, -3.0, 0.5 * Math.abs(Math.cos(a)) + 0.04, 0.03, 0.5 * Math.abs(Math.sin(a)) + 0.04, '#7E858C'));
+      [[0.24, 0], [-0.24, 0], [0, 0.24], [0, -0.24]].forEach(([dx, dz]) => ball(g, -1.35 + dx, 0.025, -3.0 + dz, 0.025, 0.025, 0.025, '#2C2E33', 6));
+      cyl(g, -1.35, 1.9, -3.0, 0.014, 0.014, 1.88, MET, 6); box(g, -1.35, 1.89, -3.0, 0.22, 0.015, 0.015, MET);
+      box(g, -1.27, 1.74, -3.0, 0.11, 0.2, 0.04, '#CFE6F0'); box(g, -1.27, 1.86, -3.0, 0.015, 0.04, 0.015, MET);
+      // le moniteur sur son pied roulant, de l'autre côté
+      box(g, -3.05, 0.03, -2.9, 0.42, 0.03, 0.42, '#7E858C'); cyl(g, -3.05, 1.05, -2.9, 0.02, 0.02, 1.02, MET, 6);
+      box(g, -3.05, 1.25, -2.9, 0.36, 0.28, 0.08, '#2C2E33'); box(g, -3.05, 1.25, -2.855, 0.3, 0.22, 0.005, '#16302A');
+      box(g, -3.05, 1.27, -2.85, 0.26, 0.012, 0.004, '#4ED38A'); box(g, -3.0, 1.2, -2.85, 0.12, 0.01, 0.004, '#E8B923');
+      // la table de chevet (tiroir, poignée, gobelet et fleurs), la table à manger qui passe au-dessus du lit
+      box(g, -3.25, 0.37, -1.75, 0.46, 0.74, 0.44, '#E6E8E8'); box(g, -3.25, 0.6, -1.525, 0.4, 0.005, 0.005, '#AEB8B7'); box(g, -3.25, 0.66, -1.52, 0.12, 0.02, 0.02, '#8FA7A2');
+      cyl(g, -3.35, 0.83, -1.8, 0.035, 0.03, 0.09, '#F4F6F6', 8); cyl(g, -3.13, 0.88, -1.75, 0.045, 0.035, 0.14, '#9FC3D6', 8);
+      [[-0.03, 0.97, 0], [0.03, 0.99, 0.02], [0, 1.0, -0.03]].forEach(([dx, y, dz]) => ball(g, -3.13 + dx, y, -1.75 + dz, 0.035, 0.03, 0.035, '#D9707A', 6));
+      box(g, -1.2, 0.02, -1.2, 0.5, 0.03, 0.4, '#7E858C'); box(g, -1.2, 0.45, -1.2, 0.04, 0.86, 0.04, MET); box(g, -1.32, 0.9, -1.2, 0.6, 0.03, 0.4, '#C9B48F');   // garée à côté du lit
+      // le fauteuil du visiteur, tourné vers le lit
+      box(g, -0.75, 0.42, -2.2, 0.55, 0.12, 0.55, '#4E8C83'); box(g, -0.5, 0.78, -2.2, 0.08, 0.62, 0.55, '#4E8C83');
+      [-1, 1].forEach(sd => { box(g, -0.75, 0.6, -2.2 + sd * 0.3, 0.55, 0.05, 0.06, '#3E7068'); box(g, -0.75, 0.18, -2.2 + sd * 0.25, 0.5, 0.36, 0.04, MET); });
+      // la fenêtre (encadrement, appui, store), sur le mur de gauche
+      wall(g, [X0 + 0.015, 1.1], [X0 + 0.015, -0.9], 1.3, '#A9C6D6', 0.95);
+      [[1.12, 0.95, 1.3, 0.04], [-0.92, 0.95, 1.3, 0.04]].forEach(([z, y, h, w]) => box(g, X0 + 0.03, y + h / 2, z, 0.06, h + 0.08, w, '#F4F6F6'));
+      box(g, X0 + 0.03, 2.27, 0.1, 0.06, 0.04, 2.08, '#F4F6F6'); box(g, X0 + 0.08, 0.93, 0.1, 0.16, 0.04, 2.1, '#F4F6F6');
+      for(let y = 1.42; y < 2.2; y += 0.1) box(g, X0 + 0.06, y, 0.1, 0.015, 0.03, 1.96, '#EEF0F0');
+      box(g, X0 + 0.06, 2.21, 0.1, 0.04, 0.04, 2.0, '#D9DEE3');
+      // le rideau de séparation : son rail est collé au plafond, le rideau est replié contre le mur, en plis
+      box(g, -0.62, 2.785, -2.25, 0.04, 0.03, 2.4, '#C9CDD3');
+      for(let k = 0; k < 6; k++) box(g, -0.62 + (k % 2 ? 0.03 : -0.03), 1.48, -3.36 + k * 0.07, 0.035, 2.5, 0.075, k % 2 ? '#A9C9CE' : '#B7D6DA');
+      // le lavabo et son meuble, le miroir, le distributeur de savon, près de l'entrée
+      box(g, 1.2, 0.42, Z1 - 0.25, 0.7, 0.84, 0.46, '#E6E8E8'); box(g, 1.2, 0.86, Z1 - 0.25, 0.74, 0.04, 0.5, '#F4F6F6');
+      box(g, 1.2, 0.85, Z1 - 0.25, 0.46, 0.03, 0.3, '#D9DEE3'); box(g, 1.2, 0.95, Z1 - 0.43, 0.03, 0.16, 0.03, '#C9CDD3'); box(g, 1.2, 1.02, Z1 - 0.39, 0.03, 0.03, 0.1, '#C9CDD3');
+      wall(g, [1.5, Z1 - 0.015], [0.9, Z1 - 0.015], 0.6, '#B9D3E1', 1.15); box(g, 0.75, 1.2, Z1 - 0.04, 0.1, 0.18, 0.06, '#F4F6F6');
+      // la télé sur son bras, face au lit ; l'horloge ; le distributeur de gel ; les dalles lumineuses
+      box(g, -2.0, 1.95, Z1 - 0.05, 0.1, 0.1, 0.1, '#7E858C'); box(g, -2.0, 1.95, Z1 - 0.13, 0.85, 0.5, 0.05, '#1E1F23'); box(g, -2.0, 1.95, Z1 - 0.158, 0.79, 0.44, 0.005, '#2E3846');
+      cyl(g, 0.6, 2.35, Z0 + 0.03, 0.15, 0.15, 0.03, '#F4F6F6', 16, 'z'); cyl(g, 0.6, 2.35, Z0 + 0.06, 0.125, 0.125, 0.003, '#2C2E33', 16, 'z');
+      box(g, 1.95, 1.3, -0.7, 0.06, 0.2, 0.1, '#F4F6F6');
+      [[-2.0, -2.4], [-2.0, 0.6], [0.2, -1.0], [0.2, 2.0]].forEach(([x, z]) => box(g, x, 2.78, z, 1.0, 0.03, 0.5, '#FFFFFF'));
       // le couloir : les portes, le fauteuil roulant, les sièges d'attente, le panneau
       [-2.2, 2.4].forEach(z => doorX(g, X1, z, 1.1, 2.1, '#8FB5AD', -1));
       // l'encadrement de l'entrée de la chambre
@@ -498,7 +562,6 @@ const SET_DEF = {
       [0.6, 1.15, 1.7].forEach(z => { box(g, 2.35, 0.45, z, 0.45, 0.06, 0.45, '#5E8FA8'); box(g, 2.15, 0.72, z, 0.05, 0.5, 0.45, '#5E8FA8'); box(g, 2.35, 0.22, z, 0.04, 0.44, 0.04, MET); });
       box(g, 3.5, 2.45, Z0 + 0.02, 1.3, 0.3, 0.04, '#2F6E8F'); pixText(g, 'HOPITAL', 3.5, 2.45, Z0 + 0.045, 1, 0.026, '#F4F6F6');
       [-1.5, 1.5].forEach(z => box(g, 3.5, 2.77, z, 0.4, 0.04, 1.2, '#FFFFFF'));
-      box(g, -1, 2.77, 0.4, 0.5, 0.04, 1.4, '#FFFFFF');
     },
   },
   // le métro : l'intérieur d'une rame (les banquettes, les barres, les portes, les fenêtres sur le tunnel)
@@ -1631,7 +1694,7 @@ const SPOTS = {
   parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
   diner:[ ['Dans la voiture, côté malle', 'In the car booth, back seat', -5.55, -4.02, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.55, -2.48, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
   bank:[ ['Au guichet', 'At the counter', -1.2, 2.3, 0], ['Derrière le guichet', 'Behind the counter', -1.2, 4.2, 180], ['Dans la file', 'In the queue', 0, -0.4, 0], ['À l’entrée', 'At the entrance', 0.6, -6.0, 0], ['Devant la chambre forte', 'In front of the vault', 5.8, 5.2, 180], ['Assis sur le banc', 'Sitting on the bench', -6.5, -5.75, 0, 'sit', 0.04] ],
-  hospital:[ ['Allongé dans le lit', 'Lying in the bed', -2.3, 0.4, 0, 'lie', 0.66], ['À son chevet, assis', 'At the bedside, seated', -1.27, 0.9, -90, 'sit'], ['Le médecin, debout', 'The doctor, standing', -1.2, -0.4, -90], ['Dans le couloir', 'In the corridor', 3.5, 0, 0], ['En salle d’attente', 'In the waiting area', 2.38, 1.15, 90, 'sit'], ['Devant la fenêtre', 'At the window', -3.5, 1.6, -90] ],
+  hospital:[ ['Allongé dans le lit', 'Lying in the bed', -2.0, -2.43, 0, 'lie', 0.62], ['Dans le fauteuil, au chevet', 'In the bedside armchair', -0.78, -2.2, -90, 'sit', -0.3], ['Le médecin, au pied du lit', 'The doctor, at the foot of the bed', -2.0, -0.85, 180], ['Debout, près du lit', 'Standing by the bed', -1.05, -0.45, -130], ['Dans le couloir', 'In the corridor', 3.5, 0, 0], ['En salle d’attente', 'In the waiting area', 2.38, 1.15, 90, 'sit'], ['À la fenêtre', 'At the window', -3.55, 0.1, -90] ],
   metro:[ ['Assis sur la banquette', 'Seated on the bench', 1.1, 0, -90, 'sit', -0.37], ['Assis en face', 'Seated opposite', -1.1, 0.6, 90, 'sit', -0.37], ['Debout à la barre', 'Standing at the pole', 0.25, 1.2, 0], ['Devant la porte', 'By the door', 0.9, 3, -90], ['Au bout de la rame', 'At the end of the car', 0, -6.2, 0] ],
   bar:[ ['Au comptoir', 'At the counter', -1.2, 2.15, 0, 'sit', -0.06], ['Le barman', 'The bartender', -0.8, 3.9, 180], ['Au billard', 'At the pool table', -2.7, -2.4, -90], ['Dans le box', 'In the booth', -4.3, -4.25, 90, 'sit', -0.33], ['En face, dans le box', 'Facing, in the booth', -2.9, -4.25, -90, 'sit', -0.33], ['À une table', 'At a table', 2.55, -1.5, -90, 'sit'], ['Près du juke-box', 'By the jukebox', 4.8, 2.2, 90] ],
   police:[ ['À l’accueil', 'At the front desk', -1, -3.0, 0], ['Derrière le comptoir', 'Behind the desk', -1, -1.5, 180], ['Dans la salle d’attente', 'In the waiting room', 4.4, -5.4, 0, 'sit'], ['À son bureau', 'At a desk', -3.6, 0.55, 0, 'sit'], ['Le suspect, à la table', 'The suspect, at the table', 5, 1.6, 0, 'sit'], ['L’inspecteur, en face', 'The detective, facing', 5, 3.6, 180, 'sit'], ['Dans la cellule', 'In the cell', -6.6, 5.4, 180] ],
@@ -1795,6 +1858,55 @@ const CAR_SHOTS = [
   ['suivre', 'On suit la voiture (¾ arrière)', 'Following the car (¾ rear)', [-2.4, 1.7, -7.0], [0, 0.9, 0], 35, 'pe'],
   ['cote', 'Travelling à hauteur de vitre', 'Tracking alongside at window height', [3.9, 1.25, 0.1], [0.2, 1.15, 0.1], 35, 'pa'],
 ];
+/* ---------- Les objets à poser ----------
+   Comme les véhicules : on les pose devant la caméra, on les déplace et on les tourne avec leur poignée.
+   Chacun : nom, couleurs au choix, hauteur de l'étiquette, empreinte de son ombre (demi-largeur, demi-profondeur). */
+const OBJ_DEF = {
+  chair:{ fr:'Chaise', en:'Chair', cols:['#6E5440', '#24262B', '#B4232C', '#E9E6E0'], label:1.2, sh:[0.28, 0.28] },
+  table:{ fr:'Table', en:'Table', cols:['#7A5C42', '#E9E6E0', '#2C2E33'], label:1.05, sh:[0.65, 0.42] },
+  box:{ fr:'Carton', en:'Cardboard box', cols:['#B08A5A'], label:0.8, sh:[0.27, 0.27] },
+  case:{ fr:'Valise', en:'Suitcase', cols:['#B4232C', '#24262B', '#3D5A80', '#C9B48F'], label:0.95, sh:[0.25, 0.14] },
+  bag:{ fr:'Sac de sport', en:'Duffel bag', cols:['#24262B', '#2F6E4F', '#3D5A80'], label:0.6, sh:[0.34, 0.2] },
+  plant:{ fr:'Plante', en:'Plant', cols:['#B9876A', '#E9E6E0', '#2C2E33'], label:1.4, sh:[0.3, 0.3] },
+  lamp:{ fr:'Lampadaire', en:'Floor lamp', cols:['#2C2E33', '#C9A64B'], label:1.95, sh:[0.2, 0.2] },
+  crate:{ fr:'Caisse en bois', en:'Wooden crate', cols:['#9A7A55'], label:0.95, sh:[0.33, 0.33] },
+  barrel:{ fr:'Bidon', en:'Oil drum', cols:['#2F6E4F', '#9B3B33', '#3D5A80', '#E8B923'], label:1.2, sh:[0.32, 0.32] },
+  tv:{ fr:'Télévision', en:'TV set', cols:['#1E1F23'], label:1.25, sh:[0.45, 0.25] },
+  bench:{ fr:'Banc', en:'Bench', cols:['#7A5C42', '#2F6E4F'], label:1.05, sh:[0.8, 0.3] },
+  bin:{ fr:'Poubelle', en:'Bin', cols:['#2F6E4F', '#5E636C', '#2C2E33'], label:1.05, sh:[0.3, 0.3] },
+  door:{ fr:'Porte', en:'Door', cols:['#7A5C42', '#E9E6E0', '#3D5A80'], label:2.4, sh:[0.55, 0.12] },
+  bed:{ fr:'Lit', en:'Bed', cols:['#2E4A6B', '#B4232C', '#E9E6E0'], label:1.0, sh:[0.8, 1.05] },
+};
+function objGeo(kind, col){
+  const g = geo(), C = col || OBJ_DEF[kind].cols[0], H = hexRGB(C), dk = k => H.map(v => v * k), M = '#9AA0A8', K = '#2C2E33';
+  const m0 = MAT; MAT = 0;
+  if(kind === 'chair'){ box(g, 0, 0.45, 0, 0.44, 0.05, 0.44, C); box(g, 0, 0.75, -0.2, 0.44, 0.55, 0.04, C); box(g, 0, 0.88, -0.2, 0.44, 0.08, 0.05, dk(0.8));
+    [[-0.19, -0.19], [0.19, -0.19], [-0.19, 0.19], [0.19, 0.19]].forEach(([x, z]) => box(g, x, 0.215, z, 0.04, 0.43, 0.04, dk(0.75))); }
+  else if(kind === 'table'){ box(g, 0, 0.73, 0, 1.2, 0.05, 0.75, C); box(g, 0, 0.67, 0, 1.1, 0.07, 0.65, dk(0.8));
+    [[-0.54, -0.32], [0.54, -0.32], [-0.54, 0.32], [0.54, 0.32]].forEach(([x, z]) => box(g, x, 0.35, z, 0.06, 0.7, 0.06, dk(0.75))); }
+  else if(kind === 'box'){ box(g, 0, 0.25, 0, 0.5, 0.5, 0.5, C); box(g, 0, 0.502, 0, 0.08, 0.004, 0.52, '#C9B48F'); box(g, 0, 0.35, 0.252, 0.08, 0.3, 0.004, '#C9B48F'); }
+  else if(kind === 'case'){ box(g, 0, 0.37, 0, 0.46, 0.62, 0.24, C); box(g, 0, 0.37, 0, 0.47, 0.03, 0.25, dk(0.7));
+    box(g, 0, 0.72, 0, 0.04, 0.1, 0.03, K); box(g, 0, 0.77, 0, 0.18, 0.03, 0.03, K); [-0.17, 0.17].forEach(x => cyl(g, x - 0.01, 0.03, 0.08, 0.025, 0.025, 0.02, K, 8, 'x')); }
+  else if(kind === 'bag'){ cyl(g, -0.32, 0.17, 0, 0.17, 0.17, 0.64, C, 12, 'x'); [-0.32, 0.32].forEach(x => cyl(g, x - 0.005, 0.17, 0, 0.165, 0.165, 0.01, dk(0.7), 12, 'x'));
+    box(g, 0, 0.345, 0, 0.5, 0.012, 0.03, dk(0.6)); [-0.12, 0.12].forEach(x => box(g, x, 0.42, 0, 0.03, 0.16, 0.03, dk(0.6))); box(g, 0, 0.5, 0, 0.27, 0.03, 0.03, dk(0.6)); }
+  else if(kind === 'plant'){ cyl(g, 0, 0.36, 0, 0.21, 0.16, 0.36, C, 12); cyl(g, 0, 0.37, 0, 0.19, 0.19, 0.02, '#4A3626', 12);
+    ball(g, 0, 0.75, 0, 0.3, 0.38, 0.3, '#4E7C58', 9); ball(g, 0.13, 1.02, 0.05, 0.2, 0.22, 0.2, '#5A8A60', 8); ball(g, -0.12, 0.95, -0.08, 0.18, 0.2, 0.18, '#4E7C58', 8); }
+  else if(kind === 'lamp'){ cyl(g, 0, 0.03, 0, 0.18, 0.18, 0.03, C, 12); cyl(g, 0, 1.6, 0, 0.018, 0.018, 1.57, C, 6); cyl(g, 0, 1.78, 0, 0.12, 0.23, 0.3, '#F2E6C9', 12); }
+  else if(kind === 'crate'){ box(g, 0, 0.3, 0, 0.6, 0.6, 0.6, C);
+    [-1, 1].forEach(sd => { box(g, 0, 0.3, sd * 0.305, 0.6, 0.06, 0.01, dk(0.75)); box(g, sd * 0.305, 0.3, 0, 0.01, 0.06, 0.6, dk(0.75)); box(g, 0, 0.3 + sd * 0.27, 0.305, 0.6, 0.05, 0.012, dk(0.75)); }); }
+  else if(kind === 'barrel'){ cyl(g, 0, 0.9, 0, 0.29, 0.29, 0.9, C, 14); [0.3, 0.6].forEach(y => cyl(g, 0, y + 0.02, 0, 0.3, 0.3, 0.04, dk(0.7), 14)); cyl(g, 0, 0.905, 0, 0.27, 0.27, 0.01, dk(0.8), 14); cyl(g, 0.12, 0.93, 0.08, 0.04, 0.04, 0.03, dk(0.6), 8); }
+  else if(kind === 'tv'){ box(g, 0, 0.25, 0, 0.9, 0.5, 0.42, '#5E4532'); box(g, 0, 0.52, 0, 0.25, 0.04, 0.15, K); box(g, 0, 0.56, 0, 0.04, 0.08, 0.04, K);
+    box(g, 0, 0.92, 0, 0.84, 0.5, 0.05, C); box(g, 0, 0.92, 0.027, 0.78, 0.44, 0.005, '#2E3846'); }
+  else if(kind === 'bench'){ box(g, 0, 0.45, 0, 1.6, 0.05, 0.42, C); box(g, 0, 0.75, -0.2, 1.6, 0.3, 0.04, C);
+    [-0.7, 0.7].forEach(x => { box(g, x, 0.22, 0, 0.05, 0.44, 0.38, K); box(g, x, 0.62, -0.2, 0.05, 0.34, 0.04, K); }); }
+  else if(kind === 'bin'){ cyl(g, 0, 0.85, 0, 0.27, 0.23, 0.85, C, 12); cyl(g, 0, 0.88, 0, 0.29, 0.29, 0.05, dk(0.75), 12); box(g, 0, 0.9, 0, 0.16, 0.025, 0.03, dk(0.6)); }
+  else if(kind === 'door'){ [-0.5, 0.5].forEach(x => box(g, x, 1.06, 0, 0.08, 2.12, 0.14, '#E9E6E0')); box(g, 0, 2.15, 0, 1.08, 0.08, 0.14, '#E9E6E0');
+    box(g, 0, 1.03, 0, 0.9, 2.06, 0.05, C); [0.6, 1.5].forEach(y => box(g, 0, y, 0.027, 0.7, 0.6, 0.005, dk(0.85))); [0.03, -0.03].forEach(z => box(g, 0.36, 1.02, z * 1.2, 0.12, 0.03, 0.03, M)); box(g, 0, 0.005, 0, 1.0, 0.01, 0.16, '#9AA0A8'); }
+  else if(kind === 'bed'){ box(g, 0, 0.2, 0, 1.5, 0.3, 2.0, '#5E4532'); box(g, 0, 0.44, 0, 1.44, 0.18, 1.94, '#F4F2EE'); box(g, 0, 0.5, 0.25, 1.48, 0.08, 1.4, C);
+    [-0.35, 0.35].forEach(x => ball(g, x, 0.58, -0.75, 0.28, 0.07, 0.16, '#FFFFFF', 10)); box(g, 0, 0.6, -1.02, 1.56, 0.9, 0.06, '#4A3626'); }
+  MAT = m0;
+  return g;
+}
 /* une caméra à partir de l'endroit où elle est (e) et de ce qu'elle regarde (t) */
 /* la caméra dans une pièce, pour voir le point T : dans le coin opposé, à hauteur d'yeux */
 function roomCam(def, r, T){
@@ -1879,6 +1991,7 @@ function propGeo(id){
 const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['car', 'Voiture', 'Car'], ['police', 'Voiture de police', 'Police car'], ['heli', 'Hélicoptère', 'Helicopter'], ['plane', 'Avion', 'Plane']];
 const MOTO_COLS = ['#B4232C', '#24262B', '#3D5A80', '#E8B923'];
 function vehicleGeo(kind, col, glass){
+  if(VEH_DEF[kind] && VEH_DEF[kind].obj) return objGeo(kind, col);
   const g = geo(), K = '#1E2025', M = '#9AA0A8', C = col || MOTO_COLS[0];
   MAT = 4; try {
   if(kind === 'heli') return heliGeo(col, glass);
@@ -2048,3 +2161,5 @@ const VEH_DEF = {
   plane:{ fr:'Avion', en:'Plane', ic:'plane', cols:['#E9E6E0', '#3D5A80', '#E8B923', '#2F6E4F'], label:3.0, shots:PLANE_SHOTS, fly:true,
     seats:[{ fr:'Pilote', en:'Pilot', pose:'pilot', x:-0.27, z:0.5, py:0.77 }, { fr:'Copilote', en:'Co-pilot', pose:'pilot', x:0.27, z:0.5, py:0.77 }, { fr:'Passager', en:'Passenger', pose:'sit', x:-0.27, z:-0.45, py:0.77 }, { fr:'Passager 2', en:'Passenger 2', pose:'sit', x:0.27, z:-0.45, py:0.77 }] },
 };
+// les objets à poser rejoignent la liste des véhicules (même pose, même poignée, même liste)
+Object.entries(OBJ_DEF).forEach(([k, d]) => { VEH_DEF[k] = Object.assign({ ic:'obj', obj:true, shots:[], seats:[] }, d); });
