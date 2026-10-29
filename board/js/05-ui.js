@@ -476,26 +476,41 @@ const PANEL_HTML = {
       <p class="mm-p">${L('Choisis la taille, le sol, les murs et le plafond (un motif ou ta propre image), puis meuble-le avec les accessoires.', 'Pick the size, floor, walls and ceiling (a pattern or your own image), then furnish it with props.')}</p>
       <button class="btn btn-primary mm-new" data-act="mapNew">${icon('plus')}${L('Créer mon lieu', 'Create my place')}</button></div>`;
     const out = m.kind === 'out', walls = !out || m.walls;
-    const surf = (part, title, on, def) => {
+    const surf = (part, title, on, def, id) => {
       const f = mapSurf(m[part], def), kinds = Object.keys(TEX_KINDS).filter(k => TEX_KINDS[k].on.includes(on));
       const img = f.k === 'img' && PHOTOS.get(f.img);
-      return lbl(title) + `<div class="txs">${kinds.map(k => `<button class="tx ${f.k === k ? 'on' : ''}" data-act="mapTex" data-p="${part}" data-k="${k}"><i style="background-image:url(${texThumb(k, f.k === k ? f.c : TEX_KINDS[k].cols[0])})"></i><span>${esc(L(TEX_KINDS[k].fr, TEX_KINDS[k].en))}</span></button>`).join('')}
+      return (id ? lblId(title, id) : `<div class="mm-sub">${title}</div>`) + `<div class="txs">${kinds.map(k => `<button class="tx ${f.k === k ? 'on' : ''}" data-act="mapTex" data-p="${part}" data-k="${k}"><i style="background-image:url(${texThumb(k, f.k === k ? f.c : TEX_KINDS[k].cols[0])})"></i><span>${esc(L(TEX_KINDS[k].fr, TEX_KINDS[k].en))}</span></button>`).join('')}
         <button class="tx ${f.k === 'img' ? 'on' : ''}" data-act="mapImg" data-p="${part}" title="${esc(L('Ta propre texture : une photo de sol, de mur, de papier peint… (JPG, PNG)', 'Your own texture: a photo of a floor, a wall, wallpaper… (JPG, PNG)'))}"><i class="tx-add" ${img ? `style="background-image:url(${img})"` : ''}>${img ? '' : icon('plus')}</i><span>${L('Mon image', 'My image')}</span></button></div>`
         + (f.k !== 'img' ? `<div class="sws mm-sws">${TEX_KINDS[f.k].cols.map(c => `<button class="swc ${f.c.toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-act="mapCol" data-p="${part}" data-c="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}<label class="swc any" title="${esc(L('Une autre couleur', 'Another colour'))}" style="--c:${esc(f.c)}"><input type="color" data-mapcol="${part}" value="${esc(f.c)}" aria-label="${esc(L('Une autre couleur', 'Another colour'))}"></label></div>` : '')
         + slider(L('Taille du motif', 'Pattern size'), 'mapS', part, f.s, 0.3, 6, 0.1, ' m');
     };
     const dim = (lab, k, v, min, max, step, unit) => slider(lab, 'mapDim', k, v, min, max, step, unit);
-    return ph('place', L('Mon lieu', 'My place'), esc(m.name || '')) + `<div class="pb">${back}
+    const tog = (k, lab, small, on) => `<label class="ftog"><span>${lab}${small ? `<small>${small}</small>` : ''}</span><input type="checkbox" data-act="mapTog" data-k="${k}" ${on ? 'checked' : ''}><i class="tg"></i></label>`;
+    const seg = (k, cur, opts) => `<div class="seg wide">${opts.map(([v, t]) => `<button class="${String(cur) === String(v) ? 'on' : ''}" data-act="mapSet" data-k="${k}" data-v="${v}">${esc(t)}</button>`).join('')}</div>`;
+    const sw = (k, cur, cols, lab) => `<div class="mm-row"><span>${lab}</span><div class="sws">${cols.map(c => c === 'none' ? `<button class="swc none ${cur === 'none' ? 'on' : ''}" data-act="mapSet" data-k="${k}" data-v="none" title="${esc(L('Aucune', 'None'))}" aria-label="${esc(L('Aucune', 'None'))}"></button>` : `<button class="swc ${String(cur).toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-act="mapSet" data-k="${k}" data-v="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}</div></div>`;
+    const win = +m.win || 0, door = m.door !== false, nc = +m.cols || 0;
+    const jumps = [['mm-size', L('Taille', 'Size')], ['mm-floor', L('Sol', 'Floor')]].concat(walls ? [['mm-walls', L('Murs', 'Walls')]] : [], !out ? [['mm-ceil', L('Plafond', 'Ceiling')]] : [], walls ? [['mm-open', L('Ouvertures', 'Openings')]] : [], [['mm-cols', L('Colonnes', 'Columns')]]);
+    return ph('place', L('Mon lieu', 'My place'), esc(m.name || ''), jumpBar(jumps)) + `<div class="pb">${back}
       <label class="fld"><span>${L('Nom du lieu', 'Place name')}</span><input id="mapName" type="text" maxlength="40" value="${esc(m.name || '')}"></label>
       <div class="seg wide">${[['in', L('Intérieur', 'Indoors')], ['out', L('Extérieur', 'Outdoors')]].map(([k, t]) => `<button class="${(m.kind || 'in') === k ? 'on' : ''}" data-act="mapKind" data-v="${k}">${esc(t)}</button>`).join('')}</div>
-      ${lbl(L('Taille', 'Size'))}${dim(L('Largeur', 'Width'), 'w', m.w || 8, 3, 40, 0.5, ' m')}${dim(L('Profondeur', 'Depth'), 'd', m.d || 6, 3, 40, 0.5, ' m')}
-      ${out ? `<label class="ftog"><span>${L('Des murs tout autour', 'Walls all around')}<small>${L('Une cour, un jardin clos…', 'A courtyard, a walled garden…')}</small></span><input type="checkbox" data-act="mapTog" data-k="walls" ${m.walls ? 'checked' : ''}><i class="tg"></i></label>${m.walls ? dim(L('Hauteur des murs', 'Wall height'), 'wh', m.wh || 2.4, 1, 6, 0.1, ' m') : ''}`
+      ${lblId(L('Taille', 'Size'), 'mm-size')}${dim(L('Largeur', 'Width'), 'w', m.w || 8, 3, 40, 0.5, ' m')}${dim(L('Profondeur', 'Depth'), 'd', m.d || 6, 3, 40, 0.5, ' m')}
+      ${out ? tog('walls', L('Des murs tout autour', 'Walls all around'), L('Une cour, un jardin clos…', 'A courtyard, a walled garden…'), m.walls) + (m.walls ? dim(L('Hauteur des murs', 'Wall height'), 'wh', m.wh || 2.4, 1, 6, 0.1, ' m') : '')
         : dim(L('Hauteur sous plafond', 'Ceiling height'), 'h', m.h || 2.8, 2.2, 6, 0.1, ' m')}
-      ${surf('floor', L('Sol', 'Floor'), 'f', out ? 'grass' : 'parquet')}
-      ${walls ? surf('wall', L('Murs', 'Walls'), 'w', out ? 'brick' : 'paint') : ''}
-      ${!out ? surf('ceil', L('Plafond', 'Ceiling'), 'c', 'paint') : ''}
-      ${walls ? lbl(L('Ouvertures', 'Openings')) + dim(L('Fenêtres', 'Windows'), 'win', m.win || 0, 0, 8, 1, '') + `<div class="seg wide">${[['city', L('Vue sur la ville', 'City view')], ['nature', L('Vue sur la campagne', 'Country view')]].map(([k, t]) => `<button class="${(m.view || 'city') === k ? 'on' : ''}" data-act="mapView" data-v="${k}">${esc(t)}</button>`).join('')}</div>
-        <label class="ftog"><span>${L('Une porte', 'A door')}</span><input type="checkbox" data-act="mapTog" data-k="door" ${m.door !== false ? 'checked' : ''}><i class="tg"></i></label>` : ''}
+      ${surf('floor', L('Sol', 'Floor'), 'f', out ? 'grass' : 'parquet', 'mm-floor')}${tog('frot', L('Tourner le motif d’un quart de tour', 'Turn the pattern a quarter turn'), L('Les lames du parquet dans l’autre sens', 'Floorboards the other way'), m.frot)}
+      ${walls ? surf('wall', L('Murs', 'Walls'), 'w', out ? 'brick' : 'paint', 'mm-walls')
+        + tog('accOn', L('Un mur différent, au fond', 'A different back wall'), L('Un mur d’accent : briques, papier peint…', 'An accent wall: bricks, wallpaper…'), m.accOn) + (m.accOn ? surf('acc', L('Le mur du fond', 'The back wall'), 'w', 'brick') : '')
+        + tog('wainOn', L('Un soubassement', 'Wainscoting'), L('Le bas des murs dans une autre matière', 'The lower walls in another material'), m.wainOn) + (m.wainOn ? dim(L('Hauteur', 'Height'), 'wainH', m.wainH || 1.0, 0.5, 1.6, 0.05, ' m') + surf('wain', L('Le soubassement', 'The wainscoting'), 'w', 'panel') : '')
+        + (!out ? sw('sk', m.sk || '#E9E6E0', ['#E9E6E0', '#C9C6BE', '#5E4532', '#2C2E33', 'none'], L('Plinthes', 'Skirting')) : '') : ''}
+      ${!out ? surf('ceil', L('Plafond', 'Ceiling'), 'c', 'paint', 'mm-ceil')
+        + `<div class="mm-sub">${L('Lumières', 'Lights')}</div>` + seg('lights', m.lights || 'panel', [['panel', L('Néons', 'Panels')], ['spot', L('Spots', 'Spots')], ['pendant', L('Suspensions', 'Pendants')], ['none', L('Aucune', 'None')]])
+        + ((m.lights || 'panel') !== 'none' ? seg('lcol', m.lcol || 'neutral', [['neutral', L('Blanc', 'White')], ['warm', L('Chaud', 'Warm')], ['cool', L('Froid', 'Cool')]]) : '') : ''}
+      ${walls ? lblId(L('Ouvertures', 'Openings'), 'mm-open') + dim(L('Fenêtres', 'Windows'), 'win', win, 0, 8, 1, '')
+        + (win ? dim(L('Largeur', 'Width'), 'ww', m.ww || 1.4, 0.6, 4, 0.1, ' m') + dim(L('Hauteur', 'Height'), 'whh', m.whh || 1.4, 0.5, 3, 0.1, ' m') + dim(L('Allège', 'Sill height'), 'wy', m.wy == null ? 0.9 : m.wy, 0.1, 1.6, 0.05, ' m')
+          + sw('wf', m.wf || '#F4F2EE', ['#F4F2EE', '#C9CDD3', '#2C2E33', '#7A5C42', '#2F5E7E'], L('Cadres', 'Frames'))
+          + seg('view', m.view || 'city', [['city', L('Vue sur la ville', 'City view')], ['nature', L('Vue sur la campagne', 'Country view')]]) : '')
+        + tog('door', L('Une porte', 'A door'), '', door)
+        + (door ? seg('dside', m.dside || 'front', [['front', L('Devant', 'Front')], ['left', L('À gauche', 'Left')], ['right', L('À droite', 'Right')]]) + sw('dcol', m.dcol || '#8C6B4E', ['#8C6B4E', '#5E4532', '#E9E6E0', '#2F5E7E', '#2C2E33', '#B4232C'], L('Couleur', 'Colour')) : '') : ''}
+      ${lblId(L('Colonnes', 'Columns'), 'mm-cols')}${seg('cols', nc, [[0, L('Aucune', 'None')], [2, '2'], [4, '4'], [6, '6']])}${nc ? sw('colc', m.colc || '#E9E6E0', ['#E9E6E0', '#C9C6BE', '#8E8B85', '#5E4532', '#2C2E33'], L('Couleur', 'Colour')) : ''}
       <p class="mm-p">${L('Pour le meubler : ', 'To furnish it: ')}<button class="lnk" data-act="panel" data-id="car">${L('les accessoires', 'the props')}</button>.</p>
       <div class="pbtns"><button class="btn btn-sm btn-ghost danger" data-act="mapDel">${icon('trash')}${L('Supprimer ce lieu', 'Delete this place')}</button></div>
       <input type="file" id="mapFile" accept="image/*" hidden></div>`;
@@ -1109,7 +1124,8 @@ const ACT = {
   mapImg:b => { const f = document.getElementById('mapFile'); if(!f) return; f.onchange = () => { if(f.files[0]) mapImage(b.dataset.p, f.files[0]); f.value = ''; }; f.click(); },
   mapKind:b => mapEditDo(m => { m.kind = b.dataset.v; if(m.kind === 'out' && (!m.floor || m.floor.k === 'parquet')) m.floor = { k:'grass' }; if(m.kind === 'in' && m.floor && /grass|sand|dirt|asphalt/.test(m.floor.k)) m.floor = { k:'parquet' }; }),
   mapView:b => mapEditDo(m => { m.view = b.dataset.v; }),
-  mapTog:b => mapEditDo(m => { const k = b.dataset.k; m[k] = k === 'door' ? m.door === false : !m[k]; }),
+  mapSet:b => mapEditDo(m => { m[b.dataset.k] = b.dataset.v; }),
+  mapTog:b => mapEditDo(m => { const k = b.dataset.k; m[k] = k === 'door' ? m.door === false : !m[k]; if(k === 'accOn' && !m.acc) m.acc = { k:'brick' }; if(k === 'wainOn' && !m.wain) m.wain = { k:'panel' }; }),
   addShot, addReverse, addCloser:() => addStep(1), addWider:() => addStep(-1), dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), roomTip:() => { lsSet('raging3d_roomtip', '1'); renderPlan(); }, planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '1' ? '0' : '1'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
   addShotEnd:() => { goShot(S.doc.shots.length - 1); addShot(); },
   moveShot:b => moveShot(+b.dataset.d),
