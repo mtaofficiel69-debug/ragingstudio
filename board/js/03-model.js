@@ -500,6 +500,8 @@ const SETS = [
   { id:'bedroom', fr:'Chambre', en:'Bedroom' },
   { id:'kitchen', fr:'Cuisine', en:'Kitchen' },
   { id:'bath', fr:'Salle de bain', en:'Bathroom' },
+  { id:'gas', fr:'Station-service', en:'Gas station' },
+  { id:'station', fr:'Quai de gare', en:'Train platform' },
   { id:'photo', fr:'Ma photo', en:'My photo' },
 ];
 const SET_DEF = {
@@ -998,6 +1000,84 @@ const SET_DEF = {
       wall(g, [1.65, Z1 - 0.012], [0.75, Z1 - 0.012], 2.05, '#E9E6E0'); box(g, 0.85, 1.0, Z1 - 0.04, 0.13, 0.03, 0.04, M);
       [0.7, 1.7].forEach(x => box(g, x, 1.04, Z1 - 0.03, 0.06, 2.08, 0.06, '#F4F2EE')); box(g, 1.2, 2.1, Z1 - 0.03, 1.12, 0.06, 0.06, '#F4F2EE');
       box(g, 0, 2.47, 0, 0.4, 0.04, 0.4, '#F7F5F0');
+    },
+  },
+  // la station-service : l'auvent et ses pompes, la boutique au fond, la route devant, le grand panneau des prix
+  gas:{
+    sky:{ top:'#86AFD3', hor:'#DCE6EE', low:'#6E737B' }, fog:[40, 170],
+    cam:{ tx:0, ty:1.2, tz:0, yaw:35, pitch:-6, dist:9, lens:28 },
+    build(g){
+      const K = '#2C2E33', R = '#C8392F', W = '#E9E6E0', M = '#B8BEC4';
+      floor(g, -40, -40, 40, 40, 0, '#5C6068');
+      floor(g, -9, -13, 9, 7, 0.02, '#9A9890');
+      // la route, devant, et son marquage
+      for(let x = -38; x < 38; x += 4) box(g, x + 1, 0.03, 11, 2, 0.008, 0.15, '#E9E6E0');
+      box(g, 0, 0.03, 8.2, 76, 0.008, 0.12, '#E9E6E0'); box(g, 0, 0.03, 13.8, 76, 0.008, 0.12, '#E9E6E0');
+      // l'auvent : le toit, ses bandeaux, ses lumières (allumées la nuit), ses deux piliers
+      box(g, 0, 4.7, 0, 12, 0.4, 8, W); box(g, 0, 4.7, 4.02, 12.04, 0.3, 0.04, R); box(g, 0, 4.7, -4.02, 12.04, 0.3, 0.04, R); [-1, 1].forEach(e => box(g, e * 6.02, 4.7, 0, 0.04, 0.3, 8.04, R));
+      pixText(g, 'STATION', 0, 4.7, 4.045, 1, 0.045, '#F4F6F6');
+      [-4, 0, 4].forEach(x => [-2.2, 2.2].forEach(z => box(g, x, 4.48, z, 0.5, 0.04, 0.5, '#F2E6C9')));
+      [-3.5, 3.5].forEach(x => {
+        box(g, x, 0.1, 0, 1.2, 0.2, 4.6, M); box(g, x, 2.4, 0, 0.36, 4.4, 0.36, '#C9CDD3');
+        [-1.4, 1.4].forEach(z => { box(g, x, 0.95, z, 0.6, 1.5, 0.45, R); box(g, x, 1.72, z, 0.62, 0.06, 0.47, W);
+          [-1, 1].forEach(e => { box(g, x + e * 0.301, 1.3, z, 0.005, 0.26, 0.3, '#1D1F24'); box(g, x + e * 0.32, 0.95, z + 0.12, 0.04, 0.16, 0.06, K); box(g, x + e * 0.302, 0.62, z, 0.006, 0.25, 0.36, W); }); });
+        box(g, x, 0.55, 2.0, 0.3, 0.7, 0.3, '#2F6E4F'); box(g, x, 0.55, -2.0, 0.3, 0.7, 0.3, '#5E636C'); });
+      // la boutique : la vitrine, la porte, l'enseigne
+      box(g, 0, 1.6, -10.5, 10, 3.2, 5, W); box(g, 0, 3.25, -10.5, 10.2, 0.1, 5.2, '#B8BEC4');
+      box(g, -1.6, 1.3, -7.99, 6.0, 2.0, 0.02, '#4E6A80'); [-4.6, -2.6, -0.6, 1.4].forEach(x => box(g, x, 1.3, -7.975, 0.06, 2.04, 0.03, '#3A3D44'));
+      box(g, 3.2, 1.1, -7.99, 1.6, 2.2, 0.02, '#4E6A80'); box(g, 3.2, 1.1, -7.975, 0.04, 2.2, 0.03, '#3A3D44'); box(g, 3.2, 2.22, -7.975, 1.64, 0.06, 0.03, '#3A3D44');
+      box(g, 0, 2.8, -7.97, 10, 0.5, 0.04, R); pixText(g, 'BOUTIQUE', 0, 2.8, -7.945, 1, 0.05, '#F4F6F6');
+      [-4.6, 4.6].forEach(x => cyl(g, x, 0.85, -7.6, 0.25, 0.22, 0.85, '#2F6E4F', 10)); box(g, -3.0, 0.45, -7.6, 1.0, 0.9, 0.6, '#E9E6E0'); box(g, -3.0, 0.92, -7.6, 1.04, 0.04, 0.64, '#3D5A80');
+      // le grand panneau des prix, au bord de la route
+      box(g, 8.5, 3.0, 7.5, 0.3, 6.0, 0.3, '#5E636C'); box(g, 8.5, 5.4, 7.5, 2.0, 2.2, 0.3, R); box(g, 8.5, 5.1, 7.66, 1.7, 1.2, 0.02, '#1D1F24');
+      pixText(g, 'ESSENCE', 8.5, 6.15, 7.67, 1, 0.04, '#F4F6F6'); [5.4, 5.05, 4.7].forEach(y => box(g, 8.85, y, 7.675, 0.6, 0.18, 0.01, '#E8B923'));
+      // la station de gonflage, les poubelles, les réverbères, des arbres le long du terrain
+      box(g, -7.8, 0.6, -3.5, 0.5, 1.2, 0.4, '#3D5A80'); box(g, -7.8, 1.0, -3.29, 0.36, 0.3, 0.02, '#1D1F24');
+      [[-9.5, 9], [9.5, -12], [-9.5, -12]].forEach(([x, z]) => { cyl(g, x, 6, z, 0.07, 0.09, 6, K, 8); box(g, x, 6.0, z + (z > 0 ? -0.5 : 0.5), 0.2, 0.08, 1.0, K); box(g, x, 5.95, z + (z > 0 ? -0.9 : 0.9), 0.24, 0.02, 0.36, '#F2E6C9'); });
+      [-16, -12, 14, 18].forEach((x, i) => { cyl(g, x, 1.8, -10 + i * 3, 0.16, 0.2, 1.8, '#5B4532', 8); ball(g, x, 2.9, -10 + i * 3, 1.3, 1.4, 1.3, '#4E7C58', 9); });
+      // au loin, de l'autre côté de la route : des bâtiments bas
+      [[-22, 24, 10, 4], [-8, 26, 12, 6], [8, 25, 9, 5], [22, 24, 11, 3.5]].forEach(([x, z, w, h], i) => box(g, x, h / 2, z, w, h, 6, ['#B9AE9C', '#9DB3C8', '#C9B48F', '#A7A49E'][i]));
+    },
+  },
+  // le quai de gare : le quai en hauteur sous son abri, un train à quai, les voies, les poteaux de la caténaire
+  station:{
+    sky:{ top:'#8FB2D0', hor:'#DCE4EA', low:'#77736C' }, fog:[40, 170],
+    cam:{ tx:0.8, ty:2.2, tz:0, yaw:-55, pitch:-5, dist:8, lens:28 },
+    build(g){
+      const K = '#2C2E33', P = 1.1, ST = '#5E636C';
+      floor(g, -40, -40, 40, 40, 0, '#7C746A');
+      // le quai : sa dalle, ses bords (la bande blanche, la ligne jaune)
+      box(g, 0, P / 2, 0, 6, P, 60, '#B8B4AC'); [-1, 1].forEach(e => { box(g, e * 2.93, P + 0.003, 0, 0.14, 0.006, 60, '#E9E6E0'); box(g, e * 2.55, P + 0.003, 0, 0.08, 0.006, 60, '#E8B923'); });
+      // les deux voies : le ballast, les traverses, les rails
+      const e0 = EDGE_ON;
+      [-4.6, 4.6].forEach(x => { box(g, x, 0.06, 0, 3.2, 0.12, 80, '#8E867A'); EDGE_ON = 0;
+        for(let z = -39.6; z < 40; z += 0.65) box(g, x, 0.15, z, 2.4, 0.06, 0.22, '#5B4532');
+        EDGE_ON = e0; [-0.72, 0.72].forEach(d => box(g, x + d, 0.24, 0, 0.07, 0.12, 80, '#8A8F96')); });
+      // le train à quai : la caisse, ses fenêtres et ses portes côté quai, ses bogies
+      const TX = 4.6, T0 = -16, T1 = 6;
+      box(g, TX, 2.3, (T0 + T1) / 2, 3.0, 3.0, T1 - T0, '#E9E6E0'); box(g, TX, 3.88, (T0 + T1) / 2, 2.8, 0.16, T1 - T0 - 0.2, '#B8BEC4');
+      box(g, TX - 1.505, 1.1, (T0 + T1) / 2, 0.01, 0.3, T1 - T0, '#2F5E7E'); box(g, TX - 1.505, 3.35, (T0 + T1) / 2, 0.01, 0.12, T1 - T0, '#2F5E7E');
+      for(let z = T0 + 1.6; z < T1 - 1; z += 2.2){ const door = Math.round((z - T0) / 2.2) % 4 === 2;
+        if(door){ box(g, TX - 1.506, 1.95, z, 0.012, 1.95, 1.3, '#B8BEC4'); box(g, TX - 1.512, 2.3, z - 0.33, 0.006, 0.7, 0.5, '#2E3846'); box(g, TX - 1.512, 2.3, z + 0.33, 0.006, 0.7, 0.5, '#2E3846'); box(g, TX - 1.514, 1.95, z, 0.006, 1.95, 0.02, K); }
+        else box(g, TX - 1.506, 2.45, z, 0.01, 0.85, 1.5, '#2E3846'); }
+      box(g, TX, 2.5, T1 + 0.01, 2.4, 1.0, 0.02, '#2E3846');
+      [T0 + 3, T1 - 3].forEach(z => { box(g, TX, 0.55, z, 2.2, 0.5, 2.6, K); [-0.9, 0.9].forEach(d => [-0.8, 0.8].forEach(w => cyl(g, TX + d - 0.05, 0.42, z + w, 0.42, 0.42, 0.1, '#3A3D44', 10, 'x'))); });
+      // l'abri du quai : ses poteaux, son toit, ses lampes (allumées la nuit), les bancs, le panneau des départs, l'horloge
+      for(let z = -24; z <= 24; z += 8) box(g, 0, P + 1.45, z, 0.25, 2.9, 0.25, ST);
+      box(g, 0, P + 2.96, 0, 5.2, 0.12, 52, '#5E636C'); box(g, 0, P + 2.88, 0, 0.3, 0.06, 52, K);
+      for(let z = -22; z <= 22; z += 4) box(g, 0, P + 2.82, z, 0.5, 0.06, 0.2, '#F2E6C9');
+      [-12, 4, 12].forEach(z => { box(g, -1.55, P + 0.42, z, 0.46, 0.07, 1.8, '#7A5C42'); box(g, -1.78, P + 0.72, z, 0.04, 0.5, 1.8, '#7A5C42');
+        [-0.75, 0.75].forEach(d => { box(g, -1.55, P + 0.2, z + d, 0.42, 0.4, 0.05, K); box(g, -1.78, P + 0.6, z + d, 0.05, 0.3, 0.05, K); }); });
+      box(g, 0, P + 2.55, -2, 1.8, 0.5, 0.12, '#1D1F24'); box(g, 0, P + 2.84, -2, 0.06, 0.08, 0.06, K); pixText(g, 'DEPART', 0, P + 2.62, -1.935, 1, 0.03, '#E8B923');
+      [2.47, 2.4].forEach(y => box(g, 0, P + y - 0.04, -1.937, 1.4, 0.03, 0.004, '#E8B923'));
+      cyl(g, 0.13, P + 2.2, 8, 0.2, 0.2, 0.04, '#F4F6F6', 16, 'x'); cyl(g, 0.168, P + 2.2, 8, 0.17, 0.17, 0.005, '#2C2E33', 16, 'x'); cyl(g, 0.17, P + 2.2, 8, 0.165, 0.165, 0.004, '#F4F6F6', 16, 'x');
+      // le nom de la gare, sur deux pieds
+      [-17.6, -16.4].forEach(z => box(g, -2.2, P + 1.0, z, 0.08, 2.0, 0.08, ST)); box(g, -2.2, P + 1.85, -17, 0.08, 0.45, 1.8, '#2F5E7E'); pixText(g, 'GARE', -17, P + 1.85, -2.15, -1, 0.05, '#F4F6F6', true);
+      // les poteaux et les fils de la caténaire, la clôture et les arbres de l'autre côté des voies
+      for(let z = -36; z <= 36; z += 12) [-7.4, 7.4].forEach(x => { box(g, x, 3.2, z, 0.22, 6.4, 0.22, ST); box(g, x / 2 + Math.sign(x) * 0.9, 6.1, z, Math.abs(x) - 1.6, 0.12, 0.12, ST); });
+      EDGE_ON = 0; [-4.6, 4.6].forEach(x => box(g, x, 6.025, 0, 0.025, 0.025, 80, '#3A3D44')); EDGE_ON = e0;
+      [-9, 9].forEach(x => { for(let z = -36; z <= 36; z += 3) box(g, x, 0.75, z, 0.06, 1.5, 0.06, '#5E636C'); [0.5, 1.4].forEach(y => box(g, x, y, 0, 0.04, 0.05, 72, '#5E636C')); });
+      [-14, -11, 12, 15].forEach((x, i) => [-24, -6, 10, 26].forEach((z, j) => { if((i + j) % 2) return; cyl(g, x, 2, z, 0.18, 0.22, 2, '#5B4532', 8); ball(g, x, 3.2, z, 1.6, 1.6, 1.6, '#4E7C58', 9); }));
     },
   },
   alley:{
@@ -2007,6 +2087,8 @@ const SPOTS = {
   bedroom:[ ['Allongé sur le lit', 'Lying on the bed', -0.6, -1.9, 0, 'lie', 0.66], ['Au bureau', 'At the desk', 2.6, 0.5, 90, 'sit'], ['Assis sur le lit', 'Sitting on the bed', -0.6, -0.75, 0, 'sit', -0.25], ['À la fenêtre', 'At the window', 2.85, -0.75, 60], ['Devant l’armoire', 'By the wardrobe', -2.35, 0.8, -90], ['À la porte', 'At the door', 2.4, 2.45, 180] ],
   kitchen:[ ['À la cuisinière', 'At the stove', 0.4, -1.8, 180], ['À table', 'At the table', -0.45, -0.05, 0, 'sit'], ['À table, en face', 'At the table, opposite', 0.45, 1.85, 180, 'sit'], ['À l’évier', 'At the sink', -1.4, -1.8, 180], ['Devant le frigo', 'By the fridge', 2.1, -1.5, 180], ['À la porte', 'At the door', -2.4, 2.2, 180] ],
   bath:[ ['Devant le miroir', 'At the mirror', -0.6, -1.15, 180], ['À la porte', 'At the door', 1.2, 1.4, 180], ['Près de la baignoire', 'By the bathtub', -1.3, 0.7, -90], ['Près de la fenêtre', 'By the window', 1.85, -0.65, 90] ],
+  gas:[ ['À la pompe', 'At the pump', 2.55, 1.4, 90], ['De l’autre côté de la pompe', 'Other side of the pump', 4.45, -1.4, -90], ['Sous l’auvent', 'Under the canopy', 0, 0.6, 180], ['Devant la boutique', 'In front of the shop', 3.2, -6.9, 0], ['Au bord de la route', 'By the road', 1.5, 7.6, 180], ['Près du gonflage', 'By the air pump', -7.0, -2.9, -90] ],
+  station:[ ['Sur le quai', 'On the platform', 0.8, 2.0, 160, null, 1.1], ['Face au train', 'Facing the train', 2.2, -8.9, 90, null, 1.1], ['Sur le banc', 'On the bench', -1.55, 4.0, 90, 'sit', 1.1], ['À la porte du train', 'At the train door', 2.6, -3.4, 90, null, 1.1], ['Sous le panneau des départs', 'Under the departures board', 0.6, -0.6, 180, null, 1.1], ['Au bout du quai', 'At the end of the platform', 0.5, -25, 0, null, 1.1] ],
   bar:[ ['Au comptoir', 'At the counter', -1.2, 2.15, 0, 'sit', -0.06], ['Le barman', 'The bartender', -0.8, 3.9, 180], ['Au billard', 'At the pool table', -2.7, -2.4, -90], ['Dans le box', 'In the booth', -4.3, -4.25, 90, 'sit', -0.33], ['En face, dans le box', 'Facing, in the booth', -2.9, -4.25, -90, 'sit', -0.33], ['À une table', 'At a table', 2.55, -1.5, -90, 'sit'], ['Près du juke-box', 'By the jukebox', 4.8, 2.2, 90] ],
   police:[ ['À l’accueil', 'At the front desk', -1, -3.0, 0], ['Derrière le comptoir', 'Behind the desk', -1, -1.5, 180], ['Dans la salle d’attente', 'In the waiting room', 4.4, -5.4, 0, 'sit'], ['À son bureau', 'At a desk', -3.6, 0.55, 0, 'sit'], ['Le suspect, à la table', 'The suspect, at the table', 5, 1.6, 0, 'sit'], ['L’inspecteur, en face', 'The detective, facing', 5, 3.6, 180, 'sit'], ['Dans la cellule', 'In the cell', -6.6, 5.4, 180] ],
 };
