@@ -135,7 +135,9 @@ function partGeo(id, look, bare){
         cyl(g, 0, 0.075, 0, f ? 0.182 : 0.174, f ? 0.2 : 0.19, 0.15, c, 14); box(g, 0, 0.068, 0, (f ? 0.35 : 0.32) + 0.012, 0.022, (f ? 0.21 : 0.2) + 0.012, dark(c, 0.78));
         box(g, 0, -0.06 - len * 0.21, -0.004, 0.17, len * 0.42, f ? 0.16 : 0.15, c); }   // le tissu entre les deux pans : la jupe reste fermée
       else if(!bare){ box(g, 0, 0.065, 0, (f ? 0.35 : 0.32) + 0.008, 0.03, (f ? 0.21 : 0.2) + 0.008, dark(BOT, 0.55));   // la ceinture
-        if(lk.wear !== 'sweater' && lk.wear !== 'coat') box(g, 0, 0.065, (f ? 0.105 : 0.1) + 0.006, 0.034, 0.026, 0.006, metal); }   // et sa boucle
+        if(lk.wear !== 'sweater' && lk.wear !== 'coat') box(g, 0, 0.065, (f ? 0.105 : 0.1) + 0.006, 0.034, 0.026, 0.006, metal);   // et sa boucle
+        // les poches de devant (jean, pantalon de toile) : une fente en biais de chaque côté
+        if(lk.wear !== 'suit' && lk.wear !== 'coat') [1, -1].forEach(sd => tri(g, [sd * 0.1, 0.045, (f ? 0.105 : 0.1) + 0.004], [sd * 0.155, 0.045, (f ? 0.105 : 0.1) + 0.004], [sd * 0.155, -0.02, (f ? 0.105 : 0.1) + 0.004], dark(BOT, 0.7))); }
       if(lk.wear === 'suit' && !bare) box(g, 0, 0.05, 0, (f ? 0.35 : 0.32) + 0.02, 0.06, (f ? 0.21 : 0.2) + 0.02, TOP);   // le bas de la veste, sur les hanches
       if(lk.wear === 'coat' || lk.wear === 'cardigan') cyl(g, 0, 0.075, 0, f ? 0.19 : 0.182, f ? 0.215 : 0.205, lk.wear === 'coat' ? 0.16 : 0.1, TOP, 14);
       break;
@@ -192,8 +194,9 @@ function partGeo(id, look, bare){
       ball(g, 0, 0.125, 0.0, 0.097, 0.118, 0.106, B, 14);                   // le crâne
       ball(g, 0, 0.06, 0.03, 0.074, 0.064, 0.078, B, 12);                   // la mâchoire, arrondie
       ball(g, 0.1, 0.112, -0.004, 0.018, 0.036, 0.026, B, 8); ball(g, -0.1, 0.112, -0.004, 0.018, 0.036, 0.026, B, 8);   // les oreilles
-      ball(g, 0, 0.1, 0.1, 0.014, 0.033, 0.022, B, 8); ball(g, 0, 0.084, 0.113, 0.016, 0.013, 0.014, B, 8);              // le nez
       if(!bare){
+        // le nez n'a pas de contour : sans quoi un trait noir en fait le tour, au milieu du visage
+        ball(g, 0, 0.1, 0.1, 0.014, 0.033, 0.022, B, 8); ball(g, 0, 0.084, 0.113, 0.016, 0.013, 0.014, B, 8);            // le nez
         // les yeux : le blanc, puis l'iris ; les sourcils, posés sur le front ; la bouche
         const zs = (x, y) => 0.106 * Math.sqrt(Math.max(0, 1 - (x / 0.097) ** 2 - ((y - 0.125) / 0.118) ** 2)) + 0.003;
         // l'expression : la hauteur des sourcils (côté nez, côté tempe), l'ouverture des yeux, la forme de la bouche
@@ -257,7 +260,10 @@ function partGeo(id, look, bare){
       const s = id === 'handL' ? -1 : 1;
       ball(g, 0, 0, 0, 0.034, 0.034, 0.034, SK, 8);
       ball(g, 0, -0.07, 0.004, f ? 0.034 : 0.038, 0.052, 0.018, SK, 10);
-      box(g, 0, -0.12, 0.006, f ? 0.058 : 0.066, 0.05, 0.026, SK);
+      // les doigts : quatre, séparés, le majeur le plus long (le contour, lui, garde une forme simple)
+      if(bare) box(g, 0, -0.12, 0.006, f ? 0.058 : 0.066, 0.05, 0.026, SK);
+      else { const W = f ? 0.058 : 0.066, fw = W / 4 - 0.002;
+        [0.045, 0.054, 0.05, 0.04].forEach((len, i) => { const x = s * (-W / 2 + fw / 2 + i * (fw + 0.0027)); box(g, x, -0.095 - len / 2, 0.006, fw, len, 0.024, SK); }); }
       ball(g, s * 0.037, -0.06, 0.02, 0.013, 0.032, 0.013, SK, 6);
       break;
     }
@@ -275,6 +281,8 @@ function partGeo(id, look, bare){
         const sg = id === 'thighL' ? 1 : -1; limb2(r1, r2, 0.42, 0.42, BOT, BOT);
         cyl(g, sg * 0.006, 0.075, -0.006, r1 + 0.034, r1 + 0.05, 0.36, TOP, 10); cyl(g, sg * 0.006, -0.272, -0.006, r1 + 0.051, r1 + 0.051, 0.012, dark(TOP, 0.8), 10); }
       else limb2(r1, r2, 0.42, 0.42, BOT, BOT);
+      // le pli du pantalon (ou la couture du jean), sur le devant de la jambe
+      if(!bare && !lk.skirt && !lk.shorts) quad(g, [-0.003, -0.02, r1 + 0.0035], [0.003, -0.02, r1 + 0.0035], [0.003, -0.4, r2 + 0.0035], [-0.003, -0.4, r2 + 0.0035], dark(BOT, 0.78));
       break;
     }
     case 'shinL': case 'shinR': {
@@ -282,6 +290,7 @@ function partGeo(id, look, bare){
       const leg = (lk.skirt || lk.shorts) ? SK : BOT;
       limb2(r1, r2, 0.4, lk.skirt && lk.age === 'old' ? 0.1 : 0, lk.skirt ? BOT : leg, leg, b0, lk.age === 'old' && lk.skirt ? BOT : (lk.skirt || lk.shorts) ? SK : BOT);
       if(lk.socks && !bare) cyl(g, 0, -0.32, 0, r2 + 0.006, r2 + 0.005, 0.08, SOCK, 10);
+      if(!bare && !lk.skirt && !lk.shorts) quad(g, [-0.003, -0.01, r1 + 0.0035], [0.003, -0.01, r1 + 0.0035], [0.003, -0.38, r2 + 0.0035], [-0.003, -0.38, r2 + 0.0035], dark(BOT, 0.78));
       break;
     }
     case 'footL': case 'footR': {
@@ -290,6 +299,7 @@ function partGeo(id, look, bare){
       ball(g, 0, -0.03, 0.15, (f ? 0.085 : 0.095) / 2, 0.026, 0.045, SHO, 8);
       box(g, 0, -0.061, 0.06, (f ? 0.085 : 0.095) + 0.006, 0.014, (f ? 0.22 : 0.24) + 0.03, SOLE);
       if(lk.sole && !bare) box(g, 0, -0.03, 0.15, (f ? 0.085 : 0.095) * 0.6, 0.01, 0.03, SOLE);   // le bout clair des baskets
+      if(lk.sole && !bare) [0.03, 0.06, 0.09].forEach(z => box(g, 0, -0.001, z, (f ? 0.085 : 0.095) * 0.55, 0.006, 0.008, SOLE));   // les lacets
       break;
     }
   }
@@ -552,7 +562,7 @@ const SET_DEF = {
       box(g, -0.75, 0.42, -2.2, 0.55, 0.12, 0.55, '#4E8C83'); box(g, -0.5, 0.78, -2.2, 0.08, 0.62, 0.55, '#4E8C83');
       [-1, 1].forEach(sd => { box(g, -0.75, 0.6, -2.2 + sd * 0.3, 0.55, 0.05, 0.06, '#3E7068'); box(g, -0.75, 0.18, -2.2 + sd * 0.25, 0.5, 0.36, 0.04, MET); });
       // la fenêtre (encadrement, appui, store), sur le mur de gauche
-      wall(g, [X0 + 0.015, 1.1], [X0 + 0.015, -0.9], 1.3, '#A9C6D6', 0.95);
+      pane(g, [X0 + 0.015, 1.1], [X0 + 0.015, -0.9], 1.3, '#A9C6D6', 0.95);
       [[1.12, 0.95, 1.3, 0.04], [-0.92, 0.95, 1.3, 0.04]].forEach(([z, y, h, w]) => box(g, X0 + 0.03, y + h / 2, z, 0.06, h + 0.08, w, '#F4F6F6'));
       box(g, X0 + 0.03, 2.27, 0.1, 0.06, 0.04, 2.08, '#F4F6F6'); box(g, X0 + 0.08, 0.93, 0.1, 0.16, 0.04, 2.1, '#F4F6F6');
       for(let y = 1.42; y < 2.2; y += 0.1) box(g, X0 + 0.06, y, 0.1, 0.015, 0.03, 1.96, '#EEF0F0');
@@ -698,7 +708,7 @@ const SET_DEF = {
       floor(g, -3.5, -3.5, 3.5, 3.5, 2.9, '#EEEBE6', true);
       wall(g, [-3.5, -3.48], [3.5, -3.48], 0.1, '#BDB6AA');
       // fenêtre
-      wall(g, [-2.1, -3.485], [0.1, -3.485], 1.4, '#A9C9DE', 0.9);
+      pane(g, [-2.1, -3.485], [0.1, -3.485], 1.4, '#A9C9DE', 0.9);
       wall(g, [-2.15, -3.475], [0.15, -3.475], 0.06, '#F4F2EE', 0.85); wall(g, [-2.15, -3.475], [0.15, -3.475], 0.06, '#F4F2EE', 2.29);
       [-2.12, -1.0, 0.12].forEach(x => wall(g, [x - 0.03, -3.475], [x + 0.03, -3.475], 1.5, '#F4F2EE', 0.85)); wall(g, [-2.15, -3.475], [0.15, -3.475], 0.04, '#F4F2EE', 1.58);
       // bureau, écran, clavier, chaise
@@ -819,7 +829,7 @@ const SET_DEF = {
       wall(g, [-3.8, -3.2], [3.8, -3.2], 2.7, '#D9D2C5'); wall(g, [-3.8, 3.2], [-3.8, -3.2], 2.7, '#CFC7B8'); wall(g, [3.8, -3.2], [3.8, 3.2], 2.7, '#CFC7B8'); wall(g, [3.8, 3.2], [-3.8, 3.2], 2.7, '#D4CCBF');
       floor(g, -3.8, -3.2, 3.8, 3.2, 2.7, '#ECE8E1', true);
       // fenêtre, porte, tableau
-      wall(g, [-3.79, 1.2], [-3.79, -0.8], 1.4, '#A9C9DE', 0.9); wall(g, [-3.785, 1.25], [-3.785, -0.85], 0.06, '#F4F2EE', 0.87); wall(g, [-3.785, 0.23], [-3.785, 0.17], 1.4, '#F4F2EE', 0.9);
+      pane(g, [-3.79, 1.2], [-3.79, -0.8], 1.4, '#A9C9DE', 0.9); wall(g, [-3.785, 1.25], [-3.785, -0.85], 0.06, '#F4F2EE', 0.87); wall(g, [-3.785, 0.23], [-3.785, 0.17], 1.4, '#F4F2EE', 0.9);
       wall(g, [1.6, 3.19], [0.7, 3.19], 2.05, '#8C6B4E'); wall(g, [0.2, -3.19], [1.6, -3.19], 0.9, '#2F6E4F', 1.4);
       // tapis, canapé, table basse, meuble télé et télé
       floor(g, -1.6, -1.4, 1.6, 0.9, 0.006, '#B9876A');
@@ -842,7 +852,7 @@ const SET_DEF = {
       wall(g, [-4.5, -3.5], [4.5, -3.5], 3.0, '#C9B9A3'); wall(g, [-4.5, 3.5], [-4.5, -3.5], 3.0, '#BFAE97'); wall(g, [4.5, -3.5], [4.5, 3.5], 3.0, '#BFAE97'); wall(g, [4.5, 3.5], [-4.5, 3.5], 3.0, '#C4B49D');
       floor(g, -4.5, -3.5, 4.5, 3.5, 3.0, '#5B4A3A', true);
       // la vitrine sur la rue et le tableau du menu
-      wall(g, [4.49, -2.6], [4.49, 2.6], 2.0, '#A9C9DE', 0.5); for(let z = -2.6; z <= 2.61; z += 1.3) wall(g, [4.485, z - 0.03], [4.485, z + 0.03], 2.0, '#2C2E33', 0.5);
+      pane(g, [4.49, -2.6], [4.49, 2.6], 2.0, '#A9C9DE', 0.5); for(let z = -2.6; z <= 2.61; z += 1.3) wall(g, [4.485, z - 0.03], [4.485, z + 0.03], 2.0, '#2C2E33', 0.5);
       wall(g, [-2.6, -3.49], [-0.4, -3.49], 1.0, '#26292F', 1.7); for(let i = 0; i < 4; i++) wall(g, [-2.4, -3.485], [-1.0 + (i % 2) * 0.3, -3.485], 0.03, '#E6E2DA', 2.45 - i * 0.18);
       // le comptoir, la machine à café, les tabourets
       box(g, -1.0, 0.52, -2.1, 3.6, 1.04, 0.6, '#6E5440'); box(g, -1.0, 1.06, -2.05, 3.7, 0.05, 0.75, '#3A3D44');
@@ -1224,7 +1234,7 @@ Object.assign(SET_DEF, {
       wall(g, [2.2, Z0 + 0.01], [3.2, Z0 + 0.01], 2.1, '#5E4532'); wall(g, [2.55, Z0 + 0.015], [2.85, Z0 + 0.015], 0.12, '#C9A64B', 1.55);
       box(g, 3.2, 1.1, -1.4, 0.55, 2.2, 1.3, '#7A5C42'); box(g, 2.93, 1.1, -1.4, 0.01, 2.0, 0.02, '#4A3626');
       // la grande fenêtre et ses rideaux
-      wall(g, [X0 + 0.01, 1.4], [X0 + 0.01, -1.6], 1.7, '#9FC0D4', 0.6);
+      pane(g, [X0 + 0.01, 1.4], [X0 + 0.01, -1.6], 1.7, '#9FC0D4', 0.6);
       [[1.75, 1.2], [-1.95, -1.6]].forEach(([z, z2]) => box(g, X0 + 0.08, 1.3, (z + z2) / 2, 0.06, 2.4, Math.abs(z - z2) * 0.4 + 0.35, '#8C3B3F'));
       box(g, X0 + 0.06, 2.52, -0.1, 0.05, 0.06, 3.6, '#2C2E33');
       // le grand lit, sa tête de lit, les tables de chevet et leurs lampes
@@ -1472,7 +1482,7 @@ function railing(g, a, b, y){
 Object.assign(SET_DEF, {
   house:{
     sky:{ top:'#86B3D9', hor:'#E3E9E8', low:'#8FA27C' }, fog:[45, 200],
-    levels:[0, 2.9, 5.8, 8.7], prev:{ tx:0, ty:3.2, tz:0, yaw:32, pitch:-12, dist:21, lens:28 }, box:[-5.2, -4.2, 5.2, 4.2],
+    view:'nature', levels:[0, 2.9, 5.8, 8.7], prev:{ tx:0, ty:3.2, tz:0, yaw:32, pitch:-12, dist:21, lens:28 }, box:[-5.2, -4.2, 5.2, 4.2],
     cam:{ tx:-1.5, ty:0.8, tz:-2.2, yaw:43, pitch:-16, dist:4.4, lens:24 },
     // les pièces : [fr, en, étage, œil de la caméra (dans un coin de la pièce), point visé (son centre)]
     // les pièces, étage par étage : leur rectangle au sol (x0, z0, x1, z1). La caméra s'y place toute seule,
@@ -1517,20 +1527,20 @@ Object.assign(SET_DEF, {
       [[X0, 1], [X1, -1]].forEach(([x, sd]) => prism(L[3], [[Z0, top], [Z1, top], [0, top + 2.6]], Math.min(x, x - sd * 0.02), Math.max(x, x - sd * 0.02), W0));
       box(L[3], 3, top + 2.4, -1, 0.6, 1.4, 0.6, '#8A7356');
       // ---- les trois étages habités ----
-      const hole1 = [-4.9, -0.45, -3.7, 3.75], hole2 = [-3.62, -0.45, -2.42, 3.75], hatch = [-4.7, -3.2, -3.9, -2.4];
+      const hole1 = [-4.65, -0.45, -3.65, 3.75], hole2 = [-3.62, -0.45, -2.42, 3.75], hatch = [-4.7, -3.2, -3.9, -2.4];
       const room = (gg, y, cols, ceilHole, floorHole_) => {
         if(floorHole_) floorHole(gg, H.x0, H.z0, H.x1, H.z1, y + 0.004, cols.f, floorHole_); else floor(gg, H.x0, H.z0, H.x1, H.z1, y + 0.004, cols.f);
         wall(gg, [H.x0, H.z0], [H.x1, H.z0], H.h, cols.a, y); wall(gg, [H.x0, H.z1], [H.x0, H.z0], H.h, cols.b, y); wall(gg, [H.x1, H.z0], [H.x1, H.z1], H.h, cols.b, y); wall(gg, [H.x1, H.z1], [H.x0, H.z1], H.h, cols.a, y);
         floorHole(gg, H.x0, H.z0, H.x1, H.z1, y + H.h - 0.002, '#F2EEE6', ceilHole, true);
         box(gg, 0, y + 0.06, H.z0 + 0.02, 10, 0.12, 0.03, '#C9BFAE'); box(gg, 0, y + 0.06, H.z1 - 0.02, 10, 0.12, 0.03, '#C9BFAE');
       };
-      const winIn = (gg, y, xs) => { xs.forEach(x => wall(gg, [x + 0.6, H.z1 - 0.01], [x - 0.6, H.z1 - 0.01], 1.3, '#A9C9DE', y + 1)); [-2.5, 2.5].forEach(z => { wall(gg, [H.x0 + 0.01, z + 0.55], [H.x0 + 0.01, z - 0.55], 1.3, '#A9C9DE', y + 1); wall(gg, [H.x1 - 0.01, z - 0.55], [H.x1 - 0.01, z + 0.55], 1.3, '#A9C9DE', y + 1); }); [-2.5, 2.5].forEach(x => wall(gg, [x - 0.6, H.z0 + 0.01], [x + 0.6, H.z0 + 0.01], 1.3, '#A9C9DE', y + 1)); };
-      // rez-de-chaussée : salon, cuisine, entrée ; l'escalier monte le long du mur gauche
+      const winIn = (gg, y, xs) => { xs.forEach(x => pane(gg, [x + 0.6, H.z1 - 0.01], [x - 0.6, H.z1 - 0.01], 1.3, '#A9C9DE', y + 1)); [-2.5, 2.5].forEach(z => { pane(gg, [H.x0 + 0.01, z + 0.55], [H.x0 + 0.01, z - 0.55], 1.3, '#A9C9DE', y + 1); pane(gg, [H.x1 - 0.01, z - 0.55], [H.x1 - 0.01, z + 0.55], 1.3, '#A9C9DE', y + 1); }); [-2.5, 2.5].forEach(x => pane(gg, [x - 0.6, H.z0 + 0.01], [x + 0.6, H.z0 + 0.01], 1.3, '#A9C9DE', y + 1)); };
+      // rez-de-chaussée : salon, cuisine, entrée ; l'escalier monte près du mur gauche (avec un vrai écart : il ne le frôle pas)
       const g0 = L[0];
       room(g0, 0, { f:WOOD, a:'#E9E3D6', b:'#DED6C6' }, hole1, null);
       for(let x = H.x0 + 0.4; x < H.x1; x += 0.4) box(g0, x, 0.006, 0, 0.012, 0.004, 8, '#8C6D50');
       winIn(g0, 0, [-3, 3]); wall(g0, [0.55, H.z1 - 0.01], [-0.55, H.z1 - 0.01], 2.1, '#7A5C42');
-      stairs(g0, -4.9, -3.7, 3.7, -0.45, 0, H.h, 14, '#8A6A4A', [-3.66]);
+      stairs(g0, -4.65, -3.65, 3.7, -0.45, 0, H.h, 14, '#8A6A4A', [-3.61]);
       partition(g0, [0.8, H.z0], [0.8, 1.2], 0, H.h, '#E9E3D6', [[3.2, 4.1]]);
       partition(g0, [0.8, 1.2], [H.x1, 1.2], 0, H.h, '#E9E3D6', [[1.2, 2.2]]);
       floor(g0, -3.2, -3.5, 0.4, -0.3, 0.008, '#B9876A');
@@ -1550,7 +1560,7 @@ Object.assign(SET_DEF, {
       room(g1, y1, { f:'#A68A6B', a:'#DCE3E8', b:'#E8DED4' }, hole2, hole1);
       winIn(g1, y1, [-3, 0, 3]);
       stairs(g1, -3.62, -2.42, 3.7, -0.45, y1, H.h, 14, '#8A6A4A', [-2.38]);
-      railing(g1, [-4.9, 3.78], [-3.7, 3.78], y1); railing(g1, [-3.66, 3.75], [-3.66, -0.45], y1 - 0.0);
+      railing(g1, [-4.65, 3.78], [-3.65, 3.78], y1); railing(g1, [-3.635, 3.75], [-3.635, -0.45], y1); railing(g1, [-4.68, 3.75], [-4.68, -0.45], y1);
       partition(g1, [-2.3, H.z0], [-2.3, H.z1], y1, H.h, '#E9E3D6', [[0.5, 1.4], [5.0, 5.9]]);
       partition(g1, [-2.3, 0.4], [H.x1, 0.4], y1, H.h, '#E9E3D6', [[3.8, 4.7]]);
       box(g1, 0.6, y1 + 0.25, -2.7, 1.7, 0.5, 2.1, '#E9E4DA'); box(g1, 0.6, y1 + 0.52, -2.7, 1.66, 0.06, 2.06, '#C9503C'); box(g1, 0.6, y1 + 0.55, -3.6, 1.6, 0.12, 0.35, '#F4F2EE'); box(g1, 0.6, y1 + 0.7, -3.85, 1.8, 1.0, 0.08, '#7A5C42');
@@ -1582,7 +1592,7 @@ Object.assign(SET_DEF, {
       quad(g3, [H.x0, y3, H.z0], [H.x1, y3, H.z0], [H.x1, ridge, 0], [H.x0, ridge, 0], hexRGB('#9C7B5B'));
       quad(g3, [H.x1, y3, H.z1], [H.x0, y3, H.z1], [H.x0, ridge, 0], [H.x1, ridge, 0], hexRGB('#9C7B5B'));
       tri(g3, [H.x0, y3, H.z1], [H.x0, y3, H.z0], [H.x0, ridge, 0], hexRGB('#B9A88C')); tri(g3, [H.x1, y3, H.z0], [H.x1, y3, H.z1], [H.x1, ridge, 0], hexRGB('#B9A88C'));
-      wall(g3, [H.x0 + 0.01, 0.5], [H.x0 + 0.01, -0.5], 0.8, '#A9C9DE', y3 + 0.8);
+      pane(g3, [H.x0 + 0.01, 0.5], [H.x0 + 0.01, -0.5], 0.8, '#A9C9DE', y3 + 0.8);
       box(g3, -2.5, y3 + 0.3, -2.2, 1.0, 0.6, 0.6, '#6E5440'); box(g3, -2.5, y3 + 0.62, -2.2, 1.04, 0.06, 0.64, '#8A6A4A');
       [[1.2, -2.4], [1.8, -2.2], [1.5, -2.3]].forEach(([x, z], k) => box(g3, x, y3 + 0.25 + (k === 2 ? 0.5 : 0), z, 0.5, 0.5, 0.5, '#B08A5A'));
       box(g3, 2.6, y3 + 0.45, 1.4, 0.55, 0.06, 0.55, '#7A5C42'); box(g3, 2.6, y3 + 0.85, 1.65, 0.55, 0.8, 0.06, '#7A5C42');
@@ -1698,7 +1708,7 @@ const SPOTS = {
   street:[ ['Sur le trottoir', 'On the sidewalk', -6.2, 0.5, 120, null, 0.14], ['En face, sur le trottoir', 'Facing, on the sidewalk', -5.0, -0.5, -60, null, 0.14], ['Au passage piéton', 'At the crosswalk', -1.6, 6.0, 90, 'walk'], ['À l’abribus, assis', 'At the bus stop, seated', 6.32, -8.4, -90, 'sit', -0.34] ],
   beach:[ ['Sur la serviette', 'On the towel', 4.8, 2.6, -150, 'sitground'], ['Allongé au soleil', 'Lying in the sun', -1.6, -0.6, 180, 'lie'], ['Au bord de l’eau', 'At the water’s edge', 1.0, -7.4, 180], ['Qui se promène', 'Taking a walk', -2.0, 2.4, -100, 'walk'] ],
   stadium:[ ['Au rond central', 'Center circle', 0.0, 0.0, 30], ['Face à face', 'Facing', 0.8, 0.6, -150], ['Devant le but', 'In front of the goal', 0.0, 44.0, 180], ['En tribune', 'In the stands', -41.0, 10.0, 90, null, 1.4] ],
-  house:[ ['Salon, sur le canapé', 'Living room, on the sofa', -1.6, -3.2, 0, 'sit'], ['Dans la cuisine', 'In the kitchen', 3.6, -1.0, 90], ['À la porte d’entrée', 'At the front door', 0.0, 3.3, 180], ['Dans l’escalier', 'On the stairs', -4.3, 1.4, 180, null, 1.66],
+  house:[ ['Salon, sur le canapé', 'Living room, on the sofa', -1.6, -3.2, 0, 'sit'], ['Dans la cuisine', 'In the kitchen', 3.6, -1.0, 90], ['À la porte d’entrée', 'At the front door', 0.0, 3.3, 180], ['Dans l’escalier', 'On the stairs', -4.15, 1.4, 180, null, 1.66],
     ['1er : sur le lit', '1st: on the bed', 0.6, -2.4, 0, 'lie', 3.45], ['1er : sur le palier', '1st: on the landing', -3.0, -2.0, 90, null, 2.9], ['1er : salle de bain', '1st: bathroom', 2.6, 2.2, 180, null, 2.9],
     ['2e : chambre d’enfant', '2nd: child’s room', 2.4, -1.4, -60, null, 5.8], ['2e : au bureau, assis', '2nd: at the desk, seated', 2.4, 2.8, 180, 'sit', 5.8 - 0.4], ['Au grenier', 'In the attic', 0.6, 0.2, 90, null, 8.7], ['Dans le jardin', 'In the garden', 1.6, 7.0, 180] ],
   roof:[ ['Au bord du toit', 'At the edge', 0.0, -6.3, 180], ['Face à face', 'Facing', 0.9, -4.8, 0], ['Près du château d’eau', 'By the water tower', -2.2, -2.2, -130], ['Assis sur le rebord', 'Sitting on the ledge', 3.0, 6.75, 180, 'sit', 0.55] ],
@@ -1727,9 +1737,10 @@ Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p
 const SET_COLL = {};
 function setGeo(id){
   const g = geo(), gl = geo(), L = (SET_DEF[id].levels || []).map(() => geo());
-  COLL = new Map(); SET_DEF[id].build(g, gl, L);
+  COLL = new Map(); PANES = new Map(); SET_DEF[id].build(g, gl, L);
   const E = { b:[], w:[], p:[] }; SET_COLL[id] = { main:COLL.get(g) || E, levels:L.map(l => COLL.get(l) || E) }; COLL = null;
-  return { g, glass:gl, levels:L };
+  const P = PANES; PANES = null;
+  return { g, glass:gl, levels:L, panes:P.get(g) || null, levelPanes:L.map(l => P.get(l) || null) };
 }
 
 /* ---------- Le vocabulaire du storyboard (le même que dans Raging Page) ---------- */
