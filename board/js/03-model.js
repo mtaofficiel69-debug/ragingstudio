@@ -1002,82 +1002,143 @@ const SET_DEF = {
       box(g, 0, 2.47, 0, 0.4, 0.04, 0.4, '#F7F5F0');
     },
   },
-  // la station-service : l'auvent et ses pompes, la boutique au fond, la route devant, le grand panneau des prix
+  // la station-service : l'auvent et ses pompes, la boutique au fond, la station de lavage, la route devant, le grand panneau des prix
   gas:{
     sky:{ top:'#86AFD3', hor:'#DCE6EE', low:'#6E737B' }, fog:[40, 170],
     cam:{ tx:0, ty:1.2, tz:0, yaw:35, pitch:-6, dist:9, lens:28 },
     build(g){
-      const K = '#2C2E33', R = '#C8392F', W = '#E9E6E0', M = '#B8BEC4';
-      floor(g, -40, -40, 40, 40, 0, '#5C6068');
-      floor(g, -9, -13, 9, 7, 0.02, '#9A9890');
-      // la route, devant, et son marquage
-      for(let x = -38; x < 38; x += 4) box(g, x + 1, 0.03, 11, 2, 0.008, 0.15, '#E9E6E0');
-      box(g, 0, 0.03, 8.2, 76, 0.008, 0.12, '#E9E6E0'); box(g, 0, 0.03, 13.8, 76, 0.008, 0.12, '#E9E6E0');
-      // l'auvent : le toit, ses bandeaux, ses lumières (allumées la nuit), ses deux piliers
-      box(g, 0, 4.7, 0, 12, 0.4, 8, W); box(g, 0, 4.7, 4.02, 12.04, 0.3, 0.04, R); box(g, 0, 4.7, -4.02, 12.04, 0.3, 0.04, R); [-1, 1].forEach(e => box(g, e * 6.02, 4.7, 0, 0.04, 0.3, 8.04, R));
-      pixText(g, 'STATION', 0, 4.7, 4.045, 1, 0.045, '#F4F6F6');
-      [-4, 0, 4].forEach(x => [-2.2, 2.2].forEach(z => box(g, x, 4.48, z, 0.5, 0.04, 0.5, '#F2E6C9')));
+      const K = '#2C2E33', R = '#C8392F', W = '#E9E6E0', M = '#B8BEC4', Y = '#E8B923', LED = '#F2D06B', e0 = EDGE_ON;
+      // une lumière, une vitre éclairée : allumées la nuit
+      const lit = (x, y, z, w, h, d, c) => { const m0 = MAT; MAT = 5; box(g, x, y, z, w, h, d, c); MAT = m0; };
+      // les détails plats (écrans, étiquettes, joints) : une simple plaque, tournée vers +x ou -x (s), éventuellement allumée la nuit
+      const px = (x, y, z, d, h, c, sd, on) => { const m0 = MAT; if(on) MAT = 5; wall(g, sd > 0 ? [x, z + d / 2] : [x, z - d / 2], sd > 0 ? [x, z - d / 2] : [x, z + d / 2], h, c, y - h / 2); MAT = m0; };
+      const flat = (x, y, z, w, d, c, down, on) => { const m0 = MAT; if(on) MAT = 5; floor(g, x - w / 2, z - d / 2, x + w / 2, z + d / 2, y, c, down); MAT = m0; };
+      // le bitume tout autour (pas sous la dalle ni sous l'herbe : rien n'est peint deux fois)
+      [[-40, -40, 40, -13], [-40, 7.4, 40, 40], [-40, -13, -14, 7.4], [19, -13, 40, 7.4], [10.3, -13, 15.2, -10], [10.3, -1.6, 15.2, 7.4]].forEach(([a, b, c, d]) => floor(g, a, b, c, d, 0, '#5C6068'));
+      // la dalle de la station, ses joints, quelques taches d'huile ; l'herbe et les haies sur les côtés
+      floor(g, -9, -13, 9, 7.4, 0.02, '#A3A098');
+      EDGE_ON = 0;
+      for(let x = -6; x <= 6; x += 3) flat(x, 0.024, -2.8, 0.03, 20.4, '#8E8B85');
+      for(let z = -10.5; z <= 4.5; z += 3) flat(0, 0.024, z, 18, 0.03, '#8E8B85');
+      [[-2.4, 1.8, 0.4], [4.6, -0.9, 0.3], [-4.6, -1.2, 0.35], [2.6, 1.9, 0.25]].forEach(([x, z, r]) => cyl(g, x, 0.026, z, r, r * 0.8, 0.002, '#999690', 10));
+      // la route : le trottoir, la bordure, les lignes
+      box(g, 0, 0.05, 7.45, 80, 0.1, 0.15, '#C9C6BE');
+      for(let x = -38; x < 38; x += 4) flat(x + 1, 0.03, 11, 2, 0.15, '#E9E6E0');
+      flat(0, 0.03, 8.2, 76, 0.12, '#E9E6E0'); flat(0, 0.03, 13.8, 76, 0.12, '#E9E6E0');
+      EDGE_ON = e0;
+      [[-14, -9], [9, 10.3], [15.2, 19]].forEach(([a, b]) => floor(g, a, -13, b, 7.3, 0.02, '#6F8F5A'));
+      box(g, -10.6, 0.4, -3.2, 0.9, 0.8, 18, '#4E7C58'); box(g, 17, 0.4, -3.2, 0.9, 0.8, 18, '#4E7C58');
+      // l'auvent : son toit, son bandeau rouge, son logo, ses dalles lumineuses, ses deux piliers
+      box(g, 0, 4.75, 0, 12.4, 0.5, 8.4, W);
+      [-1, 1].forEach(e => { box(g, 0, 4.7, e * 4.22, 12.44, 0.18, 0.04, R); box(g, e * 6.22, 4.7, 0, 0.04, 0.18, 8.44, R); });
+      pixText(g, 'STATION', 0, 4.71, 4.245, 1, 0.045, '#F4F6F6');
+      cyl(g, 5.3, 4.75, 4.2, 0.2, 0.2, 0.03, R, 16, 'z'); cyl(g, 5.3, 4.75, 4.231, 0.13, 0.13, 0.004, '#F4F6F6', 16, 'z'); cyl(g, 5.3, 4.75, 4.236, 0.07, 0.07, 0.004, R, 12, 'z');
+      EDGE_ON = 0; for(let x = -5; x <= 5; x += 2) [-2.6, 0, 2.6].forEach(z => flat(x, 4.49, z, 0.5, 0.5, '#F4EFD8', true, true)); EDGE_ON = e0;
       [-3.5, 3.5].forEach(x => {
-        box(g, x, 0.1, 0, 1.2, 0.2, 4.6, M); box(g, x, 2.4, 0, 0.36, 4.4, 0.36, '#C9CDD3');
-        [-1.4, 1.4].forEach(z => { box(g, x, 0.95, z, 0.6, 1.5, 0.45, R); box(g, x, 1.72, z, 0.62, 0.06, 0.47, W);
-          [-1, 1].forEach(e => { box(g, x + e * 0.301, 1.3, z, 0.005, 0.26, 0.3, '#1D1F24'); box(g, x + e * 0.32, 0.95, z + 0.12, 0.04, 0.16, 0.06, K); box(g, x + e * 0.302, 0.62, z, 0.006, 0.25, 0.36, W); }); });
-        box(g, x, 0.55, 2.0, 0.3, 0.7, 0.3, '#2F6E4F'); box(g, x, 0.55, -2.0, 0.3, 0.7, 0.3, '#5E636C'); });
-      // la boutique : la vitrine, la porte, l'enseigne
-      box(g, 0, 1.6, -10.5, 10, 3.2, 5, W); box(g, 0, 3.25, -10.5, 10.2, 0.1, 5.2, '#B8BEC4');
-      box(g, -1.6, 1.3, -7.99, 6.0, 2.0, 0.02, '#4E6A80'); [-4.6, -2.6, -0.6, 1.4].forEach(x => box(g, x, 1.3, -7.975, 0.06, 2.04, 0.03, '#3A3D44'));
-      box(g, 3.2, 1.1, -7.99, 1.6, 2.2, 0.02, '#4E6A80'); box(g, 3.2, 1.1, -7.975, 0.04, 2.2, 0.03, '#3A3D44'); box(g, 3.2, 2.22, -7.975, 1.64, 0.06, 0.03, '#3A3D44');
+        // l'îlot, ses butoirs jaunes, ses poteaux de protection
+        box(g, x, 0.1, 0, 1.2, 0.2, 4.6, M); [-1, 1].forEach(e => { box(g, x, 0.1, e * 2.31, 1.22, 0.21, 0.04, Y); cyl(g, x - 0.4, 1.0, e * 2.6, 0.06, 0.06, 1.0, Y, 6); cyl(g, x + 0.4, 1.0, e * 2.6, 0.06, 0.06, 1.0, Y, 6); });
+        box(g, x, 2.4, 0, 0.36, 4.4, 0.36, '#C9CDD3'); box(g, x, 0.45, 0, 0.46, 0.5, 0.46, R);
+        [-1.4, 1.4].forEach((z, n) => {
+          // la pompe : le socle, le corps, la tête et son bandeau, les écrans (allumés la nuit), les pistolets et leurs tuyaux
+          box(g, x, 0.3, z, 0.66, 0.2, 0.5, '#3A3D44'); box(g, x, 1.0, z, 0.6, 1.2, 0.45, R); box(g, x, 1.75, z, 0.62, 0.3, 0.47, W); box(g, x, 1.75, z, 0.64, 0.08, 0.49, R);
+          EDGE_ON = 0; [-1, 1].forEach(e => { const fx = x + e * 0.302;
+            px(fx, 1.38, z, 0.34, 0.3, '#1D1F24', e); px(fx + e * 0.003, 1.44, z, 0.22, 0.05, LED, e, true); px(fx + e * 0.003, 1.34, z, 0.14, 0.05, LED, e, true);
+            px(fx, 0.78, z, 0.36, 0.34, W, e); [0.84, 0.76].forEach(y => px(fx + e * 0.003, y, z, 0.26, 0.03, '#5E636C', e));
+            [[-0.14, '#2F6E4F'], [0.0, Y], [0.14, K]].forEach(([dz, c]) => { box(g, x + e * 0.33, 1.12, z + dz, 0.05, 0.16, 0.08, K); box(g, x + e * 0.37, 1.08, z + dz, 0.07, 0.1, 0.05, c); });
+            box(g, x + e * 0.34, 1.42, z - 0.2, 0.025, 0.56, 0.025, K); }); EDGE_ON = e0;
+        });
+        box(g, x, 0.55, 2.0, 0.3, 0.7, 0.3, '#2F6E4F'); box(g, x, 0.92, 2.0, 0.34, 0.04, 0.34, '#24262B'); box(g, x, 0.55, -2.0, 0.3, 0.7, 0.3, '#5E636C'); box(g, x, 0.92, -2.0, 0.34, 0.04, 0.34, '#24262B'); });
+      // la boutique : le toit, la vitrine et la porte (éclairées la nuit), les affiches, l'enseigne, les appliques
+      box(g, 0, 1.6, -10.5, 10, 3.2, 5, W); box(g, 0, 3.3, -10.5, 10.2, 0.2, 5.2, '#B8BEC4'); box(g, 0, 0.1, -7.95, 10.04, 0.2, 0.08, '#8E8B85');
+      lit(-1.6, 1.3, -7.99, 6.0, 2.0, 0.02, '#C9D6DE'); [-4.6, -2.6, -0.6, 1.4].forEach(x => box(g, x, 1.3, -7.975, 0.06, 2.04, 0.03, '#3A3D44')); box(g, -1.6, 2.32, -7.975, 6.06, 0.06, 0.03, '#3A3D44');
+      EDGE_ON = 0; [[-3.6, 1.55, R], [-1.6, 1.2, '#3D5A80'], [0.4, 1.6, Y]].forEach(([x, y, c]) => { box(g, x, y, -7.972, 0.7, 0.9, 0.006, W); box(g, x, y + 0.2, -7.969, 0.56, 0.3, 0.004, c); box(g, x, y - 0.2, -7.969, 0.4, 0.06, 0.004, K); }); EDGE_ON = e0;
+      lit(3.2, 1.1, -7.99, 1.6, 2.2, 0.02, '#C9D6DE'); box(g, 3.2, 1.1, -7.975, 0.04, 2.2, 0.03, '#3A3D44'); box(g, 3.2, 2.22, -7.975, 1.64, 0.06, 0.03, '#3A3D44'); [2.8, 3.6].forEach(x => box(g, x, 1.05, -7.955, 0.5, 0.04, 0.04, '#B8BEC4'));
       box(g, 0, 2.8, -7.97, 10, 0.5, 0.04, R); pixText(g, 'BOUTIQUE', 0, 2.8, -7.945, 1, 0.05, '#F4F6F6');
-      [-4.6, 4.6].forEach(x => cyl(g, x, 0.85, -7.6, 0.25, 0.22, 0.85, '#2F6E4F', 10)); box(g, -3.0, 0.45, -7.6, 1.0, 0.9, 0.6, '#E9E6E0'); box(g, -3.0, 0.92, -7.6, 1.04, 0.04, 0.64, '#3D5A80');
+      [-4.2, 3.2].forEach(x => { box(g, x, 2.45, -7.9, 0.08, 0.08, 0.16, K); lit(x, 2.4, -7.84, 0.2, 0.04, 0.12, '#F4EFD8'); });
+      [-4.6, 4.6].forEach(x => { cyl(g, x, 0.85, -7.6, 0.25, 0.22, 0.85, '#2F6E4F', 10); cyl(g, x, 0.89, -7.6, 0.27, 0.27, 0.04, '#24262B', 10); });
+      box(g, -3.0, 0.45, -7.6, 1.0, 0.9, 0.6, '#E9E6E0'); box(g, -3.0, 0.92, -7.6, 1.04, 0.04, 0.64, '#3D5A80'); pixText(g, 'GLACE', -3.0, 0.55, -7.296, 1, 0.025, '#3D5A80');
+      box(g, 0.8, 0.45, -7.65, 1.4, 0.06, 0.4, '#7A5C42'); [0.25, 1.35].forEach(x => box(g, x, 0.21, -7.65, 0.06, 0.42, 0.36, K));
+      box(g, 4.25, 0.7, -7.55, 0.9, 1.4, 0.5, '#C9CDD3'); for(let k = 0; k < 4; k++) cyl(g, 3.95 + k * 0.2, 0.68, -7.55, 0.08, 0.08, 0.5, '#3D7FB0', 8);
+      // la station de lavage, sur le côté
+      floor(g, 10.3, -10, 15.2, -1.6, 0.02, '#9A9890');
+      box(g, 10.6, 1.6, -5.9, 0.3, 3.2, 8, W); box(g, 14.9, 1.6, -5.9, 0.3, 3.2, 8, W); box(g, 12.75, 1.6, -9.75, 4.6, 3.2, 0.3, W); box(g, 12.75, 3.3, -5.9, 4.6, 0.2, 8.2, '#B8BEC4');
+      box(g, 12.75, 2.95, -1.86, 4.6, 0.5, 0.12, '#2F5E7E'); pixText(g, 'LAVAGE', 12.75, 2.95, -1.795, 1, 0.05, '#F4F6F6');
+      [11.3, 14.2].forEach(x => { cyl(g, x, 2.6, -4.2, 0.36, 0.36, 2.4, '#3D7FB0', 10); cyl(g, x, 2.75, -4.2, 0.06, 0.06, 0.15, K, 6); box(g, x, 2.82, -4.2, 0.08, 0.04, 2.2, K); });
+      box(g, 12.75, 2.78, -4.2, 3.2, 0.06, 0.08, K);
       // le grand panneau des prix, au bord de la route
-      box(g, 8.5, 3.0, 7.5, 0.3, 6.0, 0.3, '#5E636C'); box(g, 8.5, 5.4, 7.5, 2.0, 2.2, 0.3, R); box(g, 8.5, 5.1, 7.66, 1.7, 1.2, 0.02, '#1D1F24');
-      pixText(g, 'ESSENCE', 8.5, 6.15, 7.67, 1, 0.04, '#F4F6F6'); [5.4, 5.05, 4.7].forEach(y => box(g, 8.85, y, 7.675, 0.6, 0.18, 0.01, '#E8B923'));
-      // la station de gonflage, les poubelles, les réverbères, des arbres le long du terrain
-      box(g, -7.8, 0.6, -3.5, 0.5, 1.2, 0.4, '#3D5A80'); box(g, -7.8, 1.0, -3.29, 0.36, 0.3, 0.02, '#1D1F24');
+      box(g, 8.5, 3.0, 7.5, 0.3, 6.0, 0.3, '#5E636C'); box(g, 8.5, 5.3, 7.5, 2.0, 2.6, 0.3, R); box(g, 8.5, 6.33, 7.66, 1.9, 0.42, 0.02, W);
+      pixText(g, 'ESSENCE', 8.5, 6.33, 7.672, 1, 0.04, R); box(g, 8.5, 5.15, 7.66, 1.8, 1.7, 0.02, '#1D1F24');
+      [['1.89', '#2F6E4F', 5.65], ['1.95', Y, 5.15], ['1.79', '#F4F6F6', 4.65]].forEach(([p, c, y]) => { box(g, 7.9, y, 7.672, 0.4, 0.26, 0.004, c); pixText(g, p, 8.85, y, 7.674, 1, 0.042, LED); });
+      // les réverbères, les arbres, et au loin, de l'autre côté de la route, des bâtiments (leurs fenêtres s'allument la nuit)
       [[-9.5, 9], [9.5, -12], [-9.5, -12]].forEach(([x, z]) => { cyl(g, x, 6, z, 0.07, 0.09, 6, K, 8); box(g, x, 6.0, z + (z > 0 ? -0.5 : 0.5), 0.2, 0.08, 1.0, K); box(g, x, 5.95, z + (z > 0 ? -0.9 : 0.9), 0.24, 0.02, 0.36, '#F2E6C9'); });
       [-16, -12, 14, 18].forEach((x, i) => { cyl(g, x, 1.8, -10 + i * 3, 0.16, 0.2, 1.8, '#5B4532', 8); ball(g, x, 2.9, -10 + i * 3, 1.3, 1.4, 1.3, '#4E7C58', 9); });
-      // au loin, de l'autre côté de la route : des bâtiments bas
-      [[-22, 24, 10, 4], [-8, 26, 12, 6], [8, 25, 9, 5], [22, 24, 11, 3.5]].forEach(([x, z, w, h], i) => box(g, x, h / 2, z, w, h, 6, ['#B9AE9C', '#9DB3C8', '#C9B48F', '#A7A49E'][i]));
+      [[-22, 24, 10, 5.6], [-8, 26, 12, 8.4], [8, 25, 9, 5.6], [22, 24, 11, 5.6]].forEach(([x, z, w, h], i) => { box(g, x, h / 2, z, w, h, 6, ['#B9AE9C', '#9DB3C8', '#C9B48F', '#A7A49E'][i]); box(g, x, h + 0.1, z, w + 0.2, 0.2, 6.2, '#8E8B85');
+        MAT = 6; EDGE_ON = 0; for(let y = 1.2; y < h - 1.2; y += 2.8) for(let k = -w / 2 + 0.8; k < w / 2 - 1.2; k += 1.8) wall(g, [x + k + 1.0, z - 3.02], [x + k, z - 3.02], 1.3, '#4F6275', y); MAT = 0; EDGE_ON = e0; });
     },
   },
-  // le quai de gare : le quai en hauteur sous son abri, un train à quai, les voies, les poteaux de la caténaire
+  // le quai de gare : le quai en hauteur sous son abri, un train à quai, les voies, la caténaire, la ville derrière
   station:{
     sky:{ top:'#8FB2D0', hor:'#DCE4EA', low:'#77736C' }, fog:[40, 170],
     cam:{ tx:0.8, ty:2.2, tz:0, yaw:-55, pitch:-5, dist:8, lens:28 },
     build(g){
-      const K = '#2C2E33', P = 1.1, ST = '#5E636C';
-      floor(g, -40, -40, 40, 40, 0, '#7C746A');
-      // le quai : sa dalle, ses bords (la bande blanche, la ligne jaune)
-      box(g, 0, P / 2, 0, 6, P, 60, '#B8B4AC'); [-1, 1].forEach(e => { box(g, e * 2.93, P + 0.003, 0, 0.14, 0.006, 60, '#E9E6E0'); box(g, e * 2.55, P + 0.003, 0, 0.08, 0.006, 60, '#E8B923'); });
+      const K = '#2C2E33', P = 1.1, ST = '#5E636C', BL = '#2F5E7E', LED = '#F2D06B', e0 = EDGE_ON;
+      const lit = (x, y, z, w, h, d, c) => { const m0 = MAT; MAT = 5; box(g, x, y, z, w, h, d, c); MAT = m0; };
+      // les détails plats : une simple plaque (sur le flanc du train, tournée vers le quai ; au sol ; sous l'abri), éventuellement allumée la nuit
+      const side = (x, y, z, d, h, c, on) => { const m0 = MAT; if(on) MAT = 5; wall(g, [x, z - d / 2], [x, z + d / 2], h, c, y - h / 2); MAT = m0; };
+      const flat = (x, y, z, w, d, c, down, on) => { const m0 = MAT; if(on) MAT = 5; floor(g, x - w / 2, z - d / 2, x + w / 2, z + d / 2, y, c, down); MAT = m0; };
+      // le sol tout autour (pas sous le quai : rien n'est peint deux fois)
+      [[-40, -40, -3, 40], [3, -40, 40, 40], [-3, -40, 3, -30], [-3, 30, 3, 40]].forEach(([a, b, c, d]) => floor(g, a, b, c, d, 0, '#7C746A'));
+      // le quai : sa dalle, ses joints, ses flancs plus sombres, sa bordure, la ligne jaune, la bande podotactile
+      floor(g, -3, -30, 3, 30, P, '#B8B4AC'); wall(g, [-3, -30], [-3, 30], P, '#8E8A82'); wall(g, [3, 30], [3, -30], P, '#8E8A82'); wall(g, [3, -30], [-3, -30], P, '#9E9A92'); wall(g, [-3, 30], [3, 30], P, '#9E9A92');
+      if(COLL) collOf(g).b.push([0, P / 2, 0, 3, P / 2, 30, 0]);   // le quai reste un obstacle plein pour la caméra
+      EDGE_ON = 0; for(let z = -29; z < 30; z += 1.5) flat(0, P + 0.003, z, 5.2, 0.02, '#A9A59D');
+      [-1, 1].forEach(e => { flat(e * 2.9, P + 0.004, 0, 0.2, 60, '#D9D5CD'); flat(e * 2.55, P + 0.005, 0, 0.08, 60, '#E8B923'); flat(e * 2.36, P + 0.005, 0, 0.24, 60, '#D8CFAE'); });
+      EDGE_ON = e0;
       // les deux voies : le ballast, les traverses, les rails
-      const e0 = EDGE_ON;
       [-4.6, 4.6].forEach(x => { box(g, x, 0.06, 0, 3.2, 0.12, 80, '#8E867A'); EDGE_ON = 0;
-        for(let z = -39.6; z < 40; z += 0.65) box(g, x, 0.15, z, 2.4, 0.06, 0.22, '#5B4532');
+        // les traverses : leur dessus et leurs deux flancs (le dessous ne se voit jamais)
+        for(let z = -39.6; z < 40; z += 0.65){ flat(x, 0.18, z, 2.4, 0.22, '#5B4532'); wall(g, [x - 1.2, z + 0.11], [x + 1.2, z + 0.11], 0.06, '#5B4532', 0.12); wall(g, [x + 1.2, z - 0.11], [x - 1.2, z - 0.11], 0.06, '#5B4532', 0.12); }
         EDGE_ON = e0; [-0.72, 0.72].forEach(d => box(g, x + d, 0.24, 0, 0.07, 0.12, 80, '#8A8F96')); });
-      // le train à quai : la caisse, ses fenêtres et ses portes côté quai, ses bogies
-      const TX = 4.6, T0 = -16, T1 = 6;
-      box(g, TX, 2.3, (T0 + T1) / 2, 3.0, 3.0, T1 - T0, '#E9E6E0'); box(g, TX, 3.88, (T0 + T1) / 2, 2.8, 0.16, T1 - T0 - 0.2, '#B8BEC4');
-      box(g, TX - 1.505, 1.1, (T0 + T1) / 2, 0.01, 0.3, T1 - T0, '#2F5E7E'); box(g, TX - 1.505, 3.35, (T0 + T1) / 2, 0.01, 0.12, T1 - T0, '#2F5E7E');
-      for(let z = T0 + 1.6; z < T1 - 1; z += 2.2){ const door = Math.round((z - T0) / 2.2) % 4 === 2;
-        if(door){ box(g, TX - 1.506, 1.95, z, 0.012, 1.95, 1.3, '#B8BEC4'); box(g, TX - 1.512, 2.3, z - 0.33, 0.006, 0.7, 0.5, '#2E3846'); box(g, TX - 1.512, 2.3, z + 0.33, 0.006, 0.7, 0.5, '#2E3846'); box(g, TX - 1.514, 1.95, z, 0.006, 1.95, 0.02, K); }
-        else box(g, TX - 1.506, 2.45, z, 0.01, 0.85, 1.5, '#2E3846'); }
-      box(g, TX, 2.5, T1 + 0.01, 2.4, 1.0, 0.02, '#2E3846');
+      // le train à quai : la caisse et ses bandes, les fenêtres et les portes côté quai (éclairées la nuit), les deux nez, le toit et le pantographe, les bogies
+      const TX = 4.6, T0 = -16, T1 = 6, TZ = (T0 + T1) / 2, TL = T1 - T0;
+      box(g, TX, 2.45, TZ, 3.0, 2.7, TL, '#E9E6E0'); box(g, TX, 0.95, TZ, 3.0, 0.3, TL, '#5E636C');
+      box(g, TX, 3.86, TZ, 2.7, 0.12, TL - 0.4, '#C9CDD3'); box(g, TX, 3.96, TZ, 2.2, 0.08, TL - 1.2, '#B8BEC4');
+      box(g, TX - 1.505, 1.25, TZ, 0.01, 0.2, TL, BL); box(g, TX - 1.506, 1.4, TZ, 0.01, 0.05, TL, '#B4232C'); box(g, TX - 1.505, 3.35, TZ, 0.01, 0.12, TL, BL);
+      EDGE_ON = 0; for(let z = T0 + 1.6; z < T1 - 1; z += 2.2){ const door = Math.round((z - T0) / 2.2) % 4 === 2;
+        if(door){ side(TX - 1.503, 1.95, z, 1.36, 2.0, '#E8B923'); side(TX - 1.506, 1.95, z, 1.3, 1.95, '#B8BEC4');
+          side(TX - 1.509, 2.3, z - 0.33, 0.5, 0.7, '#8EA3B5', true); side(TX - 1.509, 2.3, z + 0.33, 0.5, 0.7, '#8EA3B5', true); side(TX - 1.51, 1.95, z, 0.02, 1.95, K); }
+        else { side(TX - 1.503, 2.45, z, 1.6, 0.95, '#3A3D44'); side(TX - 1.506, 2.45, z, 1.5, 0.85, '#8EA3B5', true); } } EDGE_ON = e0;
+      [[T1, 1], [T0, -1]].forEach(([z, s]) => { lit(TX, 2.55, z + s * 0.01, 2.4, 0.9, 0.02, '#2E3846'); box(g, TX, 1.3, z + s * 0.012, 3.0, 0.5, 0.02, '#E8B923');
+        [-0.95, 0.95].forEach(d => lit(TX + d, 1.6, z + s * 0.02, 0.24, 0.12, 0.02, '#F4EFD8')); box(g, TX, 0.95, z + s * 0.12, 0.4, 0.2, 0.24, K); });
       [T0 + 3, T1 - 3].forEach(z => { box(g, TX, 0.55, z, 2.2, 0.5, 2.6, K); [-0.9, 0.9].forEach(d => [-0.8, 0.8].forEach(w => cyl(g, TX + d - 0.05, 0.42, z + w, 0.42, 0.42, 0.1, '#3A3D44', 10, 'x'))); });
-      // l'abri du quai : ses poteaux, son toit, ses lampes (allumées la nuit), les bancs, le panneau des départs, l'horloge
-      for(let z = -24; z <= 24; z += 8) box(g, 0, P + 1.45, z, 0.25, 2.9, 0.25, ST);
-      box(g, 0, P + 2.96, 0, 5.2, 0.12, 52, '#5E636C'); box(g, 0, P + 2.88, 0, 0.3, 0.06, 52, K);
-      for(let z = -22; z <= 22; z += 4) box(g, 0, P + 2.82, z, 0.5, 0.06, 0.2, '#F2E6C9');
+      box(g, TX, 4.06, -10, 1.2, 0.12, 1.6, ST); box(g, TX, 5.05, -10, 0.05, 1.9, 0.05, K); box(g, TX, 5.99, -10, 1.6, 0.04, 0.1, K);
+      // l'abri du quai : poteaux, poutres, toit et ses bandeaux bleus, tubes lumineux (allumés la nuit), bancs, poubelles, composteurs, distributeur
+      for(let z = -24; z <= 24; z += 8){ box(g, 0, P + 1.45, z, 0.25, 2.9, 0.25, ST); box(g, 0, P + 0.15, z, 0.4, 0.3, 0.4, ST); box(g, 0, P + 2.82, z, 5.0, 0.16, 0.18, ST); }
+      box(g, 0, P + 2.96, 0, 5.2, 0.12, 52, '#5E636C'); [-1, 1].forEach(e => box(g, e * 2.62, P + 2.9, 0, 0.06, 0.3, 52.1, BL)); box(g, 0, P + 2.88, 0, 0.3, 0.06, 52, K);
+      EDGE_ON = 0; for(let z = -22; z <= 22; z += 4) [-1.2, 1.2].forEach(x => flat(x, P + 2.895, z, 0.12, 1.2, '#F4EFD8', true, true)); EDGE_ON = e0;
       [-12, 4, 12].forEach(z => { box(g, -1.55, P + 0.42, z, 0.46, 0.07, 1.8, '#7A5C42'); box(g, -1.78, P + 0.72, z, 0.04, 0.5, 1.8, '#7A5C42');
         [-0.75, 0.75].forEach(d => { box(g, -1.55, P + 0.2, z + d, 0.42, 0.4, 0.05, K); box(g, -1.78, P + 0.6, z + d, 0.05, 0.3, 0.05, K); }); });
-      box(g, 0, P + 2.55, -2, 1.8, 0.5, 0.12, '#1D1F24'); box(g, 0, P + 2.84, -2, 0.06, 0.08, 0.06, K); pixText(g, 'DEPART', 0, P + 2.62, -1.935, 1, 0.03, '#E8B923');
-      [2.47, 2.4].forEach(y => box(g, 0, P + y - 0.04, -1.937, 1.4, 0.03, 0.004, '#E8B923'));
+      [-16, 0, 16].forEach(z => { cyl(g, 0.45, P + 0.75, z + 0.4, 0.2, 0.18, 0.75, '#2F6E4F', 10); cyl(g, 0.45, P + 0.78, z + 0.4, 0.22, 0.22, 0.03, K, 10); });
+      [-10, 10].forEach(z => { box(g, 1.0, P + 0.6, z, 0.12, 1.2, 0.12, ST); box(g, 1.0, P + 1.32, z, 0.28, 0.3, 0.24, '#E8B923'); box(g, 1.0, P + 1.32, z + 0.121, 0.18, 0.04, 0.004, K); });
+      box(g, -1.6, P + 0.95, 18, 0.8, 1.9, 0.7, '#B4232C'); lit(-1.198, P + 1.25, 18, 0.006, 0.9, 0.56, '#E9EEF2'); box(g, -1.195, P + 0.55, 18, 0.01, 0.2, 0.4, K);
+      // le panneau des départs (les horaires s'allument la nuit), le panneau du quai, l'horloge, le nom de la gare
+      box(g, 0, P + 2.55, -2, 1.8, 0.62, 0.12, '#1D1F24'); box(g, 0, P + 2.88, -2, 0.06, 0.08, 0.06, K); pixText(g, 'DEPART', 0, P + 2.74, -1.935, 1, 0.026, LED);
+      [['10:45', P + 2.56], ['11:02', P + 2.42]].forEach(([t, y]) => { pixText(g, t, -0.45, y, -1.935, 1, 0.022, LED); box(g, 0.4, y, -1.937, 0.7, 0.07, 0.004, '#3A3D44'); });
+      [14, -20].forEach(z => { box(g, 0, P + 2.5, z, 1.4, 0.4, 0.08, BL); box(g, 0, P + 2.79, z, 0.06, 0.18, 0.06, K); pixText(g, 'QUAI 1', 0, P + 2.5, z + 0.045, 1, 0.03, '#F4F6F6'); pixText(g, 'QUAI 1', 0, P + 2.5, z - 0.045, -1, 0.03, '#F4F6F6'); });
       cyl(g, 0.13, P + 2.2, 8, 0.2, 0.2, 0.04, '#F4F6F6', 16, 'x'); cyl(g, 0.168, P + 2.2, 8, 0.17, 0.17, 0.005, '#2C2E33', 16, 'x'); cyl(g, 0.17, P + 2.2, 8, 0.165, 0.165, 0.004, '#F4F6F6', 16, 'x');
-      // le nom de la gare, sur deux pieds
-      [-17.6, -16.4].forEach(z => box(g, -2.2, P + 1.0, z, 0.08, 2.0, 0.08, ST)); box(g, -2.2, P + 1.85, -17, 0.08, 0.45, 1.8, '#2F5E7E'); pixText(g, 'GARE', -17, P + 1.85, -2.15, -1, 0.05, '#F4F6F6', true);
-      // les poteaux et les fils de la caténaire, la clôture et les arbres de l'autre côté des voies
+      box(g, 0.175, P + 2.26, 8, 0.004, 0.12, 0.012, K); box(g, 0.175, P + 2.2, 8.04, 0.004, 0.012, 0.08, K);
+      [-17.6, -16.4].forEach(z => box(g, -2.27, P + 1.0, z, 0.06, 2.0, 0.08, ST)); box(g, -2.2, P + 1.85, -17, 0.08, 0.45, 1.8, BL); pixText(g, 'GARE', -17, P + 1.85, -2.155, 1, 0.05, '#F4F6F6', true); pixText(g, 'GARE', -17, P + 1.85, -2.245, -1, 0.05, '#F4F6F6', true);
+      // la caténaire, la clôture
       for(let z = -36; z <= 36; z += 12) [-7.4, 7.4].forEach(x => { box(g, x, 3.2, z, 0.22, 6.4, 0.22, ST); box(g, x / 2 + Math.sign(x) * 0.9, 6.1, z, Math.abs(x) - 1.6, 0.12, 0.12, ST); });
       EDGE_ON = 0; [-4.6, 4.6].forEach(x => box(g, x, 6.025, 0, 0.025, 0.025, 80, '#3A3D44')); EDGE_ON = e0;
       [-9, 9].forEach(x => { for(let z = -36; z <= 36; z += 3) box(g, x, 0.75, z, 0.06, 1.5, 0.06, '#5E636C'); [0.5, 1.4].forEach(y => box(g, x, y, 0, 0.04, 0.05, 72, '#5E636C')); });
-      [-14, -11, 12, 15].forEach((x, i) => [-24, -6, 10, 26].forEach((z, j) => { if((i + j) % 2) return; cyl(g, x, 2, z, 0.18, 0.22, 2, '#5B4532', 8); ball(g, x, 3.2, z, 1.6, 1.6, 1.6, '#4E7C58', 9); }));
+      // derrière, la ville : des immeubles et leurs fenêtres (la nuit, certaines s'éclairent), quelques arbres
+      [[-1, -22, 12, 9], [-1, -2, 14, 13], [-1, 18, 10, 11], [1, 22, 14, 12]].forEach(([s, z, d, h], i) => { const x = s * 20, w = 7;
+        box(g, x, h / 2, z, w, h, d, ['#B39C86', '#A6ACB4', '#C9B9A3', '#9A8B7E', '#BFA58A', '#8E7E72'][i]); box(g, x, h + 0.1, z, w + 0.2, 0.2, d + 0.2, '#8E8B85');
+        const xf = x - s * (w / 2 + 0.02); MAT = 6; EDGE_ON = 0;
+        for(let y = 1.4; y < h - 1.2; y += 3) for(let k = -d / 2 + 0.9; k < d / 2 - 1.4; k += 2.0) wall(g, s > 0 ? [xf, z + k] : [xf, z + k + 1.1], s > 0 ? [xf, z + k + 1.1] : [xf, z + k], 1.4, '#4F6275', y);
+        MAT = 0; EDGE_ON = e0; });
+      [-13, 13].forEach(x => [-28, -10, 10, 28].forEach(z => { cyl(g, x, 2, z, 0.18, 0.22, 2, '#5B4532', 8); ball(g, x, 3.2, z, 1.4, 1.5, 1.4, '#4E7C58', 9); }));
     },
   },
   alley:{
@@ -1311,12 +1372,16 @@ function rotY(g, from, t, x, y, z){
 /* des lettres en petits carrés (police 3 × 5), posées sur un plan vertical z, tournées vers +z (dir 1) ou -z (dir -1) */
 const PIX = { T:['111', '010', '010', '010', '010'], A:['010', '101', '111', '101', '101'], X:['101', '101', '010', '101', '101'], I:['111', '010', '010', '010', '111'],
   P:['110', '101', '110', '100', '100'], O:['111', '101', '101', '101', '111'], L:['100', '100', '100', '100', '111'], C:['111', '100', '100', '100', '111'], E:['111', '100', '110', '100', '111'],
-  B:['110', '101', '110', '101', '110'], N:['101', '111', '111', '111', '101'], Q:['111', '101', '101', '111', '001'], U:['101', '101', '101', '101', '111'], K:['101', '110', '100', '110', '101'], S:['111', '100', '111', '001', '111'], H:['101', '101', '111', '101', '101'], R:['110', '101', '110', '101', '101'], F:['111', '100', '110', '100', '100'], D:['110', '101', '101', '101', '110'], M:['101', '111', '111', '101', '101'], G:['111', '100', '101', '101', '111'], V:['101', '101', '101', '101', '010'], ' ':['000', '000', '000', '000', '000'] };
+  B:['110', '101', '110', '101', '110'], N:['101', '111', '111', '111', '101'], Q:['111', '101', '101', '111', '001'], U:['101', '101', '101', '101', '111'], K:['101', '110', '100', '110', '101'], S:['111', '100', '111', '001', '111'], H:['101', '101', '111', '101', '101'], R:['110', '101', '110', '101', '101'], F:['111', '100', '110', '100', '100'], D:['110', '101', '101', '101', '110'], M:['101', '111', '111', '101', '101'], '0':['111', '101', '101', '101', '111'], '1':['010', '110', '010', '010', '111'], '2':['111', '001', '111', '100', '111'], '3':['111', '001', '111', '001', '111'], '4':['101', '101', '111', '001', '001'], '5':['111', '100', '111', '001', '111'], '6':['111', '100', '111', '101', '111'], '7':['111', '001', '001', '001', '001'], '8':['111', '101', '111', '101', '111'], '9':['111', '101', '111', '001', '111'], '.':['000', '000', '000', '000', '010'], ':':['000', '010', '000', '010', '000'], G:['111', '100', '101', '101', '111'], V:['101', '101', '101', '101', '010'], ' ':['000', '000', '000', '000', '000'] };
 function pixText(g, text, cx, cy, z, dir, px, col, axisX){
   const w = text.length * 4 - 1, e0 = EDGE_ON; EDGE_ON = 0;
   [...text].forEach((ch, i) => (PIX[ch] || PIX[' ']).forEach((row, r) => [...row].forEach((b, c) => { if(b !== '1') return;
     const u = (i * 4 + c - (w - 1) / 2) * px * dir, v = cy + (2 - r) * px;
-    if(axisX) box(g, z, v, cx - u, 0.006, px * 0.92, px * 0.92, col); else box(g, cx + u, v, z, px * 0.92, px * 0.92, 0.006, col); })));
+    // chaque pixel : une plaque vue des deux côtés (4 triangles au lieu des 12 d'un petit pavé : même image, bien plus léger)
+    const h = px * 0.46, C = hexRGB(col), m0 = MAT; if(MAT === 0 && isLight(C, px)) MAT = 5;
+    if(axisX){ const X = z, Z = cx - u; quad(g, [X, v - h, Z + h], [X, v - h, Z - h], [X, v + h, Z - h], [X, v + h, Z + h], C); quad(g, [X, v - h, Z - h], [X, v - h, Z + h], [X, v + h, Z + h], [X, v + h, Z - h], C); }
+    else { const X = cx + u; quad(g, [X - h, v - h, z], [X + h, v - h, z], [X + h, v + h, z], [X - h, v + h, z], C); quad(g, [X + h, v - h, z], [X - h, v - h, z], [X - h, v + h, z], [X + h, v + h, z], C); }
+    MAT = m0; })));
   EDGE_ON = e0;
 }
 /* une porte sur un mur vertical en x (vue de l'intérieur, côté faceX) : le battant, son encadrement, sa poignée */
@@ -1970,7 +2035,8 @@ Object.assign(SET_DEF, {
       for(let x = -8.5; x < 9; x += 1.5) box(g, x, 0.003, 0, 0.02, 0.004, 14, '#7E838B');
       [[-9, -7, 9, -7], [9, -7, 9, 7], [9, 7, -9, 7], [-9, 7, -9, -7]].forEach(([a, b, c, d]) => { const mx = (a + c) / 2, mz = (b + d) / 2, along = a === c; box(g, mx, 0.55, mz, along ? 0.3 : Math.abs(c - a) + 0.3, 1.1, along ? Math.abs(d - b) + 0.3 : 0.3, '#A6ACB4'); });
       box(g, 0, -15.01, 0, 18.2, 30, 14.2, '#9A8B7E');
-      for(let y = -3; y > -30; y -= 3) for(let x = -7.5; x <= 7.5; x += 2.2){ wall(g, [x - 0.5, 7.11], [x + 0.5, 7.11], 1.4, '#3E4552', y); wall(g, [x + 0.5, -7.11], [x - 0.5, -7.11], 1.4, '#3E4552', y); }
+      // les fenêtres de l'immeuble (comme dans la rue : la nuit, certaines s'éclairent)
+      MAT = 6; for(let y = -3; y > -30; y -= 3) for(let x = -7.5; x <= 7.5; x += 2.2){ wall(g, [x - 0.5, 7.11], [x + 0.5, 7.11], 1.4, '#3E4552', y); wall(g, [x + 0.5, -7.11], [x - 0.5, -7.11], 1.4, '#3E4552', y); } MAT = 0;
       // le château d'eau, la cage d'escalier, les climatiseurs, l'antenne, la verrière
       [[-4.6, -3.8], [-3.2, -3.8], [-4.6, -2.4], [-3.2, -2.4]].forEach(([x, z]) => box(g, x, 1.2, z, 0.14, 2.4, 0.14, '#5E636C'));
       cyl(g, -3.9, 4.3, -3.1, 1.2, 1.2, 1.9, '#8A6A4A', 14); cyl(g, -3.9, 5.1, -3.1, 0.05, 1.3, 0.8, '#5E636C', 14);
@@ -1984,10 +2050,19 @@ Object.assign(SET_DEF, {
       for(let i = 0; i < 26; i++){
         const a = i / 26 * Math.PI * 2, r = 30 + (i * 7) % 18, x = Math.cos(a) * r, z = Math.sin(a) * r, h = 10 + (i * 13) % 34 - 16, w = 9 + (i * 5) % 7, d = 9 + (i * 3) % 6;
         box(g, x, -30 + (h + 30) / 2, z, w, h + 30, d, cols[i % 6]);
-        for(let y = -1; y < h - 1; y += 3.2) for(let k = -w / 2 + 1.2; k < w / 2 - 0.8; k += 2.0){
-          const f = [x + k, z + d / 2 + 0.02], b2 = [x + k + 1.0, z + d / 2 + 0.02]; wall(g, f, b2, 1.4, '#3E4552', y);
-          wall(g, [x + k + 1.0, z - d / 2 - 0.02], [x + k, z - d / 2 - 0.02], 1.4, '#3E4552', y);
+        // leurs fenêtres, sur les quatre faces (la nuit, certaines s'éclairent, comme dans la rue)
+        MAT = 6;
+        for(let y = -1; y < h - 1; y += 3.2){
+          for(let k = -w / 2 + 1.2; k < w / 2 - 0.8; k += 2.0){
+            const f = [x + k, z + d / 2 + 0.02], b2 = [x + k + 1.0, z + d / 2 + 0.02]; wall(g, f, b2, 1.4, '#3E4552', y);
+            wall(g, [x + k + 1.0, z - d / 2 - 0.02], [x + k, z - d / 2 - 0.02], 1.4, '#3E4552', y);
+          }
+          for(let k = -d / 2 + 1.2; k < d / 2 - 0.8; k += 2.0){
+            wall(g, [x + w / 2 + 0.02, z + k + 1.0], [x + w / 2 + 0.02, z + k], 1.4, '#3E4552', y);
+            wall(g, [x - w / 2 - 0.02, z + k], [x - w / 2 - 0.02, z + k + 1.0], 1.4, '#3E4552', y);
+          }
         }
+        MAT = 0;
       }
     },
   },
