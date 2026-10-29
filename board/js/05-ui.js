@@ -14,19 +14,19 @@ S.hidden = [];
 
 /* ---------- Les étapes, dans la colonne de gauche ---------- */
 const PANELS = [
-  { g:['Le décor', 'The set'], items:[
-    { id:'place', n:1, ic:'place', fr:'Le lieu', en:'The place' },
+  { g:['Décor', 'Set'], items:[
+    { id:'place', ic:'place', fr:'Lieu', en:'Place' },
     { id:'car', ic:'car', fr:'Accessoires', en:'Props' },
-    { id:'crowd', ic:'crowd', fr:'La foule', en:'Crowds' } ] },
-  { g:['Les acteurs', 'The cast'], items:[
-    { id:'chars', n:2, ic:'users', fr:'Les personnages', en:'The characters' },
-    { id:'pose', n:3, ic:'pose', fr:'Les poses', en:'The poses' } ] },
-  { g:['La caméra', 'The camera'], items:[
-    { id:'frame', n:4, ic:'frame', fr:'Le cadrage', en:'Framing' },
-    { id:'move', ic:'move', fr:'Le mouvement', en:'Camera move' } ] },
-  { g:['Le plan', 'The shot'], items:[
-    { id:'text', n:5, ic:'text', fr:'Ce qui se passe', en:'What happens' } ] },
-  { g:['Le film', 'The film'], items:[
+    { id:'crowd', ic:'crowd', fr:'Foule', en:'Crowds' } ] },
+  { g:['Acteurs', 'Cast'], items:[
+    { id:'chars', ic:'users', fr:'Personnages', en:'Characters' },
+    { id:'pose', ic:'pose', fr:'Poses', en:'Poses' } ] },
+  { g:['Caméra', 'Camera'], items:[
+    { id:'frame', ic:'frame', fr:'Cadrage', en:'Framing' },
+    { id:'move', ic:'move', fr:'Mouvement', en:'Camera move' } ] },
+  { g:['Plan', 'Shot'], items:[
+    { id:'text', ic:'text', fr:'Action et dialogue', en:'Action & dialogue' } ] },
+  { g:['Film', 'Film'], items:[
     { id:'look', ic:'contrast', fr:'Rendu et format', en:'Look & format' },
     { id:'export', ic:'export', fr:'Exporter', en:'Export' },
     { id:'help', ic:'help', fr:'Aide et raccourcis', en:'Help & shortcuts' } ] },
@@ -125,12 +125,12 @@ function renderTop(){
 function renderSaved(){ const el = document.getElementById('saveStatus'); if(!el) return; const bad = typeof _saveFail !== 'undefined' && _saveFail;
   el.classList.toggle('bad', bad); el.lastChild.textContent = bad ? L('Non enregistré', 'Not saved') : L('Enregistré', 'Saved');
   el.title = bad ? L('Le navigateur est plein : exporte le fichier du projet (.rboard)', 'The browser is full: export the project file (.rboard)') : L('Enregistré dans ce navigateur', 'Saved in this browser'); }
-const exportList = () => `<button data-act="exportPdf" data-per="6">${icon('board')}<span><b>${L('Planche PDF · 6 plans par page', 'PDF board · 6 shots per page')}</b><small>${L('Tout le film d’un coup d’œil, avec les flèches des mouvements', 'The whole film at a glance, with camera-move arrows')}</small></span></button>
-     <button data-act="exportPdf" data-per="3">${icon('text')}<span><b>${L('Planche PDF · 3 grands plans par page', 'PDF board · 3 large shots per page')}</b><small>${L('Avec l’action, le dialogue et de la place pour écrire : pour le tournage', 'With action, dialogue and room to write: for the shoot')}</small></span></button>
-     <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
-     <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, avec leurs mouvements de caméra', 'The shots one after another, with their camera moves')}</small></span></button>
-     <button data-act="exportCSV">${icon('strip')}<span><b>${L('Liste des plans (tableur)', 'Shot list (spreadsheet)')}</b><small>${L('Pour la production : plan, scène, valeur, mouvement, durée, personnages… dans Excel ou Google Sheets', 'For production: shot, scene, size, move, duration, characters… in Excel or Google Sheets')}</small></span></button>
-     <button data-act="hExportCur">${icon('save')}<span><b>${L('Fichier du projet (.rboard)', 'Project file (.rboard)')}</b><small>${L('Pour le garder ou l’ouvrir sur un autre ordinateur', 'To keep it or open it on another computer')}</small></span></button>`;
+const exportList = () => `<button data-act="exportPdf" data-per="6">${icon('board')}<span><b>${L('Planche PDF', 'PDF board')}</b><small>${L('6 plans par page', '6 shots per page')}</small></span></button>
+     <button data-act="exportPdf" data-per="3">${icon('text')}<span><b>${L('Planche de tournage', 'Shooting board')}</b><small>${L('PDF · 3 plans par page, place pour écrire', 'PDF · 3 shots per page, room to write')}</small></span></button>
+     <button data-act="exportImage">${icon('image')}<span><b>${L('Image du plan', 'Shot image')}</b><small>PNG · 1920 × 1080</small></span></button>
+     <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique', 'Animatic')}</b><small>${L('Vidéo, avec les mouvements', 'Video, with the camera moves')}</small></span></button>
+     <button data-act="exportCSV">${icon('strip')}<span><b>${L('Liste des plans', 'Shot list')}</b><small>CSV · Excel, Numbers, Sheets</small></span></button>
+     <button data-act="hExportCur">${icon('save')}<span><b>${L('Fichier du projet', 'Project file')}</b><small>.rboard</small></span></button>`;
 
 /* ---------- Le plein écran, en immersion : tout l'atelier passe en plein écran, sur fond sombre ----------
    La barre du haut s'efface, le menu de gauche ne garde que ses icônes : l'image prend toute la place,
@@ -300,10 +300,9 @@ function renderHint(){
   let t;
   if(S.play) t = L('Lecture du storyboard · Échap ou clic pour arrêter', 'Playing the storyboard · Esc or click to stop');
   else if(S.endEd) t = L('Tu règles l’image de FIN du mouvement : cadre-la comme tu veux, puis reviens au début dans le volet.', 'You are setting the END frame of the move: frame it as you like, then go back to the start in the panel.');
-  else if(S.hover && IK_CHAIN[S.hover.j]) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + L('glisse : tout le membre suit (Alt : articulation par articulation)', 'drag: the whole limb follows (Alt: one joint at a time)');
-  else if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer le personnage', 'drag to move the character') : L('glisse pour bouger', 'drag to move'));
+  else if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer', 'drag to move') : L('glisse, il suit la souris', 'drag, it follows the mouse'));
   else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer sur le sol', 'Drag to move on the floor') : L('Glisse à gauche ou à droite pour faire tourner', 'Drag left or right to turn');
-  else if(S.sel) t = L('Glisse la partie verte pour la bouger · Clique dans le vide pour désélectionner', 'Drag the green part to move it · Click empty space to deselect');
+  else if(S.sel) t = L('Glisse une partie du corps · Clic dans le vide : terminé', 'Drag a body part · Click empty space: done');
   else t = L('Glisser : tourner autour · Clic droit : se décaler · Molette : avancer · Double-clic : viser', 'Drag: orbit · Right-click: pan · Wheel: move in · Double-click: aim');
   el.innerHTML = `<i></i>${esc(t)}`;
 }
@@ -319,8 +318,8 @@ const COL_PAL = {
 const COL_NAMES = { skin:['Peau', 'Skin'], hair:['Cheveux', 'Hair'], top:['Haut', 'Top'], bottom:['Bas', 'Bottom'] };
 function colorRows(ch){
   const lk = lookOf(ch), mine = (S.doc.colors || {})[ch.look] || {};
-  return `<details class="cols" ${Object.keys(mine).length ? 'open' : ''}><summary>${icon('palette')}<span>${L('Ses couleurs (pour tous les plans)', 'Their colours (for every shot)')}</span></summary>
-    ${COL_KEYS.map(k => `<div class="col-r"><span>${L(...COL_NAMES[k])}</span><div class="sws" role="group" aria-label="${esc(L(...COL_NAMES[k]))}">${COL_PAL[k].map(c => `<button class="swc ${String(lk[k]).toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-act="charCol" data-k="${k}" data-v="${c}" style="--c:${c}" title="${c}" aria-label="${esc(L(...COL_NAMES[k]) + ' ' + c)}"></button>`).join('')}<label class="swc any" title="${esc(L('Une autre couleur', 'Another colour'))}" style="--c:${esc(lk[k] || '#888888')}"><input type="color" data-colk="${k}" value="${esc(/^#[0-9a-f]{6}$/i.test(lk[k] || '') ? lk[k] : '#888888')}" aria-label="${esc(L('Une autre couleur', 'Another colour'))}"></label></div></div>`).join('')}${Object.keys(mine).length ? `<button class="lnk" data-act="charCol" data-k="">${L('Revenir aux couleurs d’origine', 'Back to the original colours')}</button>` : ''}</details>`;
+  return `<details class="cols" ${Object.keys(mine).length ? 'open' : ''}><summary title="${esc(L('Les mêmes couleurs dans tous les plans', 'The same colours in every shot'))}">${icon('palette')}<span>${L('Couleurs', 'Colours')}</span></summary>
+    ${COL_KEYS.map(k => `<div class="col-r"><span>${L(...COL_NAMES[k])}</span><div class="sws" role="group" aria-label="${esc(L(...COL_NAMES[k]))}">${COL_PAL[k].map(c => `<button class="swc ${String(lk[k]).toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-act="charCol" data-k="${k}" data-v="${c}" style="--c:${c}" title="${c}" aria-label="${esc(L(...COL_NAMES[k]) + ' ' + c)}"></button>`).join('')}<label class="swc any" title="${esc(L('Une autre couleur', 'Another colour'))}" style="--c:${esc(lk[k] || '#888888')}"><input type="color" data-colk="${k}" value="${esc(/^#[0-9a-f]{6}$/i.test(lk[k] || '') ? lk[k] : '#888888')}" aria-label="${esc(L('Une autre couleur', 'Another colour'))}"></label></div></div>`).join('')}${Object.keys(mine).length ? `<button class="lnk" data-act="charCol" data-k="">${L('Couleurs d’origine', 'Original colours')}</button>` : ''}</details>`;
 }
 function setCharCol(k, v){
   const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(!ch) return;
@@ -423,13 +422,12 @@ const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-
 const PANEL_HTML = {
   place(){
     const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'hospital', 'metro', 'bar', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
-    const fl = SET_DEF[sh.set].floors ? lblId(L('Aller dans une pièce', 'Go to a room'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
+    const fl = SET_DEF[sh.set].floors ? lblId(L('Pièces', 'Rooms'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
     const gid = ['in', 'out', 'wide'];
-    return ph('place', L('Le lieu', 'The place'), L('Les personnages s’y placent tout seuls.', 'Characters go to ready-made spots by themselves.'), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
-      `<div class="pb"><div class="myplace ${sh.set === 'photo' ? 'on' : ''}"><div class="mp-t">${icon('image')}<b>${L('Ton propre lieu', 'Your own location')}</b></div>
-        <p>${sh.set === 'photo' && sh.photo ? L('La photo est le décor de ce plan. Cale la caméra sur elle : la grille montre le sol.', 'The photo is this shot’s set. Line the camera up with it: the grid shows the floor.') : L('Prends ton vrai décor en photo et joue tes personnages devant. Tu peux aussi glisser une image sur la vue 3D.', 'Take a photo of your real location and stage your characters in front of it. You can also drop an image on the 3D view.')}</p>
-        <button class="btn btn-sm ${sh.set === 'photo' && sh.photo ? '' : 'btn-primary'}" data-act="photoPick">${icon('image')}${sh.set === 'photo' && sh.photo ? L('Changer de photo', 'Change the photo') : L('Importer une photo', 'Import a photo')}</button><input type="file" id="photoFile" accept="image/*" hidden></div>
-      ${lbl(L('Le moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : k === 'dusk' ? 'sunset' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+    const cur = SETS.find(x => x.id === sh.set) || SETS[0];
+    return ph('place', L('Lieu', 'Place'), esc(L(cur.fr, cur.en)), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
+      `<div class="pb"><button class="myplace ${sh.set === 'photo' ? 'on' : ''}" data-act="photoPick" title="${esc(L('Ton vrai décor en photo, les personnages devant. Tu peux aussi glisser une image sur la vue 3D.', 'Your real location in a photo, the characters in front. You can also drop an image on the 3D view.'))}"><span class="mp-ic">${icon('image')}</span><span class="mp-t"><b>${L('Ma photo', 'My photo')}</b><small>${sh.set === 'photo' && sh.photo ? L('Changer de photo', 'Change the photo') : L('Ton propre décor · JPG, PNG', 'Your own set · JPG, PNG')}</small></span>${icon('plus')}</button><input type="file" id="photoFile" accept="image/*" hidden>
+      ${lbl(L('Moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : k === 'dusk' ? 'sunset' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
   },
   chars(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
@@ -440,33 +438,33 @@ const PANEL_HTML = {
     const base = chars[t] && CHAR_LOOK[chars[t].look != null ? chars[t].look : t % 2] || CHAR_LOOK[0], cur = chars[t] && chars[t].outfit || 'base';
     const outfits = `<div class="figs">${OUTFITS.filter(o => !o.body || o.body === base.body).map(o => `<button class="fig-t ${cur === o.id ? 'on' : ''}" data-act="outfit" data-id="${o.id}" title="${esc(L(o.fr, o.en))}">${figure(outfitLook(base, o.id))}<small>${esc(L(o.fr, o.en))}</small></button>`).join('')}</div>`;
     const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
-    return ph('users', L('Les personnages', 'The characters'), L('Clique un nom : la caméra va vers lui. L’épingle verte le déplace.', 'Click a name: the camera goes to them. The green pin moves them.')) +
+    return ph('users', L('Personnages', 'Characters'), chars.length + ' ' + L('dans ce plan', 'in this shot')) +
       `<div class="pb">${lbl(L('Dans ce plan', 'In this shot'))}${rows}
-      ${chars[t] ? `<label class="fld name-f"><span>${L('Son nom dans le film (pour tous les plans)', 'Their name in the film (for every shot)')}</span><input id="fName" maxlength="24" value="${esc((S.doc.names || {})[chars[t].look] || '')}" placeholder="${esc(L('ex. Jules, l’inspecteur…', 'e.g. Jules, the detective…'))}"></label>` : ''}
+      ${chars[t] ? `<label class="fld name-f"><span>${L('Nom dans le film', 'Name in the film')}</span><input id="fName" maxlength="24" value="${esc((S.doc.names || {})[chars[t].look] || '')}" placeholder="${esc(L('ex. Jules', 'e.g. Jules'))}" title="${esc(L('Le même nom dans tous les plans', 'The same name in every shot'))}"></label>` : ''}
       ${chars[t] ? colorRows(chars[t]) : ''}
       ${lbl(L('Ajouter', 'Add') + ` <span class="cnt">${chars.length} / ${MAX_CHARS}</span>`)}${add}
-      ${lbl(L('Rôles secondaires : police et truands', 'Supporting roles: police and crooks'))}${npc}
-      ${chars[t] ? lbl(L('La tenue de ', 'Outfit for ') + charName(t)) + outfits : ''}
-      ${lbl(L('Placer ', 'Place ') + charName(t))}<div class="chips">${spots}</div>
-      ${chars.length > 1 ? lbl(L('À plusieurs', 'Together')) + `<div class="chips"><button class="chip" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>` : ''}</div>`;
+      ${lbl(L('Seconds rôles', 'Supporting roles'))}${npc}
+      ${chars[t] ? lbl(L('Tenue', 'Outfit')) + outfits : ''}
+      ${spots ? lbl(L('Placer', 'Place')) + `<div class="chips">${spots}</div>` : ''}
+      ${chars.length > 1 ? lbl(L('Ensemble', 'Together')) + `<div class="chips"><button class="chip" data-act="faceThem">${L('Se faire face', 'Face each other')}</button><button class="chip" data-act="lookAt">${L('Regarder l’autre', 'Look at the other')}</button></div>` : ''}</div>`;
   },
   pose(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, ch = chars[t], look = ch ? ch.look : 0, sel = S.sel;
-    const who = chars.length > 1 ? `<div class="seg wide">${chars.map((c, i) => `<button class="${t === i ? 'on' : ''}" data-act="pickChar" data-c="${i}" title="${esc(L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}</button>`).join('')}</div>` : '';
+    const who = chars.length > 1 ? `<div class="seg wide">${chars.map((c, i) => `<button class="${t === i ? 'on' : ''}" data-act="pickChar" data-c="${i}" title="${esc(L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}${chars.length <= 3 ? `<span class="who-n">${charName(i)}</span>` : ''}</button>`).join('')}</div>` : '';
     const tile = p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img ${POSE_PREV.has(poseKey(look, p.id)) ? `src="${POSE_PREV.get(poseKey(look, p.id))}"` : `data-pv="${look}:${p.id}"`} alt=""><span>${esc(L(p.fr, p.en))}</span></button>`;
     const tiles = POSE_GROUPS.map(([g, fr, en]) => `<div class="pose-g" id="g-${g}">${esc(L(fr, en))}</div><div class="poses">${POSES.filter(p => p.g === g).map(tile).join('')}</div>`).join('');
-    const prop = ch ? `${lbl(L('Dans la main', 'In hand'))}<div class="seg wide"><button class="${!ch.prop ? 'on' : ''}" data-act="prop" data-id="">${L('Rien', 'Nothing')}</button>${PROPS.map(([id, fr, en]) => `<button class="${ch.prop === id ? 'on' : ''}" data-act="prop" data-id="${id}">${id === 'gun' ? icon('gun') : ''}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
+    const prop = ch ? `${lbl(L('En main', 'In hand'))}<div class="seg wide"><button class="${!ch.prop ? 'on' : ''}" data-act="prop" data-id="">${L('Rien', 'Nothing')}</button>${PROPS.map(([id, fr, en]) => `<button class="${ch.prop === id ? 'on' : ''}" data-act="prop" data-id="${id}">${id === 'gun' ? icon('gun') : ''}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
     const faceG = e => { const B = { neutral:'M6 7.2h2.4M9.6 7.2H12', happy:'M6 7h2.4M9.6 7H12', sad:'M6 7.6l2.4-.8M9.6 6.8l2.4.8', angry:'M6 6.6l2.4.9M9.6 7.5l2.4-.9', surprised:'M6 6.3h2.4M9.6 6.3H12', scared:'M6 7.3l2.4-.9M9.6 6.4l2.4.9', shout:'M6 6.7l2.4.6M9.6 7.3l2.4-.6' }[e],
         Mo = { neutral:'M7.3 12.4h3.4', happy:'M6.9 11.8q2.1 2.2 4.2 0', sad:'M6.9 13q2.1-2 4.2 0', angry:'M7.1 12.6h3.8', surprised:'M9 11.3a1.1 1.4 0 1 0 .01 0z', scared:'M7.2 12.3h3.6v.9H7.2z', shout:'M7.4 11.1h3.2v2.6H7.4z' }[e];
       return `<svg class="face-g" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7.6"/><path d="${B}"/><circle class="e" cx="7.2" cy="8.9" r=".75"/><circle class="e" cx="10.8" cy="8.9" r=".75"/><path d="${Mo}"/></svg>`; };
-    const expr = ch ? lbl(L('Le visage', 'Facial expression')) + `<div class="faces">${EXPRS.map(([id, fr, en]) => `<button class="face-t ${(ch.expr || 'neutral') === id ? 'on' : ''}" data-act="expr" data-id="${id}">${faceG(id)}<span>${esc(L(fr, en))}</span></button>`).join('')}</div>` : '';
+    const expr = ch ? lbl(L('Visage', 'Face')) + `<div class="faces">${EXPRS.map(([id, fr, en]) => `<button class="face-t ${(ch.expr || 'neutral') === id ? 'on' : ''}" data-act="expr" data-id="${id}">${faceG(id)}<span>${esc(L(fr, en))}</span></button>`).join('')}</div>` : '';
     const gz = ch ? (ch.gaze == null ? '' : String(ch.gaze)) : '';
-    const gaze = ch ? lbl(L('Le regard', 'Looking at')) + `<div class="seg wide wrap"><button class="${gz === '' ? 'on' : ''}" data-act="gaze" data-v="">${L('Devant soi', 'Ahead')}</button><button class="${gz === 'cam' ? 'on' : ''}" data-act="gaze" data-v="cam">${icon('camera')}${L('La caméra', 'The camera')}</button>${chars.map((c, i) => i === t ? '' : `<button class="${gz === String(i) ? 'on' : ''}" data-act="gaze" data-v="${i}">${figure(lookOf(c, i))}${charName(i)}</button>`).join('')}</div>` : '';
+    const gaze = ch ? lbl(L('Regard', 'Gaze')) + `<div class="seg wide wrap"><button class="${gz === '' ? 'on' : ''}" data-act="gaze" data-v="">${L('Devant soi', 'Ahead')}</button><button class="${gz === 'cam' ? 'on' : ''}" data-act="gaze" data-v="cam">${icon('camera')}${L('La caméra', 'The camera')}</button>${chars.map((c, i) => i === t ? '' : `<button class="${gz === String(i) ? 'on' : ''}" data-act="gaze" data-v="${i}">${figure(lookOf(c, i))}${charName(i)}</button>`).join('')}</div>` : '';
     const A = ch && ch.arrow || {};
-    const arrow = ch ? lbl(L('Il se déplace (flèche au sol)', 'Moves (arrow on the floor)')) + `<div class="seg wide"><button class="${!A.len ? 'on' : ''}" data-act="arrowLen" data-v="0">${L('Non', 'No')}</button>${[1, 2, 3, 5].map(m => `<button class="${A.len === m ? 'on' : ''}" data-act="arrowLen" data-v="${m}">${m} m</button>`).join('')}</div>` +
+    const arrow = ch ? lbl(L('Déplacement', 'Movement') + `<i class="lbl-sub">${L('flèche au sol', 'floor arrow')}</i>`) + `<div class="seg wide"><button class="${!A.len ? 'on' : ''}" data-act="arrowLen" data-v="0">${L('Non', 'No')}</button>${[1, 2, 3, 5].map(m => `<button class="${A.len === m ? 'on' : ''}" data-act="arrowLen" data-v="${m}">${m} m</button>`).join('')}</div>` +
       (A.len ? `<div class="seg wide">${[['f', 'Devant', 'Ahead'], ['l', 'À sa gauche', 'Their left'], ['r', 'À sa droite', 'Their right'], ['b', 'Derrière', 'Behind']].map(([k, fr, en]) => `<button class="${(A.dir || 'f') === k ? 'on' : ''}" data-act="arrowDir" data-v="${k}">${esc(L(fr, en))}</button>`).join('')}</div>` : '') : '';
-    const gear = ch ? lbl(L('Sur lui', 'Carried')) + `<div class="seg wide">${GEAR.map(([id, fr, en]) => `<button class="${ch.gear && ch.gear[id] ? 'on' : ''}" data-act="gear" data-id="${id}">${icon('gun')}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
-    const gun = ch && ch.prop === 'gun' ? lbl(L('Prises de vue avec l’arme', 'Shots with the gun')) + `<div class="cars">${GUN_SHOTS.map(P => `<button class="car-t" data-act="gunShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
+    const gear = ch ? lbl(L('Équipement', 'Gear')) + `<div class="seg wide">${GEAR.map(([id, fr, en]) => `<button class="${ch.gear && ch.gear[id] ? 'on' : ''}" data-act="gear" data-id="${id}">${icon('gun')}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
+    const gun = ch && ch.prop === 'gun' ? lbl(L('Prises avec l’arme', 'Gun shots')) + `<div class="cars">${GUN_SHOTS.map(P => `<button class="car-t" data-act="gunShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
     let part;
     if(sel && chars[sel.c]){
       const J = JOINT[sel.j], v = chars[sel.c].j[sel.j], c2 = chars[sel.c];
@@ -474,22 +472,21 @@ const PANEL_HTML = {
         ${J.ax.map((a, i) => slider(L(a[4], a[5]), 'axis', i, v[i], a[2], a[3], 1)).join('')}
         ${sel.j === 'pelvis' ? `${slider(L('Tout le corps : tourner', 'Whole body: turn'), 'root', 0, c2.root.ry, -180, 180, 1)}${slider(L('Tout le corps : hauteur', 'Whole body: height'), 'root', 1, c2.root.y, -0.9, 2, 0.01, ' m')}` : ''}
         <button class="btn btn-sm" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
-    } else part = `<p class="fly-note">${L('Pour un geste précis : clique sur une partie du corps dans l’image (un bras, la tête…) et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture (an arm, the head…) and drag. Its settings show up here.')}</p>`;
-    return ph('pose', L('Les poses de ', 'Poses for ') + charName(t), L('Une pose en un clic, puis attrape une main ou un pied pour l’ajuster.', 'One click for a pose, then grab a hand or a foot to adjust it.'), sel ? '' : jumpBar(POSE_GROUPS.map(([g]) => [g, { move:L('Debout', 'Standing'), seat:L('Assis, au sol', 'Seated, floor'), gest:L('Gestes', 'Gestures'), gun:L('Pistolet', 'Handgun'), moto:L('Moto', 'Motorbike') }[g] || g]))) +
-      `<div class="pb">${who}${expr}${gaze}${tiles}${prop}${gear}${arrow}${gun}${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
+    } else part = `<p class="empty-n">${icon('pose')}<span>${L('Attrape une partie du corps dans l’image : elle suit la souris.', 'Grab a body part in the picture: it follows the mouse.')}</span></p>`;
+    return ph('pose', L('Poses', 'Poses'), charName(t), sel ? '' : jumpBar(POSE_GROUPS.map(([g]) => [g, { move:L('Debout', 'Standing'), seat:L('Assis, au sol', 'Seated, floor'), gest:L('Gestes', 'Gestures'), gun:L('Pistolet', 'Handgun'), moto:L('Moto', 'Motorbike') }[g] || g]))) +
+      `<div class="pb">${who}${expr}${gaze}${tiles}${prop}${gear}${arrow}${gun}${lbl(L('Retouche', 'Touch-up'))}${part}</div>`;
   },
   crowd(){
     const sh = shot(), cr = sh.crowds, k = cr[S.crowd] ? S.crowd : -1, c = cr[k];
     const kinds = CROWD_KIND.map(([id, fr, en]) => `<button class="ptile sm" data-act="addCrowd" data-kind="${id}">${icon('plus')}<span>${esc(L(fr, en))}</span></button>`).join('');
     const list = cr.map((x, i) => `<div class="crow ${i === k ? 'on' : ''}"><button class="crow-main" data-act="pickCrowd" data-k="${i}">${icon('crowd')}<span>${L('Foule', 'Crowd')} ${i + 1}</span><em>${esc(L(...CROWD_KIND.find(q => q[0] === x.kind).slice(1)))}</em></button><button class="ib sm danger" data-act="removeCrowd" data-k="${i}" title="${esc(L('Retirer', 'Remove'))}">${icon('close')}</button></div>`).join('');
     const sl = (f, label, min, max, step, unit) => `<label class="fr"><span class="fl">${esc(label)}</span><input type="range" data-act="crowdSet" data-f="${f}" data-unit="${unit}" min="${min}" max="${max}" step="${step}" value="${c[f]}"><b class="fv">${round(c[f], step < 1 ? 1 : 0)}${unit}</b></label>`;
-    const set = c ? lbl(L('Réglages de la foule ', 'Crowd settings ') + (k + 1)) + `<div class="seg wide">${CROWD_KIND.map(([id, fr, en]) => `<button class="${c.kind === id ? 'on' : ''}" data-act="crowdKind" data-kind="${id}">${esc(L(fr, en))}</button>`).join('')}</div>` +
+    const set = c ? lbl(L('Foule ', 'Crowd ') + (k + 1)) + `<div class="seg wide">${CROWD_KIND.map(([id, fr, en]) => `<button class="${c.kind === id ? 'on' : ''}" data-act="crowdKind" data-kind="${id}">${esc(L(fr, en))}</button>`).join('')}</div>` +
       sl('w', L('Largeur', 'Width'), 2, 40, 0.5, ' m') + sl('d', L('Profondeur', 'Depth'), 1, 20, 0.5, ' m') + sl('dens', L('Densité', 'Density'), 0.2, 3, 0.1, '') + sl('ry', L('Tourner', 'Turn'), -180, 180, 1, '°') + sl('y', L('Hauteur du sol', 'Ground height'), 0, 6, 0.05, ' m') +
       `<div class="pbtns"><button class="btn btn-sm" data-act="crowdShuffle">${icon('reset')}${L('Autres têtes', 'Other faces')}</button></div>` : '';
-    return ph('crowd', L('La foule', 'Crowds'), L('Des silhouettes légères, par centaines, sans ralentir.', 'Light cut-outs, by the hundred, with no slowdown.')) +
-      `<div class="pb">${lbl(L('Ajouter une foule devant la caméra', 'Add a crowd in front of the camera'))}<div class="ptiles three">${kinds}</div>
-      ${cr.length ? lbl(L('Dans ce plan', 'In this shot')) + list : `<p class="fly-note">${L('Pas encore de foule dans ce plan. Une fois posée, déplace-la avec sa poignée « Foule » dans l’image.', 'No crowd in this shot yet. Once added, move it with its “Crowd” handle in the picture.')}</p>`}${set}
-      <p class="fly-note">${L('Elles ne bougent pas et ne se posent pas : pour un personnage qui agit, ajoute plutôt un personnage.', 'They don’t move or pose: for someone who acts, add a character instead.')}</p></div>`;
+    return ph('crowd', L('Foule', 'Crowds'), cr.length ? cr.length + ' ' + L('dans ce plan', 'in this shot') : L('Figurants, par centaines', 'Extras, by the hundred')) +
+      `<div class="pb">${lbl(L('Ajouter', 'Add'))}<div class="ptiles three">${kinds}</div>
+      ${cr.length ? lbl(L('Dans ce plan', 'In this shot')) + list : ''}${set}</div>`;
   },
   frame(){
     const sh = shot(), inf = sh.info, two = sh.chars.length > 1;
@@ -497,92 +494,104 @@ const PANEL_HTML = {
     const who = `<div class="seg wide">${sh.chars.map((c, i) => `<button class="${S.target === i ? 'on' : ''}" data-act="target" data-c="${i}" title="${esc(L(lookOf(c, i).fr, lookOf(c, i).en))}">${figure(lookOf(c, i))}${sh.chars.length <= 3 ? `<span>${charName(i)}</span>` : ''}</button>`).join('')}</div>`;
     const st = sizes.map(k => `<button class="size-t ${inf.size === k ? 'on' : ''}" data-act="size" data-v="${k}" title="${esc(shotLabel('size', k))}">${sizeGlyph(k)}<b>${esc(shotLabel('size', k, true))}</b><small>${esc(shotLabel('size', k))}</small></button>`).join('');
     const an = ['neu', 'plo', 'con', 'dess', 'sol', 'deb'].map(k => `<button class="ang-t ${inf.angle === k ? 'on' : ''}" data-act="angle" data-v="${k}">${glyph(ANGLE_G[k])}<span>${esc(shotLabel('angle', k))}</span></button>`).join('');
-    return ph('frame', L('Le cadrage', 'Framing'), L('Sur qui, puis la valeur de plan : la caméra se place seule.', 'Who, then the shot size: the camera places itself.')) +
+    return ph('frame', L('Cadrage', 'Framing'), esc(shotLabel('size', inf.size)) + ' · ' + Math.round(sh.cam.lens) + ' mm') +
       `<div class="pb">${lbl(L('Sur qui', 'On whom'))}${who}
-      ${lbl(L('Des plans tout prêts', 'Ready-made shots'))}<div class="recipes">${SHOT_RECIPES.filter(r => !r[5].two || two).map(r => `<button class="rcp" data-act="recipe" data-id="${r[0]}" title="${esc(L(r[3], r[4]))}">${sizeGlyph(r[5].size)}<span><b>${esc(L(r[1], r[2]))}</b><small>${esc(L(r[3], r[4]))}</small></span></button>`).join('')}</div>
-      ${lbl(L('La valeur du plan', 'Shot size'))}<div class="sizes">${st}</div>
-      ${lbl(L('L’angle', 'Angle'))}<div class="angs">${an}</div>
-      ${lbl(L('Le côté', 'Side'))}<div class="seg wide wrap">${SIDES.map(x => `<button class="${inf.side === x[0] ? 'on' : ''}" data-act="side" data-v="${x[0]}">${esc(L(x[1], x[2]))}</button>`).join('')}</div>
-      ${lbl(L('La focale', 'Lens'))}<div class="seg wide">${LENSES.map(l => `<button class="${Math.round(sh.cam.lens) === l ? 'on' : ''}" data-act="lens" data-l="${l}">${l} mm</button>`).join('')}</div>
-      <p class="fly-note">${L('24 mm : grand angle, on voit large. 85 mm : téléobjectif, le fond se rapproche.', '24 mm: wide angle, you see a lot. 85 mm: telephoto, the background comes closer.')}</p>
-      ${two ? `<div class="pbtns"><button class="btn btn-sm" data-act="addReverse">${icon('reverse')}${L('Faire le contrechamp (nouveau plan)', 'Make the reverse shot (new shot)')}</button></div>` : ''}</div>`;
+      ${lbl(L('Plans tout prêts', 'Ready-made shots'))}<div class="recipes">${SHOT_RECIPES.filter(r => !r[5].two || two).map(r => `<button class="rcp" data-act="recipe" data-id="${r[0]}" title="${esc(L(r[3], r[4]))}">${sizeGlyph(r[5].size)}<span><b>${esc(L(r[1], r[2]))}</b></span></button>`).join('')}</div>
+      ${lbl(L('Valeur', 'Shot size'))}<div class="sizes">${st}</div>
+      ${lbl(L('Angle', 'Angle'))}<div class="angs">${an}</div>
+      ${lbl(L('Côté', 'Side'))}<div class="seg wide wrap">${SIDES.map(x => `<button class="${inf.side === x[0] ? 'on' : ''}" data-act="side" data-v="${x[0]}">${esc(L(x[1], x[2]))}</button>`).join('')}</div>
+      ${lbl(L('Focale', 'Lens'))}<div class="seg wide" title="${esc(L('24 mm : grand angle · 85 mm : téléobjectif', '24 mm: wide angle · 85 mm: telephoto'))}">${LENSES.map(l => `<button class="${Math.round(sh.cam.lens) === l ? 'on' : ''}" data-act="lens" data-l="${l}">${l} mm</button>`).join('')}</div>
+      ${two ? `<div class="pbtns"><button class="btn btn-sm" data-act="addReverse" title="${esc(L('Un nouveau plan, par-dessus l’autre épaule', 'A new shot, over the other shoulder'))}">${icon('reverse')}${L('Contrechamp', 'Reverse shot')}</button></div>` : ''}</div>`;
   },
   move(){
     const sh = shot(), inf = sh.info, m = inf.move, walk = sh.chars.some(c => c.pose === 'walk' || c.pose === 'run');
     const tile = id => { const o = SHOT.move.find(x => x[0] === id), tip = MOVE_TIP[id]; return o ? `<button class="ang-t ${m === o[0] ? 'on' : ''}" data-act="info" data-k="move" data-v="${o[0]}" title="${esc(tip ? L(tip[0], tip[1]) : '')}">${glyph(MOVE_G[o[0]] || MOVE_G.fix)}<span>${esc(L(o[1], o[2]))}</span></button>` : ''; };
     const tiles = MOVE_GROUPS.map(([fr, en, ids]) => `<div class="mv-g">${esc(L(fr, en))}</div>` + ids.map(tile).join('')).join('');
-    const tipNow = MOVE_TIP[m] ? `<p class="fly-note mv-tip">${icon('bulb')}<span>${esc(L(MOVE_TIP[m][0], MOVE_TIP[m][1]))}</span></p>` : '';
-    const end = m === 'end' ? lbl(L('Le cadre de fin', 'The end frame')) + `<div class="seg wide"><button class="${S.endEd ? '' : 'on'}" data-act="editEnd" data-v="0">${L('Début', 'Start')}</button><button class="${S.endEd ? 'on' : ''}" data-act="editEnd" data-v="1">${L('Fin', 'End')}</button></div>
-      <p class="fly-note">${L('Choisis « Fin », cadre l’image d’arrivée avec les outils habituels, puis reviens sur « Début ». La caméra ira de l’une à l’autre.', 'Pick “End”, frame the final image with the usual tools, then go back to “Start”. The camera will travel from one to the other.')}</p>` : '';
-    return ph('move', L('Le mouvement de caméra', 'Camera move'), L('Il part du cadre du plan ; on le voit à la lecture et sur le PDF.', 'It starts from the shot’s frame; it shows in playback and on the PDF.')) +
+    const tipNow = '';
+    const end = m === 'end' ? lbl(L('Cadre de fin', 'End frame')) + `<div class="seg wide"><button class="${S.endEd ? '' : 'on'}" data-act="editEnd" data-v="0">${L('Début', 'Start')}</button><button class="${S.endEd ? 'on' : ''}" data-act="editEnd" data-v="1">${L('Fin', 'End')}</button></div>
+      <p class="empty-n">${icon('frame')}<span>${L('« Fin » : cadre l’image d’arrivée, puis reviens sur « Début ».', '“End”: frame the final image, then go back to “Start”.')}</span></p>` : '';
+    return ph('move', L('Mouvement', 'Camera move'), esc(shotLabel('move', m))) +
       `<div class="pb">${tipNow}<div class="angs moves">${tiles}</div>${end}
-      ${lbl(L('Les personnages', 'Characters'))}<label class="ftog"><span>${L('Ceux qui marchent ou courent avancent pendant le plan', 'Walking or running characters move forward during the shot')}</span><input type="checkbox" data-act="walk" ${inf.walk ? 'checked' : ''}><i class="tg"></i></label>
-      ${!walk ? `<p class="fly-note">${L('Donne la pose « Marche » ou « Course » à un personnage pour l’animer.', 'Give a character the “Walking” or “Running” pose to animate them.')}</p>` : ''}
-      ${lbl(L('L’entrée dans ce plan', 'How this shot begins'))}<div class="seg wide wrap">${TRANS.map(x => `<button class="${(inf.trans || 'cut') === x[0] ? 'on' : ''}" data-act="info" data-k="trans" data-v="${x[0]}">${esc(L(x[1], x[2]))}</button>`).join('')}</div>
-      <p class="fly-note">${L('Le cut est le plus courant. Le fondu enchaîné fait passer le temps ; le fondu au noir ferme une séquence.', 'The cut is the most common. A cross-fade shows time passing; a fade to black closes a sequence.')}</p>
-      ${lbl(L('Durée du plan', 'Shot length'))}<div class="seg wide">${[1, 2, 3, 4, 5, 8].map(d => `<button class="${d === inf.dur ? 'on' : ''}" data-act="dur" data-v="${d}">${fmtTime(d)}</button>`).join('')}</div>
-      <div class="pbtns"><button class="btn btn-sm btn-play" data-act="previewShot">${icon('play')}${L('Voir ce plan bouger', 'Watch this shot move')}</button></div></div>`;
+      ${lbl(L('Personnages', 'Characters'))}<label class="ftog"><span>${L('Ceux qui marchent avancent', 'Walkers move forward')}${!walk ? `<small>${L('Pose « Marche » ou « Course »', '“Walking” or “Running” pose')}</small>` : ''}</span><input type="checkbox" data-act="walk" ${inf.walk ? 'checked' : ''}><i class="tg"></i></label>
+      ${lbl(L('Transition d’entrée', 'Transition in'))}<div class="seg wide wrap">${TRANS.map(x => `<button class="${(inf.trans || 'cut') === x[0] ? 'on' : ''}" data-act="info" data-k="trans" data-v="${x[0]}">${esc(L(x[1], x[2]))}</button>`).join('')}</div>
+      ${lbl(L('Durée', 'Length'))}<div class="seg wide">${[1, 2, 3, 4, 5, 8].map(d => `<button class="${d === inf.dur ? 'on' : ''}" data-act="dur" data-v="${d}">${fmtTime(d)}</button>`).join('')}</div>
+      <div class="pbtns"><button class="btn btn-sm btn-play" data-act="previewShot">${icon('play')}${L('Voir le mouvement', 'Preview the move')}</button></div></div>`;
   },
   car(){
     const sh = shot(), vs = sh.vehicles || [], k = vs[S.veh] ? S.veh : vs.length ? 0 : -1, v = vs[k], t = S.sel ? S.sel.c : S.target;
     const taxi = sh.set === 'taxi'
-      ? lbl(L('Le taxi', 'The taxi')) + `<div class="pbtns"><button class="btn btn-sm" data-act="carSetup">${icon('users')}${L('Installer : conducteur et passager', 'Seat the driver and the passenger')}</button></div><div class="cars">${CAR_SHOTS.map(p => `<button class="car-t" data-act="carShot" data-id="${p[0]}">${sizeGlyph(p[6])}<span>${esc(L(p[1], p[2]))}</span></button>`).join('')}</div>`
-      : lbl(L('Le taxi', 'The taxi')) + `<p class="fly-note">${L('Le taxi est un lieu à part : ses vitres sont transparentes et ' + CAR_SHOTS.length + ' prises de vue sont prêtes, dedans et autour.', 'The taxi is a place of its own: see-through windows and ' + CAR_SHOTS.length + ' ready-made shots, inside and around.')}</p><div class="pbtns"><button class="btn btn-sm" data-act="place" data-id="taxi">${icon('car')}${L('Aller dans le taxi', 'Go to the taxi')}</button></div>`;
+      ? lbl(L('Taxi', 'Taxi')) + `<div class="pbtns"><button class="btn btn-sm" data-act="carSetup">${icon('users')}${L('Conducteur et passager', 'Driver and passenger')}</button></div><div class="cars">${CAR_SHOTS.map(p => `<button class="car-t" data-act="carShot" data-id="${p[0]}">${sizeGlyph(p[6])}<span>${esc(L(p[1], p[2]))}</span></button>`).join('')}</div>`
+      : lbl(L('Taxi', 'Taxi')) + `<div class="pbtns"><button class="btn btn-sm" data-act="place" data-id="taxi" title="${esc(L('Un lieu à part, avec ' + CAR_SHOTS.length + ' prises de vue prêtes', 'A place of its own, with ' + CAR_SHOTS.length + ' ready-made shots'))}">${icon('car')}${L('Aller dans le taxi', 'Go to the taxi')}</button></div>`;
     const VD = x => VEH_DEF[x.kind] || VEH_DEF.moto, on = x => sh.chars.filter(c => c.on && c.on.v === x.id);
     const list = vs.map((x, i) => `<div class="crow ${i === k ? 'on' : ''}"><button class="crow-main" data-act="pickVeh" data-k="${i}">${icon(VD(x).ic)}<span>${esc(L(VD(x).fr, VD(x).en))} ${vs.filter((o, j) => j <= i && o.kind === x.kind).length}</span><em>${esc(on(x).map(c => L(lookOf(c).fr, lookOf(c).en)).join(', '))}</em></button><button class="ib sm danger" data-act="removeVeh" data-k="${i}" title="${esc(L('Retirer', 'Remove'))}">${icon('close')}</button></div>`).join('');
     const D = v && VD(v), who = v && (si => { const c = on(v).find(c => c.on.seat === si); return c ? L(lookOf(c).fr, lookOf(c).en) : ''; });
     const set = v ? `<div class="qsw">${D.cols.map(c => `<button class="${v.col === c ? 'on' : ''}" style="--c:${c}" data-act="vehCol" data-c="${c}" aria-label="${c}"></button>`).join('')}</div>
       ${D.seats.length ? lbl(L('Mettre ', 'Seat ') + charName(t) + L(' à la place…', ' as…')) : ''}<div class="chips">${D.seats.map((st, i) => { const c = on(v).find(c => c.on.seat === i), me = c && sh.chars.indexOf(c) === t; return `<button class="chip ${me ? 'on' : ''}" data-act="mount" data-seat="${i}">${esc(L(st.fr, st.en))}${c && !me ? `<small>· ${esc(who(i))}</small>` : ''}</button>`; }).join('')}</div>
       ${D.fly ? `<label class="fr"><span class="fl">${L('Altitude', 'Altitude')}</span><input type="range" data-act="vehAlt" min="0" max="60" step="0.5" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 1)} m</b></label>` : ''}
-      ${D.shots.length ? lbl(L('Ses prises de vue', 'Its shots')) : ''}<div class="cars">${D.shots.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
-    return ph('car', L('Accessoires : véhicules et objets', 'Props: vehicles and objects'), L('Pose un véhicule ou un objet devant la caméra ; sa poignée le déplace et le tourne.', 'Put a vehicle or an object in front of the camera; its handle moves and turns it.')) +
-      `<div class="pb">${lbl(L('Ajouter un véhicule devant la caméra', 'Add a vehicle in front of the camera'))}<div class="vadd">${Object.keys(VEH_DEF).filter(id => !VEH_DEF[id].obj).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>
-      ${lbl(L('Ajouter un objet devant la caméra', 'Add an object in front of the camera'))}<div class="oadd">${Object.keys(VEH_DEF).filter(id => VEH_DEF[id].obj).map(id => `<button class="otile" data-act="addVeh" data-kind="${id}"><img ${OBJ_PREV.has(id) ? `src="${OBJ_PREV.get(id)}"` : `data-op="${id}"`} alt=""><span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>${list}${set}${taxi}</div>`;
+      ${D.shots.length ? lbl(L('Prises de vue', 'Shots')) : ''}<div class="cars">${D.shots.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
+    return ph('car', L('Accessoires', 'Props'), vs.length ? vs.length + ' ' + L('dans ce plan', 'in this shot') : L('Véhicules et objets', 'Vehicles and objects')) +
+      `<div class="pb">${lbl(L('Véhicules', 'Vehicles'))}<div class="vadd">${Object.keys(VEH_DEF).filter(id => !VEH_DEF[id].obj).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>
+      ${lbl(L('Objets', 'Objects'))}<div class="oadd">${Object.keys(VEH_DEF).filter(id => VEH_DEF[id].obj).map(id => `<button class="otile" data-act="addVeh" data-kind="${id}"><img ${OBJ_PREV.has(id) ? `src="${OBJ_PREV.get(id)}"` : `data-op="${id}"`} alt=""><span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>${vs.length ? lbl(L('Dans ce plan', 'In this shot')) + list : ''}${set}${taxi}</div>`;
   },
   text(){
     const sh = shot(), inf = sh.info, n = S.doc.shots.length;
-    return ph('text', L('Plan ', 'Shot ') + (S.i + 1) + ' : ' + L('ce qui se passe', 'what happens'), L('Ce texte accompagne l’image sur la planche PDF et pendant la lecture.', 'This text goes with the picture on the PDF board and during playback.')) +
+    return ph('text', L('Action et dialogue', 'Action & dialogue'), L('Plan ', 'Shot ') + (S.i + 1)) +
       `<div class="pb"><div class="g2"><label class="fld"><span>${L('Scène', 'Scene')}</span><input id="fScene" data-k="scene" maxlength="40" value="${esc(inf.scene)}" placeholder="${esc(L('ex. 3', 'e.g. 3'))}"></label>
         <label class="fld"><span>${L('Durée', 'Length')}</span><select data-act="info" data-k="dur">${[1, 1.5, 2, 3, 4, 5, 8].map(d => `<option value="${d}" ${d === inf.dur ? 'selected' : ''}>${fmtTime(d)}</option>`).join('')}</select></label></div>
-      <label class="fld"><span>${L('L’action', 'Action')}</span><textarea id="cap" data-k="cap" rows="4" placeholder="${esc(L('Léa entre dans le café et cherche quelqu’un.', 'Léa walks into the café, looking for someone.'))}">${esc(inf.cap)}</textarea></label>
+      <label class="fld"><span>${L('Action', 'Action')}</span><textarea id="cap" data-k="cap" rows="4" placeholder="${esc(L('Léa entre dans le café et cherche quelqu’un.', 'Léa walks into the café, looking for someone.'))}">${esc(inf.cap)}</textarea></label>
       <label class="fld"><span>${L('Dialogue ou son', 'Dialogue or sound')}</span><textarea id="dial" data-k="dial" rows="3" placeholder="${esc(L('LÉA : Tu es en retard.', 'LÉA: You’re late.'))}">${esc(inf.dial)}</textarea></label>
-      ${lbl(L('Noté sur la planche', 'Noted on the board'))}<p class="fly-note">${esc(shotLabel('size', inf.size))} · ${esc(shotLabel('angle', inf.angle))} · ${esc(shotLabel('move', inf.move))} · ${Math.round(sh.cam.lens)} mm</p>
+      ${lbl(L('Sur la planche', 'On the board'))}<p class="meta-n">${esc(shotLabel('size', inf.size))} · ${esc(shotLabel('angle', inf.angle))} · ${esc(shotLabel('move', inf.move))} · ${Math.round(sh.cam.lens)} mm</p>
       ${lbl(L('Ce plan', 'This shot'))}<div class="pbtns"><button class="btn btn-sm" data-act="dupShot">${icon('copy')}${L('Dupliquer', 'Duplicate')}</button><button class="btn btn-sm" data-act="moveShot" data-d="-1" ${S.i === 0 ? 'disabled' : ''} title="${esc(L('Avancer ce plan', 'Move this shot earlier'))}">${icon('left')}</button><button class="btn btn-sm" data-act="moveShot" data-d="1" ${S.i === n - 1 ? 'disabled' : ''} title="${esc(L('Reculer ce plan', 'Move this shot later'))}">${icon('right')}</button><button class="btn btn-sm danger" data-act="delShot" ${n < 2 ? 'disabled' : ''}>${icon('trash')}${L('Supprimer', 'Delete')}</button></div>
-      <div class="pbtns"><button class="btn btn-sm" data-act="sheetView">${icon('board')}${L('Écrire tous les plans d’un coup (planche)', 'Write all shots at once (board view)')}</button></div></div>`;
+      <div class="pbtns"><button class="btn btn-sm" data-act="sheetView">${icon('board')}${L('Écrire en planche', 'Write in board view')}</button></div></div>`;
   },
   look(){
     const st = S.doc.style || 'color';
     const prev = k => { if(!GL.gl) return ''; const o = S.doc.style; S.doc.style = k; const u = offscreenURL(240, 135, (w, h) => drawFrame(shot(), w, h, true), 0.8); S.doc.style = o; return u; };
-    return ph('contrast', L('Le rendu', 'The look'), L('Couleur ou noir et blanc, et le format de l’image, pour tout le film.', 'Color or black & white, and the picture format, for the whole film.')) +
+    return ph('contrast', L('Rendu et format', 'Look & format'), (st === 'bw' ? L('Noir et blanc', 'Black & white') : L('Couleur', 'Color')) + ' · ' + (S.doc.ratio || '16:9') + ' · ' + L('tout le film', 'whole film')) +
       `<div class="pb"><div class="looks"><button class="look-t ${st === 'color' ? 'on' : ''}" data-act="style" data-v="color"><img src="${prev('color')}" alt=""><span>${L('Couleur', 'Color')}</span></button><button class="look-t ${st === 'bw' ? 'on' : ''}" data-act="style" data-v="bw"><img src="${prev('bw')}" alt=""><span>${L('Noir et blanc', 'Black & white')}</span></button></div>
-      <p class="fly-note">${L('En noir et blanc, les personnages gardent un trait sombre autour d’eux, leurs habits ont des clartés différentes, et le décor est un peu adouci : on les distingue toujours du fond.', 'In black & white, characters keep a dark outline, their clothes have different brightness, and the set is slightly softened: they always stand out from the background.')}</p>
-      ${lbl(L('Le format de l’image', 'Picture format'))}<div class="seg wide ratios">${RATIOS.map(r => `<button class="${(S.doc.ratio || '16:9') === r[0] ? 'on' : ''}" data-act="ratio" data-v="${r[0]}" title="${esc(r[2])}"><i class="rbox" style="width:${Math.round(Math.min(22, 11 * r[1]))}px;height:${Math.round(Math.min(11, 22 / r[1]))}px"></i>${r[0]}</button>`).join('')}</div>
-      <p class="fly-note">${L('Le format vaut pour tout le film : l’écran, la planche PDF, l’animatique et les images PNG (recadrées au bon format).', 'The format applies to the whole film: the screen, the PDF board, the animatic and PNG images (cropped to the right format).')}</p>
+
+      ${lbl(L('Format de l’image', 'Picture format'))}<div class="seg wide ratios">${RATIOS.map(r => `<button class="${(S.doc.ratio || '16:9') === r[0] ? 'on' : ''}" data-act="ratio" data-v="${r[0]}" title="${esc(r[2])}"><i class="rbox" style="width:${Math.round(Math.min(22, 11 * r[1]))}px;height:${Math.round(Math.min(11, 22 / r[1]))}px"></i>${r[0]}</button>`).join('')}</div>
+
       ${lbl(L('Aides à l’image', 'Picture aids'))}<label class="ftog"><span>${L('Grille des tiers', 'Rule of thirds')}</span><input type="checkbox" data-act="gridTog" ${S.grid ? 'checked' : ''}><i class="tg"></i></label>
-      <label class="ftog"><span>${L('Repères pro (zones de sécurité, horizon, focale, hauteur)', 'Pro guides (safe areas, horizon, lens, height)')}</span><input type="checkbox" data-act="proTog" ${S.pro ? 'checked' : ''}><i class="tg"></i></label>
-      <label class="ftog"><span>${L('Image finale (sans transparence ni poignées)', 'Final image (no see-through, no handles)')}</span><input type="checkbox" data-act="finalTog" ${S.final ? 'checked' : ''}><i class="tg"></i></label></div>`;
+      <label class="ftog"><span>${L('Repères pro', 'Pro guides')}<small>${L('Zones de sécurité, horizon, focale', 'Safe areas, horizon, lens')}</small></span><input type="checkbox" data-act="proTog" ${S.pro ? 'checked' : ''}><i class="tg"></i></label>
+      <label class="ftog"><span>${L('Image finale', 'Final image')}<small>${L('Sans transparence ni poignées', 'No see-through, no handles')}</small></span><input type="checkbox" data-act="finalTog" ${S.final ? 'checked' : ''}><i class="tg"></i></label></div>`;
   },
   export(){
-    return ph('export', L('Exporter', 'Export'), L('Tout est fait dans ton navigateur : rien n’est envoyé en ligne.', 'Everything happens in your browser: nothing is sent online.')) + `<div class="pb"><div class="xlist">${exportList()}</div></div>`;
+    return ph('export', L('Exporter', 'Export'), L('Dans ton navigateur, rien n’est envoyé', 'In your browser, nothing is uploaded')) + `<div class="pb"><div class="xlist">${exportList()}</div></div>`;
   },
   help(){
-    return ph('help', L('Ton storyboard, sans savoir dessiner', 'Your storyboard, no drawing skills needed'), '') + `<div class="pb"><ol class="how">
-      <li><b>${L('Un plan = une image', 'One shot = one picture')}</b>${L('Ce que tu vois dans le cadre est le plan en cours (son numéro est au-dessus de l’image). Il s’enregistre tout seul.', 'What you see in the frame is the current shot (its number is above the picture). It saves by itself.')}</li>
-      <li><b>${L('Installe la scène', 'Set the scene')}</b>${L('À gauche, de haut en bas : le décor (lieu, véhicules, foule), puis les acteurs (personnages, poses).', 'On the left, top to bottom: the set (place, vehicles, crowds), then the cast (characters, poses).')}</li>
-      <li><b>${L('Cadre', 'Frame')}</b>${L('« Le cadrage » : sur qui, la valeur, l’angle. La caméra se place. Puis « Le mouvement » si la caméra bouge.', '“Framing”: who, the size, the angle. The camera places itself. Then “Camera move” if the camera moves.')}</li>
-      <li><b>${L('Écris', 'Write')}</b>${L('« Ce qui se passe » : l’action et le dialogue du plan.', '“What happens”: the action and dialogue of the shot.')}</li>
-      <li><b>${L('Plan suivant', 'Next shot')}</b>${L('« Nouveau plan », en bas : il reprend celui-ci, tu ne changes que ce qui bouge. « Contrechamp » fait l’angle inverse.', '“New shot”, at the bottom: it starts from this one, you only change what moves. “Reverse shot” makes the opposite angle.')}</li>
-      <li><b>${L('Tu as déjà un scénario ?', 'Already have a script?')}</b>${L('« Depuis un scénario », en bas : chaque scène devient un plan (lieu, moment, personnages, action, réplique). Depuis Raging Page, un texte collé ou un fichier .fountain.', '“From a script”, at the bottom: each scene becomes a shot (place, time, characters, action, line). From Raging Page, pasted text or a .fountain file.')}</li>
-      <li><b>${L('Relis, exporte', 'Review, export')}</b>${L('« Lire le storyboard » le fait défiler avec les mouvements. Puis la planche PDF ou l’animatique.', '“Play the storyboard” runs it with the moves. Then the PDF board or the animatic.')}</li></ol>
-      ${lbl(L('Dans l’image', 'In the picture'))}<p class="fly-note">${L('Épingle verte au-dessus d’une tête : maintiens-la pour déplacer · flèche ronde : tourner · attraper une main ou un pied : tout le membre suit (Alt : une articulation à la fois) · clic sur un bras, la tête… : poser à la main · glisser une photo sur l’image : ton propre décor · glisser dans le vide : tourner autour · clic droit : se décaler · molette : avancer · double-clic : viser.', 'Green pin above a head: hold to move · round arrow: turn · grab a hand or a foot: the whole limb follows (Alt: one joint at a time) · click an arm, the head…: pose by hand · drop a photo on the picture: your own set · drag empty space: orbit · right-click: pan · wheel: move in · double-click: aim.')}</p>
-      ${lbl(L('La caméra', 'The camera'))}<p class="fly-note">${L('Elle se promène comme une vraie caméra : elle ne traverse ni les murs ni les meubles, elle glisse le long et passe par-dessus ce qui est bas. Pour changer de pièce, passe par une porte (touches Z Q S D ou flèches), ou clique dans une pièce sur le plan.', 'It moves like a real camera: it never goes through walls or furniture, it slides along them and over anything low. To change rooms, go through a door (WASD or arrow keys), or click a room on the plan.')}</p>
+    const kv = rows => `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+    return ph('help', L('Aide et raccourcis', 'Help & shortcuts'), L('Ton storyboard, sans dessiner', 'Your storyboard, no drawing')) + `<div class="pb">
+      ${lbl(L('En 5 étapes', 'In 5 steps'))}<ol class="how">
+      <li><b>${L('Lieu', 'Place')}</b>${L('Choisis le décor, ou ta photo.', 'Pick the set, or your photo.')}</li>
+      <li><b>${L('Personnages et poses', 'Characters & poses')}</b>${L('Ajoute-les, attrape un bras pour l’ajuster.', 'Add them, grab an arm to adjust it.')}</li>
+      <li><b>${L('Cadrage', 'Framing')}</b>${L('Sur qui, la valeur, l’angle.', 'Who, the size, the angle.')}</li>
+      <li><b>${L('Action et dialogue', 'Action & dialogue')}</b>${L('Ce qu’on voit et ce qu’on entend.', 'What we see and hear.')}</li>
+      <li><b>${L('Nouveau plan', 'New shot')}</b>${L('Il reprend le plan actuel.', 'It starts from the current one.')}</li></ol>
+      ${lbl(L('Dans l’image', 'In the picture'))}${kv([
+        [L('Glisser une partie du corps', 'Drag a body part'), L('Elle suit la souris', 'It follows the mouse')],
+        [L('Alt + glisser', 'Alt + drag'), L('Une seule articulation', 'One joint only')],
+        [L('Épingle verte', 'Green pin'), L('Déplacer le personnage', 'Move the character')],
+        [L('Flèche ronde', 'Round arrow'), L('Le tourner', 'Turn them')],
+        [L('Glisser dans le vide', 'Drag empty space'), L('Tourner autour', 'Orbit')],
+        [L('Clic droit', 'Right-click'), L('Se décaler', 'Pan')],
+        [L('Molette', 'Wheel'), L('Avancer', 'Move in')],
+        [L('Double-clic', 'Double-click'), L('Viser', 'Aim')],
+        [L('Déposer une image', 'Drop an image'), L('Ma photo comme décor', 'My photo as the set')]])}
+      ${lbl(L('Clavier', 'Keyboard'))}${kv([
+        ['← →', L('Plan précédent, suivant', 'Previous, next shot')],
+        [L('Z Q S D', 'W A S D'), L('Se déplacer', 'Move')],
+        ['R F', L('Monter, descendre', 'Up, down')],
+        ['N', L('Nouveau plan', 'New shot')],
+        [L('Espace', 'Space'), L('Lire', 'Play')],
+        ['P', L('Plein écran', 'Full screen')],
+        ['Ctrl+Z', L('Annuler', 'Undo')],
+        [L('Échap', 'Esc'), L('Désélectionner', 'Deselect')]])}
       ${lbl(L('Pour une planche de pro', 'For a pro board'))}<ul class="pro">
-        <li>${L('Ouvre la séquence par un plan large (plan général ou d’ensemble) : on comprend où l’on est.', 'Open the sequence on a wide shot (extreme wide or wide): we see where we are.')}</li>
-        <li>${L('Dans un dialogue : champ, contrechamp, en restant du même côté des personnages (la règle des 180°). Le bouton « Contrechamp » le fait pour toi.', 'In a dialogue: shot, reverse shot, staying on the same side of the characters (the 180° rule). The “Reverse shot” button does it for you.')}</li>
-        <li>${L('Resserre quand l’émotion monte : plan moyen, rapproché, gros plan.', 'Move closer as the emotion rises: medium, medium close-up, close-up.')}</li>
-        <li>${L('Choisis le format du film dès le début (« Rendu et format ») : un cadre en 2.39 ne se compose pas comme un cadre en 9:16.', 'Pick the film’s format first (“Look & format”): a 2.39 frame is not composed like a 9:16 one.')}</li>
-        <li>${L('Une ligne d’action par plan, au présent : ce qu’on voit, pas ce qu’on pense.', 'One line of action per shot, in the present tense: what we see, not what we think.')}</li></ul>
-      ${lbl(L('Raccourcis', 'Shortcuts'))}<p class="fly-note keys">${L('← → plan précédent ou suivant · ZQSD / WASD se déplacer · R F monter, descendre · N nouveau plan · P plein écran · Espace lire · Ctrl+Z annuler · Échap désélectionner', '← → previous or next shot · WASD / ZQSD move · R F up, down · N new shot · P full screen · Space play · Ctrl+Z undo · Esc deselect')}</p>
+        <li>${L('Ouvre la séquence sur un plan large.', 'Open the sequence on a wide shot.')}</li>
+        <li>${L('Dialogue : champ, contrechamp, du même côté (180°).', 'Dialogue: shot, reverse, same side (180°).')}</li>
+        <li>${L('Resserre quand l’émotion monte.', 'Move closer as the emotion rises.')}</li>
+        <li>${L('Une ligne d’action par plan, au présent.', 'One line of action per shot, present tense.')}</li></ul>
       <div class="pbtns"><button class="btn btn-sm" data-act="intro">${icon('help')}${L('Revoir l’accueil', 'See the welcome again')}</button><button class="btn btn-sm" data-act="newBoard">${icon('new')}${L('Nouveau storyboard', 'New storyboard')}</button></div></div>`;
   },
 };
@@ -595,24 +604,24 @@ function renderStrip(){
   el.innerHTML = `<div class="board-h"><b>${L('Storyboard', 'Storyboard')}</b><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span>
       <div class="seg"><button class="${S.view === 'stage' ? 'on' : ''}" data-act="stageView" title="${esc(L('Mettre en scène le plan choisi', 'Stage the chosen shot'))}">${icon('strip')}${L('Bande', 'Strip')}</button><button class="${S.view === 'sheet' ? 'on' : ''}" data-act="sheetView" title="${esc(L('Tous les plans en grand, pour écrire', 'All shots large, for writing'))}">${icon('board')}${L('Planche', 'Board')}</button></div>
       <span class="grow"></span>
-      <button class="btn btn-sm btn-play" data-act="playBoard">${icon('play')}${L('Lire le storyboard', 'Play the storyboard')}</button>
+      <button class="btn btn-sm btn-play" data-act="playBoard">${icon('play')}${L('Lire', 'Play')}</button>
       <button class="btn btn-sm btn-primary" data-act="addShot" title="${esc(L('Reprend le plan actuel (touche N)', 'Starts from the current shot (N key)'))}">${icon('plus')}${L('Nouveau plan', 'New shot')}</button></div>
     <div class="cards" id="cards">${S.doc.shots.map((s, i) => `<div class="sc-wrap">${n > 1 ? `<button class="sc-del" data-act="delShotAt" data-i="${i}" title="${esc(L('Supprimer le plan ', 'Delete shot ') + (i + 1) + L(' (touche Suppr)', ' (Delete key)'))}" aria-label="${esc(L('Supprimer le plan ', 'Delete shot ') + (i + 1))}">${icon('trash')}</button>` : ''}<button class="shot-card ${i === S.i ? 'on' : ''}" data-act="goShot" data-i="${i}" draggable="true">
         <span class="sc-img"><img data-thumb="${i}" src="${thumbOf(i)}" alt="" draggable="false"><span class="sc-n">${i + 1}</span>${s.info.scene ? `<span class="sc-sc">${esc(L('Sc. ', 'Sc. ') + s.info.scene)}</span>` : ''}${s.info.move !== 'fix' ? `<span class="sc-mv" title="${esc(shotLabel('move', s.info.move))}">${glyph(MOVE_G[s.info.move] || MOVE_G.fix)}</span>` : ''}<span class="sc-d">${fmtTime(s.info.dur || 2)}</span>${i === S.i ? `<span class="sc-now">${L('en cours', 'editing')}</span>` : ''}</span>
         <span class="sc-t"><b>${esc(shotLabel('size', s.info.size, true))}</b>${esc(s.info.cap || L('Sans action', 'No action yet'))}</span></button></div>`).join('')}
       <div class="add-col">
-        <button class="add-shot" data-act="addShot">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span><small>${L('copie du plan ', 'copy of shot ') + (S.i + 1)}</small></button>
-        <button class="add-shot rev" data-act="scriptImport" title="${esc(L('Chaque scène du scénario devient un plan : depuis Raging Page, un texte collé ou un fichier .fountain', 'Each scene of the script becomes a shot: from Raging Page, pasted text or a .fountain file'))}">${icon('text')}<span>${L('Depuis un scénario', 'From a script')}</span></button>
+        <button class="add-shot" data-act="addShot">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span><small>${L('reprend le plan ', 'from shot ') + (S.i + 1)}</small></button>
+        <button class="add-shot rev" data-act="scriptImport" title="${esc(L('Chaque scène du scénario devient un plan : depuis Raging Page, un texte collé ou un fichier .fountain', 'Each scene of the script becomes a shot: from Raging Page, pasted text or a .fountain file'))}">${icon('text')}<span>${L('Scénario', 'Script')}</span></button>
         ${two ? `<button class="add-shot rev" data-act="addReverse" title="${esc(L('Le plan suivant, par-dessus l’épaule de l’autre personnage', 'The next shot, over the other character’s shoulder'))}">${icon('reverse')}<span>${L('Contrechamp', 'Reverse shot')}</span></button>` : ''}
       </div>
-      ${n === 1 ? `<p class="board-tip">${L('Ton premier plan est prêt. Quand l’image te plaît, clique sur « Nouveau plan » : il reprend celui-ci, tu changes juste ce qui bouge. Tu as déjà un scénario ? « Depuis un scénario » crée tous les plans d’un coup.', 'Your first shot is ready. When you like the picture, click “New shot”: it starts from this one, you only change what moves. Already have a script? “From a script” creates every shot at once.')}</p>` : ''}</div>`;
+      ${n === 1 ? `<p class="board-tip"><b>${L('Premier plan prêt.', 'First shot ready.')}</b>${L('« Nouveau plan » le reprend : tu changes juste ce qui bouge.', '“New shot” starts from it: you only change what moves.')}</p>` : ''}</div>`;
   const on = el.querySelector('.shot-card.on'); if(on && on.scrollIntoView) on.scrollIntoView({ block:'nearest', inline:'nearest' });
   if(S.view === 'sheet') renderSheet();
 }
 /* la planche entière : chaque plan en grand, avec son texte modifiable sur place */
 function renderSheet(){
   const el = document.getElementById('sheetView'); if(!el || S.view !== 'sheet') return;
-  el.innerHTML = `<div class="sv-h"><b>${esc(S.doc.title || 'Storyboard')}</b><span>${L('Clique sur une image pour la mettre en scène. Écris directement sous chaque plan.', 'Click a picture to stage it. Write right under each shot.')}</span></div>
+  el.innerHTML = `<div class="sv-h"><b>${esc(S.doc.title || 'Storyboard')}</b><span>${L('Clique une image pour la mettre en scène', 'Click a picture to stage it')}</span></div>
     <div class="sv-grid">${S.doc.shots.map((s, i) => `<article class="sv-card ${i === S.i ? 'on' : ''}">
       <button class="sv-img" data-act="stageShot" data-i="${i}" title="${esc(L('Mettre en scène ce plan', 'Stage this shot'))}"><img data-thumb="${i}" src="${thumbOf(i)}" alt=""><span class="sc-n">${i + 1}</span>${s.info.move !== 'fix' ? `<span class="sc-mv">${glyph(MOVE_G[s.info.move] || MOVE_G.fix)}</span>` : ''}</button>
       ${S.doc.shots.length > 1 ? `<button class="sc-del sv-del" data-act="delShotAt" data-i="${i}" title="${esc(L('Supprimer le plan ', 'Delete shot ') + (i + 1))}" aria-label="${esc(L('Supprimer le plan ', 'Delete shot ') + (i + 1))}">${icon('trash')}</button>` : ''}
@@ -685,7 +694,7 @@ function exportImage(){
   const crop = !fb ? fetch(url).then(r => r.blob()) : new Promise(ok => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = Math.round(fb.w); c.height = Math.round(fb.h); c.getContext('2d').drawImage(im, -Math.round(fb.x), -Math.round(fb.y)); c.toBlob(ok, 'image/png'); }; im.src = url; });
   crop.then(b => {
     downloadBlob(b, safeName(S.doc.title) + ' - ' + L('plan', 'shot') + ' ' + (S.i + 1) + '.png');
-    toast(L('Image enregistrée. Dépose-la dans le storyboard de Raging Page.', 'Image saved. Drop it into the Raging Page storyboard.'));
+    toast(L('Image enregistrée', 'Image saved'));
   });
 }
 /* jsPDF n'est chargé qu'au moment d'exporter : l'outil reste léger */
@@ -763,7 +772,7 @@ async function exportPdf(per){
     doc.text('Raging Board · ragingstudio.com/board', M, H - 6);
   }
   doc.save(safeName(S.doc.title) + ' - storyboard.pdf');
-  toast(L('Planche PDF enregistrée.', 'PDF board saved.'));
+  toast(L('Planche PDF enregistrée', 'PDF board saved'));
 }
 
 /* ---------- Lire le storyboard dans l'outil : chaque plan pendant sa durée, avec son mouvement ---------- */
@@ -831,11 +840,11 @@ function showIntro(force){
   const bd = document.createElement('div'); bd.className = 'modal-bd intro';
   const st = (ic, t, d) => `<li><span class="ph-ico">${icon(ic)}</span><span><b>${t}</b>${d}</span></li>`;
   bd.innerHTML = `<div class="modal intro-card" role="dialog" aria-modal="true">
-    <div class="ph intro-h">${r3Logo(44, 'rail-logo')}<div><b>${L('Ton storyboard en 3D, sans dessiner', 'Your storyboard in 3D, no drawing')}</b><small>${L('Chaque image du storyboard est un « plan ». Tu en fais un, puis le suivant.', 'Each picture of the storyboard is a “shot”. You make one, then the next.')}</small></div></div>
+    <div class="ph intro-h">${r3Logo(44, 'rail-logo')}<div><b>${L('Ton storyboard en 3D, sans dessiner', 'Your storyboard in 3D, no drawing')}</b><small>${L('Une image = un plan', 'One picture = one shot')}</small></div></div>
     <ol class="intro-steps">
-      ${st('place', L('Installe', 'Set up'), L('À gauche : le décor, puis les personnages et leurs poses.', 'On the left: the set, then the characters and their poses.'))}
-      ${st('frame', L('Cadre', 'Frame'), L('« Le cadrage » : choisis la valeur du plan, la caméra se place. Ce que tu vois dans le cadre, c’est ton plan : il s’enregistre tout seul.', '“Framing”: pick a shot size, the camera places itself. What you see in the frame is your shot: it saves by itself.'))}
-      ${st('plus', L('Enchaîne', 'Keep going'), L('« Nouveau plan », en bas : il reprend le plan actuel, tu changes juste ce qui bouge. Puis « Lire le storyboard » et la planche PDF.', '“New shot”, at the bottom: it starts from the current one, you only change what moves. Then “Play the storyboard” and the PDF board.'))}
+      ${st('place', L('Installe', 'Set up'), L('Le lieu, les personnages, leurs poses.', 'The place, the characters, their poses.'))}
+      ${st('frame', L('Cadre', 'Frame'), L('Choisis la valeur : la caméra se place. Tout s’enregistre seul.', 'Pick the shot size: the camera places itself. Everything saves itself.'))}
+      ${st('plus', L('Enchaîne', 'Keep going'), L('« Nouveau plan » reprend le plan actuel.', '“New shot” starts from the current one.'))}
     </ol>
     <div class="modal-f"><button class="btn btn-primary" data-act="introOk">${L('C’est parti', 'Let’s go')}</button></div></div>`;
   document.body.appendChild(bd);
@@ -904,7 +913,7 @@ async function exportVideoFrames(){
     if(S.rec.cancel){ enc.close(); return true; }
     await enc.flush(); muxer.finalize();
     downloadBlob(new Blob([muxer.target.buffer], { type:'video/mp4' }), safeName(S.doc.title) + ' - ' + L('animatique', 'animatic') + '.mp4');
-    toast(L('Animatique enregistrée (MP4, 30 images par seconde).', 'Animatic saved (MP4, 30 frames per second).'));
+    toast(L('Animatique enregistrée (MP4)', 'Animatic saved (MP4)'));
     return true;
   } finally {
     S.rec = null; box.classList.add('hidden'); R.canvas.width = ow; R.canvas.height = oh; requestRender();
@@ -1103,14 +1112,14 @@ function showScriptImport(){
     const nShots = scenes.length ? scenes.reduce((t, s) => t + 1 + (cover && Math.min(s.names.length, 3) > 1 ? Math.min(Math.max(s.lines.length - 1, 0), 6) : 0), 0) : 0;
     bd.querySelector('.imp-sum').innerHTML = scenes.length ? `<b>${scenes.length} ${scenes.length > 1 ? L('scènes', 'scenes') : L('scène', 'scene')} · ${nm.size} ${nm.size > 1 ? L('personnages', 'characters') : L('personnage', 'character')} → ${nShots} ${nShots > 1 ? L('plans', 'shots') : L('plan', 'shot')}</b>
       <ol>${scenes.slice(0, 5).map(s => { const st = SETS.find(x => x.id === scriptSet(s.head)); return `<li><span>${esc(s.head || L('(sans en-tête)', '(no heading)'))}</span><i>${esc(L(st.fr, st.en))} · ${esc(L(TIMES[scriptTime(s.head)].fr, TIMES[scriptTime(s.head)].en))}</i></li>`; }).join('')}${scenes.length > 5 ? `<li class="more">${L('et ', 'and ') + (scenes.length - 5) + L(' autres', ' more')}</li>` : ''}</ol>`
-      : `<span>${L('Colle un scénario, ouvre un fichier ou choisis un projet : l’aperçu s’affiche ici.', 'Paste a script, open a file or pick a project: the preview shows here.')}</span>`;
+      : `<span>${L('L’aperçu s’affiche ici.', 'The preview shows here.')}</span>`;
     bd.querySelector('[data-r="1"]').disabled = !scenes.length;
   };
   bd.innerHTML = `<div class="modal imp" role="dialog" aria-modal="true" aria-labelledby="impT"><h3 id="impT">${L('Importer un scénario', 'Import a script')}</h3>
-    <p>${L('Chaque scène devient un plan prêt à cadrer : le lieu, le moment de la journée, les personnages avec leur nom, l’action et la réplique. Tu n’as plus qu’à choisir le cadrage.', 'Each scene becomes a shot ready to frame: the place, the time of day, the named characters, the action and the line. You only pick the framing.')}</p>
+    <p>${L('Chaque scène devient un plan : lieu, moment, personnages, action et réplique.', 'Each scene becomes a shot: place, time, characters, action and line.')}</p>
     <div class="imp-rp" hidden></div>
     <label class="fld"><span>${L('Colle ton scénario', 'Paste your script')}</span><textarea id="impText" rows="6" spellcheck="false" placeholder="${esc(L('INT. CAFÉ – JOUR\n\nPaul attend, devant deux cafés.\n\nLÉA\nJe sais. J’ai une nouvelle.', 'INT. CAFÉ – DAY\n\nPaul waits, two coffees on the table.\n\nLÉA\nI know. I have news.'))}"></textarea></label>
-    <div class="imp-row"><label class="btn btn-sm btn-ghost">${icon('text')}${L('Ouvrir un fichier (.fountain, .txt)', 'Open a file (.fountain, .txt)')}<input type="file" id="impFile" accept=".fountain,.txt,.spmd,text/plain" hidden></label>
+    <div class="imp-row"><label class="btn btn-sm btn-ghost">${icon('text')}${L('Ouvrir un fichier', 'Open a file')}<small class="imp-ext">.fountain, .txt</small><input type="file" id="impFile" accept=".fountain,.txt,.spmd,text/plain" hidden></label>
       <div class="seg"><button data-cv="0" class="${cover ? '' : 'on'}">${L('Un plan par scène', 'One shot per scene')}</button><button data-cv="1" class="${cover ? 'on' : ''}" title="${esc(L('Le plan large, puis une amorce par réplique (jusqu’à 6 par scène)', 'The wide shot, then an over-the-shoulder per line (up to 6 per scene)'))}">${L('+ champ-contrechamp', '+ shot / reverse')}</button></div></div>
     <div class="imp-sum" aria-live="polite"></div>
     <div class="modal-f"><button class="btn btn-ghost" data-r="0">${L('Annuler', 'Cancel')}</button><button class="btn btn-primary" data-r="1" disabled>${L('Créer les plans', 'Create the shots')}</button></div></div>`;
@@ -1127,7 +1136,7 @@ function showScriptImport(){
     const p = e.target.closest('.imp-p'), cv = e.target.closest('[data-cv]'), r = e.target.closest('[data-r]');
     if(p){ bd.querySelectorAll('.imp-p').forEach(b => b.classList.toggle('on', b === p)); scenes = rp[+p.dataset.p].scenes; ta.value = ''; render(); }
     else if(cv){ cover = cv.dataset.cv === '1'; lsSet('raging3d_cover', cover ? '1' : '0'); bd.querySelectorAll('[data-cv]').forEach(b => b.classList.toggle('on', b === cv)); render(); }
-    else if(r){ if(r.dataset.r === '1'){ const n = importScenes(scenes, cover); toast(n + L(' plans créés depuis le scénario. Choisis maintenant le cadrage de chacun.', ' shots created from the script. Now pick the framing of each.')); } done(); }
+    else if(r){ if(r.dataset.r === '1'){ const n = importScenes(scenes, cover); toast(n + L(' plans créés', ' shots created')); } done(); }
     else if(e.target === bd) done();
   });
   setTimeout(() => ta.focus(), 30);
@@ -1140,7 +1149,7 @@ function exportCSV(){
     const who = s.chars.map((ch, c) => (S.doc.names && S.doc.names[ch.look]) || L(lookOf(ch, c).fr, lookOf(ch, c).en)).join(', ');
     return [i + 1, s.info.scene, slugOf(s), L(st.fr, st.en), shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), String(s.info.dur || 2).replace('.', fr ? ',' : '.'), who, s.info.cap, s.info.dial, tr ? L(tr[1], tr[2]) : ''].map(q).join(sep); });
   downloadBlob(new Blob(['﻿' + [head.map(q).join(sep)].concat(rows).join('\r\n')], { type:'text/csv;charset=utf-8' }), (S.doc.title || 'storyboard').replace(/[\\/:*?"<>|]+/g, '').trim() + L(' - liste des plans.csv', ' - shot list.csv'));
-  toast(L('Liste des plans exportée : elle s’ouvre dans Excel, Numbers ou Google Sheets.', 'Shot list exported: it opens in Excel, Numbers or Google Sheets.'));
+  toast(L('Liste des plans enregistrée', 'Shot list saved'));
 }
 
 /* ---------- Confirmation ---------- */
