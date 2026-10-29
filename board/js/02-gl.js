@@ -96,6 +96,29 @@ function wall(g, a, b, h, col, y0){
   const C = typeof col === 'string' ? hexRGB(col) : col, y = y0 || 0, m0 = MAT; if(MAT === 0) MAT = 1;
   quad(g, [a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], C); MAT = m0;
 }
+/* les surfaces à texture (« Mon lieu ») : rangées à part, comme les vitres, et dessinées par leur propre petit programme.
+   Les autres lieux n'en ont pas : rien de plus à calculer pour eux. k : la lumière de la face (calculée une fois ici). */
+let TEXS = null;
+const texLight = n => { const l = 1 / Math.hypot(0.45, 0.82, 0.36), h = 0.5 + 0.5 * n[1], w = Math.max((n[0] * 0.45 * l + n[1] * 0.82 * l + n[2] * 0.36 * l + 0.35) / 1.35, 0);
+  return (0.37 + 0.13 * h + 0.56 * w) * (n[1] < -0.5 ? 0.93 : 1); };
+function texQuad(key, a, b, c, d, ua, ub, uc, ud, vert){
+  if(!TEXS) return; let m = TEXS.get(key); if(!m) TEXS.set(key, m = { p:[], u:[], l:[] });
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  let n = [uy*vz - uz*vy, uz*vx - ux*vz, ux*vy - uy*vx]; const L = Math.hypot(...n) || 1; n = n.map(v => v / L); const k = texLight(n);
+  [[a, ua], [b, ub], [c, uc], [a, ua], [c, uc], [d, ud]].forEach(([p, u]) => { m.p.push(p[0], p[1], p[2]); m.u.push(u[0], u[1]); m.l.push(k, vert ? 1 : 0); });
+}
+/* un mur à texture : même obstacle qu'un mur peint ; s : la taille du motif, en mètres */
+function twall(g, key, a, b, h, y0, s){
+  if(COLL && h >= 0.4 && Math.hypot(b[0] - a[0], b[1] - a[1]) >= 0.4) collOf(g).w.push([a[0], a[1], b[0], b[1], y0 || 0, (y0 || 0) + h]);
+  const y = y0 || 0, len = Math.hypot(b[0] - a[0], b[1] - a[1]) / s;
+  texQuad(key, [a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], [0, y / s], [len, y / s], [len, (y + h) / s], [0, (y + h) / s], true);
+}
+/* un sol (ou un plafond, vu du dessous) à texture */
+function tfloor(key, x0, z0, x1, z1, y, s, down){
+  const U = (x, z) => [x / s, -z / s];
+  if(down) texQuad(key, [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], U(x0, z0), U(x1, z0), U(x1, z1), U(x0, z1));
+  else texQuad(key, [x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], U(x0, z1), U(x1, z1), U(x1, z0), U(x0, z0));
+}
 /* sol ou plafond, vu du dessus (sol) ou du dessous (plafond) */
 function floor(g, x0, z0, x1, z1, y, col, down){
   const C = typeof col === 'string' ? hexRGB(col) : col, m0 = MAT; if(MAT === 0) MAT = 1;
@@ -441,6 +464,57 @@ const GL = {
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(K.uT, 0);
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
     gl.disableVertexAttribArray(K.aQ); gl.useProgram(this.prog);
+  },
+  /* « Mon lieu » : les textures (un motif dessiné, ou l'image de l'utilisateur), répétées, avec leurs mipmaps
+     (de loin, le motif se fond au lieu de scintiller) */
+  texOf(key, src){
+    const gl = this.gl; this._tx = this._tx || new Map();
+    if(this._tx.has(key)) return this._tx.get(key);
+    if(!src) return null;
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    const an = this._an === undefined ? (this._an = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic') || null) : this._an;
+    if(an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+    this._tx.set(key, t); return t;
+  },
+  texMesh(m){ const gl = this.gl, mk = a => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(a), gl.STATIC_DRAW); return b; };
+    return { p:mk(m.p), u:mk(m.u), l:mk(m.l), count:m.p.length / 3 }; },
+  /* list : [{ key, mesh }] ; raw : en noir (l'image de sélection) */
+  drawTex(list, vp, eye, raw){
+    const gl = this.gl; if(!list.length) return;
+    if(this.txProg === undefined){
+      const sh = (t, src) => { const x = gl.createShader(t); gl.shaderSource(x, src); gl.compileShader(x); return x; };
+      const p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec3 aP; attribute vec2 aU; attribute vec2 aL; uniform mat4 uVP; varying vec2 vU; varying vec2 vL; varying vec3 vW; void main(){ vU = aU; vL = aL; vW = aP; gl_Position = uVP * vec4(aP, 1.0); }'));
+      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `precision mediump float; uniform sampler2D uT; uniform vec3 uEye; uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform vec3 uGrade; uniform float uRaw;
+        varying vec2 vU; varying vec2 vL; varying vec3 vW;
+        void main(){
+          if(uRaw > 0.5){ gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+          vec3 c = texture2D(uT, vU).rgb * vL.x;
+          if(vL.y > 0.5) c *= mix(0.66, 1.0, smoothstep(0.0, 0.6, vW.y));
+          c = mix(c, c * c * (3.0 - 2.0 * c), 0.22) * uGrade;
+          float d = distance(vW, uEye);
+          if(uFog.x < 300.0) c = mix(c, uFogC, clamp((d - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0) * 0.82); else c *= 1.0 - 0.1 * smoothstep(6.0, 18.0, d);
+          if(uBW > 0.5) c = vec3(dot(c, vec3(0.299, 0.587, 0.114)) - 0.03);
+          gl_FragColor = vec4(c, 1.0);
+        }`));
+      gl.linkProgram(p); this.txProg = gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null;
+      if(this.txProg){ const K = this.txLoc = {}; ['aP', 'aU', 'aL'].forEach(k => K[k] = gl.getAttribLocation(p, k)); ['uVP', 'uT', 'uEye', 'uFogC', 'uFog', 'uBW', 'uGrade', 'uRaw'].forEach(k => K[k] = gl.getUniformLocation(p, k)); }
+    }
+    if(!this.txProg) return;
+    const K = this.txLoc, E = this.env || {}, g = E.grade || [1, 1, 1], fc = E.fogC || [0.86, 0.88, 0.9], fg = E.fog || [400, 500];
+    this.off(); gl.useProgram(this.txProg);
+    gl.uniformMatrix4fv(K.uVP, false, vp); gl.uniform3f(K.uEye, eye[0], eye[1], eye[2]); gl.uniform3f(K.uFogC, fc[0], fc[1], fc[2]); gl.uniform2f(K.uFog, fg[0], fg[1]);
+    gl.uniform1f(K.uBW, E.bw ? 1 : 0); gl.uniform3f(K.uGrade, g[0], g[1], g[2]); gl.uniform1f(K.uRaw, raw ? 1 : 0); gl.uniform1i(K.uT, 0); gl.activeTexture(gl.TEXTURE0);
+    ['aP', 'aU', 'aL'].forEach(k => gl.enableVertexAttribArray(K[k]));
+    list.forEach(({ tex, mesh }) => { if(!tex) return; gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.p); gl.vertexAttribPointer(K.aP, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.u); gl.vertexAttribPointer(K.aU, 2, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.l); gl.vertexAttribPointer(K.aL, 2, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, mesh.count); });
+    ['aP', 'aU', 'aL'].forEach(k => gl.disableVertexAttribArray(K[k])); gl.useProgram(this.prog);
   },
   /* le ciel en dégradé (mode 0), ou le vignettage par-dessus l'image (mode 1) */
   drawPanes(meshes, vp, eye){
