@@ -2111,9 +2111,10 @@ function mapDef(m){
       if(!out){
         tfloor(texKey(C), x0, z0, x1, z1, H, C.s, true);
         [[x0, z0 + 0.008, x1, z0 + 0.008], [x0 + 0.008, z1, x0 + 0.008, z0], [x1 - 0.008, z0, x1 - 0.008, z1], [x1, z1 - 0.008, x0, z1 - 0.008]].forEach(([a, b, c, e]) => wall(g, [a, b], [c, e], 0.08, '#E9E6E0'));
-        // les plafonniers : un tous les trois mètres environ (allumés la nuit)
-        const nx = Math.max(1, Math.round(W / 3)), nz = Math.max(1, Math.round(D / 3));
-        for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++) box(g, x0 + (i + 0.5) * W / nx, Math.min(H, 3.2) - 0.03, z0 + (j + 0.5) * D / nz, 1.0, 0.04, 0.3, '#F7F5F0');
+        // les plafonniers : un tous les trois mètres environ, toujours collés au plafond, quelle que soit sa hauteur (allumés la nuit)
+        const nx = Math.max(1, Math.round(W / 3)), nz = Math.max(1, Math.round(D / 3)), m0 = MAT; MAT = 5;
+        for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++) box(g, x0 + (i + 0.5) * W / nx, H - 0.02, z0 + (j + 0.5) * D / nz, 1.0, 0.04, 0.3, '#F7F5F0');
+        MAT = m0;
       }
       // les fenêtres : d'abord le mur du fond, puis la droite, puis la gauche
       const win = clamp(Math.round(+m.win || 0), 0, 8), sides = [[x0, x1, z0, 'z', 1], [z0, z1, x1, 'x', -1], [z1, z0, x0, 'x', 1]], wy = out ? 0.9 : 0.9, wh = Math.min(1.4, WH - 1.2);
