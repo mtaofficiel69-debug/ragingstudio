@@ -122,11 +122,14 @@ function renderTop(){
   document.getElementById('exportMenu').innerHTML = exportList();
   renderSaved();
 }
-function renderSaved(){ const el = document.getElementById('saveStatus'); if(el) { el.lastChild.textContent = L('Enregistré', 'Saved'); el.title = L('Enregistré dans ce navigateur', 'Saved in this browser'); } }
+function renderSaved(){ const el = document.getElementById('saveStatus'); if(!el) return; const bad = typeof _saveFail !== 'undefined' && _saveFail;
+  el.classList.toggle('bad', bad); el.lastChild.textContent = bad ? L('Non enregistré', 'Not saved') : L('Enregistré', 'Saved');
+  el.title = bad ? L('Le navigateur est plein : exporte le fichier du projet (.rboard)', 'The browser is full: export the project file (.rboard)') : L('Enregistré dans ce navigateur', 'Saved in this browser'); }
 const exportList = () => `<button data-act="exportPdf" data-per="6">${icon('board')}<span><b>${L('Planche PDF · 6 plans par page', 'PDF board · 6 shots per page')}</b><small>${L('Tout le film d’un coup d’œil, avec les flèches des mouvements', 'The whole film at a glance, with camera-move arrows')}</small></span></button>
      <button data-act="exportPdf" data-per="3">${icon('text')}<span><b>${L('Planche PDF · 3 grands plans par page', 'PDF board · 3 large shots per page')}</b><small>${L('Avec l’action, le dialogue et de la place pour écrire : pour le tournage', 'With action, dialogue and room to write: for the shoot')}</small></span></button>
      <button data-act="exportImage">${icon('image')}<span><b>${L('Image de ce plan (PNG)', 'Image of this shot (PNG)')}</b><small>${L('En 1920 × 1080, à déposer dans le storyboard de Raging Page', '1920 × 1080, to drop into the Raging Page storyboard')}</small></span></button>
      <button data-act="exportVideo">${icon('film')}<span><b>${L('Animatique (vidéo)', 'Animatic (video)')}</b><small>${L('Les plans à la suite, avec leurs mouvements de caméra', 'The shots one after another, with their camera moves')}</small></span></button>
+     <button data-act="exportCSV">${icon('strip')}<span><b>${L('Liste des plans (tableur)', 'Shot list (spreadsheet)')}</b><small>${L('Pour la production : plan, scène, valeur, mouvement, durée, personnages… dans Excel ou Google Sheets', 'For production: shot, scene, size, move, duration, characters… in Excel or Google Sheets')}</small></span></button>
      <button data-act="hExportCur">${icon('save')}<span><b>${L('Fichier du projet (.rboard)', 'Project file (.rboard)')}</b><small>${L('Pour le garder ou l’ouvrir sur un autre ordinateur', 'To keep it or open it on another computer')}</small></span></button>`;
 
 /* ---------- Le plein écran, en immersion : tout l'atelier passe en plein écran, sur fond sombre ----------
@@ -297,6 +300,7 @@ function renderHint(){
   let t;
   if(S.play) t = L('Lecture du storyboard · Échap ou clic pour arrêter', 'Playing the storyboard · Esc or click to stop');
   else if(S.endEd) t = L('Tu règles l’image de FIN du mouvement : cadre-la comme tu veux, puis reviens au début dans le volet.', 'You are setting the END frame of the move: frame it as you like, then go back to the start in the panel.');
+  else if(S.hover && IK_CHAIN[S.hover.j]) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + L('glisse : tout le membre suit (Alt : articulation par articulation)', 'drag: the whole limb follows (Alt: one joint at a time)');
   else if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer le personnage', 'drag to move the character') : L('glisse pour bouger', 'drag to move'));
   else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer sur le sol', 'Drag to move on the floor') : L('Glisse à gauche ou à droite pour faire tourner', 'Drag left or right to turn');
   else if(S.sel) t = L('Glisse la partie verte pour la bouger · Clique dans le vide pour désélectionner', 'Drag the green part to move it · Click empty space to deselect');
@@ -305,6 +309,25 @@ function renderHint(){
 }
 
 /* ---------- Le volet de droite : le contenu de l'étape choisie ---------- */
+/* ses couleurs, pour tout le film : la peau, les cheveux, le haut et le bas (une palette, et « autre » pour tout le reste) */
+const COL_PAL = {
+  skin:['#F3DCC8', '#EDD0B8', '#E7C8AE', '#D9AE8C', '#C99B78', '#A87556', '#8E6248', '#6B4632', '#4E3324'],
+  hair:['#1E1A18', '#3B2A20', '#5A3A24', '#7A3E26', '#A8652F', '#C9973E', '#E3C97A', '#9A9590', '#E9E6E0'],
+  top:['#F1EFEA', '#1F2024', '#2E3A4E', '#3F6E7A', '#5E7F6A', '#B4593A', '#9B1C2E', '#E3A33A', '#D9707A', '#7A5A9A'],
+  bottom:['#1F2024', '#2A2C31', '#3E5577', '#3A3D44', '#5E636C', '#B39A6B', '#7A2E3A', '#2F6E4F', '#E9E4DA']
+};
+const COL_NAMES = { skin:['Peau', 'Skin'], hair:['Cheveux', 'Hair'], top:['Haut', 'Top'], bottom:['Bas', 'Bottom'] };
+function colorRows(ch){
+  const lk = lookOf(ch), mine = (S.doc.colors || {})[ch.look] || {};
+  return `<details class="cols" ${Object.keys(mine).length ? 'open' : ''}><summary>${icon('palette')}<span>${L('Ses couleurs (pour tous les plans)', 'Their colours (for every shot)')}</span></summary>
+    ${COL_KEYS.map(k => `<div class="col-r"><span>${L(...COL_NAMES[k])}</span><div class="sws" role="group" aria-label="${esc(L(...COL_NAMES[k]))}">${COL_PAL[k].map(c => `<button class="swc ${String(lk[k]).toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-act="charCol" data-k="${k}" data-v="${c}" style="--c:${c}" title="${c}" aria-label="${esc(L(...COL_NAMES[k]) + ' ' + c)}"></button>`).join('')}<label class="swc any" title="${esc(L('Une autre couleur', 'Another colour'))}" style="--c:${esc(lk[k] || '#888888')}"><input type="color" data-colk="${k}" value="${esc(/^#[0-9a-f]{6}$/i.test(lk[k] || '') ? lk[k] : '#888888')}" aria-label="${esc(L('Une autre couleur', 'Another colour'))}"></label></div></div>`).join('')}${Object.keys(mine).length ? `<button class="lnk" data-act="charCol" data-k="">${L('Revenir aux couleurs d’origine', 'Back to the original colours')}</button>` : ''}</details>`;
+}
+function setCharCol(k, v){
+  const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(!ch) return;
+  edit(() => { const all = S.doc.colors = S.doc.colors || {}, c = all[ch.look] = all[ch.look] || {};
+    if(!k) delete all[ch.look]; else { c[k] = v; } if(all[ch.look] && !Object.keys(all[ch.look]).length) delete all[ch.look]; });
+  THUMBS.clear(); renderStrip();
+}
 const charName = c => { const ch = shot().chars[c]; const n = ch && S.doc.names && S.doc.names[ch.look]; if(n) return esc(n); const lk = lookOf(ch, c); return esc(L(lk.fr, lk.en)); };
 /* une petite silhouette, à la couleur des habits du personnage (les enfants sont plus petits) */
 const figure = lk => {
@@ -403,7 +426,10 @@ const PANEL_HTML = {
     const fl = SET_DEF[sh.set].floors ? lblId(L('Aller dans une pièce', 'Go to a room'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
     const gid = ['in', 'out', 'wide'];
     return ph('place', L('Le lieu', 'The place'), L('Les personnages s’y placent tout seuls.', 'Characters go to ready-made spots by themselves.'), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
-      `<div class="pb">${lbl(L('Le moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : k === 'dusk' ? 'sunset' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+      `<div class="pb"><div class="myplace ${sh.set === 'photo' ? 'on' : ''}"><div class="mp-t">${icon('image')}<b>${L('Ton propre lieu', 'Your own location')}</b></div>
+        <p>${sh.set === 'photo' && sh.photo ? L('La photo est le décor de ce plan. Cale la caméra sur elle : la grille montre le sol.', 'The photo is this shot’s set. Line the camera up with it: the grid shows the floor.') : L('Prends ton vrai décor en photo et joue tes personnages devant. Tu peux aussi glisser une image sur la vue 3D.', 'Take a photo of your real location and stage your characters in front of it. You can also drop an image on the 3D view.')}</p>
+        <button class="btn btn-sm ${sh.set === 'photo' && sh.photo ? '' : 'btn-primary'}" data-act="photoPick">${icon('image')}${sh.set === 'photo' && sh.photo ? L('Changer de photo', 'Change the photo') : L('Importer une photo', 'Import a photo')}</button><input type="file" id="photoFile" accept="image/*" hidden></div>
+      ${lbl(L('Le moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : k === 'dusk' ? 'sunset' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
   },
   chars(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
@@ -417,6 +443,7 @@ const PANEL_HTML = {
     return ph('users', L('Les personnages', 'The characters'), L('Clique un nom : la caméra va vers lui. L’épingle verte le déplace.', 'Click a name: the camera goes to them. The green pin moves them.')) +
       `<div class="pb">${lbl(L('Dans ce plan', 'In this shot'))}${rows}
       ${chars[t] ? `<label class="fld name-f"><span>${L('Son nom dans le film (pour tous les plans)', 'Their name in the film (for every shot)')}</span><input id="fName" maxlength="24" value="${esc((S.doc.names || {})[chars[t].look] || '')}" placeholder="${esc(L('ex. Jules, l’inspecteur…', 'e.g. Jules, the detective…'))}"></label>` : ''}
+      ${chars[t] ? colorRows(chars[t]) : ''}
       ${lbl(L('Ajouter', 'Add') + ` <span class="cnt">${chars.length} / ${MAX_CHARS}</span>`)}${add}
       ${lbl(L('Rôles secondaires : police et truands', 'Supporting roles: police and crooks'))}${npc}
       ${chars[t] ? lbl(L('La tenue de ', 'Outfit for ') + charName(t)) + outfits : ''}
@@ -448,7 +475,7 @@ const PANEL_HTML = {
         ${sel.j === 'pelvis' ? `${slider(L('Tout le corps : tourner', 'Whole body: turn'), 'root', 0, c2.root.ry, -180, 180, 1)}${slider(L('Tout le corps : hauteur', 'Whole body: height'), 'root', 1, c2.root.y, -0.9, 2, 0.01, ' m')}` : ''}
         <button class="btn btn-sm" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
     } else part = `<p class="fly-note">${L('Pour un geste précis : clique sur une partie du corps dans l’image (un bras, la tête…) et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture (an arm, the head…) and drag. Its settings show up here.')}</p>`;
-    return ph('pose', L('Les poses de ', 'Poses for ') + charName(t), L('Une pose en un clic, puis les retouches à la main si besoin.', 'One click for a pose, then hand touch-ups if needed.'), sel ? '' : jumpBar(POSE_GROUPS.map(([g]) => [g, { move:L('Debout', 'Standing'), seat:L('Assis, au sol', 'Seated, floor'), gest:L('Gestes', 'Gestures'), gun:L('Pistolet', 'Handgun'), moto:L('Moto', 'Motorbike') }[g] || g]))) +
+    return ph('pose', L('Les poses de ', 'Poses for ') + charName(t), L('Une pose en un clic, puis attrape une main ou un pied pour l’ajuster.', 'One click for a pose, then grab a hand or a foot to adjust it.'), sel ? '' : jumpBar(POSE_GROUPS.map(([g]) => [g, { move:L('Debout', 'Standing'), seat:L('Assis, au sol', 'Seated, floor'), gest:L('Gestes', 'Gestures'), gun:L('Pistolet', 'Handgun'), moto:L('Moto', 'Motorbike') }[g] || g]))) +
       `<div class="pb">${who}${expr}${gaze}${tiles}${prop}${gear}${arrow}${gun}${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
   },
   crowd(){
@@ -545,8 +572,9 @@ const PANEL_HTML = {
       <li><b>${L('Cadre', 'Frame')}</b>${L('« Le cadrage » : sur qui, la valeur, l’angle. La caméra se place. Puis « Le mouvement » si la caméra bouge.', '“Framing”: who, the size, the angle. The camera places itself. Then “Camera move” if the camera moves.')}</li>
       <li><b>${L('Écris', 'Write')}</b>${L('« Ce qui se passe » : l’action et le dialogue du plan.', '“What happens”: the action and dialogue of the shot.')}</li>
       <li><b>${L('Plan suivant', 'Next shot')}</b>${L('« Nouveau plan », en bas : il reprend celui-ci, tu ne changes que ce qui bouge. « Contrechamp » fait l’angle inverse.', '“New shot”, at the bottom: it starts from this one, you only change what moves. “Reverse shot” makes the opposite angle.')}</li>
+      <li><b>${L('Tu as déjà un scénario ?', 'Already have a script?')}</b>${L('« Depuis un scénario », en bas : chaque scène devient un plan (lieu, moment, personnages, action, réplique). Depuis Raging Page, un texte collé ou un fichier .fountain.', '“From a script”, at the bottom: each scene becomes a shot (place, time, characters, action, line). From Raging Page, pasted text or a .fountain file.')}</li>
       <li><b>${L('Relis, exporte', 'Review, export')}</b>${L('« Lire le storyboard » le fait défiler avec les mouvements. Puis la planche PDF ou l’animatique.', '“Play the storyboard” runs it with the moves. Then the PDF board or the animatic.')}</li></ol>
-      ${lbl(L('Dans l’image', 'In the picture'))}<p class="fly-note">${L('Épingle verte au-dessus d’une tête : maintiens-la pour déplacer · flèche ronde : tourner · clic sur un bras, la tête… : poser à la main · glisser dans le vide : tourner autour · clic droit : se décaler · molette : avancer · double-clic : viser.', 'Green pin above a head: hold to move · round arrow: turn · click an arm, the head…: pose by hand · drag empty space: orbit · right-click: pan · wheel: move in · double-click: aim.')}</p>
+      ${lbl(L('Dans l’image', 'In the picture'))}<p class="fly-note">${L('Épingle verte au-dessus d’une tête : maintiens-la pour déplacer · flèche ronde : tourner · attraper une main ou un pied : tout le membre suit (Alt : une articulation à la fois) · clic sur un bras, la tête… : poser à la main · glisser une photo sur l’image : ton propre décor · glisser dans le vide : tourner autour · clic droit : se décaler · molette : avancer · double-clic : viser.', 'Green pin above a head: hold to move · round arrow: turn · grab a hand or a foot: the whole limb follows (Alt: one joint at a time) · click an arm, the head…: pose by hand · drop a photo on the picture: your own set · drag empty space: orbit · right-click: pan · wheel: move in · double-click: aim.')}</p>
       ${lbl(L('La caméra', 'The camera'))}<p class="fly-note">${L('Elle se promène comme une vraie caméra : elle ne traverse ni les murs ni les meubles, elle glisse le long et passe par-dessus ce qui est bas. Pour changer de pièce, passe par une porte (touches Z Q S D ou flèches), ou clique dans une pièce sur le plan.', 'It moves like a real camera: it never goes through walls or furniture, it slides along them and over anything low. To change rooms, go through a door (WASD or arrow keys), or click a room on the plan.')}</p>
       ${lbl(L('Pour une planche de pro', 'For a pro board'))}<ul class="pro">
         <li>${L('Ouvre la séquence par un plan large (plan général ou d’ensemble) : on comprend où l’on est.', 'Open the sequence on a wide shot (extreme wide or wide): we see where we are.')}</li>
@@ -574,9 +602,10 @@ function renderStrip(){
         <span class="sc-t"><b>${esc(shotLabel('size', s.info.size, true))}</b>${esc(s.info.cap || L('Sans action', 'No action yet'))}</span></button></div>`).join('')}
       <div class="add-col">
         <button class="add-shot" data-act="addShot">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span><small>${L('copie du plan ', 'copy of shot ') + (S.i + 1)}</small></button>
+        <button class="add-shot rev" data-act="scriptImport" title="${esc(L('Chaque scène du scénario devient un plan : depuis Raging Page, un texte collé ou un fichier .fountain', 'Each scene of the script becomes a shot: from Raging Page, pasted text or a .fountain file'))}">${icon('text')}<span>${L('Depuis un scénario', 'From a script')}</span></button>
         ${two ? `<button class="add-shot rev" data-act="addReverse" title="${esc(L('Le plan suivant, par-dessus l’épaule de l’autre personnage', 'The next shot, over the other character’s shoulder'))}">${icon('reverse')}<span>${L('Contrechamp', 'Reverse shot')}</span></button>` : ''}
       </div>
-      ${n === 1 ? `<p class="board-tip">${L('Ton premier plan est prêt. Quand l’image te plaît, clique sur « Nouveau plan » : il reprend celui-ci, tu changes juste ce qui bouge.', 'Your first shot is ready. When you like the picture, click “New shot”: it starts from this one, you only change what moves.')}</p>` : ''}</div>`;
+      ${n === 1 ? `<p class="board-tip">${L('Ton premier plan est prêt. Quand l’image te plaît, clique sur « Nouveau plan » : il reprend celui-ci, tu changes juste ce qui bouge. Tu as déjà un scénario ? « Depuis un scénario » crée tous les plans d’un coup.', 'Your first shot is ready. When you like the picture, click “New shot”: it starts from this one, you only change what moves. Already have a script? “From a script” creates every shot at once.')}</p>` : ''}</div>`;
   const on = el.querySelector('.shot-card.on'); if(on && on.scrollIntoView) on.scrollIntoView({ block:'nearest', inline:'nearest' });
   if(S.view === 'sheet') renderSheet();
 }
@@ -925,6 +954,195 @@ function exportVideoLive(){
   requestAnimationFrame(step);
 }
 
+/* ---------- Importer un scénario : chaque scène devient un plan prêt à cadrer ----------
+   Trois sources : un projet de Raging Page (même navigateur), un texte collé, ou un fichier
+   .fountain / .txt. On lit les en-têtes (INT. CAFÉ – JOUR), les noms des personnages et leurs
+   répliques : le lieu, le moment, les personnages (avec leur nom) et l'action sont déjà là. */
+const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// du plus précis au plus vague : « maison de campagne » avant « campagne », « parking » avant « park »
+const SCRIPT_SETS = [
+  ['house', 'maison de campagne|ferme|farmhouse|cottage|chalet'], ['parking', 'parking|car park|garage souterrain'],
+  ['hospital', 'hopital|hospital|clinique|clinic|urgences|emergency room|chambre d.hopital'], ['police', 'commissariat|police|gendarmerie|precinct|cellule|interrogatoire'],
+  ['bank', 'banque|bank|coffre'], ['metro', 'metro|subway|rame|wagon|train|rer|tram'], ['hotel', 'hotel|motel|auberge'],
+  ['diner', 'diner|restaurant|snack|cantine|fast.food|brasserie'], ['bar', 'bar|pub|club|boite de nuit|discotheque|nightclub'], ['cafe', 'cafe|coffee|salon de the|cafeteria'],
+  ['taxi', 'taxi|voiture|car|auto|vehicule|camion|van'], ['office', 'bureau|office|agence|open.space|salle de reunion|entreprise|redaction'],
+  ['garage', 'garage|atelier|workshop'], ['warehouse', 'entrepot|warehouse|hangar|usine|factory|depot'], ['hall', 'couloir|hall|corridor|escalier|stairs|entree|palier|ascenseur'],
+  ['alley', 'ruelle|alley|impasse|passage'], ['roof', 'toit|rooftop|roof|terrasse'], ['airfield', 'aerodrome|aeroport|airport|piste|airfield'],
+  ['stadium', 'stade|stadium|terrain de foot|gymnase'], ['beach', 'plage|beach|mer|ocean|sea|port|quai'], ['forest', 'foret|forest|bois|woods|jungle'],
+  ['park', 'parc|jardin|park|garden|square'], ['country', 'campagne|champ|countryside|field|route|road|village|desert'],
+  ['street', 'rue|street|avenue|boulevard|ville|city|trottoir|place|carrefour|centre.ville'],
+  ['living', 'salon|appartement|appart|apartment|living|maison|house|chambre|bedroom|cuisine|kitchen|studio|loft|home|chez']
+].map(([id, k]) => [id, new RegExp('(^|[^a-z])(' + k + ')([^a-z]|$)')]);
+function scriptSet(head){
+  const n = norm(head).replace(/^\s*(int\.?\s*\/\s*ext|ext\.?\s*\/\s*int|i\/e|int|ext|interieur|exterieur|est)[\.\s:-]*/, '');
+  const loc = n.split(/\s[-–—]\s|\s[-–—]|[-–—]\s/)[0];
+  for(const [id, re] of SCRIPT_SETS) if(SET_DEF[id] && re.test(loc)) return id;
+  return /^\s*(ext|exterieur)/.test(norm(head)) ? 'street' : 'living';
+}
+function scriptTime(head){
+  const n = norm(head).split(/\s[-–—]\s|\s[-–—]|[-–—]\s/).slice(1).join(' ') || norm(head);
+  if(/nuit|night|minuit|midnight/.test(n)) return 'night';
+  if(/soir|crepuscule|dusk|evening|aube|dawn|sunset|sunrise|couchant|coucher|lever du jour/.test(n)) return 'dusk';
+  return 'day';
+}
+const HEAD_RE = /^\s*(\d+[a-z]?[\.\)]?\s+)?((int\.?\s*\/\s*ext|ext\.?\s*\/\s*int|i\/e|int|ext|est|interieur|exterieur)[\.\s:-])/i;
+const cueName = t => t.replace(/\(.*?\)/g, '').replace(/^@/, '').replace(/\^$/, '').trim();
+const isCue = t => { const s = cueName(t); return s.length > 1 && s.length <= 32 && s === s.toUpperCase() && /\p{Lu}/u.test(s) && !/(:|\.\.\.)$/.test(s) && !/^(fondu|cut|coupe|fade|smash|plus tard|later|fin|the end|noir|black)\b/i.test(s); };
+/* un texte (Fountain, ou un scénario tapé à la main) en scènes */
+function parseScript(text){
+  const lines = String(text || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\[\[[\s\S]*?\]\]/g, '').split(/\r?\n/), scenes = [];
+  let cur = null, i = 0;
+  // la page de titre de Fountain (Title:, Author:…) en tête : on la saute
+  if(/^\s*(title|titre|credit|author|authors|auteur|source|draft date|contact)\s*:/i.test(lines[0] || '')) while(i < lines.length && lines[i].trim()) i++;
+  const scene = (head, num) => { cur = { head, num, action:[], lines:[], names:[] }; scenes.push(cur); };
+  const who = n => { if(!cur) scene('', ''); if(n && !cur.names.includes(n)) cur.names.push(n); };
+  for(; i < lines.length; i++){
+    const raw = lines[i], t = raw.trim(); if(!t || /^(#|=)/.test(t)) continue;
+    const h = t.match(HEAD_RE);
+    if(h || (/^\.[^.]/.test(t))){ const num = h && h[1] ? h[1].replace(/[^\dA-Za-z]/g, '') : ''; scene((h && h[1] ? t.slice(h[1].length) : t.replace(/^\./, '')).replace(/\s*#[^#]*#\s*$/, '').trim().toUpperCase(), num); continue; }
+    const inl = t.match(/^([\p{Lu}][\p{Lu}'’ .\-]{1,30}?)\s*:\s*(.+)$/u);           // « LÉA : Tu es en retard. »
+    if(inl && !/^(int|ext|fondu|cut)/i.test(inl[1])){ const n = cueName(inl[1]); who(n); cur.lines.push([n, inl[2].trim()]); continue; }
+    const next = (lines[i + 1] || '').trim();
+    if(next && (isCue(t) || /^@/.test(t))){
+      const n = cueName(t), said = []; who(n);
+      while(i + 1 < lines.length && lines[i + 1].trim()){ i++; const d = lines[i].trim(); if(!/^\(.*\)$/.test(d)) said.push(d); }
+      if(said.length) cur.lines.push([n, said.join(' ')]); continue;
+    }
+    if(/^>|(\s(to|à)\s*:|^(fondu|cut to|coupe|smash cut|fade))/i.test(t) && t === t.toUpperCase()) continue;   // transitions
+    if(!cur) scene('', ''); cur.action.push(t.replace(/^!/, ''));
+  }
+  return scenes.filter(s => s.head || s.action.length || s.lines.length);
+}
+/* un projet de Raging Page : ses éléments sont déjà rangés par type */
+function parseRP(p){
+  const scenes = []; let cur = null, name = '';
+  const txt = h => { const d = document.createElement('div'); d.innerHTML = String(h || ''); return (d.textContent || '').replace(/\s+/g, ' ').trim(); };
+  (p && p.elements || []).forEach(el => {
+    const t = txt(el.text); if(!t && el.type !== 'scene') return;
+    if(el.type === 'scene' || !cur){ cur = { head:el.type === 'scene' ? t.toUpperCase() : '', num:'', action:[], lines:[], names:[] }; scenes.push(cur); if(el.type === 'scene') return; }
+    if(el.type === 'action') cur.action.push(t);
+    else if(el.type === 'character'){ name = cueName(t); if(name && !cur.names.includes(name)) cur.names.push(name); }
+    else if(el.type === 'dialogue' && name) cur.lines.push([name, t]);
+  });
+  return scenes.filter(s => s.head || s.action.length || s.lines.length);
+}
+/* les projets de Raging Page enregistrés dans ce navigateur (IndexedDB, et la copie localStorage) */
+async function rpProjects(){
+  const ls = k => { try{ return JSON.parse(localStorage.getItem(k) || 'null'); }catch(e){ return null; } };
+  let db = null;
+  try{ db = await new Promise(res => { const q = indexedDB.open('scriptmm_db', 1); q.onupgradeneeded = () => { try{ q.result.createObjectStore('kv'); }catch(e){} }; q.onsuccess = () => res(q.result); q.onerror = q.onblocked = () => res(null); }); }catch(e){ db = null; }
+  const get = k => !db ? Promise.resolve(null) : new Promise(res => { try{ const q = db.transaction('kv', 'readonly').objectStore('kv').get(k); q.onsuccess = () => res(q.result == null ? null : q.result); q.onerror = () => res(null); }catch(e){ res(null); } });
+  const idx = (await get('scriptmm_projects_index')) || ls('scriptmm_projects_index') || [];
+  const out = [];
+  for(const e of Array.isArray(idx) ? idx : []){
+    if(!e || !e.id) continue;
+    const p = (await get('scriptmm_project_' + e.id)) || ls('scriptmm_project_' + e.id);
+    if(p && Array.isArray(p.elements)) out.push({ id:e.id, title:p.title || e.title || L('Sans titre', 'Untitled'), scenes:parseRP(p) });
+  }
+  if(db) db.close();
+  return out.filter(p => p.scenes.length);
+}
+/* homme ou femme, d'après le prénom (une estimation : on change le personnage d'un clic si elle se trompe) */
+const F_NAMES = /^(lea|nina|marie|julie|sophie|claire|alice|emma|chloe|camille|sarah|laura|lucie|manon|ines|jade|louise|anne|eve|zoe|lou|celine|nathalie|isabelle|catherine|helene|juliette|charlotte|pauline|margot|agathe|rose|mia|lisa|elise|amelie|valerie|sandrine|christine|nadia|leila|fatima|yasmine|maya|clara|mary|jane|kate|anna|grace|olivia|emily|sophia|ella|lily|amy|ruth|madame|mme|mrs|ms|miss|la mere|la fille|la soeur|mother|mom|girl|woman|femme|sister|daughter|infirmiere|serveuse|policiere)\b/;
+const M_NAMES = /^(paul|marc|sam|pierre|jules|antoine|louis|hugo|lucas|leo|tom|thomas|nicolas|julien|maxime|alex|alexandre|david|jean|michel|philippe|francois|olivier|eric|vincent|karim|mehdi|omar|ali|john|jack|james|mike|peter|george|harry|luke|ben|adam|noah|monsieur|m\.|mr|le pere|le fils|le frere|father|dad|boy|man|homme|brother|son|inspecteur|docteur|serveur|policier)\b/;
+function nameGender(n){ const k = norm(n).trim(); if(M_NAMES.test(k)) return 'm'; if(F_NAMES.test(k)) return 'f'; return /[a-z]{2,}a$/.test(k.split(' ')[0]) ? 'f' : null; }
+/* tourner un personnage debout vers un autre (pour le champ-contrechamp) */
+function faceTo(ch, o){
+  if(ch.pose && ch.pose !== 'stand') return;
+  ch.root.ry = 0; const f0 = bodyMarks(ch).face;
+  ch.root.ry = Math.atan2(o.root.x - ch.root.x, o.root.z - ch.root.z) / D2R - f0;
+}
+/* les scènes en plans : un plan par scène, ou (au choix) le plan large puis le champ-contrechamp des répliques */
+function scriptShots(scenes, cover){
+  const names = S.doc.names = S.doc.names || {}, byName = {};
+  Object.keys(names).forEach(k => { byName[norm(names[k])] = +k; });
+  const pool = [0, 2, 1, 3, 6, 7, 4, 5];
+  const lookFor = n => { const k = norm(n); if(byName[k] != null) return byName[k]; const used = new Set(Object.values(byName)), g = nameGender(n);
+    const l = pool.find(x => !used.has(x) && CHAR_LOOK[x] && (!g || CHAR_LOOK[x].body === g)) ?? pool.find(x => !used.has(x) && CHAR_LOOK[x]); const v = l == null ? Object.keys(byName).length % 4 : l; byName[k] = v; if(names[v] == null) names[v] = n.charAt(0) + n.slice(1).toLowerCase(); return v; };
+  const out = []; let num = S.doc.shots.reduce((m, s) => Math.max(m, parseInt(s.info.scene, 10) || 0), 0);
+  // les personnages qui ne parlent pas sont souvent nommés dans l'action (« Léa traverse la rue ») : on les reconnaît aussi
+  const known = [...new Set(scenes.flatMap(sc => sc.names).concat(Object.values(names).map(n => String(n).toUpperCase())))];
+  const free = () => { const used = new Set(Object.values(byName)); const l = pool.find(x => !used.has(x) && names[x] == null); return l == null ? 0 : l; };
+  scenes.forEach(sc => {
+    const set = scriptSet(sc.head), def = SET_DEF[set], act = sc.action.join(' ');
+    const cast = sc.names.concat(known.filter(nm => !sc.names.includes(nm) && new RegExp('(^|[^\\p{L}])' + norm(nm).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^\\p{L}]|$)', 'u').test(norm(act))).map(nm => [nm, norm(act).indexOf(norm(nm))]).sort((x, y) => x[1] - y[1]).map(x => x[0]));
+    const n = Math.max(1, Math.min(cast.length, def.spawn.length, 3)), s = newShot(set); s.chars = [];
+    for(let c = 0; c < n; c++) s.chars.push(charFromSpawn(c, def, cast[c] ? lookFor(cast[c]) : free()));
+    num = sc.num && /^\d+/.test(sc.num) ? parseInt(sc.num, 10) : num + 1;
+    const two = s.chars.length > 1 && sc.lines.length > 0;
+    if(two && cover){ faceTo(s.chars[0], s.chars[1]); faceTo(s.chars[1], s.chars[0]); }
+    const txt = act.replace(/\s+/g, ' ').trim(), first = sc.lines[0];
+    const words = (txt + ' ' + (first ? first[1] : '')).split(/\s+/).length;
+    Object.assign(s.info, { scene:sc.num || String(num), time:scriptTime(sc.head), size:def.big ? 'pg' : 'pe', dur:clamp(Math.round(words / 3), 2, 8),
+      cap:((sc.head ? sc.head + '. ' : '') + txt).slice(0, 220).trim(), dial:first ? (first[0] + L(' : ', ': ') + first[1]).slice(0, 200) : '' });
+    out.push(s);
+    if(two && cover) sc.lines.slice(1, 7).forEach(([nm, said]) => {
+      const sp = s.chars.findIndex(ch => names[ch.look] && norm(names[ch.look]) === norm(nm)); if(sp < 0) return;
+      const r = clone(s); r.id = uidS(); r.cam = camSafe(frameOTS(r.chars[sp], r.chars[sp ? 0 : 1], 50), set);
+      Object.assign(r.info, { size:'am', dur:clamp(Math.round(said.split(/\s+/).length / 2.5), 2, 8), cap:'', dial:(nm + L(' : ', ': ') + said).slice(0, 200) });
+      out.push(r);
+    });
+  });
+  return out;
+}
+function importScenes(scenes, cover){
+  if(!scenes.length) return 0;
+  endEdit(); pushUndo();
+  const shots = scriptShots(scenes, cover), one = S.doc.shots.length === 1 && !S.doc.shots[0].info.cap && !S.doc.shots[0].info.dial && !S.doc.shots[0].info.scene;
+  const at = one ? 0 : S.doc.shots.length;
+  if(one) S.doc.shots = shots; else S.doc.shots.push(...shots);
+  S.i = at; S.sel = null; S.room = null; S.target = 0; THUMBS.clear(); changed(true);
+  return shots.length;
+}
+function showScriptImport(){
+  if(document.querySelector('.imp-bd')) return;
+  const bd = document.createElement('div'); bd.className = 'modal-bd imp-bd';
+  let scenes = [], cover = lsGet('raging3d_cover') !== '0', rp = [];
+  const render = () => {
+    const nm = new Set(); scenes.forEach(s => s.names.forEach(n => nm.add(n)));
+    const nShots = scenes.length ? scenes.reduce((t, s) => t + 1 + (cover && Math.min(s.names.length, 3) > 1 ? Math.min(Math.max(s.lines.length - 1, 0), 6) : 0), 0) : 0;
+    bd.querySelector('.imp-sum').innerHTML = scenes.length ? `<b>${scenes.length} ${scenes.length > 1 ? L('scènes', 'scenes') : L('scène', 'scene')} · ${nm.size} ${nm.size > 1 ? L('personnages', 'characters') : L('personnage', 'character')} → ${nShots} ${nShots > 1 ? L('plans', 'shots') : L('plan', 'shot')}</b>
+      <ol>${scenes.slice(0, 5).map(s => { const st = SETS.find(x => x.id === scriptSet(s.head)); return `<li><span>${esc(s.head || L('(sans en-tête)', '(no heading)'))}</span><i>${esc(L(st.fr, st.en))} · ${esc(L(TIMES[scriptTime(s.head)].fr, TIMES[scriptTime(s.head)].en))}</i></li>`; }).join('')}${scenes.length > 5 ? `<li class="more">${L('et ', 'and ') + (scenes.length - 5) + L(' autres', ' more')}</li>` : ''}</ol>`
+      : `<span>${L('Colle un scénario, ouvre un fichier ou choisis un projet : l’aperçu s’affiche ici.', 'Paste a script, open a file or pick a project: the preview shows here.')}</span>`;
+    bd.querySelector('[data-r="1"]').disabled = !scenes.length;
+  };
+  bd.innerHTML = `<div class="modal imp" role="dialog" aria-modal="true" aria-labelledby="impT"><h3 id="impT">${L('Importer un scénario', 'Import a script')}</h3>
+    <p>${L('Chaque scène devient un plan prêt à cadrer : le lieu, le moment de la journée, les personnages avec leur nom, l’action et la réplique. Tu n’as plus qu’à choisir le cadrage.', 'Each scene becomes a shot ready to frame: the place, the time of day, the named characters, the action and the line. You only pick the framing.')}</p>
+    <div class="imp-rp" hidden></div>
+    <label class="fld"><span>${L('Colle ton scénario', 'Paste your script')}</span><textarea id="impText" rows="6" spellcheck="false" placeholder="${esc(L('INT. CAFÉ – JOUR\n\nPaul attend, devant deux cafés.\n\nLÉA\nJe sais. J’ai une nouvelle.', 'INT. CAFÉ – DAY\n\nPaul waits, two coffees on the table.\n\nLÉA\nI know. I have news.'))}"></textarea></label>
+    <div class="imp-row"><label class="btn btn-sm btn-ghost">${icon('text')}${L('Ouvrir un fichier (.fountain, .txt)', 'Open a file (.fountain, .txt)')}<input type="file" id="impFile" accept=".fountain,.txt,.spmd,text/plain" hidden></label>
+      <div class="seg"><button data-cv="0" class="${cover ? '' : 'on'}">${L('Un plan par scène', 'One shot per scene')}</button><button data-cv="1" class="${cover ? 'on' : ''}" title="${esc(L('Le plan large, puis une amorce par réplique (jusqu’à 6 par scène)', 'The wide shot, then an over-the-shoulder per line (up to 6 per scene)'))}">${L('+ champ-contrechamp', '+ shot / reverse')}</button></div></div>
+    <div class="imp-sum" aria-live="polite"></div>
+    <div class="modal-f"><button class="btn btn-ghost" data-r="0">${L('Annuler', 'Cancel')}</button><button class="btn btn-primary" data-r="1" disabled>${L('Créer les plans', 'Create the shots')}</button></div></div>`;
+  document.body.appendChild(bd); render();
+  const ta = bd.querySelector('#impText');
+  ta.addEventListener('input', () => { bd.querySelectorAll('.imp-p.on').forEach(b => b.classList.remove('on')); scenes = parseScript(ta.value); render(); });
+  bd.querySelector('#impFile').addEventListener('change', e => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = () => { ta.value = String(r.result || ''); ta.dispatchEvent(new Event('input')); }; r.readAsText(f); });
+  rpProjects().then(list => { rp = list; const box = bd.querySelector('.imp-rp'); if(!list.length || !box) return; box.hidden = false;
+    box.innerHTML = `<span class="lbl">${L('Depuis Raging Page', 'From Raging Page')}</span><div class="imp-ps">${list.slice(0, 8).map((p, k) => `<button class="imp-p" data-p="${k}">${icon('text')}<span><b>${esc(p.title)}</b><small>${p.scenes.length} ${p.scenes.length > 1 ? L('scènes', 'scenes') : L('scène', 'scene')}</small></span></button>`).join('')}</div>`; }).catch(() => {});
+  const done = () => { bd.remove(); document.removeEventListener('keydown', key, true); };
+  const key = e => { if(e.key === 'Escape'){ e.stopPropagation(); done(); } };
+  document.addEventListener('keydown', key, true);
+  bd.addEventListener('click', e => {
+    const p = e.target.closest('.imp-p'), cv = e.target.closest('[data-cv]'), r = e.target.closest('[data-r]');
+    if(p){ bd.querySelectorAll('.imp-p').forEach(b => b.classList.toggle('on', b === p)); scenes = rp[+p.dataset.p].scenes; ta.value = ''; render(); }
+    else if(cv){ cover = cv.dataset.cv === '1'; lsSet('raging3d_cover', cover ? '1' : '0'); bd.querySelectorAll('[data-cv]').forEach(b => b.classList.toggle('on', b === cv)); render(); }
+    else if(r){ if(r.dataset.r === '1'){ const n = importScenes(scenes, cover); toast(n + L(' plans créés depuis le scénario. Choisis maintenant le cadrage de chacun.', ' shots created from the script. Now pick the framing of each.')); } done(); }
+    else if(e.target === bd) done();
+  });
+  setTimeout(() => ta.focus(), 30);
+}
+/* la liste des plans, pour le tableur de la production (Excel, Numbers, Google Sheets) */
+function exportCSV(){
+  const fr = getLang() !== 'en', sep = fr ? ';' : ',', q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
+  const head = [L('Plan', 'Shot'), L('Scène', 'Scene'), L('En-tête', 'Heading'), L('Lieu', 'Place'), L('Valeur', 'Size'), L('Angle', 'Angle'), L('Mouvement', 'Move'), L('Durée (s)', 'Duration (s)'), L('Personnages', 'Characters'), L('Action', 'Action'), L('Dialogue ou son', 'Dialogue or sound'), L('Transition', 'Transition')];
+  const rows = S.doc.shots.map((s, i) => { const st = SETS.find(x => x.id === s.set) || {}, tr = TRANS.find(t => t[0] === s.info.trans);
+    const who = s.chars.map((ch, c) => (S.doc.names && S.doc.names[ch.look]) || L(lookOf(ch, c).fr, lookOf(ch, c).en)).join(', ');
+    return [i + 1, s.info.scene, slugOf(s), L(st.fr, st.en), shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), String(s.info.dur || 2).replace('.', fr ? ',' : '.'), who, s.info.cap, s.info.dial, tr ? L(tr[1], tr[2]) : ''].map(q).join(sep); });
+  downloadBlob(new Blob(['﻿' + [head.map(q).join(sep)].concat(rows).join('\r\n')], { type:'text/csv;charset=utf-8' }), (S.doc.title || 'storyboard').replace(/[\\/:*?"<>|]+/g, '').trim() + L(' - liste des plans.csv', ' - shot list.csv'));
+  toast(L('Liste des plans exportée : elle s’ouvre dans Excel, Numbers ou Google Sheets.', 'Shot list exported: it opens in Excel, Numbers or Google Sheets.'));
+}
+
 /* ---------- Confirmation ---------- */
 function ask(title, msg, okLabel){
   return new Promise(res => {
@@ -950,6 +1168,9 @@ const ACT = {
   exportMenu:() => document.getElementById('exportMenu').classList.toggle('hidden'),
   exportPdf:b => { closeMenus(); exportPdf(+b.dataset.per); },
   exportImage:() => { closeMenus(); exportImage(); },
+  exportCSV:() => { closeMenus(); exportCSV(); },
+  charCol:(b, e) => { if(e) e.preventDefault(); setCharCol(b.dataset.k, b.dataset.v); },
+  scriptImport:() => { closeMenus(); showScriptImport(); },
   exportVideo:() => { closeMenus(); exportVideo(); },
   cancelRec:() => { if(S.rec) S.rec.cancel = true; },
   place:b => { setPlace(b.dataset.id); if(S.panel === 'car' && b.dataset.id === 'taxi') renderPanel(); },
@@ -958,6 +1179,7 @@ const ACT = {
   gaze:b => { const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(ch) edit(() => { if(b.dataset.v === '') delete ch.gaze; else ch.gaze = b.dataset.v === 'cam' ? 'cam' : +b.dataset.v; }); },
   arrowLen:b => { const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(ch) edit(() => { const v = +b.dataset.v; if(!v) delete ch.arrow; else ch.arrow = Object.assign({ dir:'f' }, ch.arrow || {}, { len:v }); }); },
   arrowDir:b => { const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(ch && ch.arrow) edit(() => { ch.arrow.dir = b.dataset.v; }); },
+  photoPick:() => { const f = document.getElementById('photoFile'); if(!f) return; f.onchange = () => { if(f.files[0]) importPhoto(f.files[0]); f.value = ''; }; f.click(); },
   addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), gear:b => setGear(b.dataset.id), outfit:b => setOutfit(b.dataset.id), faceThem, lookAt:lookAtOther,
   spot:b => placeAt(+b.dataset.k), side:b => frameSide(b.dataset.v),
   playBoard:() => playBoard(), stopBoard, previewShot:() => playBoard(S.i),
@@ -1052,6 +1274,7 @@ function bindEvents(){
     }
   });
   document.addEventListener('change', e => {
+    if(e.target.dataset && e.target.dataset.colk){ setCharCol(e.target.dataset.colk, e.target.value); return; }
     const t = e.target;
     if(t.dataset.act === 'axis' || t.dataset.act === 'root' || t.dataset.act === 'crowdSet' || t.dataset.act === 'vehAlt'){ pushUndo(sliderSnap); sliderSnap = null; changed(); }
     if(t.id === 'fName' && capSnap){ pushUndo(capSnap); capSnap = null; renderUI(); }
@@ -1065,6 +1288,10 @@ function bindEvents(){
   });
   const c = R.canvas;
   c.addEventListener('pointerdown', onDown); c.addEventListener('pointermove', onMove); c.addEventListener('pointerup', onUp); c.addEventListener('pointercancel', onUp);
+  // glisser une image sur la vue 3D : elle devient le décor du plan (« Ma photo »)
+  c.addEventListener('dragover', e => { if([...(e.dataTransfer.items || [])].some(i => i.kind === 'file')){ e.preventDefault(); c.classList.add('drop'); } });
+  c.addEventListener('dragleave', () => c.classList.remove('drop'));
+  c.addEventListener('drop', e => { c.classList.remove('drop'); const f = [...(e.dataTransfer.files || [])].find(x => /^image\//.test(x.type)); if(f){ e.preventDefault(); importPhoto(f); } });
   c.addEventListener('pointerleave', () => { if(!DRAG.mode && S.hover){ S.hover = null; requestRender(); renderHint(); } });
   c.addEventListener('wheel', onWheel, { passive:false });
   c.addEventListener('dblclick', onDblClick);

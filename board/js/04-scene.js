@@ -136,7 +136,8 @@ function addChar(look){
 }
 function setOutfit(id){
   const s = shot(), t = S.sel ? S.sel.c : S.target, ch = s.chars[t]; if(!ch) return;
-  edit(() => { if(id && id !== 'base') ch.outfit = id; else delete ch.outfit; });
+  edit(() => { if(id && id !== 'base') ch.outfit = id; else delete ch.outfit;
+    const c = S.doc.colors && S.doc.colors[ch.look]; if(c){ delete c.top; delete c.bottom; if(!Object.keys(c).length) delete S.doc.colors[ch.look]; } });
 }
 function removeChar(c){
   const s = shot(); if(s.chars.length < 2 || !s.chars[c]) return;
@@ -472,6 +473,44 @@ function frameAt(sh, t){
    Un bouton montre exactement ce qui sera enregistré : sans transparence, sans poignées, sans grille. */
 function setFinal(on){ S.final = on == null ? !S.final : on; renderTools(); if(typeof renderView === 'function') renderView(); requestRender(); }
 
+/* ---------- Ma photo comme décor ----------
+   La photo est rangée à part, dans la base du navigateur (IndexedDB) : une photo pèse trop lourd pour
+   le petit stockage où vivent les storyboards. Le plan ne garde que son numéro. Le fichier .rboard,
+   lui, emporte les photos avec le storyboard. */
+const PHOTOS = new Map();
+let _phDB = null;
+function photoDB(){
+  if(_phDB) return _phDB;
+  return _phDB = new Promise(ok => { try{ const r = indexedDB.open('raging3d_photos', 1);
+    r.onupgradeneeded = () => { try{ r.result.createObjectStore('p'); }catch(e){} }; r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); r.onblocked = () => ok(null);
+  }catch(e){ ok(null); } });
+}
+async function photoPut(id, url){ PHOTOS.set(id, url); const db = await photoDB(); if(!db) return false;
+  return new Promise(ok => { try{ const t = db.transaction('p', 'readwrite'); t.objectStore('p').put(url, id); t.oncomplete = () => ok(true); t.onerror = () => ok(false); }catch(e){ ok(false); } }); }
+async function photoGet(id){ if(PHOTOS.has(id)) return PHOTOS.get(id); const db = await photoDB(); if(!db) return null;
+  return new Promise(ok => { try{ const q = db.transaction('p').objectStore('p').get(id); q.onsuccess = () => { if(q.result) PHOTOS.set(id, q.result); ok(q.result || null); }; q.onerror = () => ok(null); }catch(e){ ok(null); } }); }
+/* à l'ouverture d'un storyboard : on va chercher ses photos, puis on redessine */
+async function loadPhotos(doc){
+  const ids = [...new Set((doc.shots || []).map(s => s.photo).filter(Boolean))].filter(id => !PHOTOS.has(id));
+  if(!ids.length) return; await Promise.all(ids.map(photoGet));
+  THUMBS.clear(); if(typeof renderStrip === 'function') renderStrip(); requestRender();
+}
+/* importer une photo : réduite à 1600 px au plus (légère, nette), puis le plan prend « Ma photo » pour décor */
+function importPhoto(file){
+  if(!file || !/^image\//.test(file.type)){ toast(L('Choisis une image (JPG, PNG…).', 'Pick an image (JPG, PNG…).'), 'warn'); return; }
+  const r = new FileReader();
+  r.onload = () => { const im = new Image(); im.onload = async () => {
+    const k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+    c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', 0.85), id = 'ph' + uidS();
+    const kept = await photoPut(id, url);
+    const s = shot(); if(s.set !== 'photo') setPlace('photo');
+    edit(() => { s.photo = id; }); THUMBS.clear(); renderUI(); requestRender();
+    toast(kept ? L('Ta photo est le décor de ce plan. Place les personnages, puis cale la caméra sur la photo.', 'Your photo is this shot’s set. Place the characters, then line the camera up with the photo.')
+      : L('Photo posée, mais ce navigateur ne peut pas la garder : enregistre le fichier .rboard pour ne pas la perdre.', 'Photo placed, but this browser can’t keep it: save the .rboard file so you don’t lose it.'), kept ? '' : 'warn');
+  }; im.onerror = () => toast(L('Cette image ne s’ouvre pas.', 'This image can’t be opened.'), 'warn'); im.src = r.result; };
+  r.readAsDataURL(file);
+}
 /* ---------- Caméra ---------- */
 function camEyeRaw(c){
   const y = c.yaw * D2R, p = c.pitch * D2R;
@@ -741,6 +780,9 @@ function initMeshes(){
   const g = geo(), C = [0.08, 0.09, 0.11];
   for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, b = (i + 1) / 16 * Math.PI * 2; tri(g, [0, 0, 0], [Math.sin(b) * 0.36, 0, Math.cos(b) * 0.36], [Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36], C); }
   R.blob = GL.mesh(g);
+  { const gg = geo(), C = [1, 1, 1];   // la grille du sol de « Ma photo » : un carré de 12 m, un trait par mètre
+    for(let k = -6; k <= 6; k++){ quad(gg, [k - 0.008, 0.002, -6], [k - 0.008, 0.002, 6], [k + 0.008, 0.002, 6], [k + 0.008, 0.002, -6], C); quad(gg, [-6, 0.002, k - 0.008], [6, 0.002, k - 0.008], [6, 0.002, k + 0.008], [-6, 0.002, k + 0.008], C); }
+    R.phGrid = GL.mesh(gg); }
   { const a = geo(), b = geo(), C = [1, 1, 1];   // la flèche : un trait (largeur 1, longueur 1) et une pointe
     quad(a, [-0.5, 0, 0], [-0.5, 0, 1], [0.5, 0, 1], [0.5, 0, 0], C); tri(b, [-0.5, 0, 0], [0, 0, 1], [0.5, 0, 0], C);
     R.arShaft = GL.mesh(a); R.arHead = GL.mesh(b); }
@@ -795,7 +837,7 @@ const GHOST_C = hexRGB('#5B8FD6'), BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A0
    dedans, la nuit, ce sont les lampes : plus chaud et un peu plus sombre. Les personnages restent toujours lisibles. */
 const TIMES = {
   day:{ fr:'Jour', en:'Day' },
-  dusk:{ fr:'Fin de journée', en:'Golden hour', sky:{ top:'#41507E', hor:'#F2AA6C', low:'#5E5050' }, out:[1.07, 0.86, 0.7], in:[1.03, 0.92, 0.8], ch:[1.05, 0.93, 0.84] },
+  dusk:{ fr:'Soir', en:'Dusk', sky:{ top:'#41507E', hor:'#F2AA6C', low:'#5E5050' }, out:[1.07, 0.86, 0.7], in:[1.03, 0.92, 0.8], ch:[1.05, 0.93, 0.84] },
   night:{ fr:'Nuit', en:'Night', sky:{ top:'#060A15', hor:'#1B2740', low:'#0D1017' }, out:[0.36, 0.44, 0.66], in:[0.8, 0.72, 0.58], ch:[0.66, 0.72, 0.9], chIn:[0.92, 0.85, 0.74] },
 };
 function envOf(sh){
@@ -858,7 +900,9 @@ function drawFrame(sh, w, h, clean, o){
   const vp = viewProj(cam, w / h), eye = camEye(cam);
   const E = envOf(sh);
   GL.begin(w, h, vp, E.bg, E);
-  if(E.sky) GL.drawSky(vp, hexRGB(E.sky.top), hexRGB(E.sky.hor), hexRGB(E.sky.low), 0, w / h);
+  const ph = sh.set === 'photo' && sh.photo && PHOTOS.get(sh.photo), phT = ph && GL.photoTex(ph, () => { THUMBS.clear(); if(typeof renderStrip === 'function') renderStrip(); requestRender(); });
+  if(phT){ const fbx = S.doc && S.doc.shots.indexOf(sh) >= 0 && frameBox(w, h); GL.drawPhoto(phT, fbx ? fbx.w / fbx.h : w / h); }
+  else if(E.sky) GL.drawSky(vp, hexRGB(E.sky.top), hexRGB(E.sky.hor), hexRGB(E.sky.low), 0, w / h);
   // en travaillant, le décor qui cache un personnage devient transparent ; à l'export, il reste en place
   const chars = (o && o.chars) || sh.chars, mats = chars.map(ch => charMatrices(gazed(ch, cam, chars)));
   // on ne perce le décor que pour ceux qu'il cache vraiment (vérifié à l'arrêt), et pour celui qu'on déplace :
@@ -867,7 +911,8 @@ function drawFrame(sh, w, h, clean, o){
   const tube = [];
   GL.view(eye, tube.map(c => M4.apply(mats[c].chest, [0, 0.12, 0])));
   const SM = setMesh(sh.set);
-  drawSet(SM, sh, cam, { vc:true }, !fast);
+  if(sh.set !== 'photo') drawSet(SM, sh, cam, { vc:true }, !fast);
+  else if(!final){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.disable(gl.CULL_FACE); GL.draw(R.phGrid, { flat:true, col:[1, 1, 1], a:0.38 }); gl.enable(gl.CULL_FACE); gl.depthMask(true); gl.disable(gl.BLEND); }   // la grille du sol : pour caler la caméra sur la photo
   (sh.vehicles || []).forEach(v => { const M = vehMat(v); GL.draw(vehMesh(v), { m:M, vc:true, floor:v.y || 0 }); if(!fast){ gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(vehLines(v), { m:M, flat:true, lines:true, col:INK, a:0.3 }); gl.depthMask(true); gl.disable(gl.BLEND); } });
   // une ombre douce sous chaque personnage (trois disques très légers, pas de calcul d'ombre)
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
@@ -1158,6 +1203,8 @@ function onDown(e){
   const hit = e.button === 0 && !e.shiftKey ? pickAt(x, y) : null;
   if(hit){
     S.sel = Object.assign(hit, { pick:true }); S.target = hit.c; S.crowd = -1; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
+    // attraper une main ou un pied : tout le membre suit (Alt garde l'ancienne façon, articulation par articulation)
+    DRAG.ik = DRAG.mode === 'pose' && IK_CHAIN[hit.j] && !e.altKey && S.ikOn !== false ? ikStart(hit.c, hit.j) : null;
     if(DRAG.mode === 'pose' && S.panel !== 'pose'){ S.panel = 'pose'; lsSet(LS_PANEL, 'pose'); }
     if(DRAG.mode === 'move'){ const ch = shot().chars[hit.c], g = groundAt(x, y, 0); DRAG.grab = g ? [ch.root.x - g[0], ch.root.z - g[1]] : null; }
     renderSide(); renderTools(); renderHint(); requestRender();
@@ -1210,6 +1257,9 @@ function onMove(e){
   if(Math.abs(dx) + Math.abs(dy) > 0) DRAG.moved = true;
   if(DRAG.mode === 'orbit') camGesture(cam, () => { cam.yaw -= dx * 0.3; cam.pitch = clamp(cam.pitch + dy * 0.25, -88, 85); });
   else if(DRAG.mode === 'pan') camGesture(cam, () => panBy(cam, dx, dy));
+  else if(DRAG.mode === 'pose' && DRAG.ik){
+    const [x, y] = canvasXY(e); ikDrag(DRAG.ik, x, y); renderSide(true);
+  }
   else if(DRAG.mode === 'pose'){
     const J = JOINT[S.sel.j], v = shot().chars[S.sel.c].j[J.id], k = 0.5;
     // glisser vers le haut lève ou plie ; vers le côté, la deuxième façon de bouger
@@ -1227,7 +1277,7 @@ function onMove(e){
 function onUp(e){
   DRAG.pts.delete(e.pointerId);
   if(!DRAG.mode || DRAG.pts.size) return;
-  const m = DRAG.mode; DRAG.mode = null; R.canvas.style.cursor = 'grab';
+  const m = DRAG.mode; DRAG.mode = null; DRAG.ik = null; R.canvas.style.cursor = 'grab';
   if(!DRAG.moved){
     if((m === 'orbit' || m === 'pan') && S.sel){ S.sel = null; renderSide(); renderHint(); requestRender(); }
     return;
@@ -1269,6 +1319,43 @@ function hoverCheck(e){
   if(!same){ S.hover = h; requestRender(); renderHint(); }
 }
 
+/* ---------- Poser à la main : on attrape une main (ou un pied) et le membre entier suit ----------
+   Le point attrapé glisse dans un plan face à la caméra ; on cherche les angles de l'épaule, du coude et du
+   poignet (ou de la hanche, du genou et de la cheville) qui l'y amènent, sans sortir des limites du corps.
+   Quelques dizaines d'essais par mouvement de souris : fluide même sur un vieil ordinateur. */
+const IK_CHAIN = { handL:['armL', 'foreL', 'handL'], handR:['armR', 'foreR', 'handR'], foreL:['armL', 'foreL'], foreR:['armR', 'foreR'],
+  footL:['thighL', 'shinL', 'footL'], footR:['thighR', 'shinR', 'footR'], shinL:['thighL', 'shinL'], shinR:['thighR', 'shinR'] };
+const IK_PT = { handL:[0, -0.075, 0.012], handR:[0, -0.075, 0.012], footL:[0, -0.05, 0.06], footR:[0, -0.05, 0.06], foreL:[0, -0.25, 0], foreR:[0, -0.25, 0], shinL:[0, -0.4, 0], shinR:[0, -0.4, 0] };
+function ikStart(c, j){
+  const ch = shot().chars[c], M = charMatrices(ch), p = M4.apply(M[j], IK_PT[j]), cam = viewCam(), e = camEye(cam);
+  const n = [cam.tx - e[0], cam.ty - e[1], cam.tz - e[2]], l = Math.hypot(...n) || 1;
+  return { c, j, chain:IK_CHAIN[j], p0:p, n:n.map(v => v / l) };
+}
+function rayAt(x, y){
+  const w = R.canvas.width, h = R.canvas.height, inv = M4.invert(viewProj(viewCam(), w / h)), nx = x / w * 2 - 1, ny = 1 - y / h * 2;
+  const a = M4.apply(inv, [nx, ny, -1]), b = M4.apply(inv, [nx, ny, 1]); return [a, [b[0] - a[0], b[1] - a[1], b[2] - a[2]]];
+}
+function ikDrag(K, x, y){
+  const ch = shot().chars[K.c]; if(!ch) return;
+  const [o, d] = rayAt(x, y), den = d[0] * K.n[0] + d[1] * K.n[1] + d[2] * K.n[2]; if(Math.abs(den) < 1e-6) return;
+  const t = ((K.p0[0] - o[0]) * K.n[0] + (K.p0[1] - o[1]) * K.n[1] + (K.p0[2] - o[2]) * K.n[2]) / den, T = [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t];
+  ikSolve(ch, K.j, K.chain, T);
+}
+function ikSolve(ch, j, chain, T){
+  const free = []; chain.forEach(id => JOINT[id].ax.forEach((a, i) => free.push([id, i])));
+  const orig = {}; chain.forEach(id => orig[id] = (ch.j[id] || []).slice());
+  const err = () => { const M = charMatrices(ch), q = M4.apply(M[j], IK_PT[j]); let e = (q[0] - T[0]) ** 2 + (q[1] - T[1]) ** 2 + (q[2] - T[2]) ** 2;
+    for(const [id, i] of free) e += 0.0000015 * ((ch.j[id][i] || 0) - (orig[id][i] || 0)) ** 2; return e; };
+  let best = err(), step = 8, n = 0;
+  while(step > 0.5 && n < 260){
+    let better = false;
+    for(const [id, i] of free){ const lim = JOINT[id].ax[i];
+      for(const dd of [step, -step]){ const old = ch.j[id][i] || 0; ch.j[id][i] = clamp(old + dd, lim[2], lim[3]); n++;
+        const e = err(); if(e < best - 1e-9){ best = e; better = true; } else ch.j[id][i] = old; } }
+    if(!better) step /= 2;
+  }
+  chain.forEach(id => ch.j[id] = ch.j[id].map(v => Math.round(v * 10) / 10));
+}
 /* ---------- Se déplacer : le pavé à l'écran et le clavier (ZQSD ou WASD, flèches haut et bas) ----------
    On maintient un bouton ou une touche : la caméra avance tant qu'on appuie. */
 const NAV = { held:null, last:0, snap:null, keys:new Set() };

@@ -14,10 +14,20 @@ const docDur = d => d.shots.reduce((t, s) => t + ((s.info && s.info.dur) || 2), 
 
 /* l'enregistrement du storyboard ouvert : son contenu, et sa fiche dans la liste (titre, plans, vignette) */
 let _libThumbT = 0;
+/* le filet de sécurité : si le navigateur est plein, on le dit tout de suite (au lieu de perdre le travail en silence),
+   et après quelques jours de travail sans copie, on propose une fois de garder le storyboard en fichier */
+let _saveFail = false, _bakAsked = {};
 function persistDoc(json){
-  lsSet(docKey(S.docId), json);
+  let ok = true; try{ localStorage.setItem(docKey(S.docId), json); }catch(err){ ok = false; }
+  if(!ok && !_saveFail) toast(L('Le navigateur est plein : ce storyboard n’est plus enregistré ici. Garde-le en fichier tout de suite.', 'The browser is full: this storyboard is no longer saved here. Keep it as a file right now.'), 'warn', [L('Enregistrer le fichier', 'Save the file'), () => exportBoardFile(S.docId)]);
+  _saveFail = !ok;
   const lib = libGet(), e = lib.find(x => x.id === S.docId) || (lib.unshift({ id:S.docId }), lib[0]);
   Object.assign(e, { title:S.doc.title || '', n:S.doc.shots.length, dur:docDur(S.doc), upd:Date.now() });
+  if(!e.seen) e.seen = Date.now();
+  if(ok && !_bakAsked[S.docId] && S.doc.shots.length >= 6 && Date.now() - (e.bak || e.seen) > 3 * 864e5){
+    _bakAsked[S.docId] = true;
+    toast(L('Ton storyboard n’existe que dans ce navigateur. Une copie en fichier, au cas où ?', 'Your storyboard only lives in this browser. A copy as a file, just in case?'), 'warn', [L('Enregistrer une copie', 'Save a copy'), () => exportBoardFile(S.docId)]);
+  }
   libSet(lib);
   clearTimeout(_libThumbT); _libThumbT = setTimeout(() => { const l = libGet(), x = l.find(y => y.id === S.docId); if(!x || !S.doc) return; const u = thumbOf(0); if(u){ x.thumb = u; libSet(l); } }, 1200);
 }
@@ -64,16 +74,21 @@ async function delBoard(id){
   renderHome();
 }
 /* le fichier .rboard : tout le storyboard, pour le garder ou changer d'ordinateur */
-function exportBoardFile(id){
+async function exportBoardFile(id){
   const o = id === S.docId && S.doc ? { doc:S.doc } : readDoc(id); if(!o) return;
-  const blob = new Blob([JSON.stringify({ app:'raging-board', v:1, doc:o.doc })], { type:'application/json' });
+  // les photos « Ma photo » partent avec le storyboard (sinon, sur un autre ordinateur, le décor manquerait)
+  const photos = {}; for(const pid of new Set(o.doc.shots.map(s => s.photo).filter(Boolean))){ const u = await photoGet(pid); if(u) photos[pid] = u; }
+  const blob = new Blob([JSON.stringify({ app:'raging-board', v:1, doc:o.doc, photos })], { type:'application/json' });
   downloadBlob(blob, safeName(o.doc.title || 'storyboard') + '.rboard');
+  const lib = libGet(), e = lib.find(x => x.id === id); if(e){ e.bak = Date.now(); libSet(lib); }
 }
 function importBoardFile(file){
   const r = new FileReader();
   r.onload = () => { try{ const o = JSON.parse(r.result), d = o.doc || o;
       if(!(d && d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set]))) throw 0;
-      d.shots.forEach(fixShot); addBoard(d, true); toast(L('Storyboard ouvert.', 'Storyboard opened.'));
+      d.shots.forEach(fixShot);
+      const ph = o.photos && typeof o.photos === 'object' ? o.photos : {};
+      Promise.all(Object.keys(ph).filter(k => typeof ph[k] === 'string' && ph[k].startsWith('data:image/')).map(k => photoPut(k, ph[k]))).then(() => { addBoard(d, true); toast(L('Storyboard ouvert.', 'Storyboard opened.')); });
     }catch(e){ toast(L('Ce fichier n’est pas un storyboard Raging Board.', 'This file isn’t a Raging Board storyboard.'), 'warn'); } };
   r.readAsText(file);
 }
@@ -103,6 +118,7 @@ function showEditor(){
   document.body.classList.remove('on-home');
   const h = document.getElementById('home'); if(h) h.innerHTML = '';
   renderUI(); fitStage(); requestRender(); showIntro();
+  if(S.doc) loadPhotos(S.doc);   // les photos « Ma photo » arrivent de la base du navigateur, puis on redessine
 }
 const timeAgo = t => {
   const s = (Date.now() - t) / 1000;
