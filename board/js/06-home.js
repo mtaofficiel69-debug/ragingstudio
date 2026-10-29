@@ -43,6 +43,7 @@ function migrateLib(){
 }
 function readDoc(id){
   try{ const o = JSON.parse(lsGet(docKey(id)) || 'null'); const d = o && (o.doc || o);
+    if(d) syncMaps(d);
     if(d && d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set])){ d.shots.forEach(fixShot); if(!d.style) d.style = 'color'; return { doc:d, i:clamp((o && o.i) || 0, 0, d.shots.length - 1) }; }
   }catch(e){}
   return null;
@@ -77,7 +78,7 @@ async function delBoard(id){
 async function exportBoardFile(id){
   const o = id === S.docId && S.doc ? { doc:S.doc } : readDoc(id); if(!o) return;
   // les photos « Ma photo » partent avec le storyboard (sinon, sur un autre ordinateur, le décor manquerait)
-  const photos = {}; for(const pid of new Set(o.doc.shots.map(s => s.photo).filter(Boolean))){ const u = await photoGet(pid); if(u) photos[pid] = u; }
+  const photos = {}; for(const pid of new Set(o.doc.shots.map(s => s.photo).concat(mapImages(o.doc)).filter(Boolean))){ const u = await photoGet(pid); if(u) photos[pid] = u; }
   const blob = new Blob([JSON.stringify({ app:'raging-board', v:1, doc:o.doc, photos })], { type:'application/json' });
   downloadBlob(blob, safeName(o.doc.title || 'storyboard') + '.rboard');
   const lib = libGet(), e = lib.find(x => x.id === id); if(e){ e.bak = Date.now(); libSet(lib); }
@@ -85,6 +86,7 @@ async function exportBoardFile(id){
 function importBoardFile(file){
   const r = new FileReader();
   r.onload = () => { try{ const o = JSON.parse(r.result), d = o.doc || o;
+      if(d) syncMaps(d);
       if(!(d && d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set]))) throw 0;
       d.shots.forEach(fixShot);
       const ph = o.photos && typeof o.photos === 'object' ? o.photos : {};

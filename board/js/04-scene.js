@@ -62,6 +62,7 @@ function load(){
     const o = JSON.parse(lsGet(LS_SCENE) || 'null'); if(!o) return false;
     // version 2 : la planche ; version 1 (la toute première) : chaque clé devient un plan
     const d = o.doc || o;
+    syncMaps(d);
     if(d.v === 2 && Array.isArray(d.shots) && d.shots.length && d.shots.every(s => SET_DEF[s.set])){ d.shots.forEach(fixShot); if(!d.style) d.style = 'color'; S.doc = d; S.i = clamp(o.i || 0, 0, d.shots.length - 1); return true; }
     if(d.v === 1 && SET_DEF[d.set] && Array.isArray(d.keys) && d.keys.length){
       S.doc = { v:2, title:d.title, style:'color', shots:d.keys.map(k => fixShot({ id:uidS(), set:d.set, chars:k.chars, cam:k.cam })) };
@@ -74,11 +75,12 @@ function load(){
 /* ---------- Annuler / rétablir ---------- */
 function snapshot(){ return docJSON(); }
 function pushUndo(snap){ S.undo.push(snap || snapshot()); if(S.undo.length > 80) S.undo.shift(); S.redo = []; }
-function restore(str){ endEdit(); const o = JSON.parse(str); S.doc = o.doc; S.i = clamp(o.i, 0, S.doc.shots.length - 1); S.sel = null; S.target = 0; THUMBS.clear(); changed(true); }
+function restore(str){ endEdit(); const o = JSON.parse(str); S.doc = o.doc; syncMaps(S.doc); S.i = clamp(o.i, 0, S.doc.shots.length - 1); S.sel = null; S.target = 0; THUMBS.clear(); changed(true); }
 function undo(){ if(!S.undo.length) return; S.redo.push(snapshot()); restore(S.undo.pop()); }
 function redo(){ if(!S.redo.length) return; S.undo.push(snapshot()); restore(S.redo.pop()); }
 /* après chaque changement : on enregistre, on redessine, on met à jour la vignette */
 function changed(all){
+  syncMaps(S.doc);
   if(S.target >= shot().chars.length) S.target = 0;
   save(); if(all){ renderUI(); } else { renderPanel(); renderHead(); renderTop(); }
   requestRender(); thumbLater(S.i, all);
@@ -342,7 +344,7 @@ function addVehicle(kind){
    Le calcul ne se fait qu'au moment où l'on règle la hauteur : rien de plus à chaque image. */
 function itemSize(v){
   const D = VEH_DEF[v.kind] || {};
-  if(D.obj){ const s = D.sh || [0.3, 0.3]; return [s[0], s[1], Math.max(0.15, (D.label || 1) - 0.22)]; }
+  if(D.obj){ const s = D.sh || [0.3, 0.3]; return [s[0], s[1], D.h || Math.max(0.15, (D.label || 1) - 0.22)]; }
   const H = VEH_HULL[v.kind] || [[0, 0.5, 0, 0.5, 0.5, 0.5]];
   return [Math.max(...H.map(h => Math.abs(h[0]) + h[3])), Math.max(...H.map(h => Math.abs(h[2]) + h[5])), Math.max(...H.map(h => h[1] + h[4]))];
 }
@@ -546,8 +548,9 @@ async function photoPut(id, url){ PHOTOS.set(id, url); const db = await photoDB(
 async function photoGet(id){ if(PHOTOS.has(id)) return PHOTOS.get(id); const db = await photoDB(); if(!db) return null;
   return new Promise(ok => { try{ const q = db.transaction('p').objectStore('p').get(id); q.onsuccess = () => { if(q.result) PHOTOS.set(id, q.result); ok(q.result || null); }; q.onerror = () => ok(null); }catch(e){ ok(null); } }); }
 /* à l'ouverture d'un storyboard : on va chercher ses photos, puis on redessine */
+const mapImages = doc => ((doc && doc.maps) || []).flatMap(m => [m.floor, m.wall, m.ceil].map(f => f && f.k === 'img' && f.img)).filter(Boolean);
 async function loadPhotos(doc){
-  const ids = [...new Set((doc.shots || []).map(s => s.photo).filter(Boolean))].filter(id => !PHOTOS.has(id));
+  const ids = [...new Set((doc.shots || []).map(s => s.photo).concat(mapImages(doc)).filter(Boolean))].filter(id => !PHOTOS.has(id));
   if(!ids.length) return; await Promise.all(ids.map(photoGet));
   THUMBS.clear(); if(typeof renderStrip === 'function') renderStrip(); requestRender();
 }
@@ -835,9 +838,18 @@ function camGesture(c, fn, zoom){
 const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new Map(), scale:1 };
 function setMesh(id){
   if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), gl:GL.mesh(edgeLines(o.g)), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)), levelsL:o.levels.map(l => GL.mesh(edgeLines(l))),
-    panes:o.panes ? GL.mesh(o.panes) : null, levelPanes:o.levelPanes.map(l => l ? GL.mesh(l) : null) }; }
+    panes:o.panes ? GL.mesh(o.panes) : null, levelPanes:o.levelPanes.map(l => l ? GL.mesh(l) : null), tex:o.tex.map(([key, m]) => ({ key, mesh:GL.texMesh(m) })) }; }
   return R.sets[id];
 }
+/* « Mon lieu » a changé : on le refait (ses formes, ses obstacles, ses vignettes) */
+function dropSet(id){
+  const M = R.sets && R.sets[id];
+  if(M && GL.gl){ [M.g, M.gl, M.glass, M.panes].concat(M.levels, M.levelsL, M.levelPanes).forEach(m => m && GL.free(m)); (M.tex || []).forEach(t => [t.mesh.p, t.mesh.u, t.mesh.l].forEach(b => GL.gl.deleteBuffer(b))); }
+  if(R.sets) delete R.sets[id]; delete SET_COLL[id]; delete PHYS[id];
+  [...PLACE_PREV.keys()].forEach(k => { if(k.startsWith(id + ':')) PLACE_PREV.delete(k); }); THUMBS.clear();
+}
+/* les surfaces à texture d'un lieu (les siennes, prêtes à dessiner) */
+const texList = SM => SM.tex.map(t => ({ tex:GL.texOf(t.key, texSrc(t.key)), mesh:t.mesh }));
 /* les formes d'un personnage (et de son contour), fabriquées une fois, à la demande pour les tenues */
 function lookMesh(lk){
   if(!R.parts[lk.id]){ R.parts[lk.id] = {}; R.out[lk.id] = {};
@@ -1009,7 +1021,7 @@ function drawFrame(sh, w, h, clean, o){
   const tube = [];
   GL.view(eye, tube.map(c => M4.apply(mats[c].chest, [0, 0.12, 0])));
   const SM = setMesh(sh.set);
-  if(sh.set !== 'photo'){ drawSet(SM, sh, cam, { vc:true }, !fast);
+  if(sh.set !== 'photo'){ if(SM.tex.length) GL.drawTex(texList(SM), vp, eye); drawSet(SM, sh, cam, { vc:true }, !fast);
     // les vitres des fenêtres : le dehors, vu à travers (avec les étages visibles)
     const show = SM.levels.length ? levelsShown(sh, cam) : [], pm = [SM.panes].concat(SM.levelPanes.filter((m, i) => show[i])).filter(Boolean);
     if(pm.length) GL.drawPanes(pm, vp, eye); }
@@ -1139,7 +1151,7 @@ function checkHidden(){
   const sh = shot(), cam = sh.cam, sc = 0.5, w = Math.max(1, Math.round(R.canvas.width * sc)), h = Math.max(1, Math.round(R.canvas.height * sc));
   const vp = viewProj(cam, R.canvas.width / R.canvas.height);
   GL.beginPick(w, h, vp); GL.view(camEye(cam), []);
-  drawSet(setMesh(sh.set), sh, cam, { raw:true, col:[0, 0, 0] });
+  const SM = setMesh(sh.set); drawSet(SM, sh, cam, { raw:true, col:[0, 0, 0] }); if(SM.tex.length) GL.drawTex(texList(SM), vp, camEye(cam), true);
   (sh.vehicles || []).forEach(v => GL.draw(vehMesh(v), { m:vehMat(v), raw:true, col:[0, 0, 0] }));
   const mats = sh.chars.map(ch => charMatrices(ch));
   sh.chars.forEach((ch, c) => { const P = lookMesh(lookOf(ch, c)).parts; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], raw:true, col:[(c * 32 + J.idx + 1) / 255, 0, 0] }); });
@@ -1588,7 +1600,7 @@ const OBJ_PREV = new Map();
 function objPreview(kind){
   if(OBJ_PREV.has(kind)) return OBJ_PREV.get(kind);
   const gl = GL.gl; if(!gl || S.rec) return '';
-  const D = VEH_DEF[kind], v = { kind, col:D.cols[0], x:0, y:0, z:0, ry:0 }, h = D.label - 0.25, r = Math.max(D.sh[0], D.sh[1], h / 2);
+  const D = VEH_DEF[kind], v = { kind, col:D.cols[0], x:0, y:0, z:0, ry:0 }, h = D.label - 0.25, r = Math.max(D.sh[0], D.sh[1], h / 2, D.pv || 0);
   const cam = camLook([r * 2.2, h * 0.75 + r * 0.9, r * 2.6], [0, h * 0.45, 0], 35), dk = document.documentElement.dataset.theme === 'dark';
   const url = offscreenURL(120, 96, (w, H) => {
     const vp = M4.mul(M4.persp(fovOf(cam.lens), w / H, 0.06, 320), M4.lookAt(camEyeRaw(cam), [cam.tx, cam.ty, cam.tz], [0, 1, 0]));

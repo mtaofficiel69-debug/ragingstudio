@@ -32,6 +32,8 @@ const PANELS = [
     { id:'help', ic:'help', fr:'Aide et raccourcis', en:'Help & shortcuts' } ] },
 ];
 const PANEL = Object.fromEntries(PANELS.flatMap(g => g.items).map(p => [p.id, p]));
+// « Mon lieu » s'ouvre depuis le volet Lieu (il n'a pas sa propre entrée dans la colonne)
+PANEL.mymap = { id:'mymap', fr:'Mon lieu', en:'My place', ic:'place' };
 function setPanel(id, keep){
   if(!PANEL[id]) return;
   if(S.panel === id && keep) return;
@@ -77,7 +79,7 @@ function renderRail(){
     <div class="rail-project" data-label="${esc(L('Storyboard', 'Storyboard'))}">${esc(S.doc.title || L('Sans titre', 'Untitled'))}</div>
     <nav class="rail-nav">${PANELS.map(g => `<div class="rail-group">${esc(L(g.g[0], g.g[1]))}</div>` + g.items.map(p => {
       const b = badge(p.id), off = false;
-      return `<button class="rail-item ${S.panel === p.id ? 'active' : ''} ${off ? 'dim' : ''}" data-act="panel" data-id="${p.id}" title="${esc(L(p.fr, p.en))}">${p.n ? `<i class="rn">${p.n}</i>` : icon(p.ic)}<span class="lbl">${esc(L(p.fr, p.en))}</span>${b !== '' ? `<b class="rb">${b}</b>` : ''}</button>`;
+      return `<button class="rail-item ${S.panel === p.id || (S.panel === 'mymap' && p.id === 'place') ? 'active' : ''} ${off ? 'dim' : ''}" data-act="panel" data-id="${p.id}" title="${esc(L(p.fr, p.en))}">${p.n ? `<i class="rn">${p.n}</i>` : icon(p.ic)}<span class="lbl">${esc(L(p.fr, p.en))}</span>${b !== '' ? `<b class="rb">${b}</b>` : ''}</button>`;
     }).join('')).join('')}</nav>
     <div class="rail-bottom"><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span><span>${R3_VERSION}</span></div>`;
 }
@@ -420,15 +422,83 @@ const MOVE_G = { fix:'M6 6h8v8H6z', in:'M3 10h10M10 6.5l3.5 3.5-3.5 3.5M16 4v12'
   shake:'M10 3v3M10 14v3M3 10h3M14 10h3M6 6l1.5 1.5M14 6l-1.5 1.5M6 14l1.5-1.5M14 14l-1.5-1.5', rollIn:'M4 6l12 2-1.5 8L2.5 14zM16 3a6 6 0 0 1 2 4' };
 const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-hidden="true"><path d="${d}"/></svg>`;
 
+// les objets, rangés par famille (le volet reste lisible malgré le nombre)
+const OBJ_CATS = [['home', 'Maison', 'Home'], ['work', 'Bureau et tournage', 'Office and film set'], ['street', 'Rue', 'Street'], ['nature', 'Nature', 'Outdoors'], ['misc', 'Divers', 'Misc']];
+/* ---------- « Mon lieu » : les réglages ---------- */
+const curMap = () => { const d = SET_DEF[shot().set]; return d && d.custom ? (S.doc.maps || []).find(m => m.id === d.custom) : null; };
+const TEX_THUMB = new Map();
+function texThumb(k, c){
+  const key = k + ':' + c; if(TEX_THUMB.has(key)) return TEX_THUMB.get(key);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64; cv.getContext('2d').drawImage(texCanvas(k, c), 0, 0, 128, 128, 0, 0, 64, 64);
+  const u = cv.toDataURL('image/jpeg', 0.85); TEX_THUMB.set(key, u); return u;
+}
+/* un réglage du lieu : annulable, et le lieu se refait aussitôt */
+function mapEditDo(fn){ const m = curMap(); if(!m) return; edit(() => fn(m)); }
+function mapNew(){
+  const id = uidS(), n = (S.doc.maps || []).length + 1;
+  edit(() => { S.doc.maps = (S.doc.maps || []).concat([{ id, name:L('Mon lieu ', 'My place ') + n, kind:'in', w:8, d:6, h:2.8, win:2, door:true, view:'city', floor:{ k:'parquet' }, wall:{ k:'paint' }, ceil:{ k:'paint' } }]); });
+  syncMaps(S.doc); setPlace('my_' + id); setPanel('mymap');
+}
+function mapDel(){
+  const m = curMap(); if(!m) return; const id = 'my_' + m.id;
+  edit(() => { S.doc.shots.forEach(s => { if(s.set !== id) return; const def = SET_DEF.living; s.set = 'living';
+    s.chars = s.chars.map((ch, i) => Object.assign(charFromSpawn(i, def, ch.look), ch.outfit ? { outfit:ch.outfit } : {})); s.cam = camSafe(clone(def.cam), 'living', true); });
+    S.doc.maps = S.doc.maps.filter(x => x !== m); });
+  setPanel('place'); toast(L('Lieu supprimé', 'Place deleted'));
+}
+/* sa propre texture : réduite à 256 × 256 (légère, nette de près), rangée avec les photos du storyboard */
+function mapImage(part, file){
+  if(!file || !/^image\//.test(file.type)){ toast(L('Choisis une image (JPG, PNG…).', 'Pick an image (JPG, PNG…).'), 'warn'); return; }
+  const r = new FileReader();
+  r.onload = () => { const im = new Image(); im.onload = async () => {
+    const c = document.createElement('canvas'); c.width = c.height = 256; c.getContext('2d').drawImage(im, 0, 0, 256, 256);
+    const id = 'tx_' + uidS(), url = c.toDataURL('image/jpeg', 0.86); await photoPut(id, url);
+    mapEditDo(m => { m[part] = { k:'img', img:id, s:(m[part] && m[part].s) || 1.5 }; }); renderPanel(); };
+    im.src = r.result; };
+  r.readAsDataURL(file);
+}
 const PANEL_HTML = {
   place(){
-    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'hospital', 'metro', 'bar', 'school', 'shop', 'meeting', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
+    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'hospital', 'metro', 'bar', 'school', 'shop', 'meeting', 'bedroom', 'kitchen', 'bath', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
     const fl = SET_DEF[sh.set].floors ? lblId(L('Pièces', 'Rooms'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
-    const gid = ['in', 'out', 'wide'];
+    if((S.doc.maps || []).length) groups.unshift([L('Mes lieux', 'My places'), S.doc.maps.map(m => 'my_' + m.id)]);
+    const gid = (S.doc.maps || []).length ? ['mine', 'in', 'out', 'wide'] : ['in', 'out', 'wide'];
     const cur = SETS.find(x => x.id === sh.set) || SETS[0];
     return ph('place', L('Lieu', 'Place'), esc(L(cur.fr, cur.en)), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
       `<div class="pb"><button class="myplace ${sh.set === 'photo' ? 'on' : ''}" data-act="photoPick" title="${esc(L('Ton vrai décor en photo, les personnages devant. Tu peux aussi glisser une image sur la vue 3D.', 'Your real location in a photo, the characters in front. You can also drop an image on the 3D view.'))}"><span class="mp-ic">${icon('image')}</span><span class="mp-t"><b>${L('Ma photo', 'My photo')}</b><small>${sh.set === 'photo' && sh.photo ? L('Changer de photo', 'Change the photo') : L('Ton propre décor · JPG, PNG', 'Your own set · JPG, PNG')}</small></span>${icon('plus')}</button><input type="file" id="photoFile" accept="image/*" hidden>
+      <button class="myplace ${SET_DEF[sh.set] && SET_DEF[sh.set].custom ? 'on' : ''}" data-act="${SET_DEF[sh.set] && SET_DEF[sh.set].custom ? 'mapEdit' : 'mapNew'}" title="${esc(L('Fabrique ton propre lieu : sa taille, son sol, ses murs, tes textures', 'Build your own place: its size, floor, walls, your textures'))}"><span class="mp-ic">${icon('grid')}</span><span class="mp-t"><b>${SET_DEF[sh.set] && SET_DEF[sh.set].custom ? L('Modifier ce lieu', 'Edit this place') : L('Créer mon lieu', 'Create my place')}</b><small>${L('Taille, sol, murs, tes textures', 'Size, floor, walls, your textures')}</small></span>${icon(SET_DEF[sh.set] && SET_DEF[sh.set].custom ? 'right' : 'plus')}</button>
       ${lbl(L('Moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : k === 'dusk' ? 'sunset' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+  },
+  /* « Mon lieu » : on le fabrique ici (la taille, le sol, les murs, le plafond, les fenêtres), puis on le meuble avec les accessoires */
+  mymap(){
+    const m = curMap(), back = `<div class="pbtns"><button class="btn btn-sm btn-ghost" data-act="panel" data-id="place">${icon('back')}${L('Tous les lieux', 'All places')}</button>${m ? `<button class="btn btn-sm btn-ghost" data-act="mapNew">${icon('plus')}${L('Nouveau lieu', 'New place')}</button>` : ''}</div>`;
+    if(!m) return ph('place', L('Mon lieu', 'My place'), L('Un lieu à toi', 'A place of your own')) + `<div class="pb">${back}
+      <p class="mm-p">${L('Choisis la taille, le sol, les murs et le plafond (un motif ou ta propre image), puis meuble-le avec les accessoires.', 'Pick the size, floor, walls and ceiling (a pattern or your own image), then furnish it with props.')}</p>
+      <button class="btn btn-primary mm-new" data-act="mapNew">${icon('plus')}${L('Créer mon lieu', 'Create my place')}</button></div>`;
+    const out = m.kind === 'out', walls = !out || m.walls;
+    const surf = (part, title, on, def) => {
+      const f = mapSurf(m[part], def), kinds = Object.keys(TEX_KINDS).filter(k => TEX_KINDS[k].on.includes(on));
+      const img = f.k === 'img' && PHOTOS.get(f.img);
+      return lbl(title) + `<div class="txs">${kinds.map(k => `<button class="tx ${f.k === k ? 'on' : ''}" data-act="mapTex" data-p="${part}" data-k="${k}"><i style="background-image:url(${texThumb(k, f.k === k ? f.c : TEX_KINDS[k].cols[0])})"></i><span>${esc(L(TEX_KINDS[k].fr, TEX_KINDS[k].en))}</span></button>`).join('')}
+        <button class="tx ${f.k === 'img' ? 'on' : ''}" data-act="mapImg" data-p="${part}" title="${esc(L('Ta propre texture : une photo de sol, de mur, de papier peint… (JPG, PNG)', 'Your own texture: a photo of a floor, a wall, wallpaper… (JPG, PNG)'))}"><i class="tx-add" ${img ? `style="background-image:url(${img})"` : ''}>${img ? '' : icon('plus')}</i><span>${L('Mon image', 'My image')}</span></button></div>`
+        + (f.k !== 'img' ? `<div class="sws mm-sws">${TEX_KINDS[f.k].cols.map(c => `<button class="swc ${f.c.toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-act="mapCol" data-p="${part}" data-c="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}<label class="swc any" title="${esc(L('Une autre couleur', 'Another colour'))}" style="--c:${esc(f.c)}"><input type="color" data-mapcol="${part}" value="${esc(f.c)}" aria-label="${esc(L('Une autre couleur', 'Another colour'))}"></label></div>` : '')
+        + slider(L('Taille du motif', 'Pattern size'), 'mapS', part, f.s, 0.3, 6, 0.1, ' m');
+    };
+    const dim = (lab, k, v, min, max, step, unit) => slider(lab, 'mapDim', k, v, min, max, step, unit);
+    return ph('place', L('Mon lieu', 'My place'), esc(m.name || '')) + `<div class="pb">${back}
+      <label class="fld"><span>${L('Nom du lieu', 'Place name')}</span><input id="mapName" type="text" maxlength="40" value="${esc(m.name || '')}"></label>
+      <div class="seg wide">${[['in', L('Intérieur', 'Indoors')], ['out', L('Extérieur', 'Outdoors')]].map(([k, t]) => `<button class="${(m.kind || 'in') === k ? 'on' : ''}" data-act="mapKind" data-v="${k}">${esc(t)}</button>`).join('')}</div>
+      ${lbl(L('Taille', 'Size'))}${dim(L('Largeur', 'Width'), 'w', m.w || 8, 3, 40, 0.5, ' m')}${dim(L('Profondeur', 'Depth'), 'd', m.d || 6, 3, 40, 0.5, ' m')}
+      ${out ? `<label class="ftog"><span>${L('Des murs tout autour', 'Walls all around')}<small>${L('Une cour, un jardin clos…', 'A courtyard, a walled garden…')}</small></span><input type="checkbox" data-act="mapTog" data-k="walls" ${m.walls ? 'checked' : ''}><i class="tg"></i></label>${m.walls ? dim(L('Hauteur des murs', 'Wall height'), 'wh', m.wh || 2.4, 1, 6, 0.1, ' m') : ''}`
+        : dim(L('Hauteur sous plafond', 'Ceiling height'), 'h', m.h || 2.8, 2.2, 6, 0.1, ' m')}
+      ${surf('floor', L('Sol', 'Floor'), 'f', out ? 'grass' : 'parquet')}
+      ${walls ? surf('wall', L('Murs', 'Walls'), 'w', out ? 'brick' : 'paint') : ''}
+      ${!out ? surf('ceil', L('Plafond', 'Ceiling'), 'c', 'paint') : ''}
+      ${walls ? lbl(L('Ouvertures', 'Openings')) + dim(L('Fenêtres', 'Windows'), 'win', m.win || 0, 0, 8, 1, '') + `<div class="seg wide">${[['city', L('Vue sur la ville', 'City view')], ['nature', L('Vue sur la campagne', 'Country view')]].map(([k, t]) => `<button class="${(m.view || 'city') === k ? 'on' : ''}" data-act="mapView" data-v="${k}">${esc(t)}</button>`).join('')}</div>
+        <label class="ftog"><span>${L('Une porte', 'A door')}</span><input type="checkbox" data-act="mapTog" data-k="door" ${m.door !== false ? 'checked' : ''}><i class="tg"></i></label>` : ''}
+      <p class="mm-p">${L('Pour le meubler : ', 'To furnish it: ')}<button class="lnk" data-act="panel" data-id="car">${L('les accessoires', 'the props')}</button>.</p>
+      <div class="pbtns"><button class="btn btn-sm btn-ghost danger" data-act="mapDel">${icon('trash')}${L('Supprimer ce lieu', 'Delete this place')}</button></div>
+      <input type="file" id="mapFile" accept="image/*" hidden></div>`;
   },
   chars(){
     const sh = shot(), chars = sh.chars, t = S.sel ? S.sel.c : S.target, used = chars.map(c => c.look);
@@ -531,9 +601,9 @@ const PANEL_HTML = {
       ${D.fly ? `<label class="fr"><span class="fl">${L('Altitude', 'Altitude')}</span><input type="range" data-act="vehAlt" min="0" max="60" step="0.5" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 1)} m</b></label>`
         : `<label class="fr" title="${esc(L('Il ne traverse ni le sol ni les meubles : il se pose dessus', 'It never goes through the floor or furniture: it rests on them'))}"><span class="fl">${L('Hauteur', 'Height')}</span><input type="range" data-act="vehAlt" min="${(SET_DEF[sh.set].levels || [0]).reduce((b, l) => l <= (v.y || 0) + 0.3 ? l : b, 0)}" max="${(SET_DEF[sh.set].levels || [0]).reduce((b, l) => l <= (v.y || 0) + 0.3 ? l : b, 0) + 4}" step="0.02" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 2)} m</b></label>`}
       ${D.shots.length ? lbl(L('Prises de vue', 'Shots')) : ''}<div class="cars">${D.shots.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
-    return ph('car', L('Accessoires', 'Props'), vs.length ? vs.length + ' ' + L('dans ce plan', 'in this shot') : L('Véhicules et objets', 'Vehicles and objects')) +
-      `<div class="pb">${lbl(L('Véhicules', 'Vehicles'))}<div class="vadd">${Object.keys(VEH_DEF).filter(id => !VEH_DEF[id].obj).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>
-      ${lbl(L('Objets', 'Objects'))}<div class="oadd">${Object.keys(VEH_DEF).filter(id => VEH_DEF[id].obj).map(id => `<button class="otile" data-act="addVeh" data-kind="${id}"><img ${OBJ_PREV.has(id) ? `src="${OBJ_PREV.get(id)}"` : `data-op="${id}"`} alt=""><span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>${vs.length ? lbl(L('Dans ce plan', 'In this shot')) + list : ''}${set}${taxi}</div>`;
+    return ph('car', L('Accessoires', 'Props'), vs.length ? vs.length + ' ' + L('dans ce plan', 'in this shot') : L('Véhicules et objets', 'Vehicles and objects'), jumpBar([['veh', L('Véhicules', 'Vehicles')]].concat(OBJ_CATS.map(([c, fr, en]) => ['o-' + c, L(fr, en)])))) +
+      `<div class="pb">${lblId(L('Véhicules', 'Vehicles'), 'veh')}<div class="vadd">${Object.keys(VEH_DEF).filter(id => !VEH_DEF[id].obj).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>
+      ${OBJ_CATS.map(([c, fr, en]) => lblId(L(fr, en), 'o-' + c) + `<div class="oadd">${Object.keys(VEH_DEF).filter(id => VEH_DEF[id].obj && (VEH_DEF[id].cat || 'misc') === c).map(id => `<button class="otile" data-act="addVeh" data-kind="${id}"><img ${OBJ_PREV.has(id) ? `src="${OBJ_PREV.get(id)}"` : `data-op="${id}"`} alt=""><span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>`).join('')}${vs.length ? lbl(L('Dans ce plan', 'In this shot')) + list : ''}${set}${taxi}</div>`;
   },
   text(){
     const sh = shot(), inf = sh.info, n = S.doc.shots.length;
@@ -615,7 +685,6 @@ function renderStrip(){
       <div class="add-col">
         <button class="add-shot" data-act="addShot">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span><small>${L('reprend le plan ', 'from shot ') + (S.i + 1)}</small></button>
         <div class="add-steps"><button class="add-shot rev" data-act="addCloser" title="${esc(L('Le plan suivant, un cran plus serré sur le même personnage', 'The next shot, one size tighter on the same character'))}">${icon('closer')}<span>${L('Plus près', 'Closer')}</span></button><button class="add-shot rev" data-act="addWider" title="${esc(L('Le plan suivant, un cran plus large', 'The next shot, one size wider'))}">${icon('wider')}<span>${L('Plus large', 'Wider')}</span></button></div>
-        <button class="add-shot rev" data-act="scriptImport" title="${esc(L('Chaque scène du scénario devient un plan : depuis Raging Page, un texte collé ou un fichier .fountain', 'Each scene of the script becomes a shot: from Raging Page, pasted text or a .fountain file'))}">${icon('text')}<span>${L('Scénario', 'Script')}</span></button>
         ${two ? `<button class="add-shot rev" data-act="addReverse" title="${esc(L('Le plan suivant, par-dessus l’épaule de l’autre personnage', 'The next shot, over the other character’s shoulder'))}">${icon('reverse')}<span>${L('Contrechamp', 'Reverse shot')}</span></button>` : ''}
       </div>
       ${n === 1 ? `<p class="board-tip"><b>${L('Premier plan prêt.', 'First shot ready.')}</b>${L('« Nouveau plan » le reprend : tu changes juste ce qui bouge.', '“New shot” starts from it: you only change what moves.')}</p>` : ''}</div>`;
@@ -968,185 +1037,6 @@ function exportVideoLive(){
   requestAnimationFrame(step);
 }
 
-/* ---------- Importer un scénario : chaque scène devient un plan prêt à cadrer ----------
-   Trois sources : un projet de Raging Page (même navigateur), un texte collé, ou un fichier
-   .fountain / .txt. On lit les en-têtes (INT. CAFÉ – JOUR), les noms des personnages et leurs
-   répliques : le lieu, le moment, les personnages (avec leur nom) et l'action sont déjà là. */
-const norm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-// du plus précis au plus vague : « maison de campagne » avant « campagne », « parking » avant « park »
-const SCRIPT_SETS = [
-  ['house', 'maison de campagne|ferme|farmhouse|cottage|chalet'], ['parking', 'parking|car park|garage souterrain'],
-  ['hospital', 'hopital|hospital|clinique|clinic|urgences|emergency room|chambre d.hopital'], ['police', 'commissariat|police|gendarmerie|precinct|cellule|interrogatoire'],
-  ['bank', 'banque|bank|coffre'], ['metro', 'metro|subway|rame|wagon|train|rer|tram'], ['hotel', 'hotel|motel|auberge'],
-  ['diner', 'diner|restaurant|snack|cantine|fast.food|brasserie'], ['bar', 'bar|pub|club|boite de nuit|discotheque|nightclub'], ['meeting', 'salle de reunion|reunion|meeting|conference|boardroom|seminaire'], ['school', 'salle de classe|classe|ecole|classroom|school|college|lycee|universite|amphi'],
-  ['shop', 'superette|epicerie|magasin|boutique|supermarche|supermarket|shop|store|grocery|station.service'], ['cafe', 'cafe|coffee|salon de the|cafeteria'],
-  ['taxi', 'taxi|voiture|car|auto|vehicule|camion|van'], ['office', 'bureau|office|agence|open.space|entreprise|redaction'],
-  ['garage', 'garage|atelier|workshop'], ['warehouse', 'entrepot|warehouse|hangar|usine|factory|depot'], ['hall', 'couloir|hall|corridor|escalier|stairs|entree|palier|ascenseur'],
-  ['alley', 'ruelle|alley|impasse|passage'], ['roof', 'toit|rooftop|roof|terrasse'], ['airfield', 'aerodrome|aeroport|airport|piste|airfield'],
-  ['stadium', 'stade|stadium|terrain de foot|gymnase'], ['beach', 'plage|beach|mer|ocean|sea|port|quai'], ['forest', 'foret|forest|bois|woods|jungle'],
-  ['park', 'parc|jardin|park|garden|square'], ['country', 'campagne|champ|countryside|field|route|road|village|desert'],
-  ['street', 'rue|street|avenue|boulevard|ville|city|trottoir|place|carrefour|centre.ville'],
-  ['living', 'salon|appartement|appart|apartment|living|maison|house|chambre|bedroom|cuisine|kitchen|studio|loft|home|chez']
-].map(([id, k]) => [id, new RegExp('(^|[^a-z])(' + k + ')([^a-z]|$)')]);
-function scriptSet(head){
-  const n = norm(head).replace(/^\s*(int\.?\s*\/\s*ext|ext\.?\s*\/\s*int|i\/e|int|ext|interieur|exterieur|est)[\.\s:-]*/, '');
-  const loc = n.split(/\s[-–—]\s|\s[-–—]|[-–—]\s/)[0];
-  for(const [id, re] of SCRIPT_SETS) if(SET_DEF[id] && re.test(loc)) return id;
-  return /^\s*(ext|exterieur)/.test(norm(head)) ? 'street' : 'living';
-}
-function scriptTime(head){
-  const n = norm(head).split(/\s[-–—]\s|\s[-–—]|[-–—]\s/).slice(1).join(' ') || norm(head);
-  if(/nuit|night|minuit|midnight/.test(n)) return 'night';
-  if(/soir|crepuscule|dusk|evening|aube|dawn|sunset|sunrise|couchant|coucher|lever du jour/.test(n)) return 'dusk';
-  return 'day';
-}
-const HEAD_RE = /^\s*(\d+[a-z]?[\.\)]?\s+)?((int\.?\s*\/\s*ext|ext\.?\s*\/\s*int|i\/e|int|ext|est|interieur|exterieur)[\.\s:-])/i;
-const cueName = t => t.replace(/\(.*?\)/g, '').replace(/^@/, '').replace(/\^$/, '').trim();
-const isCue = t => { const s = cueName(t); return s.length > 1 && s.length <= 32 && s === s.toUpperCase() && /\p{Lu}/u.test(s) && !/(:|\.\.\.)$/.test(s) && !/^(fondu|cut|coupe|fade|smash|plus tard|later|fin|the end|noir|black)\b/i.test(s); };
-/* un texte (Fountain, ou un scénario tapé à la main) en scènes */
-function parseScript(text){
-  const lines = String(text || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\[\[[\s\S]*?\]\]/g, '').split(/\r?\n/), scenes = [];
-  let cur = null, i = 0;
-  // la page de titre de Fountain (Title:, Author:…) en tête : on la saute
-  if(/^\s*(title|titre|credit|author|authors|auteur|source|draft date|contact)\s*:/i.test(lines[0] || '')) while(i < lines.length && lines[i].trim()) i++;
-  const scene = (head, num) => { cur = { head, num, action:[], lines:[], names:[] }; scenes.push(cur); };
-  const who = n => { if(!cur) scene('', ''); if(n && !cur.names.includes(n)) cur.names.push(n); };
-  for(; i < lines.length; i++){
-    const raw = lines[i], t = raw.trim(); if(!t || /^(#|=)/.test(t)) continue;
-    const h = t.match(HEAD_RE);
-    if(h || (/^\.[^.]/.test(t))){ const num = h && h[1] ? h[1].replace(/[^\dA-Za-z]/g, '') : ''; scene((h && h[1] ? t.slice(h[1].length) : t.replace(/^\./, '')).replace(/\s*#[^#]*#\s*$/, '').trim().toUpperCase(), num); continue; }
-    const inl = t.match(/^([\p{Lu}][\p{Lu}'’ .\-]{1,30}?)\s*:\s*(.+)$/u);           // « LÉA : Tu es en retard. »
-    if(inl && !/^(int|ext|fondu|cut)/i.test(inl[1])){ const n = cueName(inl[1]); who(n); cur.lines.push([n, inl[2].trim()]); continue; }
-    const next = (lines[i + 1] || '').trim();
-    if(next && (isCue(t) || /^@/.test(t))){
-      const n = cueName(t), said = []; who(n);
-      while(i + 1 < lines.length && lines[i + 1].trim()){ i++; const d = lines[i].trim(); if(!/^\(.*\)$/.test(d)) said.push(d); }
-      if(said.length) cur.lines.push([n, said.join(' ')]); continue;
-    }
-    if(/^>|(\s(to|à)\s*:|^(fondu|cut to|coupe|smash cut|fade))/i.test(t) && t === t.toUpperCase()) continue;   // transitions
-    if(!cur) scene('', ''); cur.action.push(t.replace(/^!/, ''));
-  }
-  return scenes.filter(s => s.head || s.action.length || s.lines.length);
-}
-/* un projet de Raging Page : ses éléments sont déjà rangés par type */
-function parseRP(p){
-  const scenes = []; let cur = null, name = '';
-  const txt = h => { const d = document.createElement('div'); d.innerHTML = String(h || ''); return (d.textContent || '').replace(/\s+/g, ' ').trim(); };
-  (p && p.elements || []).forEach(el => {
-    const t = txt(el.text); if(!t && el.type !== 'scene') return;
-    if(el.type === 'scene' || !cur){ cur = { head:el.type === 'scene' ? t.toUpperCase() : '', num:'', action:[], lines:[], names:[] }; scenes.push(cur); if(el.type === 'scene') return; }
-    if(el.type === 'action') cur.action.push(t);
-    else if(el.type === 'character'){ name = cueName(t); if(name && !cur.names.includes(name)) cur.names.push(name); }
-    else if(el.type === 'dialogue' && name) cur.lines.push([name, t]);
-  });
-  return scenes.filter(s => s.head || s.action.length || s.lines.length);
-}
-/* les projets de Raging Page enregistrés dans ce navigateur (IndexedDB, et la copie localStorage) */
-async function rpProjects(){
-  const ls = k => { try{ return JSON.parse(localStorage.getItem(k) || 'null'); }catch(e){ return null; } };
-  let db = null;
-  try{ db = await new Promise(res => { const q = indexedDB.open('scriptmm_db', 1); q.onupgradeneeded = () => { try{ q.result.createObjectStore('kv'); }catch(e){} }; q.onsuccess = () => res(q.result); q.onerror = q.onblocked = () => res(null); }); }catch(e){ db = null; }
-  const get = k => !db ? Promise.resolve(null) : new Promise(res => { try{ const q = db.transaction('kv', 'readonly').objectStore('kv').get(k); q.onsuccess = () => res(q.result == null ? null : q.result); q.onerror = () => res(null); }catch(e){ res(null); } });
-  const idx = (await get('scriptmm_projects_index')) || ls('scriptmm_projects_index') || [];
-  const out = [];
-  for(const e of Array.isArray(idx) ? idx : []){
-    if(!e || !e.id) continue;
-    const p = (await get('scriptmm_project_' + e.id)) || ls('scriptmm_project_' + e.id);
-    if(p && Array.isArray(p.elements)) out.push({ id:e.id, title:p.title || e.title || L('Sans titre', 'Untitled'), scenes:parseRP(p) });
-  }
-  if(db) db.close();
-  return out.filter(p => p.scenes.length);
-}
-/* homme ou femme, d'après le prénom (une estimation : on change le personnage d'un clic si elle se trompe) */
-const F_NAMES = /^(lea|nina|marie|julie|sophie|claire|alice|emma|chloe|camille|sarah|laura|lucie|manon|ines|jade|louise|anne|eve|zoe|lou|celine|nathalie|isabelle|catherine|helene|juliette|charlotte|pauline|margot|agathe|rose|mia|lisa|elise|amelie|valerie|sandrine|christine|nadia|leila|fatima|yasmine|maya|clara|mary|jane|kate|anna|grace|olivia|emily|sophia|ella|lily|amy|ruth|madame|mme|mrs|ms|miss|la mere|la fille|la soeur|mother|mom|girl|woman|femme|sister|daughter|infirmiere|serveuse|policiere)\b/;
-const M_NAMES = /^(paul|marc|sam|pierre|jules|antoine|louis|hugo|lucas|leo|tom|thomas|nicolas|julien|maxime|alex|alexandre|david|jean|michel|philippe|francois|olivier|eric|vincent|karim|mehdi|omar|ali|john|jack|james|mike|peter|george|harry|luke|ben|adam|noah|monsieur|m\.|mr|le pere|le fils|le frere|father|dad|boy|man|homme|brother|son|inspecteur|docteur|serveur|policier)\b/;
-function nameGender(n){ const k = norm(n).trim(); if(M_NAMES.test(k)) return 'm'; if(F_NAMES.test(k)) return 'f'; return /[a-z]{2,}a$/.test(k.split(' ')[0]) ? 'f' : null; }
-/* tourner un personnage debout vers un autre (pour le champ-contrechamp) */
-function faceTo(ch, o){
-  if(ch.pose && ch.pose !== 'stand') return;
-  ch.root.ry = 0; const f0 = bodyMarks(ch).face;
-  ch.root.ry = Math.atan2(o.root.x - ch.root.x, o.root.z - ch.root.z) / D2R - f0;
-}
-/* les scènes en plans : un plan par scène, ou (au choix) le plan large puis le champ-contrechamp des répliques */
-function scriptShots(scenes, cover){
-  const names = S.doc.names = S.doc.names || {}, byName = {};
-  Object.keys(names).forEach(k => { byName[norm(names[k])] = +k; });
-  const pool = [0, 2, 1, 3, 6, 7, 4, 5];
-  const lookFor = n => { const k = norm(n); if(byName[k] != null) return byName[k]; const used = new Set(Object.values(byName)), g = nameGender(n);
-    const l = pool.find(x => !used.has(x) && CHAR_LOOK[x] && (!g || CHAR_LOOK[x].body === g)) ?? pool.find(x => !used.has(x) && CHAR_LOOK[x]); const v = l == null ? Object.keys(byName).length % 4 : l; byName[k] = v; if(names[v] == null) names[v] = n.charAt(0) + n.slice(1).toLowerCase(); return v; };
-  const out = []; let num = S.doc.shots.reduce((m, s) => Math.max(m, parseInt(s.info.scene, 10) || 0), 0);
-  // les personnages qui ne parlent pas sont souvent nommés dans l'action (« Léa traverse la rue ») : on les reconnaît aussi
-  const known = [...new Set(scenes.flatMap(sc => sc.names).concat(Object.values(names).map(n => String(n).toUpperCase())))];
-  const free = () => { const used = new Set(Object.values(byName)); const l = pool.find(x => !used.has(x) && names[x] == null); return l == null ? 0 : l; };
-  scenes.forEach(sc => {
-    const set = scriptSet(sc.head), def = SET_DEF[set], act = sc.action.join(' ');
-    const cast = sc.names.concat(known.filter(nm => !sc.names.includes(nm) && new RegExp('(^|[^\\p{L}])' + norm(nm).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^\\p{L}]|$)', 'u').test(norm(act))).map(nm => [nm, norm(act).indexOf(norm(nm))]).sort((x, y) => x[1] - y[1]).map(x => x[0]));
-    const n = Math.max(1, Math.min(cast.length, def.spawn.length, 3)), s = newShot(set); s.chars = [];
-    for(let c = 0; c < n; c++) s.chars.push(charFromSpawn(c, def, cast[c] ? lookFor(cast[c]) : free()));
-    num = sc.num && /^\d+/.test(sc.num) ? parseInt(sc.num, 10) : num + 1;
-    const two = s.chars.length > 1 && sc.lines.length > 0;
-    if(two && cover){ faceTo(s.chars[0], s.chars[1]); faceTo(s.chars[1], s.chars[0]); }
-    const txt = act.replace(/\s+/g, ' ').trim(), first = sc.lines[0];
-    const words = (txt + ' ' + (first ? first[1] : '')).split(/\s+/).length;
-    Object.assign(s.info, { scene:sc.num || String(num), time:scriptTime(sc.head), size:def.big ? 'pg' : 'pe', dur:clamp(Math.round(words / 3), 2, 8),
-      cap:((sc.head ? sc.head + '. ' : '') + txt).slice(0, 220).trim(), dial:first ? (first[0] + L(' : ', ': ') + first[1]).slice(0, 200) : '' });
-    out.push(s);
-    if(two && cover) sc.lines.slice(1, 7).forEach(([nm, said]) => {
-      const sp = s.chars.findIndex(ch => names[ch.look] && norm(names[ch.look]) === norm(nm)); if(sp < 0) return;
-      const r = clone(s); r.id = uidS(); r.cam = camSafe(frameOTS(r.chars[sp], r.chars[sp ? 0 : 1], 50), set);
-      Object.assign(r.info, { size:'am', dur:clamp(Math.round(said.split(/\s+/).length / 2.5), 2, 8), cap:'', dial:(nm + L(' : ', ': ') + said).slice(0, 200) });
-      out.push(r);
-    });
-  });
-  return out;
-}
-function importScenes(scenes, cover){
-  if(!scenes.length) return 0;
-  endEdit(); pushUndo();
-  const shots = scriptShots(scenes, cover), one = S.doc.shots.length === 1 && !S.doc.shots[0].info.cap && !S.doc.shots[0].info.dial && !S.doc.shots[0].info.scene;
-  const at = one ? 0 : S.doc.shots.length;
-  if(one) S.doc.shots = shots; else S.doc.shots.push(...shots);
-  S.i = at; S.sel = null; S.room = null; S.target = 0; THUMBS.clear(); changed(true);
-  return shots.length;
-}
-function showScriptImport(){
-  if(document.querySelector('.imp-bd')) return;
-  const bd = document.createElement('div'); bd.className = 'modal-bd imp-bd';
-  let scenes = [], cover = lsGet('raging3d_cover') !== '0', rp = [];
-  const render = () => {
-    const nm = new Set(); scenes.forEach(s => s.names.forEach(n => nm.add(n)));
-    const nShots = scenes.length ? scenes.reduce((t, s) => t + 1 + (cover && Math.min(s.names.length, 3) > 1 ? Math.min(Math.max(s.lines.length - 1, 0), 6) : 0), 0) : 0;
-    bd.querySelector('.imp-sum').innerHTML = scenes.length ? `<b>${scenes.length} ${scenes.length > 1 ? L('scènes', 'scenes') : L('scène', 'scene')} · ${nm.size} ${nm.size > 1 ? L('personnages', 'characters') : L('personnage', 'character')} → ${nShots} ${nShots > 1 ? L('plans', 'shots') : L('plan', 'shot')}</b>
-      <ol>${scenes.slice(0, 5).map(s => { const st = SETS.find(x => x.id === scriptSet(s.head)); return `<li><span>${esc(s.head || L('(sans en-tête)', '(no heading)'))}</span><i>${esc(L(st.fr, st.en))} · ${esc(L(TIMES[scriptTime(s.head)].fr, TIMES[scriptTime(s.head)].en))}</i></li>`; }).join('')}${scenes.length > 5 ? `<li class="more">${L('et ', 'and ') + (scenes.length - 5) + L(' autres', ' more')}</li>` : ''}</ol>`
-      : `<span>${L('L’aperçu s’affiche ici.', 'The preview shows here.')}</span>`;
-    bd.querySelector('[data-r="1"]').disabled = !scenes.length;
-  };
-  bd.innerHTML = `<div class="modal imp" role="dialog" aria-modal="true" aria-labelledby="impT"><h3 id="impT">${L('Importer un scénario', 'Import a script')}</h3>
-    <p>${L('Chaque scène devient un plan : lieu, moment, personnages, action et réplique.', 'Each scene becomes a shot: place, time, characters, action and line.')}</p>
-    <div class="imp-rp" hidden></div>
-    <label class="fld"><span>${L('Colle ton scénario', 'Paste your script')}</span><textarea id="impText" rows="6" spellcheck="false" placeholder="${esc(L('INT. CAFÉ – JOUR\n\nPaul attend, devant deux cafés.\n\nLÉA\nJe sais. J’ai une nouvelle.', 'INT. CAFÉ – DAY\n\nPaul waits, two coffees on the table.\n\nLÉA\nI know. I have news.'))}"></textarea></label>
-    <div class="imp-row"><label class="btn btn-sm btn-ghost">${icon('text')}${L('Ouvrir un fichier', 'Open a file')}<small class="imp-ext">.fountain, .txt</small><input type="file" id="impFile" accept=".fountain,.txt,.spmd,text/plain" hidden></label>
-      <div class="seg"><button data-cv="0" class="${cover ? '' : 'on'}">${L('Un plan par scène', 'One shot per scene')}</button><button data-cv="1" class="${cover ? 'on' : ''}" title="${esc(L('Le plan large, puis une amorce par réplique (jusqu’à 6 par scène)', 'The wide shot, then an over-the-shoulder per line (up to 6 per scene)'))}">${L('+ champ-contrechamp', '+ shot / reverse')}</button></div></div>
-    <div class="imp-sum" aria-live="polite"></div>
-    <div class="modal-f"><button class="btn btn-ghost" data-r="0">${L('Annuler', 'Cancel')}</button><button class="btn btn-primary" data-r="1" disabled>${L('Créer les plans', 'Create the shots')}</button></div></div>`;
-  document.body.appendChild(bd); render();
-  const ta = bd.querySelector('#impText');
-  ta.addEventListener('input', () => { bd.querySelectorAll('.imp-p.on').forEach(b => b.classList.remove('on')); scenes = parseScript(ta.value); render(); });
-  bd.querySelector('#impFile').addEventListener('change', e => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = () => { ta.value = String(r.result || ''); ta.dispatchEvent(new Event('input')); }; r.readAsText(f); });
-  rpProjects().then(list => { rp = list; const box = bd.querySelector('.imp-rp'); if(!list.length || !box) return; box.hidden = false;
-    box.innerHTML = `<span class="lbl">${L('Depuis Raging Page', 'From Raging Page')}</span><div class="imp-ps">${list.slice(0, 8).map((p, k) => `<button class="imp-p" data-p="${k}">${icon('text')}<span><b>${esc(p.title)}</b><small>${p.scenes.length} ${p.scenes.length > 1 ? L('scènes', 'scenes') : L('scène', 'scene')}</small></span></button>`).join('')}</div>`; }).catch(() => {});
-  const done = () => { bd.remove(); document.removeEventListener('keydown', key, true); };
-  const key = e => { if(e.key === 'Escape'){ e.stopPropagation(); done(); } };
-  document.addEventListener('keydown', key, true);
-  bd.addEventListener('click', e => {
-    const p = e.target.closest('.imp-p'), cv = e.target.closest('[data-cv]'), r = e.target.closest('[data-r]');
-    if(p){ bd.querySelectorAll('.imp-p').forEach(b => b.classList.toggle('on', b === p)); scenes = rp[+p.dataset.p].scenes; ta.value = ''; render(); }
-    else if(cv){ cover = cv.dataset.cv === '1'; lsSet('raging3d_cover', cover ? '1' : '0'); bd.querySelectorAll('[data-cv]').forEach(b => b.classList.toggle('on', b === cv)); render(); }
-    else if(r){ if(r.dataset.r === '1'){ const n = importScenes(scenes, cover); toast(n + L(' plans créés', ' shots created')); } done(); }
-    else if(e.target === bd) done();
-  });
-  setTimeout(() => ta.focus(), 30);
-}
 /* la liste des plans, pour le tableur de la production (Excel, Numbers, Google Sheets) */
 function exportCSV(){
   const fr = getLang() !== 'en', sep = fr ? ';' : ',', q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
@@ -1185,7 +1075,6 @@ const ACT = {
   exportImage:() => { closeMenus(); exportImage(); },
   exportCSV:() => { closeMenus(); exportCSV(); },
   charCol:(b, e) => { if(e) e.preventDefault(); setCharCol(b.dataset.k, b.dataset.v); },
-  scriptImport:() => { closeMenus(); showScriptImport(); },
   exportVideo:() => { closeMenus(); exportVideo(); },
   cancelRec:() => { if(S.rec) S.rec.cancel = true; },
   place:b => { setPlace(b.dataset.id); if(S.panel === 'car' && b.dataset.id === 'taxi') renderPanel(); },
@@ -1214,6 +1103,13 @@ const ACT = {
   stageShot:b => { S.view = 'stage'; goShot(+b.dataset.i); renderUI(); },
   stageView:() => { S.view = 'stage'; renderUI(); },
   sheetView:() => { S.view = 'sheet'; renderUI(); },
+  mapNew, mapDel, mapEdit:() => setPanel('mymap'),
+  mapTex:b => mapEditDo(m => { const p = b.dataset.p, k = b.dataset.k, o = m[p] || {}; m[p] = { k, c:o.k === k && o.c ? o.c : TEX_KINDS[k].cols[0], s:TEX_KINDS[k].s }; }),
+  mapCol:b => mapEditDo(m => { const p = b.dataset.p; m[p] = Object.assign({}, mapSurf(m[p], 'paint'), { c:b.dataset.c }); }),
+  mapImg:b => { const f = document.getElementById('mapFile'); if(!f) return; f.onchange = () => { if(f.files[0]) mapImage(b.dataset.p, f.files[0]); f.value = ''; }; f.click(); },
+  mapKind:b => mapEditDo(m => { m.kind = b.dataset.v; if(m.kind === 'out' && (!m.floor || m.floor.k === 'parquet')) m.floor = { k:'grass' }; if(m.kind === 'in' && m.floor && /grass|sand|dirt|asphalt/.test(m.floor.k)) m.floor = { k:'parquet' }; }),
+  mapView:b => mapEditDo(m => { m.view = b.dataset.v; }),
+  mapTog:b => mapEditDo(m => { const k = b.dataset.k; m[k] = k === 'door' ? m.door === false : !m[k]; }),
   addShot, addReverse, addCloser:() => addStep(1), addWider:() => addStep(-1), dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), roomTip:() => { lsSet('raging3d_roomtip', '1'); renderPlan(); }, planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '1' ? '0' : '1'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
   addShotEnd:() => { goShot(S.doc.shots.length - 1); addShot(); },
   moveShot:b => moveShot(+b.dataset.d),
@@ -1271,6 +1167,13 @@ function bindEvents(){
     }
     // la planche entière : on écrit sous chaque plan, sans changer de plan
     if(t.dataset.sv){ if(!capSnap) capSnap = snapshot(); const s = S.doc.shots[+t.dataset.i]; if(s){ s.info[t.dataset.sv] = t.value; save(); } return; }
+    if(t.id === 'mapName'){ const m = curMap(); if(!m) return; if(!capSnap) capSnap = snapshot(); m.name = t.value; syncMaps(S.doc); save(); return; }
+    if(t.dataset.act === 'mapDim' || t.dataset.act === 'mapS'){
+      const m = curMap(); if(!m) return; if(!sliderSnap) sliderSnap = snapshot();
+      if(t.dataset.act === 'mapDim') m[t.dataset.i] = +t.value; else m[t.dataset.i] = Object.assign({}, mapSurf(m[t.dataset.i], 'paint'), { s:+t.value });
+      const b = t.nextElementSibling; if(b) b.textContent = round(+t.value, +t.step < 1 ? 2 : 0) + (t.dataset.act === 'mapDim' && t.dataset.i === 'win' ? '' : ' m');
+      syncMaps(S.doc); requestRender(); return;
+    }
     if(t.dataset.act === 'crowdSet'){
       if(!sliderSnap) sliderSnap = snapshot();
       setCrowd(S.crowd, t.dataset.f, +t.value); renderSide(true); return;
@@ -1292,11 +1195,15 @@ function bindEvents(){
     if(e.target.dataset && e.target.dataset.colk){ setCharCol(e.target.dataset.colk, e.target.value); return; }
     const t = e.target;
     if(t.dataset.act === 'axis' || t.dataset.act === 'root' || t.dataset.act === 'crowdSet' || t.dataset.act === 'vehAlt'){ pushUndo(sliderSnap); sliderSnap = null; changed(); }
+    if((t.dataset.act === 'mapDim' || t.dataset.act === 'mapS') && sliderSnap){ pushUndo(sliderSnap); sliderSnap = null; const sh = shot(); sh.cam = camSafe(sh.cam, sh.set, true); changed(true); }
+    if(t.id === 'mapName' && capSnap){ pushUndo(capSnap); capSnap = null; renderUI(); }
+    if(t.dataset.mapcol){ const p = t.dataset.mapcol; mapEditDo(m => { m[p] = Object.assign({}, mapSurf(m[p], 'paint'), { c:t.value }); }); }
     if(t.id === 'fName' && capSnap){ pushUndo(capSnap); capSnap = null; renderUI(); }
     if((t.id === 'cap' || t.id === 'dial' || t.id === 'fScene' || t.dataset.sv) && capSnap){ pushUndo(capSnap); capSnap = null; if(t.id === 'fScene' || t.dataset.sv) { renderStrip(); renderHead(); } }
     if(t.dataset.act === 'info' && t.tagName === 'SELECT'){ const k = t.dataset.k; edit(() => { shot().info[k] = k === 'dur' ? +t.value : t.value; }); renderStrip(); }
     if(t.dataset.act === 'room' && t.value !== ''){ goRoom(+t.value); renderHead(); renderPanel(); }
     if(t.dataset.act === 'walk') edit(() => { shot().info.walk = t.checked; });
+    if(t.dataset.act === 'mapTog') ACT.mapTog(t);
     if(t.dataset.act === 'gridTog'){ S.grid = t.checked; renderHead(); renderView(); }
     if(t.dataset.act === 'proTog'){ S.pro = t.checked; lsSet('raging3d_pro', S.pro ? '1' : '0'); renderHead(); renderView(); }
     if(t.dataset.act === 'finalTog') setFinal(t.checked);
