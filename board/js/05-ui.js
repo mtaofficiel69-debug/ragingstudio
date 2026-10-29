@@ -48,12 +48,13 @@ function theme(){ return lsGet(LS_THEME) === 'dark' || (document.body.classList.
 function renderUI(){
   const app = document.getElementById('app');
   document.documentElement.lang = getLang(); document.documentElement.dataset.theme = theme();
-  if(!app.querySelector('.rail')){
+  if(!app.querySelector('.main-col')){
+    // le banc de montage : les plans en colonne à gauche, l'image au centre, l'inspecteur à onglets à droite
     app.innerHTML = `
-      <aside class="rail" id="rail"></aside>
       <div class="main-col">
         <header class="topbar" id="topbar"></header>
         <div class="work">
+          <aside class="board shots" id="strip"></aside>
           <section class="center">
             <div class="stage-area" id="stageArea">
               <div class="shot-head" id="shotHead"></div>
@@ -63,30 +64,29 @@ function renderUI(){
               <div class="under" id="under"><div class="dock" id="nav"></div><div class="dock tod-box" id="tod"></div><div class="hint" id="hint"></div></div>
             </div>
             <div class="sheet-view hidden" id="sheetView"></div>
-            <div class="board" id="strip"></div>
           </section>
-          <aside class="side" id="side"></aside>
+          <aside class="side" id="side"><nav class="tabs" id="rail"></nav><div class="side-in" id="sideIn"></div></aside>
         </div>
       </div>`;
   }
   renderRail(); renderTop(); renderHead(); renderPanel(); renderStrip(); renderHint(); renderNav(); renderView(); fitStage();
 }
+/* les onglets de l'inspecteur, en haut du volet de droite : un nom court sous chaque icône, le nom complet au survol */
+const TAB_SHORT = { place:['Lieu', 'Place'], car:['Objets', 'Props'], crowd:['Foule', 'Crowds'], chars:['Persos', 'Cast'], pose:['Poses', 'Poses'], frame:['Cadrage', 'Framing'],
+  move:['Caméra', 'Camera'], text:['Texte', 'Text'], look:['Rendu', 'Look'], export:['Export', 'Export'], help:['Aide', 'Help'] };
 function renderRail(){
   const el = document.getElementById('rail'); if(!el) return;
-  const s = shot(), n = S.doc.shots.length;
+  const s = shot();
   const badge = id => id === 'chars' ? s.chars.length : id === 'crowd' ? (s.crowds.length || '') : id === 'car' ? ((s.vehicles || []).length || '') : '';
-  el.innerHTML = `<a class="rail-brand" href="./" data-act="toHome" title="${esc(L('Mes storyboards', 'My storyboards'))}">${r3Logo(34, 'rail-logo')}${r3Wordmark()}</a>
-    <div class="rail-project" data-label="${esc(L('Storyboard', 'Storyboard'))}">${esc(S.doc.title || L('Sans titre', 'Untitled'))}</div>
-    <nav class="rail-nav">${PANELS.map(g => `<div class="rail-group">${esc(L(g.g[0], g.g[1]))}</div>` + g.items.map(p => {
-      const b = badge(p.id), off = false;
-      return `<button class="rail-item ${S.panel === p.id || (S.panel === 'mymap' && p.id === 'place') ? 'active' : ''} ${off ? 'dim' : ''}" data-act="panel" data-id="${p.id}" title="${esc(L(p.fr, p.en))}">${p.n ? `<i class="rn">${p.n}</i>` : icon(p.ic)}<span class="lbl">${esc(L(p.fr, p.en))}</span>${b !== '' ? `<b class="rb">${b}</b>` : ''}</button>`;
-    }).join('')).join('')}</nav>
-    <div class="rail-bottom"><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span><span>${R3_VERSION}</span></div>`;
+  el.innerHTML = PANELS.flatMap(g => g.items).map(p => { const b = badge(p.id), on = S.panel === p.id || (S.panel === 'mymap' && p.id === 'place');
+    return `<button class="tab ${on ? 'active' : ''}" data-act="panel" data-id="${p.id}" title="${esc(L(p.fr, p.en))}" aria-label="${esc(L(p.fr, p.en))}">${icon(p.ic)}<span>${esc(L(...TAB_SHORT[p.id]))}</span>${b !== '' ? `<b class="tb-n">${b}</b>` : ''}</button>`; }).join('');
 }
 function renderTop(){
   const el = document.getElementById('topbar'); if(!el) return;
   if(!el.firstChild){
     el.innerHTML = `<div class="topbar-left">
+        <a class="tb-brand" href="./" data-act="toHome" title="${esc(L('Mes storyboards', 'My storyboards'))}">${r3Logo(30, 'rail-logo')}${r3Wordmark()}</a>
+        <span class="tb-div"></span>
         <button class="btn tb-back" id="tbBack" data-act="toHome">${icon('back')}<span class="tb-lbl" id="tbBackLbl"></span></button>
         <span class="tb-div"></span>
         <input class="tb-title" id="tbTitle" spellcheck="false" maxlength="80">
@@ -367,7 +367,7 @@ function renderSide(onlyValues){
 }
 let _panelQ = false;
 function renderPanel(){
-  const el = document.getElementById('side'); if(!el) return;
+  const el = document.getElementById('sideIn'); if(!el) return;
   const fn = PANEL_HTML[S.panel] || PANEL_HTML.place;
   const keep = el.querySelector('.side-body'), top = keep ? keep.scrollTop : 0, same = el.dataset.p === S.panel;
   el.innerHTML = `<div class="side-body">${fn()}</div>`;
@@ -689,11 +689,9 @@ const fmtDur = t => { const m = Math.floor(t / 60), s = Math.round(t % 60); retu
 function renderStrip(){
   const el = document.getElementById('strip'); if(!el) return;
   const two = shot().chars.length > 1, n = S.doc.shots.length;
-  el.innerHTML = `<div class="board-h"><b>${L('Storyboard', 'Storyboard')}</b><span>${n} ${n > 1 ? L('plans', 'shots') : L('plan', 'shot')} · ${fmtDur(totalDur())}</span>
-      <div class="seg"><button class="${S.view === 'stage' ? 'on' : ''}" data-act="stageView" title="${esc(L('Mettre en scène le plan choisi', 'Stage the chosen shot'))}">${icon('strip')}${L('Bande', 'Strip')}</button><button class="${S.view === 'sheet' ? 'on' : ''}" data-act="sheetView" title="${esc(L('Tous les plans en grand, pour écrire', 'All shots large, for writing'))}">${icon('board')}${L('Planche', 'Board')}</button></div>
-      <span class="grow"></span>
-      <button class="btn btn-sm btn-play" data-act="playBoard">${icon('play')}${L('Lire', 'Play')}</button>
-      <button class="btn btn-sm btn-primary" data-act="addShot" title="${esc(L('Reprend le plan actuel (touche N)', 'Starts from the current shot (N key)'))}">${icon('plus')}${L('Nouveau plan', 'New shot')}</button></div>
+  el.innerHTML = `<div class="board-h"><b>${L('Plans', 'Shots')}</b><span>${n} · ${fmtDur(totalDur())}</span><span class="grow"></span>
+      <button class="btn btn-sm btn-play" data-act="playBoard" title="${esc(L('Lire le storyboard', 'Play the storyboard'))}">${icon('play')}${L('Lire', 'Play')}</button><button class="btn btn-sm btn-primary sq" data-act="addShot" title="${esc(L('Nouveau plan, qui reprend le plan actuel (touche N)', 'New shot, starting from the current one (N key)'))}" aria-label="${esc(L('Nouveau plan', 'New shot'))}">${icon('plus')}</button></div>
+    <div class="board-h2"><div class="seg"><button class="${S.view === 'stage' ? 'on' : ''}" data-act="stageView" title="${esc(L('Mettre en scène le plan choisi', 'Stage the chosen shot'))}">${icon('strip')}${L('Bande', 'Strip')}</button><button class="${S.view === 'sheet' ? 'on' : ''}" data-act="sheetView" title="${esc(L('Tous les plans en grand, pour écrire', 'All shots large, for writing'))}">${icon('board')}${L('Planche', 'Board')}</button></div></div>
     <div class="cards" id="cards">${S.doc.shots.map((s, i) => `<div class="sc-wrap">${n > 1 ? `<button class="sc-del" data-act="delShotAt" data-i="${i}" title="${esc(L('Supprimer le plan ', 'Delete shot ') + (i + 1) + L(' (touche Suppr)', ' (Delete key)'))}" aria-label="${esc(L('Supprimer le plan ', 'Delete shot ') + (i + 1))}">${icon('trash')}</button>` : ''}<button class="shot-card ${i === S.i ? 'on' : ''}" data-act="goShot" data-i="${i}" draggable="true">
         <span class="sc-img"><img data-thumb="${i}" src="${thumbOf(i)}" alt="" draggable="false"><span class="sc-n">${i + 1}</span>${s.info.scene ? `<span class="sc-sc">${esc(L('Sc. ', 'Sc. ') + s.info.scene)}</span>` : ''}${s.info.move !== 'fix' ? `<span class="sc-mv" title="${esc(shotLabel('move', s.info.move))}">${glyph(MOVE_G[s.info.move] || MOVE_G.fix)}</span>` : ''}<span class="sc-d">${fmtTime(s.info.dur || 2)}</span>${i === S.i ? `<span class="sc-now">${L('en cours', 'editing')}</span>` : ''}</span>
         <span class="sc-t"><b>${esc(shotLabel('size', s.info.size, true))}</b>${esc(s.info.cap || L('Sans action', 'No action yet'))}</span></button></div>`).join('')}
@@ -730,7 +728,10 @@ function fitStage(){
   st.style.width = Math.max(160, Math.floor(w)) + 'px'; st.style.height = Math.max(90, Math.floor(h)) + 'px';
   if(S.rec) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5) * (R.scale || 1);
-  R.canvas.width = Math.round(Math.max(160, w) * dpr); R.canvas.height = Math.round(Math.max(90, h) * dpr);
+  // l'image est plus grande : sur un ordinateur lent, on garde le même nombre de pixels à calculer qu'avant pendant qu'on bouge
+  // (au repos, l'image se refait nette, à pleine taille)
+  const cap = R.bench > 60 ? 600 : R.bench > 32 ? 740 : Infinity, k = Math.min(dpr, cap / Math.max(160, w));
+  R.canvas.width = Math.round(Math.max(160, w) * k); R.canvas.height = Math.round(Math.max(90, h) * k);
   R.baseW = R.canvas.width; R.baseH = R.canvas.height; R.cssW = Math.max(160, w); R.sharp = false;
   requestRender();
 }
@@ -1173,7 +1174,7 @@ function bindEvents(){
     const t = e.target;
     if(t.id === 'fName'){ const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(!ch) return; if(!capSnap) capSnap = snapshot();
       S.doc.names = S.doc.names || {}; if(t.value.trim()) S.doc.names[ch.look] = t.value.trim(); else delete S.doc.names[ch.look]; save(); return; }
-    if(t.id === 'tbTitle'){ S.doc.title = t.value; save(); const p = document.querySelector('.rail-project'); if(p) p.textContent = t.value || L('Sans titre', 'Untitled'); return; }
+    if(t.id === 'tbTitle'){ S.doc.title = t.value; save(); return; }
     // les champs du plan : scène, action, dialogue
     if(t.id === 'cap' || t.id === 'dial' || t.id === 'fScene'){
       if(!capSnap) capSnap = snapshot(); shot().info[t.dataset.k] = t.value; save();
@@ -1236,7 +1237,8 @@ function bindEvents(){
   // le storyboard : glisser une vignette pour la changer de place
   const strip = document.getElementById('strip'); let dragFrom = -1;
   strip.addEventListener('dragstart', e => { const c = e.target.closest('.shot-card'); if(!c) return; dragFrom = +c.dataset.i; c.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try{ e.dataTransfer.setData('text/plain', String(dragFrom)); }catch(err){} });
-  const dropIndex = e => { const cards = [...strip.querySelectorAll('.shot-card')]; for(let i = 0; i < cards.length; i++){ const r = cards[i].getBoundingClientRect(); if(e.clientX < r.left + r.width / 2) return i; } return cards.length; };
+  const dropIndex = e => { const cards = [...strip.querySelectorAll('.shot-card')], vert = strip.classList.contains('shots') && getComputedStyle(strip.querySelector('.cards')).flexDirection === 'column';   // en colonne : on compare la hauteur
+    for(let i = 0; i < cards.length; i++){ const r = cards[i].getBoundingClientRect(); if(vert ? e.clientY < r.top + r.height / 2 : e.clientX < r.left + r.width / 2) return i; } return cards.length; };
   strip.addEventListener('dragover', e => { if(dragFrom < 0) return; e.preventDefault(); const k = dropIndex(e); strip.querySelectorAll('.shot-card').forEach((c, i) => { c.classList.toggle('drop-l', i === k); c.classList.toggle('drop-r', k === S.doc.shots.length && i === k - 1); }); });
   const dragEnd = () => { dragFrom = -1; strip.querySelectorAll('.drag, .drop-l, .drop-r').forEach(c => c.classList.remove('drag', 'drop-l', 'drop-r')); };
   strip.addEventListener('drop', e => { if(dragFrom < 0) return; e.preventDefault(); const f = dragFrom, k = dropIndex(e); dragEnd(); dropShot(f, k); });
