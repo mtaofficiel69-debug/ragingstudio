@@ -70,6 +70,7 @@ function icon(name, cls){
     moon:'<path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/>',
     obj:'<path d="M8 1.8 13.6 5v6L8 14.2 2.4 11V5zM2.4 5 8 8.2 13.6 5M8 8.2v6"/>',
     sunset:'<path d="M4.6 10.6a3.4 3.4 0 0 1 6.8 0M1.5 10.6h13M3 13.2h10M8 3.4v1.6M3.3 5.6l1.1 1.1M12.7 5.6l-1.1 1.1"/>',
+    palette:'<path d="M8 1.5a6.5 6.5 0 1 0 0 13c1 0 1.4-.7 1.1-1.5-.4-1 .2-2 1.3-2h1.6a3 3 0 0 0 3-3C15 4.4 11.9 1.5 8 1.5z"/><circle cx="4.6" cy="7.4" r=".9"/><circle cx="6.8" cy="4.6" r=".9"/><circle cx="10.2" cy="4.8" r=".9"/>',
     sun:'<circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/>',
     save:'<path d="M3 2.5h8.2L13.5 4.8v8.2c0 .3-.2.5-.5.5H3c-.3 0-.5-.2-.5-.5V3c0-.3.2-.5.5-.5z"/><path d="M5 2.5v3.3h5V2.5M5 13.5V9.5h6v4"/>',
     folder:'<path d="M1.8 4.2c0-.6.5-1 1-1h3.4l1.5 1.6h5.5c.6 0 1 .4 1 1v6.7c0 .6-.4 1-1 1H2.8c-.5 0-1-.4-1-1z"/>',
@@ -133,6 +134,8 @@ function toast(msg, kind){
   // une action dans le message (par exemple « Annuler ») : toast(msg, '', [label, fn])
   if(arguments[2]){ const [lb, fn] = arguments[2], b = document.createElement('button'); b.className = 'toast-act'; b.textContent = lb; b.onclick = () => { fn(); t.classList.add('out'); }; t.appendChild(b); t.style.pointerEvents = 'auto'; }
   host.appendChild(t);
-  setTimeout(() => t.classList.add('out'), 3200);
-  setTimeout(() => t.remove(), 3600);
+  // un avertissement qui demande d'agir reste plus longtemps à l'écran
+  const ms = kind === 'warn' && arguments[2] ? 9000 : 3200;
+  setTimeout(() => t.classList.add('out'), ms);
+  setTimeout(() => t.remove(), ms + 400);
 }

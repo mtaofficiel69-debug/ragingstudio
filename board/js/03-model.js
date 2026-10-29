@@ -87,7 +87,16 @@ function exprLook(lk, e){
   if(!o){ o = Object.assign({}, lk, { expr:e, id:key }); _exprLooks.set(key, o); }
   return o;
 }
-const lookOf = (ch, c) => { const base = CHAR_LOOK[ch && ch.look != null ? ch.look : (c || 0) % 2] || CHAR_LOOK[0]; return exprLook(ch && ch.outfit ? outfitLook(base, ch.outfit) : base, ch && ch.expr); };
+/* les couleurs choisies pour un personnage (peau, cheveux, haut, bas) : pour tout le film, comme son nom */
+const _colLooks = new Map(), COL_KEYS = ['skin', 'hair', 'top', 'bottom'];
+function colorLook(lk, c){
+  const ks = c ? COL_KEYS.filter(k => /^#[0-9a-f]{6}$/i.test(c[k] || '')) : []; if(!ks.length) return lk;
+  const key = lk.id + '_c_' + ks.map(k => k[0] + c[k].slice(1).toLowerCase()).join(''); let o = _colLooks.get(key);
+  if(!o){ o = Object.assign({}, lk, { id:key }); ks.forEach(k => { o[k] = c[k]; }); if(c.top && /^#/.test(c.top)) o.col = c.top; if(lk.wear === 'dress' && c.top && !c.bottom) o.bottom = c.top; _colLooks.set(key, o); }
+  return o;
+}
+const lookOf = (ch, c) => { const li = ch && ch.look != null ? ch.look : (c || 0) % 2, base = CHAR_LOOK[li] || CHAR_LOOK[0], cols = typeof S !== 'undefined' && S.doc && S.doc.colors && S.doc.colors[li];
+  return exprLook(colorLook(ch && ch.outfit ? outfitLook(base, ch.outfit) : base, cols), ch && ch.expr); };
 /* les articulations qui bougent selon la silhouette ; « head » grossit la tête (les enfants),
    « stoop » voûte un peu le dos (les aînés) */
 const BODY = {
@@ -475,8 +484,15 @@ const SETS = [
   { id:'hospital', fr:'Hôpital', en:'Hospital' },
   { id:'metro', fr:'Métro', en:'Subway car' },
   { id:'bar', fr:'Bar', en:'Bar' },
+  { id:'photo', fr:'Ma photo', en:'My photo' },
 ];
 const SET_DEF = {
+  // « Ma photo » : pas de décor 3D, c'est la photo du vrai lieu qui fait le fond ; les personnages se posent sur un sol invisible
+  photo:{
+    spawn:[{ x:-0.6, z:0, ry:15 }, { x:0.7, z:0.1, ry:-20 }],
+    cam:{ tx:0, ty:1.0, tz:0, yaw:0, pitch:-4, dist:4.2, lens:28 }, bg:'#2A2D33',
+    build(g){ tri(g, [-0.01, -50, 0], [0.01, -50, 0], [0, -50, 0.01], [0, 0, 0]); },
+  },
   // l'hôpital : une chambre (le lit médicalisé, la perfusion, le moniteur) et son couloir
   hospital:{
     cam:{ tx:-2.0, ty:0.8, tz:-2.2, yaw:33, pitch:-8, dist:6.0, lens:24 },

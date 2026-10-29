@@ -337,6 +337,41 @@ const GL = {
     gl.uniform3f(L.uFogC, E.fogC[0], E.fogC[1], E.fogC[2]); gl.uniform2f(L.uFog, E.fog[0], E.fog[1]); gl.uniform1f(L.uBW, E.bw ? 1 : 0);
     const g = E.grade || [1, 1, 1], gc = E.gradeC || [1, 1, 1]; gl.uniform3f(L.uGrade, g[0], g[1], g[2]); gl.uniform3f(L.uGradeC, gc[0], gc[1], gc[2]);
   },
+  /* « Ma photo » : la photo du vrai lieu, en fond, qui remplit l'image (recadrée sans être déformée) */
+  photoTex(url, onload){
+    const gl = this.gl; this._ph = this._ph || new Map();
+    const hit = this._ph.get(url); if(hit) return hit.ready ? hit : null;
+    const o = { tex:gl.createTexture(), ready:false, ar:1 }; this._ph.set(url, o);
+    const im = new Image();
+    im.onload = () => { gl.bindTexture(gl.TEXTURE_2D, o.tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      o.ar = im.width / im.height; o.ready = true; if(onload) onload(); };
+    im.src = url;
+    return null;
+  },
+  drawPhoto(o, aspect){
+    const gl = this.gl;
+    if(!this.phProg){
+      this.phProg = (() => { const sh = (t, src) => { const x = gl.createShader(t); gl.shaderSource(x, src); gl.compileShader(x); return x; };
+        const p = gl.createProgram();
+        gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec2 aQ; uniform vec2 uS; varying vec2 vU; void main(){ vU = (aQ * uS) * 0.5 + 0.5; gl_Position = vec4(aQ, 0.999, 1.0); }'));
+        gl.attachShader(p, sh(gl.FRAGMENT_SHADER, 'precision mediump float; uniform sampler2D uT; uniform float uBW; uniform vec3 uGr; varying vec2 vU; void main(){ vec3 c = texture2D(uT, vU).rgb * uGr; if(uBW > 0.5){ float l = dot(c, vec3(0.299, 0.587, 0.114)); c = vec3(l); } gl_FragColor = vec4(c, 1.0); }'));
+        gl.linkProgram(p); return gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null; })();
+      if(!this.phProg) return;
+      this.phLoc = { aQ:gl.getAttribLocation(this.phProg, 'aQ'), uS:gl.getUniformLocation(this.phProg, 'uS'), uT:gl.getUniformLocation(this.phProg, 'uT'), uBW:gl.getUniformLocation(this.phProg, 'uBW'), uGr:gl.getUniformLocation(this.phProg, 'uGr') };
+    }
+    const K = this.phLoc, E = this.env || {}, g = E.grade || [1, 1, 1];
+    // recadrer comme « cover » : on garde tout le cadre rempli, sans déformer la photo
+    const r = o.ar / aspect, sc = r > 1 ? [1 / r, 1] : [1, r];
+    this.off(); gl.useProgram(this.phProg);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.skyBuf); gl.enableVertexAttribArray(K.aQ); gl.vertexAttribPointer(K.aQ, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform2f(K.uS, sc[0], sc[1]); gl.uniform1f(K.uBW, E.bw ? 1 : 0); gl.uniform3f(K.uGr, g[0], g[1], g[2]);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(K.uT, 0);
+    gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
+    gl.disableVertexAttribArray(K.aQ); gl.useProgram(this.prog);
+  },
   /* le ciel en dégradé (mode 0), ou le vignettage par-dessus l'image (mode 1) */
   drawSky(vp, top, hor, low, mode, aspect){
     const gl = this.gl, K = this.skyLoc; if(!this.sky) return;
