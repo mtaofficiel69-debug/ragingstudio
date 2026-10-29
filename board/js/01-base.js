@@ -68,6 +68,7 @@ function icon(name, cls){
     text:'<path d="M2.5 3.5h11M2.5 6.5h11M2.5 9.5h7.5M2.5 12.5h5"/>',
     contrast:'<circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" stroke="none"/>',
     moon:'<path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/>',
+    obj:'<path d="M8 1.8 13.6 5v6L8 14.2 2.4 11V5zM2.4 5 8 8.2 13.6 5M8 8.2v6"/>',
     sunset:'<path d="M4.6 10.6a3.4 3.4 0 0 1 6.8 0M1.5 10.6h13M3 13.2h10M8 3.4v1.6M3.3 5.6l1.1 1.1M12.7 5.6l-1.1 1.1"/>',
     sun:'<circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/>',
     save:'<path d="M3 2.5h8.2L13.5 4.8v8.2c0 .3-.2.5-.5.5H3c-.3 0-.5-.2-.5-.5V3c0-.3.2-.5.5-.5z"/><path d="M5 2.5v3.3h5V2.5M5 13.5V9.5h6v4"/>',

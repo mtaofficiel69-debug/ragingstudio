@@ -309,8 +309,8 @@ function removeCrowd(k){ const s = shot(); if(!s.crowds[k]) return; edit(() => {
 function addVehicle(kind){
   const s = shot(), c = viewCam(), y = c.yaw * D2R, d = clamp(c.dist * 0.5 + 1.5, 2, 10);
   edit(() => {
-    const K = VEH_DEF[kind] ? kind : 'moto', D = VEH_DEF[K], dd = K === 'moto' ? d : Math.max(d, 6);
-    s.vehicles.push({ id:uidS(), kind:K, col:D.cols[s.vehicles.filter(o => o.kind === K).length % D.cols.length], x:round(c.tx - Math.sin(y) * dd, 2), y:0, z:round(c.tz - Math.cos(y) * dd, 2), ry:round(c.yaw + 90, 0) });
+    const K = VEH_DEF[kind] ? kind : 'moto', D = VEH_DEF[K], dd = K === 'moto' || D.obj ? Math.min(d, 4) : Math.max(d, 6);
+    s.vehicles.push({ id:uidS(), kind:K, col:D.cols[s.vehicles.filter(o => o.kind === K).length % D.cols.length], x:round(c.tx - Math.sin(y) * dd, 2), y:0, z:round(c.tz - Math.cos(y) * dd, 2), ry:round(c.yaw + (D.obj ? 0 : 90), 0) });
     S.veh = s.vehicles.length - 1;
   });
 }
@@ -741,6 +741,9 @@ function initMeshes(){
   const g = geo(), C = [0.08, 0.09, 0.11];
   for(let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2, b = (i + 1) / 16 * Math.PI * 2; tri(g, [0, 0, 0], [Math.sin(b) * 0.36, 0, Math.cos(b) * 0.36], [Math.sin(a) * 0.36, 0, Math.cos(a) * 0.36], C); }
   R.blob = GL.mesh(g);
+  { const a = geo(), b = geo(), C = [1, 1, 1];   // la flèche : un trait (largeur 1, longueur 1) et une pointe
+    quad(a, [-0.5, 0, 0], [-0.5, 0, 1], [0.5, 0, 1], [0.5, 0, 0], C); tri(b, [-0.5, 0, 0], [0, 0, 1], [0.5, 0, 0], C);
+    R.arShaft = GL.mesh(a); R.arHead = GL.mesh(b); }
   R.props = {}; R.propsOut = {};
   PROPS.map(p => p[0]).concat(['holster']).forEach(id => { R.props[id] = GL.mesh(propGeo(id)); R.propsOut[id] = GL.mesh(smoothNormals(propGeo(id))); });
 }
@@ -811,6 +814,36 @@ function gearOf(ch, M){
   if(G.sling && ch.prop !== 'rifle') out.push(['rifle', M4.mul(M.chest, M4.mul(M4.trans(0, 0.1, -0.17), M4.mul(M4.rz(-0.75), M4.ry(Math.PI))))]);
   return out;
 }
+/* le regard : la tête (et un peu le torse) se tourne vers la caméra ou vers un autre personnage, à chaque image.
+   On calcule la direction dans le repère du torse, puis les deux angles de la tête (tourner, hocher). */
+function gazed(ch, cam, chars){
+  const gz = ch.gaze; if(gz == null || gz === '') return ch;
+  let t;
+  if(gz === 'cam') t = camEye(cam);
+  else { const o = chars[+gz]; if(!o || o === ch) return ch; const Mo = charMatrices(o); t = M4.apply(Mo.head, [0, 0.12, 0.04]); }
+  const c = Object.assign({}, ch, { j:Object.assign({}, ch.j) }), M = charMatrices(ch);
+  const l = M4.apply(M4.invert(M.chest), t), d = [l[0], l[1] - 0.45, l[2]];
+  let yaw = Math.atan2(d[0], d[2]) / D2R; const pitch = Math.atan2(d[1], Math.hypot(d[0], d[2])) / D2R;
+  if(Math.abs(yaw) > 150) return ch;   // derrière lui : il ne se dévisse pas le cou
+  const ct = clamp(yaw * 0.3, -30, 30), ch0 = (ch.j.chest || [0, 0, 0]).slice(); ch0[1] = clamp((ch0[1] || 0) + ct, -35, 35); c.j.chest = ch0;
+  const h0 = (ch.j.head || [0, 0, 0]).slice(); h0[1] = clamp(yaw - ct, -80, 80); h0[0] = clamp(-pitch, -45, 55); c.j.head = h0;
+  return c;
+}
+/* la flèche de déplacement d'un personnage, posée au sol (comme sur un storyboard dessiné) */
+const ARROW_DIR = { f:0, l:90, r:-90, b:180 };
+function drawArrows(chars, mats, final){
+  const gl = GL.gl; gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  chars.forEach((ch, c) => {
+    const A = ch.arrow; if(!A || !A.len) return;
+    const M = mats[c], fy = Math.max(0, Math.min(M4.apply(M.footL, [0, -0.065, 0.05])[1], M4.apply(M.footR, [0, -0.065, 0.05])[1])) + 0.014, p = M4.apply(M.pelvis, [0, 0, 0]);
+    const a = (ch.root.ry + (ARROW_DIR[A.dir] || 0)) * D2R, L_ = A.len, base = M4.mul(M4.trans(p[0], fy, p[2]), M4.ry(a));
+    const part = (w, z0, z1, mesh, col, al, y) => GL.draw(mesh, { m:M4.mul(M4.mul(base, M4.trans(0, y, z0)), [w, 0, 0, 0, 0, 1, 0, 0, 0, 0, z1 - z0, 0, 0, 0, 0, 1]), flat:true, col, a:al });
+    // le contour sombre, puis la flèche verte par-dessus
+    part(0.2, 0.4, L_ - 0.3, R.arShaft, INK, 0.85, 0); part(0.52, L_ - 0.4, L_ + 0.07, R.arHead, INK, 0.85, 0);
+    part(0.13, 0.43, L_ - 0.3, R.arShaft, GREEN, 0.95, 0.004); part(0.4, L_ - 0.35, L_, R.arHead, GREEN, 0.95, 0.004);
+  });
+  gl.disable(gl.BLEND); gl.enable(gl.CULL_FACE);
+}
 function drawFrame(sh, w, h, clean, o){
   const gl = GL.gl; if(!gl) return;
   sh = sh || shot(); w = w || R.canvas.width; h = h || R.canvas.height; CAM_SET = sh.set;
@@ -827,7 +860,7 @@ function drawFrame(sh, w, h, clean, o){
   GL.begin(w, h, vp, E.bg, E);
   if(E.sky) GL.drawSky(vp, hexRGB(E.sky.top), hexRGB(E.sky.hor), hexRGB(E.sky.low), 0, w / h);
   // en travaillant, le décor qui cache un personnage devient transparent ; à l'export, il reste en place
-  const chars = (o && o.chars) || sh.chars, mats = chars.map(ch => charMatrices(ch));
+  const chars = (o && o.chars) || sh.chars, mats = chars.map(ch => charMatrices(gazed(ch, cam, chars)));
   // on ne perce le décor que pour ceux qu'il cache vraiment (vérifié à l'arrêt), et pour celui qu'on déplace :
   // sur un petit ordinateur, c'est autant de calcul en moins
   // le décor ne se perce plus (plus de trou rond) : qui est caché se voit en silhouette claire, par-dessus
@@ -845,9 +878,10 @@ function drawFrame(sh, w, h, clean, o){
   });
   // et sous chaque véhicule (sous un hélicoptère en vol, l'ombre pâlit avec l'altitude)
   const VSH = { moto:[0.4, 1.05], car:[1.1, 2.6], police:[1.1, 2.6], heli:[1.3, 3.0], plane:[1.2, 3.6] };
-  (sh.vehicles || []).forEach(v => { const e = VSH[v.kind] || VSH.car, alt = v.y || 0, f = 1 / (1 + alt * 0.25);
+  (sh.vehicles || []).forEach(v => { const e = VSH[v.kind] || (VEH_DEF[v.kind] && VEH_DEF[v.kind].sh) || VSH.car, alt = v.y || 0, f = 1 / (1 + alt * 0.25);
     [[1.12, 0.07], [0.9, 0.12]].forEach(([r, a]) => GL.draw(R.blob, { m:M4.mul(M4.mul(M4.trans(v.x, 0.01, v.z), M4.ry((v.ry || 0) * D2R)), [e[0] / 0.36 * r, 0, 0, 0, 0, 1, 0, 0, 0, 0, e[1] / 0.36 * r, 0, 0, 0, 0, 1]), flat:true, a:a * f, col:[0.06, 0.07, 0.09] })); });
   gl.depthMask(true); gl.disable(gl.BLEND);
+  if(chars.some(ch => ch.arrow && ch.arrow.len)) drawArrows(chars, mats, final);
   GL.drawCrowds(crowdMeshes(sh), vp, eye, [Math.cos(cam.yaw * D2R), 0, -Math.sin(cam.yaw * D2R)]);
   // en travaillant : les parties cachées par le décor (mur, voiture) sont dessinées en filigrane,
   // avant les personnages, pour qu'elles n'apparaissent que là où le décor passe devant
@@ -1299,6 +1333,21 @@ function posePreview(look, pid){
     if(ch.prop) GL.draw(R.props[ch.prop], { m:M.handR, col:[1, 1, 1], mul:true, char:true });
   });
   POSE_PREV.set(key, url);
+  return url;
+}
+/* la vignette d'un objet : lui seul, de trois quarts, sur le fond du volet */
+const OBJ_PREV = new Map();
+function objPreview(kind){
+  if(OBJ_PREV.has(kind)) return OBJ_PREV.get(kind);
+  const gl = GL.gl; if(!gl || S.rec) return '';
+  const D = VEH_DEF[kind], v = { kind, col:D.cols[0], x:0, y:0, z:0, ry:0 }, h = D.label - 0.25, r = Math.max(D.sh[0], D.sh[1], h / 2);
+  const cam = camLook([r * 2.2, h * 0.75 + r * 0.9, r * 2.6], [0, h * 0.45, 0], 35), dk = document.documentElement.dataset.theme === 'dark';
+  const url = offscreenURL(120, 96, (w, H) => {
+    const vp = M4.mul(M4.persp(fovOf(cam.lens), w / H, 0.06, 320), M4.lookAt(camEyeRaw(cam), [cam.tx, cam.ty, cam.tz], [0, 1, 0]));
+    GL.begin(w, H, vp, hexRGB(dk ? '#262930' : '#E7EBF0'), {}); GL.view(camEyeRaw(cam), []);
+    GL.draw(vehMesh(v), { m:M4.ident(), vc:true });
+  }, 0.85);
+  OBJ_PREV.set(kind, url);
   return url;
 }
 /* la vignette d'un lieu : son premier cadrage, sans personne */

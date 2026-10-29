@@ -117,6 +117,17 @@ function cyl(g, x, y, z, r1, r2, len, col, seg, axis){
   }
   EDGE_ON = e0; MAT = m0;
 }
+/* un volume à huit pans, effilé du bas (y0) vers le haut (y1) : un torse arrondi, sans arêtes vives.
+   hx, hz : demi-largeur et demi-profondeur en bas ; tx, tz : en haut ; k : la part de chaque coin abattu */
+function taper8(g, y0, y1, hx, hz, tx, tz, col, k, zc){
+  const C = typeof col === 'string' ? hexRGB(col) : col, e0 = EDGE_ON; EDGE_ON = 0; k = k == null ? 0.38 : k; zc = zc || 0;
+  const ring = (y, a, b) => [[a, -b * (1 - k)], [a, b * (1 - k)], [a * (1 - k), b], [-a * (1 - k), b], [-a, b * (1 - k)], [-a, -b * (1 - k)], [-a * (1 - k), -b], [a * (1 - k), -b]].map(([x, z]) => [x, y, z + zc]);
+  const B = ring(y0, hx, hz), T = ring(y1, tx, tz);
+  for(let i = 0; i < 8; i++){ const j = (i + 1) % 8; quad(g, B[i], T[i], T[j], B[j], C); }
+  const ct = [0, y1, zc], cb = [0, y0, zc];
+  for(let i = 0; i < 8; i++){ const j = (i + 1) % 8; tri(g, ct, T[j], T[i], C); tri(g, cb, B[i], B[j], C); }
+  EDGE_ON = e0;
+}
 /* ellipsoïde bas en polygones */
 function ball(g, x, y, z, rx, ry, rz, col, seg){
   seg = Math.max(5, Math.round((seg || 8) * GEO_K)); const st = Math.max(4, Math.round(seg * .7)); const C = typeof col === 'string' ? hexRGB(col) : col, m0 = MAT, e0 = EDGE_ON; EDGE_ON = 0;
@@ -190,6 +201,7 @@ const GL = {
           c = base * (0.32 + 0.15 * h + 0.36 * d * vec3(1.05, 1.0, 0.94) + 0.3 * f);
           float lc = dot(c, vec3(0.299, 0.587, 0.114)); c = mix(vec3(lc), c, 1.22);                  // des couleurs un peu plus franches que le décor
           c += vec3(0.3, 0.3, 0.31) * pow(1.0 - f, 2.2) * (0.5 + 0.5 * h);                       // un liseré clair tout autour : le personnage se détache du fond
+          c *= mix(0.84, 1.0, smoothstep(0.0, 0.85, vW.y - uFloor));                              // un peu plus sombre près du sol : il touche le décor
         } else {
           // une lumière du ciel un peu froide par-dessus, un rebond chaud par-dessous, et un soleil doux
           // qui « enveloppe » les formes (aussi léger à calculer que l'ancien éclairage)
@@ -198,6 +210,7 @@ const GL = {
           c = base * (amb + 0.56 * w * vec3(1.05, 1.0, 0.92));
           // le pied des murs et des meubles, plus sombre (à chaque étage) : les objets « touchent » le sol
           if(abs(n.y) < 0.5) c *= mix(0.66, 1.0, smoothstep(0.0, 0.6, vW.y - uFloor));
+          if(n.y < -0.5) c *= 0.93;                                                                // les plafonds, un peu plus sombres que les murs
           c = mix(c, c * c * (3.0 - 2.0 * c), 0.22);   // un peu plus de relief dans les valeurs
           // le décor reste un peu en retrait (couleurs un peu plus douces, un voile très léger au loin) : les personnages ressortent
           // chaque matière a sa lumière : l'architecture reste en retrait, les meubles et objets ressortent un peu,

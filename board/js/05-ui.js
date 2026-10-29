@@ -16,7 +16,7 @@ S.hidden = [];
 const PANELS = [
   { g:['Le décor', 'The set'], items:[
     { id:'place', n:1, ic:'place', fr:'Le lieu', en:'The place' },
-    { id:'car', ic:'car', fr:'Les véhicules', en:'Vehicles' },
+    { id:'car', ic:'car', fr:'Accessoires', en:'Props' },
     { id:'crowd', ic:'crowd', fr:'La foule', en:'Crowds' } ] },
   { g:['Les acteurs', 'The cast'], items:[
     { id:'chars', n:2, ic:'users', fr:'Les personnages', en:'The characters' },
@@ -305,7 +305,7 @@ function renderHint(){
 }
 
 /* ---------- Le volet de droite : le contenu de l'étape choisie ---------- */
-const charName = c => { const ch = shot().chars[c]; const lk = lookOf(ch, c); return esc(L(lk.fr, lk.en)); };
+const charName = c => { const ch = shot().chars[c]; const n = ch && S.doc.names && S.doc.names[ch.look]; if(n) return esc(n); const lk = lookOf(ch, c); return esc(L(lk.fr, lk.en)); };
 /* une petite silhouette, à la couleur des habits du personnage (les enfants sont plus petits) */
 const figure = lk => {
   const kid = lk.age === 'kid', k = kid ? 0.78 : 1, oy = kid ? 4.4 : 0, f = lk.body === 'f';
@@ -349,7 +349,7 @@ function renderPanel(){
   el.dataset.p = S.panel;
   if(same) el.querySelector('.side-body').scrollTop = top;
   renderRail();
-  fillPlacePreviews(); fillPosePreviews();
+  fillPlacePreviews(); fillPosePreviews(); fillObjPreviews();
 }
 /* les vignettes des lieux se dessinent une par une, sans bloquer l'interface */
 let _ppT = 0;
@@ -363,6 +363,12 @@ function fillPosePreviews(){
   clearTimeout(_pvT);
   const el = document.querySelector('img[data-pv]'); if(!el || S.play || S.rec || !GL.gl) return;
   _pvT = setTimeout(() => { const [lk, pid] = el.dataset.pv.split(':'); el.src = posePreview(+lk, pid); el.removeAttribute('data-pv'); fillPosePreviews(); }, 12);
+}
+let _opT = 0;
+function fillObjPreviews(){
+  clearTimeout(_opT);
+  const el = document.querySelector('img[data-op]'); if(!el || S.play || S.rec || !GL.gl) return;
+  _opT = setTimeout(() => { el.src = objPreview(el.dataset.op); el.removeAttribute('data-op'); fillObjPreviews(); }, 12);
 }
 function renderTools(){ renderHead(); renderPanel(); renderView(); }
 function renderShotPanel(){ renderHead(); if(S.panel === 'text' || S.panel === 'move') renderPanel(); renderTop(); }
@@ -410,6 +416,7 @@ const PANEL_HTML = {
     const spots = (SPOTS[sh.set] || []).map((p, k) => `<button class="chip" data-act="spot" data-k="${k}">${esc(L(p[0], p[1]))}</button>`).join('');
     return ph('users', L('Les personnages', 'The characters'), L('Clique un nom : la caméra va vers lui. L’épingle verte le déplace.', 'Click a name: the camera goes to them. The green pin moves them.')) +
       `<div class="pb">${lbl(L('Dans ce plan', 'In this shot'))}${rows}
+      ${chars[t] ? `<label class="fld name-f"><span>${L('Son nom dans le film (pour tous les plans)', 'Their name in the film (for every shot)')}</span><input id="fName" maxlength="24" value="${esc((S.doc.names || {})[chars[t].look] || '')}" placeholder="${esc(L('ex. Jules, l’inspecteur…', 'e.g. Jules, the detective…'))}"></label>` : ''}
       ${lbl(L('Ajouter', 'Add') + ` <span class="cnt">${chars.length} / ${MAX_CHARS}</span>`)}${add}
       ${lbl(L('Rôles secondaires : police et truands', 'Supporting roles: police and crooks'))}${npc}
       ${chars[t] ? lbl(L('La tenue de ', 'Outfit for ') + charName(t)) + outfits : ''}
@@ -422,6 +429,15 @@ const PANEL_HTML = {
     const tile = p => `<button class="pose-t ${ch && ch.pose === p.id ? 'on' : ''}" data-act="pose" data-id="${p.id}"><img ${POSE_PREV.has(poseKey(look, p.id)) ? `src="${POSE_PREV.get(poseKey(look, p.id))}"` : `data-pv="${look}:${p.id}"`} alt=""><span>${esc(L(p.fr, p.en))}</span></button>`;
     const tiles = POSE_GROUPS.map(([g, fr, en]) => `<div class="pose-g" id="g-${g}">${esc(L(fr, en))}</div><div class="poses">${POSES.filter(p => p.g === g).map(tile).join('')}</div>`).join('');
     const prop = ch ? `${lbl(L('Dans la main', 'In hand'))}<div class="seg wide"><button class="${!ch.prop ? 'on' : ''}" data-act="prop" data-id="">${L('Rien', 'Nothing')}</button>${PROPS.map(([id, fr, en]) => `<button class="${ch.prop === id ? 'on' : ''}" data-act="prop" data-id="${id}">${id === 'gun' ? icon('gun') : ''}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
+    const faceG = e => { const B = { neutral:'M6 7.2h2.4M9.6 7.2H12', happy:'M6 7h2.4M9.6 7H12', sad:'M6 7.6l2.4-.8M9.6 6.8l2.4.8', angry:'M6 6.6l2.4.9M9.6 7.5l2.4-.9', surprised:'M6 6.3h2.4M9.6 6.3H12', scared:'M6 7.3l2.4-.9M9.6 6.4l2.4.9', shout:'M6 6.7l2.4.6M9.6 7.3l2.4-.6' }[e],
+        Mo = { neutral:'M7.3 12.4h3.4', happy:'M6.9 11.8q2.1 2.2 4.2 0', sad:'M6.9 13q2.1-2 4.2 0', angry:'M7.1 12.6h3.8', surprised:'M9 11.3a1.1 1.4 0 1 0 .01 0z', scared:'M7.2 12.3h3.6v.9H7.2z', shout:'M7.4 11.1h3.2v2.6H7.4z' }[e];
+      return `<svg class="face-g" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7.6"/><path d="${B}"/><circle class="e" cx="7.2" cy="8.9" r=".75"/><circle class="e" cx="10.8" cy="8.9" r=".75"/><path d="${Mo}"/></svg>`; };
+    const expr = ch ? lbl(L('Le visage', 'Facial expression')) + `<div class="faces">${EXPRS.map(([id, fr, en]) => `<button class="face-t ${(ch.expr || 'neutral') === id ? 'on' : ''}" data-act="expr" data-id="${id}">${faceG(id)}<span>${esc(L(fr, en))}</span></button>`).join('')}</div>` : '';
+    const gz = ch ? (ch.gaze == null ? '' : String(ch.gaze)) : '';
+    const gaze = ch ? lbl(L('Le regard', 'Looking at')) + `<div class="seg wide wrap"><button class="${gz === '' ? 'on' : ''}" data-act="gaze" data-v="">${L('Devant soi', 'Ahead')}</button><button class="${gz === 'cam' ? 'on' : ''}" data-act="gaze" data-v="cam">${icon('camera')}${L('La caméra', 'The camera')}</button>${chars.map((c, i) => i === t ? '' : `<button class="${gz === String(i) ? 'on' : ''}" data-act="gaze" data-v="${i}">${figure(lookOf(c, i))}${charName(i)}</button>`).join('')}</div>` : '';
+    const A = ch && ch.arrow || {};
+    const arrow = ch ? lbl(L('Il se déplace (flèche au sol)', 'Moves (arrow on the floor)')) + `<div class="seg wide"><button class="${!A.len ? 'on' : ''}" data-act="arrowLen" data-v="0">${L('Non', 'No')}</button>${[1, 2, 3, 5].map(m => `<button class="${A.len === m ? 'on' : ''}" data-act="arrowLen" data-v="${m}">${m} m</button>`).join('')}</div>` +
+      (A.len ? `<div class="seg wide">${[['f', 'Devant', 'Ahead'], ['l', 'À sa gauche', 'Their left'], ['r', 'À sa droite', 'Their right'], ['b', 'Derrière', 'Behind']].map(([k, fr, en]) => `<button class="${(A.dir || 'f') === k ? 'on' : ''}" data-act="arrowDir" data-v="${k}">${esc(L(fr, en))}</button>`).join('')}</div>` : '') : '';
     const gear = ch ? lbl(L('Sur lui', 'Carried')) + `<div class="seg wide">${GEAR.map(([id, fr, en]) => `<button class="${ch.gear && ch.gear[id] ? 'on' : ''}" data-act="gear" data-id="${id}">${icon('gun')}${esc(L(fr, en))}</button>`).join('')}</div>` : '';
     const gun = ch && ch.prop === 'gun' ? lbl(L('Prises de vue avec l’arme', 'Shots with the gun')) + `<div class="cars">${GUN_SHOTS.map(P => `<button class="car-t" data-act="gunShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
     let part;
@@ -433,7 +449,7 @@ const PANEL_HTML = {
         <button class="btn btn-sm" data-act="resetPart">${icon('reset')}${L('Remettre droit', 'Straighten')}</button>`;
     } else part = `<p class="fly-note">${L('Pour un geste précis : clique sur une partie du corps dans l’image (un bras, la tête…) et glisse. Ses réglages s’affichent ici.', 'For a precise gesture: click a body part in the picture (an arm, the head…) and drag. Its settings show up here.')}</p>`;
     return ph('pose', L('Les poses de ', 'Poses for ') + charName(t), L('Une pose en un clic, puis les retouches à la main si besoin.', 'One click for a pose, then hand touch-ups if needed.'), sel ? '' : jumpBar(POSE_GROUPS.map(([g]) => [g, { move:L('Debout', 'Standing'), seat:L('Assis, au sol', 'Seated, floor'), gest:L('Gestes', 'Gestures'), gun:L('Pistolet', 'Handgun'), moto:L('Moto', 'Motorbike') }[g] || g]))) +
-      `<div class="pb">${who}${tiles}${prop}${gear}${gun}${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
+      `<div class="pb">${who}${expr}${gaze}${tiles}${prop}${gear}${arrow}${gun}${lbl(L('Partie du corps', 'Body part'))}${part}</div>`;
   },
   crowd(){
     const sh = shot(), cr = sh.crowds, k = cr[S.crowd] ? S.crowd : -1, c = cr[k];
@@ -489,11 +505,12 @@ const PANEL_HTML = {
     const list = vs.map((x, i) => `<div class="crow ${i === k ? 'on' : ''}"><button class="crow-main" data-act="pickVeh" data-k="${i}">${icon(VD(x).ic)}<span>${esc(L(VD(x).fr, VD(x).en))} ${vs.filter((o, j) => j <= i && o.kind === x.kind).length}</span><em>${esc(on(x).map(c => L(lookOf(c).fr, lookOf(c).en)).join(', '))}</em></button><button class="ib sm danger" data-act="removeVeh" data-k="${i}" title="${esc(L('Retirer', 'Remove'))}">${icon('close')}</button></div>`).join('');
     const D = v && VD(v), who = v && (si => { const c = on(v).find(c => c.on.seat === si); return c ? L(lookOf(c).fr, lookOf(c).en) : ''; });
     const set = v ? `<div class="qsw">${D.cols.map(c => `<button class="${v.col === c ? 'on' : ''}" style="--c:${c}" data-act="vehCol" data-c="${c}" aria-label="${c}"></button>`).join('')}</div>
-      ${lbl(L('Mettre ', 'Seat ') + charName(t) + L(' à la place…', ' as…'))}<div class="chips">${D.seats.map((st, i) => { const c = on(v).find(c => c.on.seat === i), me = c && sh.chars.indexOf(c) === t; return `<button class="chip ${me ? 'on' : ''}" data-act="mount" data-seat="${i}">${esc(L(st.fr, st.en))}${c && !me ? `<small>· ${esc(who(i))}</small>` : ''}</button>`; }).join('')}</div>
+      ${D.seats.length ? lbl(L('Mettre ', 'Seat ') + charName(t) + L(' à la place…', ' as…')) : ''}<div class="chips">${D.seats.map((st, i) => { const c = on(v).find(c => c.on.seat === i), me = c && sh.chars.indexOf(c) === t; return `<button class="chip ${me ? 'on' : ''}" data-act="mount" data-seat="${i}">${esc(L(st.fr, st.en))}${c && !me ? `<small>· ${esc(who(i))}</small>` : ''}</button>`; }).join('')}</div>
       ${D.fly ? `<label class="fr"><span class="fl">${L('Altitude', 'Altitude')}</span><input type="range" data-act="vehAlt" min="0" max="60" step="0.5" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 1)} m</b></label>` : ''}
-      ${lbl(L('Ses prises de vue', 'Its shots'))}<div class="cars">${D.shots.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
-    return ph('car', L('Les véhicules', 'Vehicles'), L('Pose un véhicule devant la caméra, mets un personnage à une place, puis choisis une prise de vue.', 'Put a vehicle in front of the camera, seat a character, then pick a shot.')) +
-      `<div class="pb">${lbl(L('Ajouter devant la caméra', 'Add in front of the camera'))}<div class="vadd">${Object.keys(VEH_DEF).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>${list}${set}${taxi}</div>`;
+      ${D.shots.length ? lbl(L('Ses prises de vue', 'Its shots')) : ''}<div class="cars">${D.shots.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
+    return ph('car', L('Accessoires : véhicules et objets', 'Props: vehicles and objects'), L('Pose un véhicule ou un objet devant la caméra ; sa poignée le déplace et le tourne.', 'Put a vehicle or an object in front of the camera; its handle moves and turns it.')) +
+      `<div class="pb">${lbl(L('Ajouter un véhicule devant la caméra', 'Add a vehicle in front of the camera'))}<div class="vadd">${Object.keys(VEH_DEF).filter(id => !VEH_DEF[id].obj).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>
+      ${lbl(L('Ajouter un objet devant la caméra', 'Add an object in front of the camera'))}<div class="oadd">${Object.keys(VEH_DEF).filter(id => VEH_DEF[id].obj).map(id => `<button class="otile" data-act="addVeh" data-kind="${id}"><img ${OBJ_PREV.has(id) ? `src="${OBJ_PREV.get(id)}"` : `data-op="${id}"`} alt=""><span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>${list}${set}${taxi}</div>`;
   },
   text(){
     const sh = shot(), inf = sh.info, n = S.doc.shots.length;
@@ -669,7 +686,9 @@ async function exportPdf(per){
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
   const W = 297, H = 210, M = 12, shots = S.doc.shots, pages = Math.ceil(shots.length / per);
   const tr = s => { const x = s.info.trans && s.info.trans !== 'cut' && TRANS.find(o => o[0] === s.info.trans); return x ? L(x[1], x[2]) : ''; };
-  const meta = s => [slugOf(s), tr(s), shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), Math.round(s.cam.lens) + ' mm', fmtTime(s.info.dur || 2)].filter(Boolean).join(' · ');
+  // les personnages qu'on a nommés (Jules, Mia…) : on les retrouve sous chaque image
+  const who = s => { const n = s.chars.map(ch => S.doc.names && S.doc.names[ch.look]).filter(Boolean); return n.length ? L('Avec ', 'With ') + n.join(', ') : ''; };
+  const meta = s => [slugOf(s), who(s), tr(s), shotLabel('size', s.info.size), shotLabel('angle', s.info.angle), shotLabel('move', s.info.move), Math.round(s.cam.lens) + ' mm', fmtTime(s.info.dur || 2)].filter(Boolean).join(' · ');
   const badge = (i, x, y) => {
     doc.setFillColor(23, 122, 79); doc.roundedRect(x + 2, y + 2, 9, 5.4, 1, 1, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255); doc.text(String(i + 1), x + 6.5, y + 5.8, { align:'center' });
@@ -935,6 +954,10 @@ const ACT = {
   cancelRec:() => { if(S.rec) S.rec.cancel = true; },
   place:b => { setPlace(b.dataset.id); if(S.panel === 'car' && b.dataset.id === 'taxi') renderPanel(); },
   pickChar:b => focusChar(+b.dataset.c),
+  expr:b => { const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(ch) edit(() => { if(b.dataset.id === 'neutral') delete ch.expr; else ch.expr = b.dataset.id; }); },
+  gaze:b => { const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(ch) edit(() => { if(b.dataset.v === '') delete ch.gaze; else ch.gaze = b.dataset.v === 'cam' ? 'cam' : +b.dataset.v; }); },
+  arrowLen:b => { const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(ch) edit(() => { const v = +b.dataset.v; if(!v) delete ch.arrow; else ch.arrow = Object.assign({ dir:'f' }, ch.arrow || {}, { len:v }); }); },
+  arrowDir:b => { const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(ch && ch.arrow) edit(() => { ch.arrow.dir = b.dataset.v; }); },
   addChar:b => addChar(+b.dataset.look), removeChar:b => removeChar(+b.dataset.c), gear:b => setGear(b.dataset.id), outfit:b => setOutfit(b.dataset.id), faceThem, lookAt:lookAtOther,
   spot:b => placeAt(+b.dataset.k), side:b => frameSide(b.dataset.v),
   playBoard:() => playBoard(), stopBoard, previewShot:() => playBoard(S.i),
@@ -999,6 +1022,8 @@ function bindEvents(){
   let sliderSnap = null, capSnap = null;
   document.addEventListener('input', e => {
     const t = e.target;
+    if(t.id === 'fName'){ const ch = shot().chars[S.sel ? S.sel.c : S.target]; if(!ch) return; if(!capSnap) capSnap = snapshot();
+      S.doc.names = S.doc.names || {}; if(t.value.trim()) S.doc.names[ch.look] = t.value.trim(); else delete S.doc.names[ch.look]; save(); return; }
     if(t.id === 'tbTitle'){ S.doc.title = t.value; save(); const p = document.querySelector('.rail-project'); if(p) p.textContent = t.value || L('Sans titre', 'Untitled'); return; }
     // les champs du plan : scène, action, dialogue
     if(t.id === 'cap' || t.id === 'dial' || t.id === 'fScene'){
@@ -1029,6 +1054,7 @@ function bindEvents(){
   document.addEventListener('change', e => {
     const t = e.target;
     if(t.dataset.act === 'axis' || t.dataset.act === 'root' || t.dataset.act === 'crowdSet' || t.dataset.act === 'vehAlt'){ pushUndo(sliderSnap); sliderSnap = null; changed(); }
+    if(t.id === 'fName' && capSnap){ pushUndo(capSnap); capSnap = null; renderUI(); }
     if((t.id === 'cap' || t.id === 'dial' || t.id === 'fScene' || t.dataset.sv) && capSnap){ pushUndo(capSnap); capSnap = null; if(t.id === 'fScene' || t.dataset.sv) { renderStrip(); renderHead(); } }
     if(t.dataset.act === 'info' && t.tagName === 'SELECT'){ const k = t.dataset.k; edit(() => { shot().info[k] = k === 'dur' ? +t.value : t.value; }); renderStrip(); }
     if(t.dataset.act === 'room' && t.value !== ''){ goRoom(+t.value); renderHead(); renderPanel(); }
