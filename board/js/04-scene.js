@@ -926,6 +926,7 @@ function requestRender(){
    les bords des meubles deviennent nets. Une seule image, quand plus rien ne bouge : rien ne ralentit,
    même sur un vieil ordinateur (s'il est très lent, on affine moins). */
 function sharpen(){
+  return;   // l'image garde toujours la même finesse : plus de bascule floue / nette quand on bouge puis qu'on s'arrête
   if(!R.canvas || !R.baseW || R.sharp || S.rec || S.play) return;
   if(R.raf || DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || document.hidden || _wheelSnap){ R.sharpT = setTimeout(sharpen, R.bench > 45 ? 900 : 220); return; }
   if(R.bench > 90) return;   // un ordinateur très lent : on garde l'image telle quelle, la fluidité d'abord
