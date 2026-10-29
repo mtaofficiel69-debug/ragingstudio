@@ -1094,8 +1094,8 @@ function benchmark(){
   while(n < 3){ drawFrame(); sync(); n++; }
   const ms = (performance.now() - t1) / n; R.slow = ms > 20;
   const scale = ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
-  if(scale !== R.scale){ R.scale = scale; fitStage(); }
-  R.bench = ms;
+  const was = R.bench; R.bench = ms;
+  if(scale !== R.scale || (was > 32) !== (ms > 32) || (was > 60) !== (ms > 60)){ R.scale = scale; fitStage(); }
 }
 /* les formats d'image : le cadre reste en 16:9, le format se voit par des bandes (comme sur un moniteur de tournage) */
 const RATIOS = [['16:9', 16 / 9, '16:9 · TV, web'], ['1.85', 1.85, '1.85 · cinéma'], ['2.39', 2.39, '2.39 · scope'], ['4:3', 4 / 3, '4:3'], ['1:1', 1, '1:1 · carré'], ['9:16', 9 / 16, '9:16 · vertical']];
