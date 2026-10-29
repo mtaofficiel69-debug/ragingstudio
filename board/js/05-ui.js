@@ -209,7 +209,7 @@ function renderPlan(){
     const [ax, ay] = planXY(-5, -4), [bx, by] = planXY(5, 4);
     svg += `<rect class="hp-floor" x="${ax}" y="${ay}" width="${bx - ax}" height="${by - ay}" rx="2"/>`;
     // l'escalier ou la trappe de l'étage
-    const holes = [[-4.65, -0.45, -3.65, 3.75], [-3.62, -0.45, -2.42, 3.75], [-4.7, -3.2, -3.9, -2.4], [-4.7, -3.2, -3.9, -2.4]];
+    const holes = [[-4.2, -0.45, -3.2, 3.75], [-3.12, -0.45, -2.12, 3.75], [-4.7, -3.2, -3.9, -2.4], [-4.7, -3.2, -3.9, -2.4]];
     const hs = lv === 1 ? [holes[0], holes[1]] : lv === 2 ? [holes[1], holes[2]] : lv === 3 ? [holes[3]] : [holes[0]];
     hs.forEach(([x0, z0, x1, z1]) => { const [p, q] = planXY(x0, z0), [r, t] = planXY(x1, z1); svg += `<rect class="hp-stair" x="${p}" y="${q}" width="${r - p}" height="${t - q}"/>`; for(let z = z0 + 0.3; z < z1; z += 0.3){ const [u, v] = planXY(x0, z), [w] = planXY(x1, z); svg += `<line class="hp-step" x1="${u}" y1="${v}" x2="${w}" y2="${v}"/>`; } });
     // les cloisons, avec leurs portes
@@ -305,7 +305,7 @@ function renderHint(){
   else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer sur le sol', 'Drag to move on the floor') : L('Glisse à gauche ou à droite pour faire tourner', 'Drag left or right to turn');
   else if(S.sel) t = L('Glisse une partie du corps · Clic dans le vide : terminé', 'Drag a body part · Click empty space: done');
   else t = L('Glisser : tourner autour · Clic droit : se décaler · Molette : avancer · Double-clic : viser', 'Drag: orbit · Right-click: pan · Wheel: move in · Double-click: aim');
-  el.innerHTML = `<i></i>${esc(t)}`;
+  el.innerHTML = `<i></i><span>${esc(t)}</span>`; el.title = t;
 }
 
 /* ---------- Le volet de droite : le contenu de l'étape choisie ---------- */
@@ -422,7 +422,7 @@ const glyph = (d, cls) => `<svg class="${cls || 'mg'}" viewBox="0 0 20 20" aria-
 
 const PANEL_HTML = {
   place(){
-    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'hospital', 'metro', 'bar', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
+    const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'hospital', 'metro', 'bar', 'school', 'shop', 'meeting', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
     const fl = SET_DEF[sh.set].floors ? lblId(L('Pièces', 'Rooms'), 'rooms') + `<div class="chips">${SET_DEF[sh.set].floors.map((f, k) => `<button class="chip ${S.room === k ? 'on' : ''}" data-act="floor" data-k="${k}">${esc(L(f[0], f[1]))}</button>`).join('')}</div>` : '';
     const gid = ['in', 'out', 'wide'];
     const cur = SETS.find(x => x.id === sh.set) || SETS[0];
@@ -614,6 +614,7 @@ function renderStrip(){
         <span class="sc-t"><b>${esc(shotLabel('size', s.info.size, true))}</b>${esc(s.info.cap || L('Sans action', 'No action yet'))}</span></button></div>`).join('')}
       <div class="add-col">
         <button class="add-shot" data-act="addShot">${icon('plus')}<span>${L('Nouveau plan', 'New shot')}</span><small>${L('reprend le plan ', 'from shot ') + (S.i + 1)}</small></button>
+        <div class="add-steps"><button class="add-shot rev" data-act="addCloser" title="${esc(L('Le plan suivant, un cran plus serré sur le même personnage', 'The next shot, one size tighter on the same character'))}">${icon('closer')}<span>${L('Plus près', 'Closer')}</span></button><button class="add-shot rev" data-act="addWider" title="${esc(L('Le plan suivant, un cran plus large', 'The next shot, one size wider'))}">${icon('wider')}<span>${L('Plus large', 'Wider')}</span></button></div>
         <button class="add-shot rev" data-act="scriptImport" title="${esc(L('Chaque scène du scénario devient un plan : depuis Raging Page, un texte collé ou un fichier .fountain', 'Each scene of the script becomes a shot: from Raging Page, pasted text or a .fountain file'))}">${icon('text')}<span>${L('Scénario', 'Script')}</span></button>
         ${two ? `<button class="add-shot rev" data-act="addReverse" title="${esc(L('Le plan suivant, par-dessus l’épaule de l’autre personnage', 'The next shot, over the other character’s shoulder'))}">${icon('reverse')}<span>${L('Contrechamp', 'Reverse shot')}</span></button>` : ''}
       </div>
@@ -977,8 +978,9 @@ const SCRIPT_SETS = [
   ['house', 'maison de campagne|ferme|farmhouse|cottage|chalet'], ['parking', 'parking|car park|garage souterrain'],
   ['hospital', 'hopital|hospital|clinique|clinic|urgences|emergency room|chambre d.hopital'], ['police', 'commissariat|police|gendarmerie|precinct|cellule|interrogatoire'],
   ['bank', 'banque|bank|coffre'], ['metro', 'metro|subway|rame|wagon|train|rer|tram'], ['hotel', 'hotel|motel|auberge'],
-  ['diner', 'diner|restaurant|snack|cantine|fast.food|brasserie'], ['bar', 'bar|pub|club|boite de nuit|discotheque|nightclub'], ['cafe', 'cafe|coffee|salon de the|cafeteria'],
-  ['taxi', 'taxi|voiture|car|auto|vehicule|camion|van'], ['office', 'bureau|office|agence|open.space|salle de reunion|entreprise|redaction'],
+  ['diner', 'diner|restaurant|snack|cantine|fast.food|brasserie'], ['bar', 'bar|pub|club|boite de nuit|discotheque|nightclub'], ['meeting', 'salle de reunion|reunion|meeting|conference|boardroom|seminaire'], ['school', 'salle de classe|classe|ecole|classroom|school|college|lycee|universite|amphi'],
+  ['shop', 'superette|epicerie|magasin|boutique|supermarche|supermarket|shop|store|grocery|station.service'], ['cafe', 'cafe|coffee|salon de the|cafeteria'],
+  ['taxi', 'taxi|voiture|car|auto|vehicule|camion|van'], ['office', 'bureau|office|agence|open.space|entreprise|redaction'],
   ['garage', 'garage|atelier|workshop'], ['warehouse', 'entrepot|warehouse|hangar|usine|factory|depot'], ['hall', 'couloir|hall|corridor|escalier|stairs|entree|palier|ascenseur'],
   ['alley', 'ruelle|alley|impasse|passage'], ['roof', 'toit|rooftop|roof|terrasse'], ['airfield', 'aerodrome|aeroport|airport|piste|airfield'],
   ['stadium', 'stade|stadium|terrain de foot|gymnase'], ['beach', 'plage|beach|mer|ocean|sea|port|quai'], ['forest', 'foret|forest|bois|woods|jungle'],
@@ -1212,7 +1214,7 @@ const ACT = {
   stageShot:b => { S.view = 'stage'; goShot(+b.dataset.i); renderUI(); },
   stageView:() => { S.view = 'stage'; renderUI(); },
   sheetView:() => { S.view = 'sheet'; renderUI(); },
-  addShot, addReverse, dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), roomTip:() => { lsSet('raging3d_roomtip', '1'); renderPlan(); }, planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '1' ? '0' : '1'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
+  addShot, addReverse, addCloser:() => addStep(1), addWider:() => addStep(-1), dupShot, delShot, delShotAt:b => delShot(+b.dataset.i), roomTip:() => { lsSet('raging3d_roomtip', '1'); renderPlan(); }, planTog:() => { lsSet('raging3d_plan', lsGet('raging3d_plan') === '1' ? '0' : '1'); renderPlan(); }, planLv:b => { S.planLevel = +b.dataset.l; const d = SET_DEF[shot().set], k = d.floors.findIndex(f => f[2] === S.planLevel); if(k >= 0){ goRoom(k); renderHead(); renderPanel(); } else renderPlan(); }, bringHere:() => { bringHere(); renderPlan(); }, jump:b => { const g = document.getElementById('g-' + b.dataset.t); if(g) g.scrollIntoView({ block:'start', behavior:'smooth' }); },
   addShotEnd:() => { goShot(S.doc.shots.length - 1); addShot(); },
   moveShot:b => moveShot(+b.dataset.d),
   info:b => { const k = b.dataset.k, v = b.dataset.v; if(k === 'move' && v !== 'end') endEdit(); edit(() => { shot().info[k] = v; }); renderStrip(); },

@@ -109,6 +109,17 @@ function addReverse(){
   n.cam = frameOTS(n.chars[front], n.chars[back], s.cam.lens >= 50 ? s.cam.lens : 50);
   S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.target = front; S.sel = null; changed(true);
 }
+/* le plan suivant, un cran plus serré (ou plus large) sur le même personnage : le découpage classique, en un clic */
+const SIZE_STEPS = ['pg', 'pe', 'pa', 'pm', 'pr', 'gp', 'tgp'];
+function addStep(dir){
+  const s = shot(), k = SIZE_STEPS.indexOf(s.info.size), to = SIZE_STEPS[k < 0 ? (dir > 0 ? 4 : 1) : clamp(k + dir, 0, SIZE_STEPS.length - 1)];
+  endEdit(); pushUndo();
+  const n = clone(s); n.id = uidS(); n.info = Object.assign({}, s.info, { cap:'', dial:'', size:to, move:'fix', trans:'cut' }); delete n.camEnd;
+  if(n.info.angle === 'deb') n.info.angle = 'neu';
+  S.doc.shots.splice(S.i + 1, 0, n); S.i++; S.sel = null;
+  if(n.chars.length){ frameNow(n, to, n.info.angle); n.cam.roll = 0; } camSafe(n.cam, n.set, true); CAM_WANT.cam = null;
+  changed(true); toast(L('Plan ', 'Shot ') + (S.i + 1) + ' : ' + shotLabel('size', to));
+}
 function dupShot(){ endEdit(); pushUndo(); const n = clone(shot()); n.id = uidS(); S.doc.shots.splice(S.i + 1, 0, n); S.i++; changed(true); }
 function delShot(k){
   if(S.doc.shots.length < 2){ toast(L('Il faut garder au moins un plan.', 'You need to keep at least one shot.')); return; }
@@ -223,6 +234,13 @@ const SHOT_RECIPES = [
   ['reveal', 'La révélation', 'The reveal', 'La caméra s’élève et dévoile la scène.', 'The camera rises and unveils the scene.', { size:'pe', angle:'neu', side:'tq', move:'grue' }],
   ['shock', 'Le choc', 'The shock', 'Effet Vertigo : le monde bascule autour de lui.', 'Dolly zoom: the world lurches around them.', { size:'pr', angle:'neu', side:'face', move:'vertigo' }],
   ['trunk', 'Vu du coffre (Tarantino)', 'Trunk shot (Tarantino)', 'Très bas, vers le haut, les personnages penchés sur nous.', 'Very low, looking up, the characters leaning over us.', { size:'pa', angle:'sol', side:'face', pitch:24 }],
+  ['overhead', 'Vu du ciel', 'God’s eye view', 'Tout droit d’en haut : la mise en place de la scène.', 'Straight down from above: the layout of the scene.', { size:'pe', angle:'dess' }],
+  ['profile', 'De profil', 'In profile', 'De côté : il regarde ailleurs, on l’observe.', 'From the side: they look away, we watch them.', { size:'pm', angle:'neu', side:'prof' }],
+  ['behind', 'De dos, vers l’inconnu', 'From behind, into the unknown', 'On le suit de dos : on découvre avec lui.', 'We follow them from behind: we discover with them.', { size:'pa', angle:'neu', side:'dos', move:'follow' }],
+  ['urgency', 'L’urgence', 'The urgency', 'Caméra à l’épaule, au plus près de l’action.', 'Handheld, right in the action.', { size:'pm', angle:'neu', side:'tq', move:'epa' }],
+  ['twist', 'Le coup de théâtre', 'The twist', 'Un zoom brutal sur son visage.', 'A sudden crash zoom on their face.', { size:'pr', angle:'neu', side:'face', move:'crash' }],
+  ['moment', 'L’instant suspendu', 'The suspended moment', 'La caméra tourne lentement autour de lui.', 'The camera slowly circles around them.', { size:'pm', angle:'neu', side:'tq', move:'orbit' }],
+  ['ground', 'Au ras du sol', 'Ground level', 'La caméra posée par terre : les pas, la menace.', 'The camera on the floor: footsteps, menace.', { size:'pe', angle:'sol', side:'tq' }],
 ];
 function shotRecipe(id){
   const r = SHOT_RECIPES.find(x => x[0] === id), s = shot(); if(!r) return;
@@ -740,13 +758,28 @@ function physRay(P, t, dir, maxd){
 function camWant(c){ CAM_WANT.cam = c; CAM_WANT.dist = c.dist; }
 /* une caméra posée d'un coup (un cadrage, une pièce) : si quelque chose se trouve entre le point visé et
    l'objectif, l'objectif se pose juste devant ; la focale s'élargit pour garder la même taille de sujet */
+/* l'objectif tombé dans un obstacle (un porte-bagages, un dossier) : il se rapproche du sujet jusqu'à en sortir */
+function unstick(P, c){
+  const ht = physHit(P, [c.tx, c.ty, c.tz]);
+  for(let k = 0; k < 40 && c.dist > 0.3; k++){ const h = physHit(P, camEyeRaw(c)); if(h < 0 || h === ht) break; c.dist -= 0.05; }
+  return c;
+}
 function camSafe(c, id, fit){
-  const P = id !== 'taxi' && physOf(id); if(!P) return c;   // les prises de vue du taxi (et des véhicules) sont faites pour passer par les vitres
+  // le taxi : ses prises de vue passent par les vitres. Une caméra dehors, plus basse que le bas des vitres, ne verrait que
+  // la portière : elle remonte juste à hauteur de vitre (on garde le sujet, la contre-plongée devient légère)
+  if(id === 'taxi'){ const e = camEyeRaw(c), outside = p => Math.abs(p[2]) > 0.93 || p[0] > 2.45 || p[0] < -2.5;
+    // l'un dedans, l'autre dehors : on se voit par la vitre
+    // (dans l'habitacle, l'objectif ne descend pas non plus dans les sièges)
+    const inBoth = !outside(e) && !outside([c.tx, c.ty, c.tz]), low = inBoth ? 0.62 : 1.02;
+    if((outside(e) !== outside([c.tx, c.ty, c.tz]) || inBoth) && e[1] < low - 0.02){ const ne = [e[0], low, e[2]], v = [ne[0] - c.tx, ne[1] - c.ty, ne[2] - c.tz], dd = Math.hypot(...v) || 1;
+      c.dist = dd; c.yaw = Math.atan2(v[0], v[2]) / D2R; c.pitch = -Math.asin(v[1] / dd) / D2R; }
+    return c; }
+  const P = physOf(id); if(!P) return c;
   const t = [c.tx, c.ty, c.tz];
   // jusqu'où l'objectif peut reculer depuis le point visé, dans la direction (yaw, pitch)
   const free = (yaw, pitch) => { const y = yaw * D2R, pp = pitch * D2R; return physRay(P, t, [Math.cos(pp) * Math.sin(y), -Math.sin(pp), Math.cos(pp) * Math.cos(y)], c.dist); };
   let d = free(c.yaw, c.pitch);
-  if(d >= c.dist - 0.02) return c;
+  if(d >= c.dist - 0.02) return unstick(P, c);
   // un cadrage tout prêt qui tombe dans un meuble (un comptoir, un dossier) : on cherche l'angle le plus proche
   // d'où l'on voit vraiment le sujet, un peu plus haut ou un peu sur le côté, plutôt que de coller l'objectif au sujet
   if(fit && d < c.dist * 0.8){
@@ -766,7 +799,7 @@ function camSafe(c, id, fit){
   const nd = Math.max(0.05, d);
   if(fit && c.lens) c.lens = clamp(c.lens * nd / c.dist, 14, 200);
   c.dist = nd;
-  return c;
+  return unstick(P, c);
 }
 /* l'objectif : là où on l'a mis */
 const camEye = c => camEyeRaw(c);
@@ -872,15 +905,18 @@ function requestRender(){
   if(R.raf || S.rec || S.play) return;
   // pendant qu'on bouge : l'image à sa finesse normale (fluide) ; dès qu'on s'arrête, une image plus fine
   if(R.sharp){ R.sharp = false; R.canvas.width = R.baseW; R.canvas.height = R.baseH; }
-  clearTimeout(R.sharpT); R.sharpT = setTimeout(sharpen, R.bench > 45 ? 380 : 200);
-  R.raf = requestAnimationFrame(() => { R.raf = 0; drawFrame(); if(S.tween || NAV.held) requestRender(); });
+  clearTimeout(R.sharpT); R.sharpT = setTimeout(sharpen, R.bench > 45 ? 900 : 220);   // sur un ordinateur lent, on attend qu'on ait vraiment fini
+  R.raf = requestAnimationFrame(() => { R.raf = 0;
+    if(DRAG.pendIK){ const a = DRAG.pendIK; DRAG.pendIK = null; ikDrag(a[0], a[1], a[2], a[3]); renderSide(true); }
+    drawFrame(); if(S.tween || NAV.held) requestRender(); });
 }
 /* l'image au repos, calculée plus finement (jusqu'à 2 pixels par pixel d'écran) : les traits des visages,
    les bords des meubles deviennent nets. Une seule image, quand plus rien ne bouge : rien ne ralentit,
    même sur un vieil ordinateur (s'il est très lent, on affine moins). */
 function sharpen(){
   if(!R.canvas || !R.baseW || R.sharp || S.rec || S.play) return;
-  if(R.raf || DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || document.hidden){ R.sharpT = setTimeout(sharpen, 200); return; }
+  if(R.raf || DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || document.hidden || _wheelSnap){ R.sharpT = setTimeout(sharpen, R.bench > 45 ? 900 : 220); return; }
+  if(R.bench > 90) return;   // un ordinateur très lent : on garde l'image telle quelle, la fluidité d'abord
   const dpr = window.devicePixelRatio || 1, want = Math.min(2, Math.max(dpr, 1) * (R.bench > 45 ? 1 : R.bench > 25 ? 1.5 : 2)), base = R.baseW / (R.cssW || R.baseW);
   let k = want / base; if(R.baseW * R.baseH * k * k > 4.2e6) k = Math.sqrt(4.2e6 / (R.baseW * R.baseH));
   if(k < 1.08) return;
@@ -1270,6 +1306,7 @@ function onDown(e){
     S.sel = Object.assign(hit, { pick:true }); S.target = hit.c; S.crowd = -1; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
     // attraper une main ou un pied : tout le membre suit (Alt garde l'ancienne façon, articulation par articulation)
     DRAG.ik = DRAG.mode === 'pose' ? ikStart(hit.c, hit.j, e.altKey, x, y) : null;
+    if(DRAG.ik) DRAG.ik.c0 = [e.clientX, e.clientY, R.canvas.getBoundingClientRect().height || 400];   // le point de départ, en pixels d'écran
     if(DRAG.mode === 'pose' && S.panel !== 'pose'){ S.panel = 'pose'; lsSet(LS_PANEL, 'pose'); }
     if(DRAG.mode === 'move'){ const ch = shot().chars[hit.c], g = groundAt(x, y, 0); DRAG.grab = g ? [ch.root.x - g[0], ch.root.z - g[1]] : null; }
     renderSide(); renderTools(); renderHint(); requestRender();
@@ -1323,7 +1360,8 @@ function onMove(e){
   if(DRAG.mode === 'orbit') camGesture(cam, () => { cam.yaw -= dx * 0.3; cam.pitch = clamp(cam.pitch + dy * 0.25, -88, 85); });
   else if(DRAG.mode === 'pan') camGesture(cam, () => panBy(cam, dx, dy));
   else if(DRAG.mode === 'pose' && DRAG.ik){
-    const [x, y] = canvasXY(e); ikDrag(DRAG.ik, x, y); renderSide(true);
+    // un seul calcul de pose par image (la souris envoie souvent plus de mouvements que l'écran n'affiche d'images)
+    const [x, y] = canvasXY(e); DRAG.pendIK = [DRAG.ik, x, y, { clientX:e.clientX, clientY:e.clientY }];
   }
   else if(DRAG.mode === 'move'){
     const [x, y] = canvasXY(e), g = groundAt(x, y, 0), ch = shot().chars[S.sel.c];
@@ -1334,6 +1372,7 @@ function onMove(e){
 function onUp(e){
   DRAG.pts.delete(e.pointerId);
   if(!DRAG.mode || DRAG.pts.size) return;
+  if(DRAG.pendIK){ const a = DRAG.pendIK; DRAG.pendIK = null; ikDrag(a[0], a[1], a[2], a[3]); }   // le dernier mouvement, pas encore affiché
   const m = DRAG.mode; DRAG.mode = null; DRAG.ik = null; R.canvas.style.cursor = 'grab';
   if(!DRAG.moved){
     if((m === 'orbit' || m === 'pan') && S.sel){ S.sel = null; renderSide(); renderHint(); requestRender(); }
@@ -1345,7 +1384,7 @@ function onUp(e){
 let _wheelT = 0, _wheelSnap = null;
 function onWheel(e){
   e.preventDefault(); S.tween = null;
-  if(DRAG.mode === 'pose' && DRAG.ik){
+  if(DRAG.mode === 'pose' && DRAG.ik && !DRAG.ik.direct){
     const K = DRAG.ik;
     if(K.base == null){ const P = M4.apply(charMatrices(shot().chars[K.c])[K.j], K.pt); K.base = Math.hypot(P[0] - K.eye[0], P[1] - K.eye[1], P[2] - K.eye[2]); }   // depuis là où elle est
     K.dz = clamp(K.dz + (e.deltaY < 0 ? 0.05 : -0.05), -0.8, 0.8); DRAG.moved = true;
@@ -1391,7 +1430,10 @@ function hoverCheck(e){
    Quelques centaines de petits essais par mouvement de souris : fluide même sur un vieil ordinateur. */
 const IK_CHAIN = { head:['head'], chest:['spine', 'chest'], spine:['spine'],
   armL:['armL'], foreL:['armL', 'foreL'], handL:['armL', 'foreL', 'handL'], armR:['armR'], foreR:['armR', 'foreR'], handR:['armR', 'foreR', 'handR'],
-  thighL:['thighL'], shinL:['thighL', 'shinL'], footL:['thighL', 'shinL', 'footL'], thighR:['thighR'], shinR:['thighR', 'shinR'], footR:['thighR', 'shinR', 'footR'] };
+  thighL:['thighL'], shinL:['thighL', 'shinL'], footL:['footL'], thighR:['thighR'], shinR:['thighR', 'shinR'], footR:['footR'] };   // le pied : seulement la cheville
+/* la tête et le buste ne passent pas par le calcul : glisser à gauche ou à droite les tourne, vers le haut ou le bas
+   les fait hocher ou se pencher, toujours dans le sens de la souris (le sens est réglé au début du geste, selon d'où on les voit) */
+const IK_DIRECT = { head:[1, 0], chest:[1, 0], spine:[1, 0] };   // [l'axe « tourner », l'axe « hocher / pencher »]
 // où l'on peut saisir chaque partie (un segment, dans le repère de la partie) : on prend le point le plus proche de la souris.
 // La tête et le torse se saisissent en avant du visage : tirer vers le côté les fait tourner, vers le haut les fait se redresser.
 // (un levier d'une cinquantaine de centimètres : un petit geste, une rotation mesurée)
@@ -1406,6 +1448,12 @@ function rayAt(x, y){
 }
 function ikStart(c, j, one, x, y){
   const ch = shot().chars[c]; if(!ch || !IK_CHAIN[j]) return null;
+  if(IK_DIRECT[j]){
+    const w = R.canvas.width, h = R.canvas.height, vp = viewProj(viewCam(), w / h), v = ch.j[j], [ti, ni] = IK_DIRECT[j], P = [0, j === 'head' ? 0.1 : 0.25, 0.5];
+    const scr = () => M4.apply(vp, M4.apply(charMatrices(ch)[j], P));
+    const s0 = scr(), sign = (i, k) => { const o = v[i]; v[i] = o + 4; const s1 = scr(); v[i] = o; const d = s1[k] - s0[k]; return Math.abs(d) < 1e-5 ? 1 : Math.sign(d); };
+    return { c, j, direct:true, v0:v.slice(), sx:sign(ti, 0), sy:sign(ni, 1), n0:x != null ? [x / w * 2 - 1, 1 - y / h * 2] : [0, 0] };
+  }
   const M = charMatrices(ch), [A, B] = IK_SEG[j], a = M4.apply(M[j], A), b = M4.apply(M[j], B);
   // le point du segment le plus proche du rayon de la souris : c'est lui qu'on tient
   let t = 1;
@@ -1423,8 +1471,17 @@ function ikStart(c, j, one, x, y){
   const eye = camEye(viewCam()), p0 = M4.apply(M[j], pt), d0 = Math.hypot(p0[0] - eye[0], p0[1] - eye[1], p0[2] - eye[2]);
   return { c, j, chain:one ? [j] : IK_CHAIN[j], pt, vp, h, eye, d0, dz:0, n:x != null ? [x / w * 2 - 1, 1 - y / h * 2] : null, off:x != null ? [q[0] - (x / w * 2 - 1), q[1] - (1 - y / h * 2)] : [0, 0] };
 }
-function ikDrag(K, x, y){
+function ikDrag(K, x, y, e){
   const ch = shot().chars[K.c]; if(!ch) return;
+  if(K.direct){
+    // en pixels d'écran depuis le début du geste (la même amplitude quelle que soit la taille de l'image)
+    const w = R.canvas.width, h = R.canvas.height, H2 = K.c0 ? K.c0[2] / 2 : h / 2;
+    const dx = e && K.c0 ? (e.clientX - K.c0[0]) / H2 * (h / w) : x / w * 2 - 1 - K.n0[0], dy = e && K.c0 ? -(e.clientY - K.c0[1]) / H2 : 1 - y / h * 2 - K.n0[1];
+    const [ti, ni] = IK_DIRECT[K.j], ax = JOINT[K.j].ax, v = ch.j[K.j];
+    v[ti] = Math.round(clamp(K.v0[ti] + dx * 110 * K.sx, ax[ti][2], ax[ti][3]) * 10) / 10;
+    v[ni] = Math.round(clamp(K.v0[ni] + dy * 90 * K.sy, ax[ni][2], ax[ni][3]) * 10) / 10;
+    return;
+  }
   // en coordonnées de l'image (de -1 à 1) : la taille de l'image peut changer entre deux gestes (image affinée au repos)
   const w = R.canvas.width, h = R.canvas.height; K.n = [x / w * 2 - 1, 1 - y / h * 2];
   ikSolve(ch, K.j, K.chain, [K.n[0] + K.off[0], K.n[1] + K.off[1]], K.pt, K.vp, K.h, K);
@@ -1450,8 +1507,8 @@ function ikSolve(ch, j, chain, T, pt, vp, h, K){
       e += K.dz ? 6 * dd * dd : dd > 0 ? 2 * dd * dd : 0; }                     // s'éloigner coûte ; la molette fixe la profondeur voulue
     for(const [id, i, wt, back] of free){ const v = ch.j[id][i] || 0; e += wt * (v - (orig[id][i] || 0)) ** 2; if(back && v < 0) e += 0.00003 * v * v; } return e; };
   // de grands pas d'abord (on ne reste pas coincé), puis de plus en plus fins
-  let best = err(), step = 16, n = 0;
-  while(step > 0.5 && n < 360){
+  let best = err(), step = 16, n = 0; const maxN = R.slow ? 170 : 360;   // moins d'essais sur un ordinateur lent
+  while(step > 0.5 && n < maxN){
     let better = false;
     for(const [id, i] of free){ const lim = JOINT[id].ax[i];
       for(const dd of [step, -step]){ const old = ch.j[id][i] || 0; ch.j[id][i] = clamp(old + dd, lim[2], lim[3]); n++;

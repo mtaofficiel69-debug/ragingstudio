@@ -96,6 +96,8 @@ function icon(name, cls){
     vehicle:'<path d="M2 10.5V8.4l1.4-3.2c.2-.5.7-.8 1.2-.8h6.8c.5 0 1 .3 1.2.8L14 8.4v2.1"/><path d="M1.5 10.5h13v2h-13z"/><circle cx="4.6" cy="12.6" r=".9"/><circle cx="11.4" cy="12.6" r=".9"/>',
     stairs:'<path d="M2 14h3v-3h3V8h3V5h3V2"/>',
     target:'<circle cx="8" cy="8" r="5.6"/><circle cx="8" cy="8" r="2"/><path d="M8 .8v2.4M8 12.8v2.4M.8 8h2.4M12.8 8h2.4"/>',
+    closer:'<path d="M2 2l4 4M14 2l-4 4M2 14l4-4M14 14l-4-4M3.4 6H6V3.4M12.6 6H10V3.4M3.4 10H6v2.6M12.6 10H10v2.6"/>',
+    wider:'<path d="M6 6 2 2M10 6l4-4M6 10l-4 4M10 10l4 4M2 4.8V2h2.8M14 4.8V2h-2.8M2 11.2V14h2.8M14 11.2V14h-2.8"/>',
   }[name] || '';
   return `<svg class="icon ${cls || ''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 }
