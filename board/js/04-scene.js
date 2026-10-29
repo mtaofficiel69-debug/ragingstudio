@@ -311,10 +311,48 @@ function addVehicle(kind){
   const s = shot(), c = viewCam(), y = c.yaw * D2R, d = clamp(c.dist * 0.5 + 1.5, 2, 10);
   edit(() => {
     const K = VEH_DEF[kind] ? kind : 'moto', D = VEH_DEF[K], dd = K === 'moto' || D.obj ? Math.min(d, 4) : Math.max(d, 6);
-    s.vehicles.push({ id:uidS(), kind:K, col:D.cols[s.vehicles.filter(o => o.kind === K).length % D.cols.length], x:round(c.tx - Math.sin(y) * dd, 2), y:0, z:round(c.tz - Math.cos(y) * dd, 2), ry:round(c.yaw + (D.obj ? 0 : 90), 0) });
+    const nv = { id:uidS(), kind:K, col:D.cols[s.vehicles.filter(o => o.kind === K).length % D.cols.length], x:round(c.tx - Math.sin(y) * dd, 2), y:0, z:round(c.tz - Math.cos(y) * dd, 2), ry:round(c.yaw + (D.obj ? 0 : 90), 0) };
+    const lv = SET_DEF[s.set].levels; if(lv) nv.y = lv.reduce((b, l) => l <= c.ty + 0.3 ? l : b, 0);
+    if(D.obj) nv.y = supportY(s, nv, nv.y);
+    s.vehicles.push(nv);
     S.veh = s.vehicles.length - 1;
   });
 }
+/* ---------- La hauteur d'un accessoire ----------
+   On le monte, on le descend : il ne passe jamais sous le sol (ni sous le plancher de l'étage où il est),
+   ni à travers un meuble ou un autre accessoire (il se pose dessus), ni à travers le plafond d'une pièce.
+   Le calcul ne se fait qu'au moment où l'on règle la hauteur : rien de plus à chaque image. */
+function itemSize(v){
+  const D = VEH_DEF[v.kind] || {};
+  if(D.obj){ const s = D.sh || [0.3, 0.3]; return [s[0], s[1], Math.max(0.15, (D.label || 1) - 0.22)]; }
+  const H = VEH_HULL[v.kind] || [[0, 0.5, 0, 0.5, 0.5, 0.5]];
+  return [Math.max(...H.map(h => Math.abs(h[0]) + h[3])), Math.max(...H.map(h => Math.abs(h[2]) + h[5])), Math.max(...H.map(h => h[1] + h[4]))];
+}
+function supportY(sh, v, want){
+  const d = SET_DEF[sh.set] || {}, C = SET_COLL[sh.set], lv = d.levels || [0], [hx, hz, h] = itemSize(v);
+  const a = (v.ry || 0) * D2R, ca = Math.abs(Math.cos(a)), sa = Math.abs(Math.sin(a)), ex = hx * ca + hz * sa, ez = hx * sa + hz * ca;
+  // l'étage où il se trouve déjà : on règle sa hauteur dans cet étage (il ne passe pas d'un étage à l'autre)
+  const lvl = lv.reduce((b, l, i) => l <= Math.max(v.y || 0, 0) + 0.3 ? i : b, 0), base = lv[lvl] || 0;
+  // le plafond de la pièce où il est (dans un lieu sans ciel) : il reste dessous, et ce qui est à l'étage ne compte pas
+  const inBox = !d.box || (v.x > d.box[0] && v.x < d.box[2] && v.z > d.box[1] && v.z < d.box[3]);
+  const top = !C ? 1e9 : d.levels ? (inBox ? base + (d.roomH || 2.9) : 1e9) : d.sky ? 1e9 : Math.max(0, ...[C.main].concat(C.levels).flatMap(L => L.w.map(w => w[5])));
+  let y = Math.max(want, base);
+  // ce qui peut porter l'objet : les meubles du lieu, et les autres accessoires
+  const boxes = [];
+  if(C) [C.main].concat(C.levels).forEach(L => L.b.forEach(b => { const c = Math.abs(Math.cos(b[6] || 0)), s = Math.abs(Math.sin(b[6] || 0)); boxes.push([b[0], b[2], b[3] * c + b[5] * s, b[3] * s + b[5] * c, b[1] - b[4], b[1] + b[4]]); }));
+  (sh.vehicles || []).forEach(o => { if(o === v) return; const [ox, oz, oh] = itemSize(o), oa = (o.ry || 0) * D2R, c = Math.abs(Math.cos(oa)), s = Math.abs(Math.sin(oa)); boxes.push([o.x, o.z, ox * c + oz * s, ox * s + oz * c, o.y || 0, (o.y || 0) + oh]); });
+  for(let k = 0; k < 6; k++){
+    let moved = false;
+    for(const b of boxes){
+      if(b[4] >= top - 0.05 || Math.abs(v.x - b[0]) >= ex + b[2] - 0.02 || Math.abs(v.z - b[1]) >= ez + b[3] - 0.02) continue;   // pas au-dessus, ou à l'étage
+      if(y < b[5] - 0.005 && y + h > b[4] + 0.005){ y = b[5]; moved = true; }                              // dedans : il se pose dessus
+    }
+    if(!moved) break;
+  }
+  if(top > 0.5 && top < 1e8 && y + h > top) y = Math.max(base, top - h);
+  return Math.round(y * 100) / 100;
+}
+function setVehY(v, want){ const s = shot(); v.y = supportY(s, v, want); syncRiders(s); }
 function removeVehicle(k){ const s = shot(), v = s.vehicles[k]; if(!v) return; edit(() => { s.chars.forEach(ch => { if(ch.on && ch.on.v === v.id){ delete ch.on; applyPose(ch, 'stand'); } }); s.vehicles.splice(k, 1); S.veh = s.vehicles.length ? Math.min(k, s.vehicles.length - 1) : -1; }); }
 /* les personnages montés suivent leur véhicule */
 const vehSeat = (v, i) => { const D = VEH_DEF[v.kind] || VEH_DEF.moto; return D.seats[i] || D.seats[0]; };
@@ -763,7 +801,8 @@ function camGesture(c, fn, zoom){
 /* ---------- Rendu ---------- */
 const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new Map(), scale:1 };
 function setMesh(id){
-  if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), gl:GL.mesh(edgeLines(o.g)), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)), levelsL:o.levels.map(l => GL.mesh(edgeLines(l))) }; }
+  if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), gl:GL.mesh(edgeLines(o.g)), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)), levelsL:o.levels.map(l => GL.mesh(edgeLines(l))),
+    panes:o.panes ? GL.mesh(o.panes) : null, levelPanes:o.levelPanes.map(l => l ? GL.mesh(l) : null) }; }
   return R.sets[id];
 }
 /* les formes d'un personnage (et de son contour), fabriquées une fois, à la demande pour les tenues */
@@ -811,7 +850,9 @@ function drawSet(SM, sh, cam, o, lines){
   if(lines){
     gl.disable(gl.POLYGON_OFFSET_FILL); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     const L = { flat:true, lines:true, col:INK, a:0.3 };
-    GL.draw(SM.gl, L); SM.levelsL.forEach((m, i) => { if(show[i]) GL.draw(m, L); });
+    // les traits d'un étage au-dessus de la caméra ne se dessinent pas : collés au plafond, ils transparaîtraient à travers
+    const ey = camEye(cam)[1], here = lv.reduce((b, y, i) => ey >= y - 0.2 ? i : b, 0);
+    GL.draw(SM.gl, L); SM.levelsL.forEach((m, i) => { if(show[i] && i <= here) GL.draw(m, L); });
     gl.depthMask(true); gl.disable(gl.BLEND);
   }
 }
@@ -829,7 +870,22 @@ function crowdMeshes(sh){
 }
 function requestRender(){
   if(R.raf || S.rec || S.play) return;
+  // pendant qu'on bouge : l'image à sa finesse normale (fluide) ; dès qu'on s'arrête, une image plus fine
+  if(R.sharp){ R.sharp = false; R.canvas.width = R.baseW; R.canvas.height = R.baseH; }
+  clearTimeout(R.sharpT); R.sharpT = setTimeout(sharpen, R.bench > 45 ? 380 : 200);
   R.raf = requestAnimationFrame(() => { R.raf = 0; drawFrame(); if(S.tween || NAV.held) requestRender(); });
+}
+/* l'image au repos, calculée plus finement (jusqu'à 2 pixels par pixel d'écran) : les traits des visages,
+   les bords des meubles deviennent nets. Une seule image, quand plus rien ne bouge : rien ne ralentit,
+   même sur un vieil ordinateur (s'il est très lent, on affine moins). */
+function sharpen(){
+  if(!R.canvas || !R.baseW || R.sharp || S.rec || S.play) return;
+  if(R.raf || DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || document.hidden){ R.sharpT = setTimeout(sharpen, 200); return; }
+  const dpr = window.devicePixelRatio || 1, want = Math.min(2, Math.max(dpr, 1) * (R.bench > 45 ? 1 : R.bench > 25 ? 1.5 : 2)), base = R.baseW / (R.cssW || R.baseW);
+  let k = want / base; if(R.baseW * R.baseH * k * k > 4.2e6) k = Math.sqrt(4.2e6 / (R.baseW * R.baseH));
+  if(k < 1.08) return;
+  R.canvas.width = Math.round(R.baseW * k); R.canvas.height = Math.round(R.baseH * k); R.sharp = true;
+  R.inSharp = true; drawFrame(); R.inSharp = false;   // la même image, plus fine : rien à revérifier (ce que cache le décor)
 }
 const GHOST_C = hexRGB('#5B8FD6'), BG = hexRGB('#DCE0E7'), GREEN = hexRGB('#22A06B'), GREEN_L = hexRGB('#7FD1A8'), GHOST = hexRGB('#3E4552'), INK = hexRGB('#1B1E24');
 /* l'ambiance du lieu : le fond, le ciel, la brume, et le noir et blanc du film */
@@ -840,12 +896,18 @@ const TIMES = {
   dusk:{ fr:'Soir', en:'Dusk', sky:{ top:'#41507E', hor:'#F2AA6C', low:'#5E5050' }, out:[1.07, 0.86, 0.7], in:[1.03, 0.92, 0.8], ch:[1.05, 0.93, 0.84] },
   night:{ fr:'Nuit', en:'Night', sky:{ top:'#060A15', hor:'#1B2740', low:'#0D1017' }, out:[0.36, 0.44, 0.66], in:[0.8, 0.72, 0.58], ch:[0.66, 0.72, 0.9], chIn:[0.92, 0.85, 0.74] },
 };
-function envOf(sh){
+function envOf(sh, cam){
   const d = SET_DEF[sh.set], T = TIMES[sh.info && sh.info.time] || TIMES.day, sky = d.sky && T.sky ? T.sky : d.sky;
+  // dans une maison (un lieu avec un jardin), quand la caméra est à l'intérieur : la lumière des pièces, pas celle du dehors
+  // (la nuit, les lampes sont allumées, comme dans tous les lieux fermés)
+  const e = cam && d.box ? camEye(cam) : null, inside = !!(e && e[0] > d.box[0] && e[0] < d.box[2] && e[2] > d.box[1] && e[2] < d.box[3]);
+  const outLight = d.sky && !inside;
   let bg = d.bg ? hexRGB(d.bg) : BG;
   if(T.out && !d.sky) bg = bg.map((v, i) => v * T.in[i]);
-  return { bg, sky, fogC:sky ? hexRGB(sky.hor) : bg, fog:d.fog || [400, 500], bw:S.doc && S.doc.style === 'bw',
-    grade:T.out ? (d.sky ? T.out : T.in) : null, gradeC:T.ch ? (d.sky ? T.ch : (T.chIn || T.ch)) : null };
+  // le dehors vu par les fenêtres : le ciel du lieu (ou un ciel de jour, de soir ou de nuit pour un lieu fermé)
+  const ws = T.sky || d.sky || { top:'#86AFD3', hor:'#DCE6EE' };
+  return { bg, sky, fogC:sky ? hexRGB(sky.hor) : bg, fog:d.fog || [400, 500], bw:S.doc && S.doc.style === 'bw', winT:hexRGB(ws.top), winH:hexRGB(ws.hor), view:d.view,
+    grade:T.out ? (outLight ? T.out : T.in) : null, gradeC:T.ch ? (outLight ? T.ch : (T.chIn || T.ch)) : null };
 }
 /* dessine un plan ; « clean » : l'image du film, sans aide (exports, vignettes).
    « o » (lecture, animatique) : { cam, chars } pour une image en mouvement. */
@@ -898,7 +960,7 @@ function drawFrame(sh, w, h, clean, o){
   const fast = moving && R.slow;
   const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh));
   const vp = viewProj(cam, w / h), eye = camEye(cam);
-  const E = envOf(sh);
+  const E = envOf(sh, cam);
   GL.begin(w, h, vp, E.bg, E);
   const ph = sh.set === 'photo' && sh.photo && PHOTOS.get(sh.photo), phT = ph && GL.photoTex(ph, () => { THUMBS.clear(); if(typeof renderStrip === 'function') renderStrip(); requestRender(); });
   if(phT){ const fbx = S.doc && S.doc.shots.indexOf(sh) >= 0 && frameBox(w, h); GL.drawPhoto(phT, fbx ? fbx.w / fbx.h : w / h); }
@@ -911,7 +973,10 @@ function drawFrame(sh, w, h, clean, o){
   const tube = [];
   GL.view(eye, tube.map(c => M4.apply(mats[c].chest, [0, 0.12, 0])));
   const SM = setMesh(sh.set);
-  if(sh.set !== 'photo') drawSet(SM, sh, cam, { vc:true }, !fast);
+  if(sh.set !== 'photo'){ drawSet(SM, sh, cam, { vc:true }, !fast);
+    // les vitres des fenêtres : le dehors, vu à travers (avec les étages visibles)
+    const show = SM.levels.length ? levelsShown(sh, cam) : [], pm = [SM.panes].concat(SM.levelPanes.filter((m, i) => show[i])).filter(Boolean);
+    if(pm.length) GL.drawPanes(pm, vp, eye); }
   else if(!final){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.disable(gl.CULL_FACE); GL.draw(R.phGrid, { flat:true, col:[1, 1, 1], a:0.38 }); gl.enable(gl.CULL_FACE); gl.depthMask(true); gl.disable(gl.BLEND); }   // la grille du sol : pour caler la caméra sur la photo
   (sh.vehicles || []).forEach(v => { const M = vehMat(v); GL.draw(vehMesh(v), { m:M, vc:true, floor:v.y || 0 }); if(!fast){ gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(vehLines(v), { m:M, flat:true, lines:true, col:INK, a:0.3 }); gl.depthMask(true); gl.disable(gl.BLEND); } });
   // une ombre douce sous chaque personnage (trois disques très légers, pas de calcul d'ombre)
@@ -967,7 +1032,7 @@ function drawFrame(sh, w, h, clean, o){
   if(fb){ gl.enable(gl.SCISSOR_TEST); gl.clearColor(0.07, 0.075, 0.085, 1);
     (fb.x > 0 ? [[0, 0, fb.x, h], [fb.x + fb.w, 0, w - fb.x - fb.w, h]] : [[0, 0, w, fb.y], [0, fb.y + fb.h, w, h - fb.y - fb.h]]).forEach(([x, y, bw, bh]) => { gl.scissor(Math.floor(x), Math.floor(y), Math.ceil(bw), Math.ceil(bh)); gl.clear(gl.COLOR_BUFFER_BIT); });
     gl.disable(gl.SCISSOR_TEST); }
-  if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o) hiddenLater(); if(typeof planMarker === 'function'){ planMarker(); techMarker(); } }
+  if(!clean && w === R.canvas.width){ R.pickDirty = true; placeHandles(sh, vp, w, h, mats); if(!o && !R.inSharp) hiddenLater(); if(typeof planMarker === 'function'){ planMarker(); techMarker(); } }
   CAM_SET = null;
 }
 /* les petits ordinateurs : on mesure une fois le temps d'une image ; si c'est lent, l'image de travail
@@ -1142,7 +1207,7 @@ function onHandleMove(e){
     const dx = e.clientX - HDRAG.x; HDRAG.x = e.clientX;
     if(dx){ pos.ry = (((pos.ry || 0) + dx * 0.8) % 360 + 540) % 360 - 180; HDRAG.moved = true; renderSide(true); }
   }
-  if(HDRAG.crowd === 'veh') syncRiders(shot());
+  if(HDRAG.crowd === 'veh'){ if(HDRAG.kind === 'move' && (VEH_DEF[o.kind] || {}).obj) o.y = supportY(shot(), o, o.y || 0); syncRiders(shot()); }
   requestRender();
 }
 function onHandleUp(){
@@ -1280,6 +1345,13 @@ function onUp(e){
 let _wheelT = 0, _wheelSnap = null;
 function onWheel(e){
   e.preventDefault(); S.tween = null;
+  if(DRAG.mode === 'pose' && DRAG.ik){
+    const K = DRAG.ik;
+    if(K.base == null){ const P = M4.apply(charMatrices(shot().chars[K.c])[K.j], K.pt); K.base = Math.hypot(P[0] - K.eye[0], P[1] - K.eye[1], P[2] - K.eye[2]); }   // depuis là où elle est
+    K.dz = clamp(K.dz + (e.deltaY < 0 ? 0.05 : -0.05), -0.8, 0.8); DRAG.moved = true;
+    const ch = shot().chars[K.c]; if(ch && K.n) ikSolve(ch, K.j, K.chain, [K.n[0] + K.off[0], K.n[1] + K.off[1]], K.pt, K.vp, K.h, K);
+    renderSide(true); requestRender(); return;
+  }
   if(!_wheelSnap) _wheelSnap = snapshot();
   const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015);
   const [x, y] = canvasXY(e), hit = f < 1 && pickAt(x, y), g = groundAt(x, y, c.ty);
@@ -1346,12 +1418,16 @@ function ikStart(c, j, one, x, y){
   const pt = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
   const w = R.canvas.width, h = R.canvas.height, vp = viewProj(viewCam(), w / h), q = M4.apply(vp, M4.apply(M[j], pt));
   // l'écart entre le curseur et le point saisi, au moment où on l'attrape (on ne le fait pas sauter sous la souris)
-  return { c, j, chain:one ? [j] : IK_CHAIN[j], pt, vp, h, off:x != null ? [q[0] - (x / w * 2 - 1), q[1] - (1 - y / h * 2)] : [0, 0] };
+  // la distance du point saisi à la caméra : quand c'est ambigu, il vient vers nous plutôt que de partir derrière ;
+  // la molette (en tenant) le rapproche ou l'éloigne
+  const eye = camEye(viewCam()), p0 = M4.apply(M[j], pt), d0 = Math.hypot(p0[0] - eye[0], p0[1] - eye[1], p0[2] - eye[2]);
+  return { c, j, chain:one ? [j] : IK_CHAIN[j], pt, vp, h, eye, d0, dz:0, n:x != null ? [x / w * 2 - 1, 1 - y / h * 2] : null, off:x != null ? [q[0] - (x / w * 2 - 1), q[1] - (1 - y / h * 2)] : [0, 0] };
 }
 function ikDrag(K, x, y){
   const ch = shot().chars[K.c]; if(!ch) return;
-  const w = R.canvas.width;
-  ikSolve(ch, K.j, K.chain, [x / w * 2 - 1 + K.off[0], 1 - y / K.h * 2 + K.off[1]], K.pt, K.vp, K.h);
+  // en coordonnées de l'image (de -1 à 1) : la taille de l'image peut changer entre deux gestes (image affinée au repos)
+  const w = R.canvas.width, h = R.canvas.height; K.n = [x / w * 2 - 1, 1 - y / h * 2];
+  ikSolve(ch, K.j, K.chain, [K.n[0] + K.off[0], K.n[1] + K.off[1]], K.pt, K.vp, K.h, K);
 }
 /* ce qui coûte le plus : vriller un membre sur lui-même, pencher la tête ou le buste de côté, casser le poignet.
    On ne le fait que si rien d'autre n'amène le point sous la souris. */
@@ -1363,12 +1439,15 @@ const ikCost = (id, i) => { const a = JOINT[id].ax[i], trunk = id === 'head' || 
 // un bras ou une jambe qui part derrière le corps : possible, mais seulement si on le demande vraiment
 const BACK = { armL:0, armR:0, thighL:0, thighR:0 };
 /* le point saisi doit rester sous le curseur, à l'écran : la profondeur est libre (elle bouge le moins possible) */
-function ikSolve(ch, j, chain, T, pt, vp, h){
+function ikSolve(ch, j, chain, T, pt, vp, h, K){
   // l'articulation la plus proche de la main qui tient travaille d'abord : on attrape l'avant-bras, le coude plie
   const free = []; chain.forEach((id, n) => { ch.j[id] = ch.j[id] || []; JOINT[id].ax.forEach((a, i) => free.push([id, i, ikCost(id, i) * (1 + (chain.length - 1 - n) * 2), BACK[id] === i])); });
   const orig = {}; chain.forEach(id => orig[id] = ch.j[id].slice());
   const k = h / 2 / 250;     // écart à l'écran : en quarts de millier de pixels, à l'échelle des angles
-  const err = () => { const M = charMatrices(ch), q = M4.apply(vp, M4.apply(M[j], pt)); let e = ((q[0] - T[0]) * k) ** 2 + ((q[1] - T[1]) * k) ** 2;
+  if(K && (j === 'head' || j === 'chest' || j === 'spine')) K = null;   // la tête et le torse se tiennent par un levier : pas de profondeur
+  const err = () => { const M = charMatrices(ch), P = M4.apply(M[j], pt), q = M4.apply(vp, P); let e = ((q[0] - T[0]) * k) ** 2 + ((q[1] - T[1]) * k) ** 2;
+    if(K){ const dd = Math.hypot(P[0] - K.eye[0], P[1] - K.eye[1], P[2] - K.eye[2]) - (K.base != null ? K.base - K.dz : K.d0);
+      e += K.dz ? 6 * dd * dd : dd > 0 ? 2 * dd * dd : 0; }                     // s'éloigner coûte ; la molette fixe la profondeur voulue
     for(const [id, i, wt, back] of free){ const v = ch.j[id][i] || 0; e += wt * (v - (orig[id][i] || 0)) ** 2; if(back && v < 0) e += 0.00003 * v * v; } return e; };
   // de grands pas d'abord (on ne reste pas coincé), puis de plus en plus fins
   let best = err(), step = 16, n = 0;

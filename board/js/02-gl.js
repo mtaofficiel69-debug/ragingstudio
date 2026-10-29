@@ -74,6 +74,8 @@ function box(g, x, y, z, w, h, d, col, ry){
   const e0 = EDGE_ON, m0 = MAT; if(Math.min(w, h, d) < 0.012) EDGE_ON = 0;   // les bandes peintes au sol : pas de trait
   if(MAT === 0 && ((h < 0.25 && w > 2 && d > 2) || Math.max(w, h, d) > 3.2)) MAT = 1;   // une dalle, un grand volume : de l'architecture
   if(MAT === 0 && isLight(typeof col === 'string' ? hexRGB(col) : col, Math.max(w, h, d))) MAT = 5;
+  // un plafonnier : un panneau fin et clair, collé au plafond (néon de bureau, d'hôpital…) : allumé la nuit
+  if(MAT === 0 && h <= 0.06 && y > 2.45 && y < 3.3 && Math.max(w, d) <= 2.4 && Math.min(w, d) >= 0.12){ const C = typeof col === 'string' ? hexRGB(col) : col; if(C[0] + C[1] + C[2] > 2.6) MAT = 5; }
   const hx = w/2, hy = h/2, hz = d/2, c = Math.cos(ry || 0), s = Math.sin(ry || 0);
   const P = (a, b, e) => [x + a*c + e*s, y + b, z - a*s + e*c];
   const v = [P(-hx,-hy,-hz), P(hx,-hy,-hz), P(hx,hy,-hz), P(-hx,hy,-hz), P(-hx,-hy,hz), P(hx,-hy,hz), P(hx,hy,hz), P(-hx,hy,hz)];
@@ -84,6 +86,11 @@ function box(g, x, y, z, w, h, d, col, ry){
   EDGE_ON = e0; MAT = m0;
 }
 /* mur d'un seul côté : on le voit de face, il disparaît vu de dos (la caméra peut passer derrière) */
+/* une vitre de fenêtre : on y voit le dehors (le ciel, la ville ou la campagne au loin), calculé selon la direction du regard :
+   la vue tourne avec la caméra, comme à travers une vraie fenêtre. Les vitres ont leur propre petit programme
+   (le calcul ne se fait que sur elles : le reste de l'image ne coûte pas un calcul de plus) */
+let PANES = null;
+function pane(g, a, b, h, col, y0){ let q = g; if(PANES){ q = PANES.get(g); if(!q) PANES.set(g, q = geo()); } wall(q, a, b, h, col, y0); }
 function wall(g, a, b, h, col, y0){
   if(COLL && h >= 0.4 && Math.hypot(b[0] - a[0], b[1] - a[1]) >= 0.4) collOf(g).w.push([a[0], a[1], b[0], b[1], y0 || 0, (y0 || 0) + h]);
   const C = typeof col === 'string' ? hexRGB(col) : col, y = y0 || 0, m0 = MAT; if(MAT === 0) MAT = 1;
@@ -92,7 +99,9 @@ function wall(g, a, b, h, col, y0){
 /* sol ou plafond, vu du dessus (sol) ou du dessous (plafond) */
 function floor(g, x0, z0, x1, z1, y, col, down){
   const C = typeof col === 'string' ? hexRGB(col) : col, m0 = MAT; if(MAT === 0) MAT = 1;
-  if(down) quad(g, [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], C);
+  // un plafond ne trace pas ses propres bords (ses raccords, autour d'une trémie, feraient des traits noirs au plafond) :
+  // l'angle avec les murs est déjà tracé par les murs
+  if(down){ const e0 = EDGE_ON; EDGE_ON = 0; quad(g, [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], C); EDGE_ON = e0; }
   else quad(g, [x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], C);
   MAT = m0;
 }
@@ -259,6 +268,36 @@ const GL = {
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // le ciel et le vignettage : un seul triangle qui couvre l'écran
+    this.win = prog(`attribute vec3 aP; uniform mat4 uVP; varying vec3 vW; void main(){ vW = aP; gl_Position = uVP * vec4(aP, 1.0); }`,
+      `precision mediump float; uniform vec3 uEye; uniform vec3 uWinT; uniform vec3 uWinH; uniform float uView; uniform vec3 uGrade; uniform float uBW; varying vec3 vW;
+      float hash(float x){ return fract(sin(x * 91.17) * 43758.55); }
+      /* ce qu'on voit par une fenêtre : le ciel, une ligne d'immeubles (ou de collines et d'arbres) au loin, le sol */
+      vec3 outside(vec3 d, float night){
+        float el = d.y, az = atan(d.x, d.z), cell = floor(az * 7.0), f = fract(az * 7.0);
+        vec3 c = mix(uWinH, uWinT, smoothstep(-0.02, 0.55, el));
+        if(uView < 0.5){                                                                   // la ville
+          float h = 0.05 + 0.2 * hash(cell), h2 = 0.03 + 0.12 * hash(cell + 31.0);
+          float top = f > 0.12 && f < 0.88 ? h : h2;
+          if(el < top){ vec3 b = mix(vec3(0.52, 0.54, 0.58), vec3(0.66, 0.62, 0.56), hash(cell + 7.0)) * mix(1.0, 0.25, night);
+            vec2 q = vec2(f * 9.0, el * 60.0); float lit = step(0.55, hash(floor(q.x) + floor(q.y) * 17.0 + cell * 3.0));
+            float w = step(0.35, fract(q.x)) * step(0.4, fract(q.y));
+            c = mix(b, mix(b * 0.82, vec3(1.0, 0.82, 0.5), lit * night), w * 0.8); }
+        } else {                                                                           // la campagne
+          float hill = 0.035 + 0.025 * sin(az * 3.0) + 0.015 * sin(az * 7.3 + 1.0);
+          float tree = 0.04 + 0.05 * hash(floor(az * 40.0)) * step(0.45, hash(floor(az * 40.0) + 5.0));
+          if(el < hill + tree * step(hill, el + 0.04)) c = mix(vec3(0.33, 0.45, 0.3), vec3(0.42, 0.52, 0.36), hash(floor(az * 40.0))) * mix(1.0, 0.3, night);
+          else if(el < hill) c = vec3(0.45, 0.55, 0.38) * mix(1.0, 0.3, night);
+        }
+        if(el < 0.0) c = mix(uView < 0.5 ? vec3(0.44, 0.45, 0.47) : vec3(0.42, 0.52, 0.34), vec3(0.3), smoothstep(0.0, -0.4, el)) * mix(1.0, 0.3, night);
+        return c;
+      }
+      void main(){
+        float night = clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0);
+        vec3 c = mix(outside(normalize(vW - uEye), night), vec3(0.86, 0.92, 0.98), 0.12) * mix(vec3(1.0), uGrade, 0.5);
+        if(uBW > 0.5) c = vec3(dot(c, vec3(0.299, 0.587, 0.114)));
+        gl_FragColor = vec4(c, 1.0);
+      }`);
+    if(this.win){ const K = this.winLoc = {}; ['aP', 'uVP', 'uEye', 'uWinT', 'uWinH', 'uView', 'uGrade', 'uBW'].forEach(k => K[k] = k[0] === 'a' ? gl.getAttribLocation(this.win, k) : gl.getUniformLocation(this.win, k)); }
     this.sky = prog(`attribute vec2 aQ; uniform mat4 uInv; varying vec3 vD; varying vec2 vQ;
         void main(){ vQ = aQ; vec4 a = uInv * vec4(aQ, -1.0, 1.0), b = uInv * vec4(aQ, 1.0, 1.0); vD = b.xyz / b.w - a.xyz / a.w; gl_Position = vec4(aQ, 0.999, 1.0); }`,
       `precision mediump float; uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow; uniform float uMode; uniform float uBW; uniform vec2 uAsp;
@@ -380,6 +419,17 @@ const GL = {
     gl.disableVertexAttribArray(K.aQ); gl.useProgram(this.prog);
   },
   /* le ciel en dégradé (mode 0), ou le vignettage par-dessus l'image (mode 1) */
+  drawPanes(meshes, vp, eye){
+    const gl = this.gl, K = this.winLoc, E = this.env; if(!this.win || !meshes.length) return;
+    this.off(); gl.useProgram(this.win);
+    gl.uniformMatrix4fv(K.uVP, false, vp); gl.uniform3f(K.uEye, eye[0], eye[1], eye[2]);
+    const wt = E.winT || [0.53, 0.69, 0.83], wh = E.winH || [0.86, 0.9, 0.93], g = E.grade || [1, 1, 1];
+    gl.uniform3f(K.uWinT, wt[0], wt[1], wt[2]); gl.uniform3f(K.uWinH, wh[0], wh[1], wh[2]); gl.uniform1f(K.uView, E.view === 'nature' ? 1 : 0);
+    gl.uniform3f(K.uGrade, g[0], g[1], g[2]); gl.uniform1f(K.uBW, E.bw ? 1 : 0);
+    gl.enableVertexAttribArray(K.aP);
+    meshes.forEach(m => { gl.bindBuffer(gl.ARRAY_BUFFER, m.p); gl.vertexAttribPointer(K.aP, 3, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLES, 0, m.count); });
+    gl.disableVertexAttribArray(K.aP); gl.useProgram(this.prog);
+  },
   drawSky(vp, top, hor, low, mode, aspect){
     const gl = this.gl, K = this.skyLoc; if(!this.sky) return;
     this.off(); gl.useProgram(this.sky);

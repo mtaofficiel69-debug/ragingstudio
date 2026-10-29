@@ -209,7 +209,7 @@ function renderPlan(){
     const [ax, ay] = planXY(-5, -4), [bx, by] = planXY(5, 4);
     svg += `<rect class="hp-floor" x="${ax}" y="${ay}" width="${bx - ax}" height="${by - ay}" rx="2"/>`;
     // l'escalier ou la trappe de l'étage
-    const holes = [[-4.9, -0.45, -3.7, 3.75], [-3.62, -0.45, -2.42, 3.75], [-4.7, -3.2, -3.9, -2.4], [-4.7, -3.2, -3.9, -2.4]];
+    const holes = [[-4.65, -0.45, -3.65, 3.75], [-3.62, -0.45, -2.42, 3.75], [-4.7, -3.2, -3.9, -2.4], [-4.7, -3.2, -3.9, -2.4]];
     const hs = lv === 1 ? [holes[0], holes[1]] : lv === 2 ? [holes[1], holes[2]] : lv === 3 ? [holes[3]] : [holes[0]];
     hs.forEach(([x0, z0, x1, z1]) => { const [p, q] = planXY(x0, z0), [r, t] = planXY(x1, z1); svg += `<rect class="hp-stair" x="${p}" y="${q}" width="${r - p}" height="${t - q}"/>`; for(let z = z0 + 0.3; z < z1; z += 0.3){ const [u, v] = planXY(x0, z), [w] = planXY(x1, z); svg += `<line class="hp-step" x1="${u}" y1="${v}" x2="${w}" y2="${v}"/>`; } });
     // les cloisons, avec leurs portes
@@ -300,6 +300,7 @@ function renderHint(){
   let t;
   if(S.play) t = L('Lecture du storyboard · Échap ou clic pour arrêter', 'Playing the storyboard · Esc or click to stop');
   else if(S.endEd) t = L('Tu règles l’image de FIN du mouvement : cadre-la comme tu veux, puis reviens au début dans le volet.', 'You are setting the END frame of the move: frame it as you like, then go back to the start in the panel.');
+  else if(DRAG.mode === 'pose' && DRAG.ik) t = L('Glisse : la partie suit · Molette : la rapprocher ou l’éloigner', 'Drag: the part follows · Wheel: bring it closer or push it away');
   else if(S.hover) t = L(JOINT[S.hover.j].fr, JOINT[S.hover.j].en) + ' · ' + (S.hover.j === 'pelvis' ? L('glisse pour déplacer', 'drag to move') : L('glisse, il suit la souris', 'drag, it follows the mouse'));
   else if(HDRAG.c >= 0) t = HDRAG.kind === 'move' ? L('Glisse pour déplacer sur le sol', 'Drag to move on the floor') : L('Glisse à gauche ou à droite pour faire tourner', 'Drag left or right to turn');
   else if(S.sel) t = L('Glisse une partie du corps · Clic dans le vide : terminé', 'Drag a body part · Click empty space: done');
@@ -527,7 +528,8 @@ const PANEL_HTML = {
     const D = v && VD(v), who = v && (si => { const c = on(v).find(c => c.on.seat === si); return c ? L(lookOf(c).fr, lookOf(c).en) : ''; });
     const set = v ? `<div class="qsw">${D.cols.map(c => `<button class="${v.col === c ? 'on' : ''}" style="--c:${c}" data-act="vehCol" data-c="${c}" aria-label="${c}"></button>`).join('')}</div>
       ${D.seats.length ? lbl(L('Mettre ', 'Seat ') + charName(t) + L(' à la place…', ' as…')) : ''}<div class="chips">${D.seats.map((st, i) => { const c = on(v).find(c => c.on.seat === i), me = c && sh.chars.indexOf(c) === t; return `<button class="chip ${me ? 'on' : ''}" data-act="mount" data-seat="${i}">${esc(L(st.fr, st.en))}${c && !me ? `<small>· ${esc(who(i))}</small>` : ''}</button>`; }).join('')}</div>
-      ${D.fly ? `<label class="fr"><span class="fl">${L('Altitude', 'Altitude')}</span><input type="range" data-act="vehAlt" min="0" max="60" step="0.5" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 1)} m</b></label>` : ''}
+      ${D.fly ? `<label class="fr"><span class="fl">${L('Altitude', 'Altitude')}</span><input type="range" data-act="vehAlt" min="0" max="60" step="0.5" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 1)} m</b></label>`
+        : `<label class="fr" title="${esc(L('Il ne traverse ni le sol ni les meubles : il se pose dessus', 'It never goes through the floor or furniture: it rests on them'))}"><span class="fl">${L('Hauteur', 'Height')}</span><input type="range" data-act="vehAlt" min="${(SET_DEF[sh.set].levels || [0]).reduce((b, l) => l <= (v.y || 0) + 0.3 ? l : b, 0)}" max="${(SET_DEF[sh.set].levels || [0]).reduce((b, l) => l <= (v.y || 0) + 0.3 ? l : b, 0) + 4}" step="0.02" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 2)} m</b></label>`}
       ${D.shots.length ? lbl(L('Prises de vue', 'Shots')) : ''}<div class="cars">${D.shots.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
     return ph('car', L('Accessoires', 'Props'), vs.length ? vs.length + ' ' + L('dans ce plan', 'in this shot') : L('Véhicules et objets', 'Vehicles and objects')) +
       `<div class="pb">${lbl(L('Véhicules', 'Vehicles'))}<div class="vadd">${Object.keys(VEH_DEF).filter(id => !VEH_DEF[id].obj).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>
@@ -571,6 +573,7 @@ const PANEL_HTML = {
       ${lbl(L('Dans l’image', 'In the picture'))}${kv([
         [L('Glisser une partie du corps', 'Drag a body part'), L('Elle suit la souris', 'It follows the mouse')],
         [L('Alt + glisser', 'Alt + drag'), L('Une seule articulation', 'One joint only')],
+        [L('Molette en tenant', 'Wheel while holding'), L('Rapprocher, éloigner', 'Closer, further')],
         [L('Épingle verte', 'Green pin'), L('Déplacer le personnage', 'Move the character')],
         [L('Flèche ronde', 'Round arrow'), L('Le tourner', 'Turn them')],
         [L('Glisser dans le vide', 'Drag empty space'), L('Tourner autour', 'Orbit')],
@@ -643,6 +646,7 @@ function fitStage(){
   if(S.rec) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5) * (R.scale || 1);
   R.canvas.width = Math.round(Math.max(160, w) * dpr); R.canvas.height = Math.round(Math.max(90, h) * dpr);
+  R.baseW = R.canvas.width; R.baseH = R.canvas.height; R.cssW = Math.max(160, w); R.sharp = false;
   requestRender();
 }
 
@@ -1272,7 +1276,7 @@ function bindEvents(){
     if(t.dataset.act === 'vehAlt'){
       const s = shot(), v = s.vehicles[S.veh < 0 ? 0 : S.veh]; if(!v) return;
       if(!sliderSnap) sliderSnap = snapshot();
-      v.y = +t.value; syncRiders(s); const b = t.nextElementSibling; if(b) b.textContent = round(v.y, 1) + ' m'; R.pickDirty = true; requestRender(); return;
+      setVehY(v, +t.value); const b = t.nextElementSibling; if(b) b.textContent = round(v.y, 2) + ' m'; R.pickDirty = true; requestRender(); return;
     }
     if((t.dataset.act === 'axis' || t.dataset.act === 'root') && S.sel){
       if(!sliderSnap) sliderSnap = snapshot();
