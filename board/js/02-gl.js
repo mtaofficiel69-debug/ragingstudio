@@ -272,23 +272,47 @@ const GL = {
       `precision mediump float; uniform vec3 uEye; uniform vec3 uWinT; uniform vec3 uWinH; uniform float uView; uniform vec3 uGrade; uniform float uBW; varying vec3 vW;
       float hash(float x){ return fract(sin(x * 91.17) * 43758.55); }
       /* ce qu'on voit par une fenêtre : le ciel, une ligne d'immeubles (ou de collines et d'arbres) au loin, le sol */
+      /* une rangée d'immeubles vue de loin : k bâtiments par radian, des hauteurs variées, des annexes plus basses,
+         parfois un édicule sur le toit, et des fenêtres en grille (le jour elles reflètent le ciel, la nuit certaines s'allument) */
+      vec4 row(float az, float el, float k, float seed, float h0, float h1, float night){
+        float x = az * k + seed, cell = floor(x), f = fract(x), r = hash(cell + seed), e = 0.05 + 0.07 * hash(cell + 3.1);
+        float top = h0 + (h1 - h0) * r * r;
+        if(f < e || f > 1.0 - e) top *= 0.72;
+        if(hash(cell + 9.0) > 0.62 && f > 0.42 && f < 0.56) top += 0.014;
+        if(el > top) return vec4(0.0);
+        vec3 tone = mix(vec3(0.56, 0.57, 0.61), vec3(0.72, 0.66, 0.57), hash(cell + 7.0));
+        tone = mix(tone, vec3(0.44, 0.46, 0.52), step(0.72, hash(cell + 13.0)));
+        float u = f * (5.0 + floor(4.0 * hash(cell + 2.0))), v = el * 9.5 * k;
+        float win = step(0.22, fract(u)) * step(fract(u), 0.78) * step(0.3, fract(v)) * step(fract(v), 0.82) * step(e, f) * step(f, 1.0 - e) * step(0.012, top - el);
+        float lit = step(0.58, hash(floor(u) + floor(v) * 13.0 + cell * 7.0));
+        vec3 b = tone * (0.92 + 0.08 * step(0.5, fract(f * 2.0 + 0.25))) * mix(1.0, 0.2, night);
+        vec3 wc = mix(mix(tone * 0.7, mix(uWinH, uWinT, 0.5) * 0.9, 0.4) * mix(1.0, 0.18, night), vec3(1.0, 0.83, 0.52), lit * night);
+        return vec4(mix(b, wc, win), 1.0);
+      }
       vec3 outside(vec3 d, float night){
-        float el = d.y, az = atan(d.x, d.z), cell = floor(az * 7.0), f = fract(az * 7.0);
+        float el = d.y, az = atan(d.x, d.z);
         vec3 c = mix(uWinH, uWinT, smoothstep(-0.02, 0.55, el));
-        if(uView < 0.5){                                                                   // la ville
-          float h = 0.05 + 0.2 * hash(cell), h2 = 0.03 + 0.12 * hash(cell + 31.0);
-          float top = f > 0.12 && f < 0.88 ? h : h2;
-          if(el < top){ vec3 b = mix(vec3(0.52, 0.54, 0.58), vec3(0.66, 0.62, 0.56), hash(cell + 7.0)) * mix(1.0, 0.25, night);
-            vec2 q = vec2(f * 9.0, el * 60.0); float lit = step(0.55, hash(floor(q.x) + floor(q.y) * 17.0 + cell * 3.0));
-            float w = step(0.35, fract(q.x)) * step(0.4, fract(q.y));
-            c = mix(b, mix(b * 0.82, vec3(1.0, 0.82, 0.5), lit * night), w * 0.8); }
-        } else {                                                                           // la campagne
-          float hill = 0.035 + 0.025 * sin(az * 3.0) + 0.015 * sin(az * 7.3 + 1.0);
-          float tree = 0.04 + 0.05 * hash(floor(az * 40.0)) * step(0.45, hash(floor(az * 40.0) + 5.0));
-          if(el < hill + tree * step(hill, el + 0.04)) c = mix(vec3(0.33, 0.45, 0.3), vec3(0.42, 0.52, 0.36), hash(floor(az * 40.0))) * mix(1.0, 0.3, night);
-          else if(el < hill) c = vec3(0.45, 0.55, 0.38) * mix(1.0, 0.3, night);
+        c += vec3(0.1, 0.07, 0.02) * (1.0 - night) * pow(max(dot(d, normalize(vec3(0.45, 0.22, 0.55))), 0.0), 10.0);   // un peu de soleil
+        if(uView < 0.5){                                                                   // la ville : un fond voilé, puis des immeubles plus proches
+          vec4 far = row(az, el, 13.0, 0.0, 0.03, 0.11, night), near = row(az, el, 4.5, 50.0, 0.05, 0.3, night);
+          if(far.a > 0.0) c = mix(far.rgb, uWinH * mix(1.0, 0.35, night), 0.45);
+          if(near.a > 0.0) c = near.rgb;
+          // sous l'horizon : le pied des façades d'en face, leur trottoir, puis la rue et son marquage
+          if(el < -0.07){ float m = mix(1.0, 0.35, night);
+            if(el > -0.11) c = vec3(0.62, 0.61, 0.58) * m;                                                     // le trottoir
+            else if(el > -0.115) c = vec3(0.4) * m;                                                           // la bordure
+            else { c = mix(vec3(0.33, 0.34, 0.37), vec3(0.24, 0.25, 0.27), smoothstep(-0.12, -0.6, el)) * m;   // la chaussée
+              if(abs(el + 0.24) < 0.008 && fract(az * 6.0) < 0.5) c = vec3(0.8, 0.78, 0.7) * m; } }          // la ligne au milieu
+        } else {                                                                           // la campagne : des collines voilées, une ligne d'arbres, les prés
+          float far = 0.05 + 0.03 * sin(az * 2.0 + 1.3) + 0.015 * sin(az * 5.1);
+          float hill = 0.025 + 0.02 * sin(az * 3.0) + 0.012 * sin(az * 7.3 + 1.0);
+          float tc = floor(az * 40.0), tree = 0.03 + 0.05 * hash(tc) * step(0.4, hash(tc + 5.0)), tf = fract(az * 40.0);
+          float crown = tree * sqrt(max(0.0, 1.0 - (2.0 * tf - 1.0) * (2.0 * tf - 1.0)));
+          if(el < far) c = mix(vec3(0.5, 0.6, 0.5), uWinH, 0.45) * mix(1.0, 0.3, night);
+          if(el < hill + crown && el > hill - 0.005) c = mix(vec3(0.3, 0.42, 0.28), vec3(0.38, 0.5, 0.33), hash(tc)) * mix(1.0, 0.3, night);
+          if(el < hill) c = mix(vec3(0.45, 0.56, 0.37), vec3(0.4, 0.5, 0.33), step(0.5, fract(az * 9.0))) * mix(1.0, 0.3, night);
+          if(el < 0.0) c = mix(vec3(0.42, 0.53, 0.34), vec3(0.32, 0.42, 0.27), smoothstep(0.0, -0.4, el)) * mix(1.0, 0.3, night);
         }
-        if(el < 0.0) c = mix(uView < 0.5 ? vec3(0.44, 0.45, 0.47) : vec3(0.42, 0.52, 0.34), vec3(0.3), smoothstep(0.0, -0.4, el)) * mix(1.0, 0.3, night);
         return c;
       }
       void main(){
