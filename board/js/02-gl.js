@@ -114,8 +114,8 @@ function twall(g, key, a, b, h, y0, s){
   texQuad(key, [a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], [0, y / s], [len, y / s], [len, (y + h) / s], [0, (y + h) / s], true);
 }
 /* un sol (ou un plafond, vu du dessous) à texture */
-function tfloor(key, x0, z0, x1, z1, y, s, down){
-  const U = (x, z) => [x / s, -z / s];
+function tfloor(key, x0, z0, x1, z1, y, s, down, rot){
+  const U = rot ? (x, z) => [z / s, x / s] : (x, z) => [x / s, -z / s];   // rot : le motif tourné d'un quart de tour (les lames du parquet dans l'autre sens)
   if(down) texQuad(key, [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], U(x0, z0), U(x1, z0), U(x1, z1), U(x0, z1));
   else texQuad(key, [x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], U(x0, z1), U(x1, z1), U(x1, z0), U(x0, z0));
 }
@@ -187,6 +187,17 @@ function smoothNormals(g){
    Trois petits programmes : la scène (éclairage simple, brume au loin, contour des personnages),
    le ciel (un dégradé, plus un léger vignettage), et la foule (des silhouettes plates
    tournées vers la caméra, comme les tribunes des jeux de foot). */
+/* le noir et blanc, le même partout (décor, personnages, ciel, fenêtres, foule, photo, textures) : comme une pellicule.
+   Un filtre jaune léger (la peau s'éclaircit, le ciel fonce un peu), plus de contraste et une courbe en S (des noirs profonds
+   sans être bouchés, des blancs propres), et un grain très fin, fixe ; sans aucune couleur (quelques opérations par pixel, rien de plus) */
+const BW_GLSL = `vec3 bwTone(vec3 c, float lift){
+  float l = dot(c, vec3(0.36, 0.54, 0.10)) * (1.0 + lift) + lift * 0.4;
+  l = clamp((l - 0.4) * 1.38 + 0.44, 0.0, 1.0);
+  l = mix(l, l * l * (3.0 - 2.0 * l), 0.6);
+  l = 0.035 + l * 0.94 + (fract(52.9829 * fract(dot(floor(gl_FragCoord.xy), vec2(0.06711, 0.00584)))) - 0.5) * 0.022;
+  return vec3(l);
+}
+`;
 const GL = {
   gl:null, prog:null, loc:{}, meshes:[],
   init(canvas){
@@ -211,7 +222,8 @@ const GL = {
       varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2; varying float vM;
       /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
       bool inTube(vec3 t){ vec3 d = t - uEye; float k = dot(vW - uEye, d) / dot(d, d); return k > 0.0 && k < 0.9 && distance(vW, uEye + d * k) < 0.42; }
-      vec3 bw(vec3 c, float lift){ float l = dot(c, vec3(0.299, 0.587, 0.114)); return vec3(l * (1.0 + lift) + lift * 0.4); }
+      ${BW_GLSL}
+      vec3 bw(vec3 c, float lift){ return bwTone(c, lift); }
       void main(){
         if(uX > 0.5){
           bool hid = false;
@@ -299,6 +311,7 @@ const GL = {
     // le ciel et le vignettage : un seul triangle qui couvre l'écran
     this.win = prog(`attribute vec3 aP; uniform mat4 uVP; varying vec3 vW; void main(){ vW = aP; gl_Position = uVP * vec4(aP, 1.0); }`,
       `precision mediump float; uniform vec3 uEye; uniform vec3 uWinT; uniform vec3 uWinH; uniform float uView; uniform vec3 uGrade; uniform float uBW; varying vec3 vW;
+      ${BW_GLSL}
       float hash(float x){ return fract(sin(x * 91.17) * 43758.55); }
       /* ce qu'on voit par une fenêtre : le ciel, une ligne d'immeubles (ou de collines et d'arbres) au loin, le sol */
       /* une rangée d'immeubles vue de loin : k bâtiments par radian, des hauteurs variées, des annexes plus basses,
@@ -347,19 +360,20 @@ const GL = {
       void main(){
         float night = clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0);
         vec3 c = mix(outside(normalize(vW - uEye), night), vec3(0.86, 0.92, 0.98), 0.12) * mix(vec3(1.0), uGrade, 0.5);
-        if(uBW > 0.5) c = vec3(dot(c, vec3(0.299, 0.587, 0.114)));
+        if(uBW > 0.5) c = bwTone(c, -0.02);
         gl_FragColor = vec4(c, 1.0);
       }`);
     if(this.win){ const K = this.winLoc = {}; ['aP', 'uVP', 'uEye', 'uWinT', 'uWinH', 'uView', 'uGrade', 'uBW'].forEach(k => K[k] = k[0] === 'a' ? gl.getAttribLocation(this.win, k) : gl.getUniformLocation(this.win, k)); }
     this.sky = prog(`attribute vec2 aQ; uniform mat4 uInv; varying vec3 vD; varying vec2 vQ;
         void main(){ vQ = aQ; vec4 a = uInv * vec4(aQ, -1.0, 1.0), b = uInv * vec4(aQ, 1.0, 1.0); vD = b.xyz / b.w - a.xyz / a.w; gl_Position = vec4(aQ, 0.999, 1.0); }`,
       `precision mediump float; uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow; uniform float uMode; uniform float uBW; uniform vec2 uAsp;
+        ${BW_GLSL}
         varying vec3 vD; varying vec2 vQ;
         void main(){
           if(uMode > 0.5){ float r = length(vQ * uAsp); gl_FragColor = vec4(0.0, 0.0, 0.0, smoothstep(0.62, 1.42, r) * 0.32); return; }
           vec3 d = normalize(vD);
           vec3 c = d.y > 0.0 ? mix(uHor, uTop, pow(clamp(d.y * 1.7, 0.0, 1.0), 0.75)) : mix(uHor, uLow, clamp(-d.y * 4.0, 0.0, 1.0));
-          if(uBW > 0.5){ float l = dot(c, vec3(0.299, 0.587, 0.114)); c = vec3(l); }
+          if(uBW > 0.5) c = bwTone(c, 0.0);
           gl_FragColor = vec4(c, 1.0);
         }`);
     if(this.sky){
@@ -373,6 +387,7 @@ const GL = {
         varying vec2 vUV; varying vec4 vT; varying float vDist; varying float vY;
         void main(){ vec3 p = aCen + uRight * aCor.x + vec3(0.0, aCor.y, 0.0); vUV = aUV; vT = aTint; vDist = distance(p, uEye); vY = aCor.y; gl_Position = uVP * vec4(p, 1.0); }`,
       `precision mediump float; uniform sampler2D uTex; uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform vec3 uGrade;
+        ${BW_GLSL}
         varying vec2 vUV; varying vec4 vT; varying float vDist; varying float vY;
         void main(){
           vec4 t = texture2D(uTex, vUV); if(t.a < 0.5) discard;
@@ -381,7 +396,7 @@ const GL = {
           c = mix(c, c * mix(vec3(1.0, 0.86, 0.74), vec3(0.62, 0.45, 0.34), vT.a), t.b);  // la peau
           c *= (0.78 + 0.22 * clamp(vY / 1.2, 0.0, 1.0)) * uGrade;
           c = mix(c, uFogC, clamp((vDist - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0) * 0.82);
-          if(uBW > 0.5){ float l = dot(c, vec3(0.299, 0.587, 0.114)); c = vec3(l * 0.94); }
+          if(uBW > 0.5) c = bwTone(c, -0.06);
           gl_FragColor = vec4(c, 1.0);
         }`);
     if(this.crowd){
@@ -456,7 +471,7 @@ const GL = {
       this.phProg = (() => { const sh = (t, src) => { const x = gl.createShader(t); gl.shaderSource(x, src); gl.compileShader(x); return x; };
         const p = gl.createProgram();
         gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec2 aQ; uniform vec2 uS; varying vec2 vU; void main(){ vU = (aQ * uS) * 0.5 + 0.5; gl_Position = vec4(aQ, 0.999, 1.0); }'));
-        gl.attachShader(p, sh(gl.FRAGMENT_SHADER, 'precision mediump float; uniform sampler2D uT; uniform float uBW; uniform vec3 uGr; varying vec2 vU; void main(){ vec3 c = texture2D(uT, vU).rgb * uGr; if(uBW > 0.5){ float l = dot(c, vec3(0.299, 0.587, 0.114)); c = vec3(l); } gl_FragColor = vec4(c, 1.0); }'));
+        gl.attachShader(p, sh(gl.FRAGMENT_SHADER, 'precision mediump float; uniform sampler2D uT; uniform float uBW; uniform vec3 uGr; varying vec2 vU; ' + BW_GLSL + ' void main(){ vec3 c = texture2D(uT, vU).rgb * uGr; if(uBW > 0.5) c = bwTone(c, 0.0); gl_FragColor = vec4(c, 1.0); }'));
         gl.linkProgram(p); return gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null; })();
       if(!this.phProg) return;
       this.phLoc = { aQ:gl.getAttribLocation(this.phProg, 'aQ'), uS:gl.getUniformLocation(this.phProg, 'uS'), uT:gl.getUniformLocation(this.phProg, 'uT'), uBW:gl.getUniformLocation(this.phProg, 'uBW'), uGr:gl.getUniformLocation(this.phProg, 'uGr') };
@@ -495,6 +510,7 @@ const GL = {
       const p = gl.createProgram();
       gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec3 aP; attribute vec2 aU; attribute vec2 aL; uniform mat4 uVP; varying vec2 vU; varying vec2 vL; varying vec3 vW; void main(){ vU = aU; vL = aL; vW = aP; gl_Position = uVP * vec4(aP, 1.0); }'));
       gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `precision mediump float; uniform sampler2D uT; uniform vec3 uEye; uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform vec3 uGrade; uniform float uRaw;
+        ${BW_GLSL}
         varying vec2 vU; varying vec2 vL; varying vec3 vW;
         void main(){
           if(uRaw > 0.5){ gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
@@ -503,7 +519,7 @@ const GL = {
           c = mix(c, c * c * (3.0 - 2.0 * c), 0.22) * uGrade;
           float d = distance(vW, uEye);
           if(uFog.x < 300.0) c = mix(c, uFogC, clamp((d - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0) * 0.82); else c *= 1.0 - 0.1 * smoothstep(6.0, 18.0, d);
-          if(uBW > 0.5) c = vec3(dot(c, vec3(0.299, 0.587, 0.114)) - 0.03);
+          if(uBW > 0.5) c = bwTone(c, -0.06);
           gl_FragColor = vec4(c, 1.0);
         }`));
       gl.linkProgram(p); this.txProg = gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null;

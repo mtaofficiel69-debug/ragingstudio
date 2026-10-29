@@ -1082,6 +1082,9 @@ const SET_DEF = {
     sky:{ top:'#8FB2D0', hor:'#DCE4EA', low:'#77736C' }, fog:[40, 170],
     cam:{ tx:0.8, ty:2.2, tz:0, yaw:-55, pitch:-5, dist:8, lens:28 },
     build(g){
+      // la caméra ne bute que sur ce qui compte : le quai, le train, les immeubles. Poteaux, bancs, abri, caténaire, voies, clôture, arbres
+      // la laissent passer (sinon, entre les poteaux et le toit de l'abri, elle était sans cesse arrêtée)
+      const C0 = COLL; COLL = null; const solid = fn => { COLL = C0; fn(); COLL = null; };
       const K = '#2C2E33', P = 1.1, ST = '#5E636C', BL = '#2F5E7E', LED = '#F2D06B', e0 = EDGE_ON;
       const lit = (x, y, z, w, h, d, c) => { const m0 = MAT; MAT = 5; box(g, x, y, z, w, h, d, c); MAT = m0; };
       // les détails plats : une simple plaque (sur le flanc du train, tournée vers le quai ; au sol ; sous l'abri), éventuellement allumée la nuit
@@ -1091,7 +1094,7 @@ const SET_DEF = {
       [[-40, -40, -3, 40], [3, -40, 40, 40], [-3, -40, 3, -30], [-3, 30, 3, 40]].forEach(([a, b, c, d]) => floor(g, a, b, c, d, 0, '#7C746A'));
       // le quai : sa dalle, ses joints, ses flancs plus sombres, sa bordure, la ligne jaune, la bande podotactile
       floor(g, -3, -30, 3, 30, P, '#B8B4AC'); wall(g, [-3, -30], [-3, 30], P, '#8E8A82'); wall(g, [3, 30], [3, -30], P, '#8E8A82'); wall(g, [3, -30], [-3, -30], P, '#9E9A92'); wall(g, [-3, 30], [3, 30], P, '#9E9A92');
-      if(COLL) collOf(g).b.push([0, P / 2, 0, 3, P / 2, 30, 0]);   // le quai reste un obstacle plein pour la caméra
+      if(C0) solid(() => collOf(g).b.push([0, P / 2, 0, 3, P / 2, 30, 0]));   // le quai reste un obstacle plein pour la caméra
       EDGE_ON = 0; for(let z = -29; z < 30; z += 1.5) flat(0, P + 0.003, z, 5.2, 0.02, '#A9A59D');
       [-1, 1].forEach(e => { flat(e * 2.9, P + 0.004, 0, 0.2, 60, '#D9D5CD'); flat(e * 2.55, P + 0.005, 0, 0.08, 60, '#E8B923'); flat(e * 2.36, P + 0.005, 0, 0.24, 60, '#D8CFAE'); });
       EDGE_ON = e0;
@@ -1102,7 +1105,7 @@ const SET_DEF = {
         EDGE_ON = e0; [-0.72, 0.72].forEach(d => box(g, x + d, 0.24, 0, 0.07, 0.12, 80, '#8A8F96')); });
       // le train à quai : la caisse et ses bandes, les fenêtres et les portes côté quai (éclairées la nuit), les deux nez, le toit et le pantographe, les bogies
       const TX = 4.6, T0 = -16, T1 = 6, TZ = (T0 + T1) / 2, TL = T1 - T0;
-      box(g, TX, 2.45, TZ, 3.0, 2.7, TL, '#E9E6E0'); box(g, TX, 0.95, TZ, 3.0, 0.3, TL, '#5E636C');
+      solid(() => { box(g, TX, 2.45, TZ, 3.0, 2.7, TL, '#E9E6E0'); box(g, TX, 0.95, TZ, 3.0, 0.3, TL, '#5E636C'); });
       box(g, TX, 3.86, TZ, 2.7, 0.12, TL - 0.4, '#C9CDD3'); box(g, TX, 3.96, TZ, 2.2, 0.08, TL - 1.2, '#B8BEC4');
       box(g, TX - 1.505, 1.25, TZ, 0.01, 0.2, TL, BL); box(g, TX - 1.506, 1.4, TZ, 0.01, 0.05, TL, '#B4232C'); box(g, TX - 1.505, 3.35, TZ, 0.01, 0.12, TL, BL);
       EDGE_ON = 0; for(let z = T0 + 1.6; z < T1 - 1; z += 2.2){ const door = Math.round((z - T0) / 2.2) % 4 === 2;
@@ -1135,11 +1138,12 @@ const SET_DEF = {
       [-9, 9].forEach(x => { for(let z = -36; z <= 36; z += 3) box(g, x, 0.75, z, 0.06, 1.5, 0.06, '#5E636C'); [0.5, 1.4].forEach(y => box(g, x, y, 0, 0.04, 0.05, 72, '#5E636C')); });
       // derrière, la ville : des immeubles et leurs fenêtres (la nuit, certaines s'éclairent), quelques arbres
       [[-1, -22, 12, 9], [-1, -2, 14, 13], [-1, 18, 10, 11], [1, 22, 14, 12]].forEach(([s, z, d, h], i) => { const x = s * 20, w = 7;
-        box(g, x, h / 2, z, w, h, d, ['#B39C86', '#A6ACB4', '#C9B9A3', '#9A8B7E', '#BFA58A', '#8E7E72'][i]); box(g, x, h + 0.1, z, w + 0.2, 0.2, d + 0.2, '#8E8B85');
+        solid(() => box(g, x, h / 2, z, w, h, d, ['#B39C86', '#A6ACB4', '#C9B9A3', '#9A8B7E', '#BFA58A', '#8E7E72'][i])); box(g, x, h + 0.1, z, w + 0.2, 0.2, d + 0.2, '#8E8B85');
         const xf = x - s * (w / 2 + 0.02); EDGE_ON = 0;
         for(let y = 1.4; y < h - 1.2; y += 3) for(let k = -d / 2 + 0.9; k < d / 2 - 1.4; k += 2.0) if((MAT = winLit(xf, y, z + k))) wall(g, s > 0 ? [xf, z + k] : [xf, z + k + 1.1], s > 0 ? [xf, z + k + 1.1] : [xf, z + k], 1.4, '#4F6275', y);
         MAT = 0; EDGE_ON = e0; });
       [-13, 13].forEach(x => [-28, -10, 10, 28].forEach(z => { cyl(g, x, 2, z, 0.18, 0.22, 2, '#5B4532', 8); ball(g, x, 3.2, z, 1.4, 1.5, 1.4, '#4E7C58', 9); }));
+      COLL = C0;
     },
   },
   alley:{
@@ -2257,37 +2261,67 @@ function mapDef(m){
   const out = m.kind === 'out', W = clamp(+m.w || 8, 3, 40), D = clamp(+m.d || 6, 3, 40), H = clamp(+m.h || 2.8, 2.2, 6);
   const x0 = -W / 2, x1 = W / 2, z0 = -D / 2, z1 = D / 2, walls = !out || m.walls;
   const F = mapSurf(m.floor, out ? 'grass' : 'parquet'), Wl = mapSurf(m.wall, out ? 'brick' : 'paint'), C = mapSurf(m.ceil, 'paint');
+  const A = mapSurf(m.acc, 'brick'), WN = mapSurf(m.wain, 'panel');
   const d = { custom:m.id, view:m.view === 'nature' ? 'nature' : undefined,
     cam:{ tx:0, ty:1.1, tz:0, yaw:-32, pitch:-8, dist:out ? clamp(Math.max(W, D) * 0.5, 5, 14) : clamp(Math.max(W, D) * 0.6, 3, 9), lens:24 },
     spawn:[{ x:-0.6, z:0, ry:20 }, { x:0.6, z:0.2, ry:-20 }],
     build(g){
-      tfloor(texKey(F), x0, z0, x1, z1, 0, F.s);
+      tfloor(texKey(F), x0, z0, x1, z1, 0, F.s, false, m.frot);
       // dehors, au-delà du terrain : un sol neutre (la teinte de l'herbe, du sable… si c'est un sol naturel)
       if(out) floor(g, -150, -150, 150, 150, -0.03, hexRGB(/grass|sand|dirt|asphalt|cobble|concrete/.test(F.k) ? F.c : '#8F9A7E').map(v => v * 0.92));
+      const WH = out ? clamp(+m.wh || 2.4, 1, 6) : H;
+      // les colonnes : sur la ligne du milieu (deux rangées au-delà de trois), des obstacles pour la caméra
+      const nc = [0, 2, 4, 6].includes(+m.cols) ? +m.cols : 0, CC = m.colc || '#E9E6E0', CH = out && !walls ? 3 : WH;
+      if(nc){ const rows = nc > 3 ? 2 : 1, per = nc / rows, along = W >= D;
+        for(let r = 0; r < rows; r++) for(let k = 0; k < per; k++){ const t = (k + 1) / (per + 1), o = rows > 1 ? (r ? 0.25 : -0.25) : 0;
+          const x = along ? x0 + W * t : o * W, z = along ? o * D : z0 + D * t;
+          box(g, x, CH / 2, z, 0.4, CH, 0.4, CC); box(g, x, 0.06, z, 0.52, 0.12, 0.52, CC); if(!out || walls) box(g, x, CH - 0.06, z, 0.52, 0.12, 0.52, CC); } }
       if(!walls) return;
-      const WH = out ? clamp(+m.wh || 2.4, 1, 6) : H, K = texKey(Wl);
-      [[[x0, z0], [x1, z0]], [[x0, z1], [x0, z0]], [[x1, z0], [x1, z1]], [[x1, z1], [x0, z1]]].forEach(([a, b]) => twall(g, K, a, b, WH, 0, Wl.s));
+      // les murs : le mur du fond peut avoir sa propre matière (un mur d'accent)
+      const K = texKey(Wl), KA = m.accOn ? texKey(A) : K, SA = m.accOn ? A.s : Wl.s;
+      [[[x0, z0], [x1, z0], 1], [[x0, z1], [x0, z0], 0], [[x1, z0], [x1, z1], 0], [[x1, z1], [x0, z1], 0]].forEach(([a, b, back]) => twall(g, back ? KA : K, a, b, WH, 0, back ? SA : Wl.s));
+      // le soubassement : une autre matière sur le bas des murs, et sa cimaise (sans obstacle de plus pour la caméra)
+      const sk = m.sk === 'none' ? null : (m.sk || '#E9E6E0');
+      if(m.wainOn){ const wh = clamp(+m.wainH || 1.0, 0.5, Math.min(1.6, WH - 0.4)), C0 = COLL; COLL = null;
+        [[[x0, z0 + 0.006], [x1, z0 + 0.006]], [[x0 + 0.006, z1], [x0 + 0.006, z0]], [[x1 - 0.006, z0], [x1 - 0.006, z1]], [[x1, z1 - 0.006], [x0, z1 - 0.006]]].forEach(([a, b]) => twall(g, texKey(WN), a, b, wh, 0, WN.s));
+        COLL = C0; const rc = sk || '#E9E6E0';
+        box(g, 0, wh, z0 + 0.02, W, 0.05, 0.04, rc); box(g, 0, wh, z1 - 0.02, W, 0.05, 0.04, rc); box(g, x0 + 0.02, wh, 0, 0.04, 0.05, D, rc); box(g, x1 - 0.02, wh, 0, 0.04, 0.05, D, rc); }
       if(!out){
-        tfloor(texKey(C), x0, z0, x1, z1, H, C.s, true);
-        [[x0, z0 + 0.008, x1, z0 + 0.008], [x0 + 0.008, z1, x0 + 0.008, z0], [x1 - 0.008, z0, x1 - 0.008, z1], [x1, z1 - 0.008, x0, z1 - 0.008]].forEach(([a, b, c, e]) => wall(g, [a, b], [c, e], 0.08, '#E9E6E0'));
-        // les plafonniers : un tous les trois mètres environ, toujours collés au plafond, quelle que soit sa hauteur (allumés la nuit)
-        const nx = Math.max(1, Math.round(W / 3)), nz = Math.max(1, Math.round(D / 3)), m0 = MAT; MAT = 5;
-        for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++) box(g, x0 + (i + 0.5) * W / nx, H - 0.02, z0 + (j + 0.5) * D / nz, 1.0, 0.04, 0.3, '#F7F5F0');
+        tfloor(texKey(C), x0, z0, x1, z1, H, C.s, true, m.crot);
+        if(sk) [[x0, z0 + 0.008, x1, z0 + 0.008], [x0 + 0.008, z1, x0 + 0.008, z0], [x1 - 0.008, z0, x1 - 0.008, z1], [x1, z1 - 0.008, x0, z1 - 0.008]].forEach(([a, b, c, e]) => wall(g, [a, b], [c, e], 0.08, sk));
+        // les lumières du plafond : néons, spots, suspensions, ou aucune ; blanc chaud ou froid (allumées la nuit) ; toujours collées au plafond
+        const LT = m.lights || 'panel', LC = m.lcol === 'cool' ? '#F4F7FA' : m.lcol === 'warm' ? '#F4E3C2' : '#F7F5F0', m0 = MAT;
+        if(LT === 'panel'){ const nx = Math.max(1, Math.round(W / 3)), nz = Math.max(1, Math.round(D / 3)); MAT = 5;
+          for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++) box(g, x0 + (i + 0.5) * W / nx, H - 0.02, z0 + (j + 0.5) * D / nz, 1.0, 0.04, 0.3, LC); }
+        else if(LT === 'spot'){ const nx = Math.max(1, Math.round(W / 1.6)), nz = Math.max(1, Math.round(D / 1.6)); MAT = 5;
+          for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++) cyl(g, x0 + (i + 0.5) * W / nx, H, z0 + (j + 0.5) * D / nz, 0.09, 0.09, 0.025, LC, 10); }
+        else if(LT === 'pendant'){ const nx = Math.max(1, Math.round(W / 3)), nz = Math.max(1, Math.round(D / 3)), drop = Math.min(0.9, H - 2.0);
+          for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++){ const x = x0 + (i + 0.5) * W / nx, z = z0 + (j + 0.5) * D / nz;
+            box(g, x, H - drop / 2, z, 0.012, drop, 0.012, '#2C2E33'); cyl(g, x, H - drop, z, 0.05, 0.22, 0.2, '#2C2E33', 10); MAT = 5; ball(g, x, H - drop - 0.2, z, 0.06, 0.06, 0.06, LC, 7); MAT = m0; } }
         MAT = m0;
       }
-      // les fenêtres : d'abord le mur du fond, puis la droite, puis la gauche
-      const win = clamp(Math.round(+m.win || 0), 0, 8), sides = [[x0, x1, z0, 'z', 1], [z0, z1, x1, 'x', -1], [z1, z0, x0, 'x', 1]], wy = out ? 0.9 : 0.9, wh = Math.min(1.4, WH - 1.2);
+      // les fenêtres : d'abord le mur du fond, puis la droite, puis la gauche ; leur largeur, leur hauteur, leur allège, la couleur du cadre
+      const win = clamp(Math.round(+m.win || 0), 0, 8), sides = [[x0, x1, z0, 'z', 1], [z0, z1, x1, 'x', -1], [z1, z0, x0, 'x', 1]];
+      const ww = clamp(+m.ww || 1.4, 0.6, 4), wy = clamp(m.wy == null ? 0.9 : +m.wy, 0.1, WH - 0.6), wh = Math.min(clamp(+m.whh || 1.4, 0.5, 3), WH - wy - 0.3), FR = m.wf || '#F4F2EE';
       let left = win;
-      sides.forEach(([u0, u1, c, ax, inw]) => { if(left <= 0 || wh < 0.4) return; const len = Math.abs(u1 - u0), fit = Math.max(0, Math.floor((len - 0.6) / 2)), n = Math.min(left, fit); left -= n;
-        for(let k = 0; k < n; k++){ const t = (k + 0.5) / n, u = u0 + (u1 - u0) * t, A = u - 0.7 * Math.sign(u1 - u0), B = u + 0.7 * Math.sign(u1 - u0);
+      // une porte sur un côté : les fenêtres de ce mur lui laissent la place
+      if(m.door !== false && m.dside === 'right') sides[1][1] = z1 - 2.0; if(m.door !== false && m.dside === 'left') sides[2][0] = z1 - 2.0;
+      sides.forEach(([u0, u1, c, ax, inw]) => { if(left <= 0 || wh < 0.4) return; const len = Math.abs(u1 - u0), fit = Math.max(0, Math.floor((len - 0.6) / (ww + 0.6))), n = Math.min(left, fit), sg = Math.sign(u1 - u0); left -= n;
+        for(let k = 0; k < n; k++){ const t = (k + 0.5) / n, u = u0 + (u1 - u0) * t, a = u - ww / 2 * sg, b = u + ww / 2 * sg;
           const P = (v, off) => ax === 'z' ? [v, c + inw * off] : [c + inw * off, v];
-          pane(g, P(A, 0.015), P(B, 0.015), wh, '#A9C9DE', wy);
-          wall(g, P(A - 0.05 * Math.sign(u1 - u0), 0.025), P(B + 0.05 * Math.sign(u1 - u0), 0.025), 0.06, '#F4F2EE', wy - 0.04); wall(g, P(A - 0.05 * Math.sign(u1 - u0), 0.025), P(B + 0.05 * Math.sign(u1 - u0), 0.025), 0.06, '#F4F2EE', wy + wh - 0.02);
-          [A, u, B].forEach(v => wall(g, P(v - 0.03 * Math.sign(u1 - u0), 0.025), P(v + 0.03 * Math.sign(u1 - u0), 0.025), wh, '#F4F2EE', wy)); } });
-      // la porte, sur le mur de devant
-      if(m.door !== false && W >= 2.5){ const dx = x1 - 1.2;
-        wall(g, [dx + 0.45, z1 - 0.012], [dx - 0.45, z1 - 0.012], 2.05, '#8C6B4E'); box(g, dx - 0.35, 1.0, z1 - 0.04, 0.13, 0.03, 0.04, '#C9CDD3');
-        [dx - 0.5, dx + 0.5].forEach(x => box(g, x, 1.04, z1 - 0.03, 0.06, 2.08, 0.06, '#F4F2EE')); box(g, dx, 2.1, z1 - 0.03, 1.12, 0.06, 0.06, '#F4F2EE'); }
+          pane(g, P(a, 0.015), P(b, 0.015), wh, '#A9C9DE', wy);
+          wall(g, P(a - 0.05 * sg, 0.025), P(b + 0.05 * sg, 0.025), 0.06, FR, wy - 0.04); wall(g, P(a - 0.05 * sg, 0.025), P(b + 0.05 * sg, 0.025), 0.06, FR, wy + wh - 0.02);
+          const nm = Math.max(2, Math.round(ww / 0.7)); for(let q = 0; q <= nm; q++){ const v = a + (b - a) * q / nm; wall(g, P(v - 0.03 * sg, 0.025), P(v + 0.03 * sg, 0.025), wh, FR, wy); } } });
+      // la porte : sur le mur de devant, de gauche ou de droite, dans sa couleur
+      const ds = m.dside || 'front', DC = m.dcol || '#8C6B4E';
+      if(m.door !== false){
+        if(ds === 'front' && W >= 2.5){ const dx = x1 - 1.2;
+          wall(g, [dx + 0.45, z1 - 0.012], [dx - 0.45, z1 - 0.012], 2.05, DC); box(g, dx - 0.35, 1.0, z1 - 0.04, 0.13, 0.03, 0.04, '#C9CDD3');
+          [dx - 0.5, dx + 0.5].forEach(x => box(g, x, 1.04, z1 - 0.03, 0.06, 2.08, 0.06, '#F4F2EE')); box(g, dx, 2.1, z1 - 0.03, 1.12, 0.06, 0.06, '#F4F2EE'); }
+        else if(ds !== 'front' && D >= 2.5){ const sx = ds === 'left' ? x0 : x1, i = ds === 'left' ? 1 : -1, dz = z1 - 1.2;
+          wall(g, ds === 'left' ? [sx + 0.012, dz + 0.45] : [sx - 0.012, dz - 0.45], ds === 'left' ? [sx + 0.012, dz - 0.45] : [sx - 0.012, dz + 0.45], 2.05, DC);
+          box(g, sx + i * 0.04, 1.0, dz - 0.35, 0.04, 0.03, 0.13, '#C9CDD3');
+          [dz - 0.5, dz + 0.5].forEach(z => box(g, sx + i * 0.03, 1.04, z, 0.06, 2.08, 0.06, '#F4F2EE')); box(g, sx + i * 0.03, 2.1, dz, 0.06, 0.06, 1.12, '#F4F2EE'); } }
     } };
   if(out){ d.bg = '#C6D6E4'; d.sky = { top:'#82B0D8', hor:'#DCE8EE', low:'#7C9A68' }; d.fog = [30, 160]; }
   else { d.rooms = [[m.name || 'Mon lieu', m.name || 'My place', 0, [x0, z0, x1, z1]]]; d.roomH = H; }

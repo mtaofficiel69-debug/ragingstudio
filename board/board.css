@@ -790,4 +790,9 @@ body.imm-clean .hplan{display:none;}
 .mm-p{font-size:12.5px; color:var(--ink-soft); line-height:1.45; margin:8px 0;}
 .mm-p .lnk{padding:0; border:0; background:none; font:inherit; color:var(--accent-ink); text-decoration:underline; cursor:pointer;}
 .mm-new{width:100%; justify-content:center;}
+.mm-sub{margin:10px 0 6px; font-size:12px; font-weight:600; color:var(--ink-soft);}
+.mm-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:6px 0 8px;}
+.mm-row > span{font-size:12.5px; color:var(--ink-soft);}
+.swc.none{background:linear-gradient(135deg, transparent 44%, var(--ink-soft) 44%, var(--ink-soft) 56%, transparent 56%), var(--surface);}
+.pb .seg.wide + .seg.wide{margin-top:6px;}
 
