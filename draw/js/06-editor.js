@@ -875,23 +875,35 @@ function applyPickedColor(col){
    Le remplissage devient un élément à part, posé juste au-dessus de ce qu'on a touché (les traits restent par-dessus) :
    on peut le déplacer, le gommer, l'effacer, ou cliquer dessus avec une autre couleur pour le repeindre. */
 const BUCKET_AREA = 6e6;   // au-delà, la zone est cherchée sur une image réduite : reste rapide sur les vieux PC
-let _bucketBusy = false;
+let _bucketBusy = false, _bucketQueue = [];
 async function bucketAt(p){
-  const d = S.doc; if(!d || S.drag || _bucketBusy) return;
+  const d = S.doc; if(!d || S.drag) return;
   if(p.x < 0 || p.y < 0 || p.x >= d.w || p.y >= d.h) return;
+  // un clic pendant un remplissage n'est jamais perdu : il passe juste après, avec sa couleur
+  if(_bucketBusy){ if(_bucketQueue.length < 8) _bucketQueue.push({p, col:S.brush.color}); return; }
   _bucketBusy = true;
-  try{ await bucketFill(d, p); }
-  catch(e){ toast(L('Impossible de remplir ici.','Can’t fill here.'), 'warn'); }
-  finally{ _bucketBusy = false; }
+  const col = S.brush.color;   // la couleur du moment du clic, même si on en change pendant le calcul
+  if(cv) cv.style.cursor = 'progress';                                   // on voit tout de suite que ça travaille
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));  // l'écran se met à jour avant le calcul
+  try{
+    await bucketFill(d, p, col);
+    while(_bucketQueue.length && S.doc === d){ const q = _bucketQueue.shift(); await bucketFill(d, q.p, q.col); }
+  }
+  catch(e){ _bucketCache = null; toast(L('Impossible de remplir ici.','Can’t fill here.'), 'warn'); }
+  finally{ _bucketBusy = false; _bucketQueue = []; if(cv) cv.style.cursor = cursorFor(S.tool); }
 }
+/* l'affiche dessinée pour le seau est gardée tant qu'elle n'a pas changé : les remplissages suivants sont immédiats */
+let _bucketCache = null;
+function bucketKey(d){ return d.id + '|' + snapshot() + '|' + Object.keys(IMG).filter(id => IMG[id].complete).length + '|' + (document.fonts ? document.fonts.status : ''); }
 /* l'affiche (ou quelques éléments seuls) dessinée à l'échelle k, en pixels */
-function bucketPixels(d, k, W, H, list, withBg){
-  const c = document.createElement('canvas'); c.width = W; c.height = H;
+function bucketPixels(d, k, W, H, list, withBg, R){
+  R = R || {x:0, y:0, w:W, h:H};   // seulement ce rectangle (en pixels de travail) : bien plus rapide
+  const c = document.createElement('canvas'); c.width = R.w; c.height = R.h;
   const g = c.getContext('2d', {willReadFrequently:true});
-  g.setTransform(k, 0, 0, k, 0, 0);
+  g.setTransform(k, 0, 0, k, -R.x, -R.y);
   if(withBg){ g.fillStyle = makePaint(g, d.bg, 0, 0, d.w, d.h); g.fillRect(0, 0, d.w, d.h); }
   list.forEach(o => drawObject(g, o, k, {}, d));
-  return g.getImageData(0, 0, W, H).data;
+  return g.getImageData(0, 0, R.w, R.h).data;
 }
 /* l'élément vraiment dessiné sous ce pixel (pas seulement sa boîte), le plus haut */
 function bucketHit(d, p, k, sx, sy){
@@ -978,12 +990,14 @@ function bucketFloodClosed(ok, W, H, seed, r){
   }
   return f;
 }
-async function bucketFill(d, p){
-  const col = toHex(S.brush.color), F = parseColor(col), tol = clamp(S.bucket.tol, 0, 100)*2.55;
+async function bucketFill(d, p, color){
+  const col = toHex(color || S.brush.color), F = parseColor(col), tol = clamp(S.bucket.tol, 0, 100)*2.55;
   const k = Math.min(1, Math.sqrt(BUCKET_AREA/(d.w*d.h)));
   const W = Math.max(1, Math.round(d.w*k)), H = Math.max(1, Math.round(d.h*k)), n = W*H;
   // l'affiche telle qu'on la voit (sans le grain ni le vignettage, qui troubleraient les zones)
-  const px = bucketPixels(d, k, W, H, d.objects, true);
+  const key = bucketKey(d), C = _bucketCache;
+  const px = C && C.key === key && C.W === W && C.H === H ? C.px : bucketPixels(d, k, W, H, d.objects, true);
+  _bucketCache = {key, W, H, px};
   let sx = Math.min(W - 1, Math.floor(p.x*k)), sy = Math.min(H - 1, Math.floor(p.y*k));
   const okFor = (r, g, b) => { const ok = new Uint8Array(n); for(let j = 0, q = 0; j < n; j++, q += 4) ok[j] = Math.abs(px[q] - r) <= tol && Math.abs(px[q + 1] - g) <= tol && Math.abs(px[q + 2] - b) <= tol; return ok; };
   let s0 = (sy*W + sx)*4, sr = px[s0], sg = px[s0 + 1], sb = px[s0 + 2];
@@ -1008,14 +1022,38 @@ async function bucketFill(d, p){
   const hi = bucketHit(d, {x:(sx + .5)/k, y:(sy + .5)/k}, k, sx, sy);
   const hit = hi >= 0 ? d.objects[hi] : null;
   if(hit && !hit.locked && hit.type === 'text' && hit.fill && hit.fill.type === 'solid' && near(hit.fill.color)){
-    hit.fill = solid(col); touch(hit); commit(); renderSide(); requestRender(); return;
+    _bucketCache = null; hit.fill = solid(col); touch(hit); commit(); renderSide(); requestRender(); return;
   }
   // la zone
   if(reg){
     const r = Math.round(clamp(S.bucket.gap || 0, 0, 40)*k);
     if(r >= 1 && reg.cnt > Math.max(64, n*0.01)){   // une fuite donne toujours une grande zone
-      const c = bucketFloodClosed(ok, W, H, sy*W + sx, r);
-      if(c && reg.cnt > c.cnt*1.25 + 64) reg = c;   // la couleur fuyait par un trou : on garde la zone bouchée
+      if(n <= 1.3e6){
+        const c = bucketFloodClosed(ok, W, H, sy*W + sx, r);
+        if(c && reg.cnt > c.cnt*1.25 + 64) reg = c;   // la couleur fuyait par un trou : on garde la zone bouchée
+      }else{
+        // grande affiche : on cherche les trous sur une image deux fois plus petite (4 fois moins de calcul),
+        // puis on garde la zone exacte, au pixel près, là où la couleur a le droit d'aller
+        const W2 = (W + 1) >> 1, H2 = (H + 1) >> 1, ok2 = new Uint8Array(W2*H2);
+        for(let y = 0; y < H2; y++) for(let x = 0; x < W2; x++){
+          const j = 2*y*W + 2*x, xr = 2*x + 1 < W, yd = 2*y + 1 < H;
+          ok2[y*W2 + x] = ok[j] && (!xr || ok[j + 1]) && (!yd || ok[j + W]) && (!xr || !yd || ok[j + W + 1]);
+        }
+        const s2 = (sy >> 1)*W2 + (sx >> 1);
+        const c = ok2[s2] ? bucketFloodClosed(ok2, W2, H2, s2, Math.max(1, Math.round(r/2))) : null;
+        if(c && reg.cnt > c.cnt*4*1.25 + 256){
+          const m2 = c.m, g2 = new Uint8Array(W2*H2);
+          for(let y = c.y1; y <= c.y2; y++) for(let x = c.x1; x <= c.x2; x++) if(m2[y*W2 + x])
+            for(let ey = Math.max(0, y - 1); ey <= Math.min(H2 - 1, y + 1); ey++) for(let ex = Math.max(0, x - 1); ex <= Math.min(W2 - 1, x + 1); ex++) g2[ey*W2 + ex] = 1;
+          const m = reg.m, f = {m, cnt:0, x1:W, y1:H, x2:-1, y2:-1};
+          for(let y = reg.y1; y <= reg.y2; y++) for(let x = reg.x1; x <= reg.x2; x++){
+            const j = y*W + x; if(!m[j]) continue;
+            if(!g2[(y >> 1)*W2 + (x >> 1)]){ m[j] = 0; continue; }
+            f.cnt++; if(x < f.x1) f.x1 = x; if(x > f.x2) f.x2 = x; if(y < f.y1) f.y1 = y; if(y > f.y2) f.y2 = y;
+          }
+          reg = bucketFlood(m, W, H, sy*W + sx);   // seulement la partie reliée au clic
+        }
+      }
     }
   }else{
     reg = {m:ok, cnt:0, x1:W, y1:H, x2:-1, y2:-1};
@@ -1024,32 +1062,35 @@ async function bucketFill(d, p){
   const m = reg.m;
   // une forme, un décor ou un remplissage touché en entier : on change sa couleur à lui
   if(hit && !hit.locked && ((hit.type === 'shape' || hit.type === 'path') && hit.fill && hit.fill.type === 'solid' && near(hit.fill.color) || hit.bucket && near(hit.bucket))){
-    const A = bucketPixels(d, k, W, H, [hit], false);
+    const bb = aabb(hit), ax = clamp(Math.floor(bb.x1*k) - 1, 0, W - 1), ay = clamp(Math.floor(bb.y1*k) - 1, 0, H - 1);
+    const Rb = {x:ax, y:ay, w:clamp(Math.ceil(bb.x2*k) + 1, ax + 1, W) - ax, h:clamp(Math.ceil(bb.y2*k) + 1, ay + 1, H) - ay};
+    const A = bucketPixels(d, k, W, H, [hit], false, Rb);
     let V = 0, R = 0;
-    for(let j = 0, q = 0; j < n; j++, q += 4) if(A[q + 3] > 128 && ok[j]){ V++; if(m[j]) R++; }
+    for(let y = 0; y < Rb.h; y++) for(let x = 0; x < Rb.w; x++){ const j = (y + Rb.y)*W + x + Rb.x; if(A[(y*Rb.w + x)*4 + 3] > 128 && ok[j]){ V++; if(m[j]) R++; } }
     if(R >= V*0.97 && reg.cnt - R <= Math.max(24, reg.cnt*0.02)){
+      _bucketCache = null;
       if(hit.bucket) await recolorBucket(hit, col);
       else{ hit.fill = solid(col); touch(hit); commit(); renderSide(); requestRender(); }
       return;
     }
   }
   // ce qui est posé au-dessus (les traits) : la couleur passe dessous, pour ne laisser aucun liseré
-  const up = d.objects.slice(hi + 1).filter(o => o.visible);
-  const U = up.length ? bucketPixels(d, k, W, H, up, false) : null;
   const X1 = Math.max(0, reg.x1 - 3), Y1 = Math.max(0, reg.y1 - 3), X2 = Math.min(W - 1, reg.x2 + 3), Y2 = Math.min(H - 1, reg.y2 + 3);
   const bw = X2 - X1 + 1, bh = Y2 - Y1 + 1, a = new Uint8Array(bw*bh);
+  const up = d.objects.slice(hi + 1).filter(o => { if(!o.visible) return false; const b = aabb(o); return b.x2*k >= X1 - 2 && b.x1*k <= X2 + 2 && b.y2*k >= Y1 - 2 && b.y1*k <= Y2 + 2; });
+  const U = up.length ? bucketPixels(d, k, W, H, up, false, {x:X1, y:Y1, w:bw, h:bh}) : null;
   for(let y = Y1; y <= Y2; y++) for(let x = X1; x <= X2; x++) if(m[y*W + x]) a[(y - Y1)*bw + x - X1] = 255;
   if(U){
-    for(let step = 0; step < 3; step++){
-      const add = [];
+    for(let step = 1; step <= 3; step++){
+      let added = 0;
       for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
-        const i = y*bw + x; if(a[i] === 255) continue;
-        if(U[((y + Y1)*W + x + X1)*4 + 3] < 8) continue;
-        if((x > 0 && a[i - 1] === 255) || (x < bw - 1 && a[i + 1] === 255) || (y > 0 && a[i - bw] === 255) || (y < bh - 1 && a[i + bw] === 255)) add.push(i);
+        const i = y*bw + x; if(a[i] || U[i*4 + 3] < 8) continue;
+        const e = v => a[v] === 255 || (a[v] && a[v] < step);   // les pixels pris à ce tour ne comptent pas encore
+        if((x > 0 && e(i - 1)) || (x < bw - 1 && e(i + 1)) || (y > 0 && e(i - bw)) || (y < bh - 1 && e(i + bw))){ a[i] = step; added++; }
       }
-      add.forEach(i => a[i] = 255);
-      if(!add.length) break;
+      if(!added) break;
     }
+    for(let i = 0; i < a.length; i++) if(a[i] && a[i] < 255) a[i] = 255;
   }
   // le pixel de bord adouci : on y met juste la part de couleur qui revient à la zone
   for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
@@ -1072,10 +1113,24 @@ async function bucketFill(d, p){
   const og = out.getContext('2d'), id = og.createImageData(bw, bh), od = id.data;
   for(let i = 0; i < a.length; i++) if(a[i]){ const q = i*4; od[q] = F.r; od[q + 1] = F.g; od[q + 2] = F.b; od[q + 3] = a[i]; }
   og.putImageData(id, 0, 0);
-  const aid = await bucketAsset(out.toDataURL('image/png')); if(!aid || S.doc !== d) return;
+  // l'affiche gardée en mémoire reçoit la couleur, pour que le prochain clic n'ait rien à redessiner
+  for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
+    const i = y*bw + x, al = a[i]; if(!al || (U && U[i*4 + 3] >= 8)) continue;
+    const q = ((y + Y1)*W + x + X1)*4, t = al/255;
+    px[q] += (F.r - px[q])*t; px[q + 1] += (F.g - px[q + 1])*t; px[q + 2] += (F.b - px[q + 2])*t;
+  }
+  const aid = await bucketAsset(await canvasPng(out)); if(!aid || S.doc !== d){ _bucketCache = null; return; }
   const o = mkImage(aid, (X1 + bw/2)/k, (Y1 + bh/2)/k, bw/k, bh/k, bw, bh, {name:L('Remplissage','Fill'), bucket:col});
   insertObj(o, hi + 1);
   commit(); renderLayersIfOpen(); requestRender();
+  if(_bucketCache && _bucketCache.px === px) _bucketCache.key = bucketKey(d);
+}
+/* l'image du remplissage, encodée sans figer la page quand le navigateur le permet */
+function canvasPng(c){
+  return new Promise(res => {
+    if(!c.toBlob) return res(c.toDataURL('image/png'));
+    c.toBlob(b => { if(!b) return res(c.toDataURL('image/png')); const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(c.toDataURL('image/png')); fr.readAsDataURL(b); }, 'image/png');
+  });
 }
 async function bucketAsset(src){
   const im = new Image(); im.src = src;
@@ -1088,7 +1143,7 @@ async function recolorBucket(o, col){
   const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
   const g = c.getContext('2d'); g.drawImage(im, 0, 0);
   g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
-  const id = await bucketAsset(c.toDataURL('image/png')); if(!id || !objById(o.id)) return;
+  const id = await bucketAsset(await canvasPng(c)); if(!id || !objById(o.id)) return;
   o.asset = id; o.bucket = col; touch(o);
   commit(); renderSide(); requestRender();
 }
