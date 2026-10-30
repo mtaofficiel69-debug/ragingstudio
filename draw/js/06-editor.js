@@ -9,7 +9,7 @@ const S = {
   sel:[], tool:'select', prevTool:'select',
   brush:{tool:'round', size:22, color:'#FFFFFF', opacity:1, smooth:55},
   eraser:{size:60, opacity:1},
-  bucket:{tol:16, contig:true},
+  bucket:{tol:16, contig:true, gap:10},
   zoom:1, panX:0, panY:0, fitted:false, autoFit:true,
   flyout:'templates', rtab:'props',
   history:[], hpos:-1,
@@ -867,73 +867,213 @@ function applyPickedColor(col){
 }
 
 /* ---------- Pot de peinture ----------
-   Sur une forme, un texte ou un décor d'une seule couleur : c'est sa couleur qui change (il reste modifiable).
-   Partout ailleurs (dessin, photo, fond) : la zone de même couleur se remplit, comme dans un logiciel de dessin.
-   Le remplissage devient un élément à part, posé juste au-dessus de ce qu'on a touché : on peut le déplacer,
-   le gommer, l'effacer, ou cliquer dessus avec une autre couleur pour le repeindre. */
+   On regarde l'affiche telle qu'elle est vue, au pixel près, et on remplit la zone de même couleur sous le clic.
+   - Une forme, un décor ou un remplissage déjà fait, touché en entier : c'est sa couleur qui change (il reste modifiable).
+     S'il n'est touché qu'en partie (coupé par un trait), seule cette partie se remplit.
+   - Un texte : c'est sa couleur qui change.
+   - Les petits trous d'un trait mal fermé sont bouchés : la couleur ne déborde plus sur toute l'affiche.
+   Le remplissage devient un élément à part, posé juste au-dessus de ce qu'on a touché (les traits restent par-dessus) :
+   on peut le déplacer, le gommer, l'effacer, ou cliquer dessus avec une autre couleur pour le repeindre. */
 const BUCKET_AREA = 6e6;   // au-delà, la zone est cherchée sur une image réduite : reste rapide sur les vieux PC
+let _bucketBusy = false;
 async function bucketAt(p){
-  const d = S.doc; if(!d || S.drag) return;
+  const d = S.doc; if(!d || S.drag || _bucketBusy) return;
   if(p.x < 0 || p.y < 0 || p.x >= d.w || p.y >= d.h) return;
-  const col = toHex(S.brush.color), tol = clamp(S.bucket.tol, 0, 100)*2.55;
-  // l'affiche telle qu'on la voit (sans le grain ni le vignettage, qui troubleraient les zones)
-  const k = Math.min(1, Math.sqrt(BUCKET_AREA/(d.w*d.h)));
-  const W = Math.max(1, Math.round(d.w*k)), H = Math.max(1, Math.round(d.h*k));
+  _bucketBusy = true;
+  try{ await bucketFill(d, p); }
+  catch(e){ toast(L('Impossible de remplir ici.','Can’t fill here.'), 'warn'); }
+  finally{ _bucketBusy = false; }
+}
+/* l'affiche (ou quelques éléments seuls) dessinée à l'échelle k, en pixels */
+function bucketPixels(d, k, W, H, list, withBg){
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d', {willReadFrequently:true});
   g.setTransform(k, 0, 0, k, 0, 0);
-  g.fillStyle = makePaint(g, d.bg, 0, 0, d.w, d.h); g.fillRect(0, 0, d.w, d.h);
-  d.objects.forEach(o => drawObject(g, o, k, {}, d));
-  let px;
-  try{ px = g.getImageData(0, 0, W, H).data; }catch(e){ toast(L('Impossible de remplir ici.','Can’t fill here.'), 'warn'); return; }
-  const sx = Math.min(W - 1, Math.floor(p.x*k)), sy = Math.min(H - 1, Math.floor(p.y*k)), s0 = (sy*W + sx)*4;
-  const sr = px[s0], sg = px[s0 + 1], sb = px[s0 + 2];
-  // l'élément touché, le plus haut
-  let hi = -1;
-  for(let i = d.objects.length - 1; i >= 0; i--){ const o = d.objects[i]; if(o.visible && hitObject(o, p.x, p.y, 0, d)){ hi = i; break; } }
-  const hit = hi >= 0 ? d.objects[hi] : null;
+  if(withBg){ g.fillStyle = makePaint(g, d.bg, 0, 0, d.w, d.h); g.fillRect(0, 0, d.w, d.h); }
+  list.forEach(o => drawObject(g, o, k, {}, d));
+  return g.getImageData(0, 0, W, H).data;
+}
+/* l'élément vraiment dessiné sous ce pixel (pas seulement sa boîte), le plus haut */
+function bucketHit(d, p, k, sx, sy){
+  const c = document.createElement('canvas'); c.width = 3; c.height = 3;
+  const g = c.getContext('2d', {willReadFrequently:true});
+  for(let i = d.objects.length - 1; i >= 0; i--){
+    const o = d.objects[i];
+    if(!o.visible || !hitObject(o, p.x, p.y, 2/Math.max(.05, k), d)) continue;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 3, 3);
+    g.setTransform(k, 0, 0, k, 1 - sx, 1 - sy);
+    drawObject(g, o, k, {}, d);
+    const a = g.getImageData(0, 0, 3, 3).data;
+    if(a[4*4 + 3] > 24) return i;
+  }
+  return -1;
+}
+/* remplissage d'un seul tenant : renvoie le masque, sa taille et sa boîte */
+function bucketFlood(ok, W, H, seed){
+  const m = new Uint8Array(W*H), st = [seed];
+  let cnt = 0, x1 = W, y1 = H, x2 = -1, y2 = -1;
+  while(st.length){
+    let j = st.pop(); if(m[j]) continue;
+    const y = (j/W)|0; let x = j - y*W;
+    while(x > 0 && ok[j - 1] && !m[j - 1]){ x--; j--; }
+    if(x < x1) x1 = x; if(y < y1) y1 = y; if(y > y2) y2 = y;
+    let up = false, dn = false;
+    while(x < W && ok[j] && !m[j]){
+      m[j] = 1; cnt++;
+      if(y > 0){ const u = j - W; if(ok[u] && !m[u]){ if(!up){ st.push(u); up = true; } } else up = false; }
+      if(y < H - 1){ const v = j + W; if(ok[v] && !m[v]){ if(!dn){ st.push(v); dn = true; } } else dn = false; }
+      x++; j++;
+    }
+    if(x - 1 > x2) x2 = x - 1;
+  }
+  return {m, cnt, x1, y1, x2, y2};
+}
+/* même chose, mais les trous plus petits que r pixels sont bouchés : on remplit loin des bords,
+   puis la couleur revient jusqu'aux traits (sans repasser par les trous) */
+function bucketFloodClosed(ok, W, H, seed, r){
+  const n = W*H, wall = new Uint8Array(n), tmp = new Uint8Array(n);
+  // les traits épaissis de r pixels (fenêtre glissante, ligne puis colonne)
+  for(let y = 0; y < H; y++){
+    const o = y*W; let s = 0;
+    for(let x = 0; x < Math.min(W, r); x++) s += !ok[o + x];
+    for(let x = 0; x < W; x++){
+      if(x + r < W) s += !ok[o + x + r];
+      if(x - r - 1 >= 0) s -= !ok[o + x - r - 1];
+      tmp[o + x] = s > 0;
+    }
+  }
+  for(let x = 0; x < W; x++){
+    let s = 0;
+    for(let y = 0; y < Math.min(H, r); y++) s += tmp[y*W + x];
+    for(let y = 0; y < H; y++){
+      if(y + r < H) s += tmp[(y + r)*W + x];
+      if(y - r - 1 >= 0) s -= tmp[(y - r - 1)*W + x];
+      wall[y*W + x] = s > 0;
+    }
+  }
+  if(wall[seed]) return null;
+  for(let j = 0; j < n; j++) tmp[j] = ok[j] && !wall[j];
+  const f = bucketFlood(tmp, W, H, seed), m = f.m;
+  // la couleur revient jusqu'aux traits, sur r + 1 pixels au plus (on ne part que du bord de la zone)
+  let Q = new Int32Array(4096), qt = 0, qh = 0;
+  const dist = new Uint8Array(n);
+  const push = j => { if(qt >= Q.length){ const z = new Int32Array(Q.length*2); z.set(Q); Q = z; } Q[qt++] = j; };
+  const open = j => ok[j] && !m[j];
+  for(let y = f.y1; y <= f.y2; y++) for(let x = f.x1; x <= f.x2; x++){
+    const j = y*W + x;
+    if(m[j] && ((x > 0 && open(j - 1)) || (x < W - 1 && open(j + 1)) || (y > 0 && open(j - W)) || (y < H - 1 && open(j + W)))) push(j);
+  }
+  const grow = (v, dj) => { m[v] = 1; dist[v] = dj + 1; f.cnt++; push(v);
+    const vy = (v/W)|0, vx = v - vy*W; if(vx < f.x1) f.x1 = vx; if(vx > f.x2) f.x2 = vx; if(vy < f.y1) f.y1 = vy; if(vy > f.y2) f.y2 = vy; };
+  while(qh < qt){
+    const j = Q[qh++], dj = dist[j]; if(dj > r) continue;
+    const y = (j/W)|0, x = j - y*W;
+    if(x > 0 && open(j - 1)) grow(j - 1, dj);
+    if(x < W - 1 && open(j + 1)) grow(j + 1, dj);
+    if(y > 0 && open(j - W)) grow(j - W, dj);
+    if(y < H - 1 && open(j + W)) grow(j + W, dj);
+    // et en diagonale : la couleur revient à la même distance dans toutes les directions (sinon un liseré reste)
+    if(y > 0){ if(x > 0 && open(j - W - 1)) grow(j - W - 1, dj); if(x < W - 1 && open(j - W + 1)) grow(j - W + 1, dj); }
+    if(y < H - 1){ if(x > 0 && open(j + W - 1)) grow(j + W - 1, dj); if(x < W - 1 && open(j + W + 1)) grow(j + W + 1, dj); }
+  }
+  return f;
+}
+async function bucketFill(d, p){
+  const col = toHex(S.brush.color), F = parseColor(col), tol = clamp(S.bucket.tol, 0, 100)*2.55;
+  const k = Math.min(1, Math.sqrt(BUCKET_AREA/(d.w*d.h)));
+  const W = Math.max(1, Math.round(d.w*k)), H = Math.max(1, Math.round(d.h*k)), n = W*H;
+  // l'affiche telle qu'on la voit (sans le grain ni le vignettage, qui troubleraient les zones)
+  const px = bucketPixels(d, k, W, H, d.objects, true);
+  let sx = Math.min(W - 1, Math.floor(p.x*k)), sy = Math.min(H - 1, Math.floor(p.y*k));
+  const okFor = (r, g, b) => { const ok = new Uint8Array(n); for(let j = 0, q = 0; j < n; j++, q += 4) ok[j] = Math.abs(px[q] - r) <= tol && Math.abs(px[q + 1] - g) <= tol && Math.abs(px[q + 2] - b) <= tol; return ok; };
+  let s0 = (sy*W + sx)*4, sr = px[s0], sg = px[s0 + 1], sb = px[s0 + 2];
+  let ok = okFor(sr, sg, sb), reg = S.bucket.contig ? bucketFlood(ok, W, H, sy*W + sx) : null;
+  // clic pile sur le bord adouci d'un trait : on prend la vraie couleur la plus proche, à moins de 2 pixels d'écran
+  if(reg && reg.cnt < 24){
+    const rr = Math.max(1, Math.round(2*k/Math.max(.01, S.zoom)));
+    let best = null;
+    for(let dy = -rr; dy <= rr; dy++) for(let dx = -rr; dx <= rr; dx++){
+      const x = sx + dx, y = sy + dy; if(x < 0 || y < 0 || x >= W || y >= H || (!dx && !dy)) continue;
+      const dd = dx*dx + dy*dy; if(best && dd >= best.dd) continue;
+      const q = (y*W + x)*4;
+      let flat = true;
+      for(let ey = -1; ey <= 1 && flat; ey++) for(let ex = -1; ex <= 1; ex++){ const xx = Math.min(W - 1, Math.max(0, x + ex)), yy = Math.min(H - 1, Math.max(0, y + ey)), e = (yy*W + xx)*4; if(Math.abs(px[e] - px[q]) > 8 || Math.abs(px[e + 1] - px[q + 1]) > 8 || Math.abs(px[e + 2] - px[q + 2]) > 8){ flat = false; break; } }
+      if(flat) best = {x, y, dd};
+    }
+    if(best){ sx = best.x; sy = best.y; s0 = (sy*W + sx)*4; sr = px[s0]; sg = px[s0 + 1]; sb = px[s0 + 2]; ok = okFor(sr, sg, sb); reg = bucketFlood(ok, W, H, sy*W + sx); }
+  }
+  if(Math.max(Math.abs(F.r - sr), Math.abs(F.g - sg), Math.abs(F.b - sb)) <= 3){ toast(L('Cette partie a déjà cette couleur : choisis-en une autre.','This part already has this colour: pick another one.'), 'warn'); return; }
   const near = cc => { const q = parseColor(cc); return Math.max(Math.abs(q.r - sr), Math.abs(q.g - sg), Math.abs(q.b - sb)) <= Math.max(tol, 12); };
-  if(hit && !hit.locked && (hit.type === 'shape' || hit.type === 'text' || hit.type === 'path') && hit.fill && hit.fill.type === 'solid' && near(hit.fill.color)){
+  // l'élément vraiment dessiné sous le clic
+  const hi = bucketHit(d, {x:(sx + .5)/k, y:(sy + .5)/k}, k, sx, sy);
+  const hit = hi >= 0 ? d.objects[hi] : null;
+  if(hit && !hit.locked && hit.type === 'text' && hit.fill && hit.fill.type === 'solid' && near(hit.fill.color)){
     hit.fill = solid(col); touch(hit); commit(); renderSide(); requestRender(); return;
   }
-  if(hit && !hit.locked && hit.bucket && near(hit.bucket)){ recolorBucket(hit, col); return; }
-  // la zone : les pixels voisins de la même couleur (ou tous ceux de cette couleur)
-  const n = W*H, m = new Uint8Array(n);
-  const same = j => { const q = j*4; return Math.abs(px[q] - sr) <= tol && Math.abs(px[q + 1] - sg) <= tol && Math.abs(px[q + 2] - sb) <= tol; };
-  let x1 = W, y1 = H, x2 = -1, y2 = -1;
-  if(S.bucket.contig){
-    const st = [sy*W + sx];
-    while(st.length){
-      let j = st.pop(); if(m[j]) continue;
-      const y = (j/W)|0; let x = j - y*W;
-      while(x > 0 && !m[j - 1] && same(j - 1)){ x--; j--; }
-      if(x < x1) x1 = x; if(y < y1) y1 = y; if(y > y2) y2 = y;
-      let up = false, dn = false;
-      while(x < W && !m[j] && same(j)){
-        m[j] = 1;
-        if(y > 0){ const u = j - W; if(!m[u] && same(u)){ if(!up){ st.push(u); up = true; } } else up = false; }
-        if(y < H - 1){ const v = j + W; if(!m[v] && same(v)){ if(!dn){ st.push(v); dn = true; } } else dn = false; }
-        x++; j++;
-      }
-      if(x - 1 > x2) x2 = x - 1;
+  // la zone
+  if(reg){
+    const r = Math.round(clamp(S.bucket.gap || 0, 0, 40)*k);
+    if(r >= 1 && reg.cnt > Math.max(64, n*0.01)){   // une fuite donne toujours une grande zone
+      const c = bucketFloodClosed(ok, W, H, sy*W + sx, r);
+      if(c && reg.cnt > c.cnt*1.25 + 64) reg = c;   // la couleur fuyait par un trou : on garde la zone bouchée
     }
   }else{
-    for(let j = 0; j < n; j++) if(same(j)){ m[j] = 1; const y = (j/W)|0, x = j - y*W; if(x < x1) x1 = x; if(x > x2) x2 = x; if(y < y1) y1 = y; if(y > y2) y2 = y; }
+    reg = {m:ok, cnt:0, x1:W, y1:H, x2:-1, y2:-1};
+    for(let j = 0; j < n; j++) if(ok[j]){ reg.cnt++; const y = (j/W)|0, x = j - y*W; if(x < reg.x1) reg.x1 = x; if(x > reg.x2) reg.x2 = x; if(y < reg.y1) reg.y1 = y; if(y > reg.y2) reg.y2 = y; }
   }
-  if(x2 < 0) return;
-  // un pixel de plus tout autour : la couleur passe sous les bords adoucis des traits, sans liseré blanc
-  x1 = Math.max(0, x1 - 1); y1 = Math.max(0, y1 - 1); x2 = Math.min(W - 1, x2 + 1); y2 = Math.min(H - 1, y2 + 1);
-  const bw = x2 - x1 + 1, bh = y2 - y1 + 1, h1 = new Uint8Array(bw*bh);
-  for(let y = 0; y < bh; y++){ const r = (y + y1)*W + x1; for(let x = 0; x < bw; x++){ const j = r + x; h1[y*bw + x] = m[j] | (x > 0 ? m[j - 1] : 0) | (x < bw - 1 ? m[j + 1] : 0); } }
-  const out = document.createElement('canvas'); out.width = bw; out.height = bh;
-  const og = out.getContext('2d'), id = og.createImageData(bw, bh), od = id.data, q = parseColor(col);
+  const m = reg.m;
+  // une forme, un décor ou un remplissage touché en entier : on change sa couleur à lui
+  if(hit && !hit.locked && ((hit.type === 'shape' || hit.type === 'path') && hit.fill && hit.fill.type === 'solid' && near(hit.fill.color) || hit.bucket && near(hit.bucket))){
+    const A = bucketPixels(d, k, W, H, [hit], false);
+    let V = 0, R = 0;
+    for(let j = 0, q = 0; j < n; j++, q += 4) if(A[q + 3] > 128 && ok[j]){ V++; if(m[j]) R++; }
+    if(R >= V*0.97 && reg.cnt - R <= Math.max(24, reg.cnt*0.02)){
+      if(hit.bucket) await recolorBucket(hit, col);
+      else{ hit.fill = solid(col); touch(hit); commit(); renderSide(); requestRender(); }
+      return;
+    }
+  }
+  // ce qui est posé au-dessus (les traits) : la couleur passe dessous, pour ne laisser aucun liseré
+  const up = d.objects.slice(hi + 1).filter(o => o.visible);
+  const U = up.length ? bucketPixels(d, k, W, H, up, false) : null;
+  const X1 = Math.max(0, reg.x1 - 3), Y1 = Math.max(0, reg.y1 - 3), X2 = Math.min(W - 1, reg.x2 + 3), Y2 = Math.min(H - 1, reg.y2 + 3);
+  const bw = X2 - X1 + 1, bh = Y2 - Y1 + 1, a = new Uint8Array(bw*bh);
+  for(let y = Y1; y <= Y2; y++) for(let x = X1; x <= X2; x++) if(m[y*W + x]) a[(y - Y1)*bw + x - X1] = 255;
+  if(U){
+    for(let step = 0; step < 3; step++){
+      const add = [];
+      for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
+        const i = y*bw + x; if(a[i] === 255) continue;
+        if(U[((y + Y1)*W + x + X1)*4 + 3] < 8) continue;
+        if((x > 0 && a[i - 1] === 255) || (x < bw - 1 && a[i + 1] === 255) || (y > 0 && a[i - bw] === 255) || (y < bh - 1 && a[i + bw] === 255)) add.push(i);
+      }
+      add.forEach(i => a[i] = 255);
+      if(!add.length) break;
+    }
+  }
+  // le pixel de bord adouci : on y met juste la part de couleur qui revient à la zone
   for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
-    const j = y*bw + x;
-    if(h1[j] | (y > 0 ? h1[j - bw] : 0) | (y < bh - 1 ? h1[j + bw] : 0)){ const o4 = j*4; od[o4] = q.r; od[o4 + 1] = q.g; od[o4 + 2] = q.b; od[o4 + 3] = 255; }
+    const i = y*bw + x; if(a[i]) continue;
+    const gx = x + X1, gy = y + Y1, j = gy*W + gx;
+    if(!((gx > 0 && m[j - 1]) || (gx < W - 1 && m[j + 1]) || (gy > 0 && m[j - W]) || (gy < H - 1 && m[j + W]))) continue;
+    let bj = -1, bd = -1;
+    for(const v of [gx > 0 ? j - 1 : -1, gx < W - 1 ? j + 1 : -1, gy > 0 ? j - W : -1, gy < H - 1 ? j + W : -1]){
+      if(v < 0 || m[v]) continue;
+      const q = v*4, dd = Math.max(Math.abs(px[q] - sr), Math.abs(px[q + 1] - sg), Math.abs(px[q + 2] - sb));
+      if(dd > bd){ bd = dd; bj = v; }
+    }
+    const q = j*4, B = bj >= 0 ? bj*4 : q;
+    const er = sr - px[B], eg = sg - px[B + 1], eb = sb - px[B + 2], ee = er*er + eg*eg + eb*eb;
+    if(ee < 300) continue;
+    const t = ((px[q] - px[B])*er + (px[q + 1] - px[B + 1])*eg + (px[q + 2] - px[B + 2])*eb)/ee;
+    a[i] = Math.round(clamp(t, 0, 1)*255);
   }
+  const out = document.createElement('canvas'); out.width = bw; out.height = bh;
+  const og = out.getContext('2d'), id = og.createImageData(bw, bh), od = id.data;
+  for(let i = 0; i < a.length; i++) if(a[i]){ const q = i*4; od[q] = F.r; od[q + 1] = F.g; od[q + 2] = F.b; od[q + 3] = a[i]; }
   og.putImageData(id, 0, 0);
   const aid = await bucketAsset(out.toDataURL('image/png')); if(!aid || S.doc !== d) return;
-  const o = mkImage(aid, (x1 + bw/2)/k, (y1 + bh/2)/k, bw/k, bh/k, bw, bh, {name:L('Remplissage','Fill'), bucket:col});
+  const o = mkImage(aid, (X1 + bw/2)/k, (Y1 + bh/2)/k, bw/k, bh/k, bw, bh, {name:L('Remplissage','Fill'), bucket:col});
   insertObj(o, hi + 1);
   commit(); renderLayersIfOpen(); requestRender();
 }
