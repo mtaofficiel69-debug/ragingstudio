@@ -649,6 +649,7 @@ const PANEL_HTML = {
   help(){
     const kv = rows => `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
     return ph('help', L('Aide et raccourcis', 'Help & shortcuts'), L('Ton storyboard, sans dessiner', 'Your storyboard, no drawing')) + `<div class="pb">
+      <div class="tour-cta">${icon('help')}<span><b>${L('Nouveau ici, ou pas à l’aise avec la 3D ?', 'New here, or not at ease with 3D?')}</b>${L('La visite guidée te montre tout, pas à pas, en 2 minutes.', 'The guided tour shows you everything, step by step, in 2 minutes.')}</span><button class="btn btn-sm btn-primary" data-act="tourStart">${L('Lancer la visite', 'Start the tour')}</button></div>
       ${lbl(L('En 5 étapes', 'In 5 steps'))}<ol class="how">
       <li><b>${L('Lieu', 'Place')}</b>${L('Choisis le décor, ou ta photo.', 'Pick the set, or your photo.')}</li>
       <li><b>${L('Personnages et poses', 'Characters & poses')}</b>${L('Ajoute-les, attrape un bras pour l’ajuster.', 'Add them, grab an arm to adjust it.')}</li>
@@ -934,8 +935,81 @@ function showIntro(force){
       ${st('frame', L('Cadre', 'Frame'), L('Choisis la valeur : la caméra se place. Tout s’enregistre seul.', 'Pick the shot size: the camera places itself. Everything saves itself.'))}
       ${st('plus', L('Enchaîne', 'Keep going'), L('« Nouveau plan » reprend le plan actuel.', '“New shot” starts from the current one.'))}
     </ol>
-    <div class="modal-f"><button class="btn btn-primary" data-act="introOk">${L('C’est parti', 'Let’s go')}</button></div></div>`;
+    <div class="modal-f"><button class="btn" data-act="tourStart">${icon('help')}${L('Visite guidée', 'Guided tour')}</button><button class="btn btn-primary" data-act="introOk">${L('C’est parti', 'Let’s go')}</button></div></div>`;
   document.body.appendChild(bd);
+}
+
+/* ---------- La visite guidée : pour ceux qui découvrent la 3D (on la lance quand on veut, elle ne s'impose jamais) ---------- */
+const TOUR = [
+  { t:['Bienvenue dans Raging Board', 'Welcome to Raging Board'],
+    d:['Tu storyboardes comme sur papier : une case = un plan. Sauf qu’ici, au lieu de dessiner, tu poses des acteurs dans un décor et tu choisis le cadre. Pas besoin de connaître la 3D : tout se fait en quelques clics.', 'You storyboard just like on paper: one panel = one shot. Except here, instead of drawing, you place actors in a set and pick the framing. No 3D skills needed: it all takes a few clicks.'] },
+  { el:'#strip', t:['Tes cases', 'Your panels'],
+    d:['Chaque vignette est un plan, dans l’ordre du film. Glisse-les pour changer l’ordre. « Nouveau plan » reprend le plan actuel : tu ne changes que ce qui bouge, comme un calque sur ta case précédente.', 'Each thumbnail is a shot, in film order. Drag them to reorder. “New shot” starts from the current one: you only change what moves, like a layer over your previous panel.'] },
+  { p:'place', el:'#side', t:['Le décor', 'The set'],
+    d:['Choisis un des lieux tout prêts. Tu dessines ? « Ma photo » met ton propre croquis ou une photo en fond, et tu poses les personnages dessus.', 'Pick one of the ready-made places. You draw? “My photo” puts your own sketch or a photo in the background, and you place the characters on it.'] },
+  { p:'chars', el:'#side', t:['Les acteurs', 'The cast'],
+    d:['Ajoute jusqu’à 6 personnages et choisis leurs tenues. Ce sont tes bonshommes de storyboard, déjà dessinés.', 'Add up to 6 characters and pick their outfits. They’re your storyboard figures, already drawn.'] },
+  { p:'pose', el:'#side', t:['Les poses', 'Poses'],
+    d:['Choisis une pose dans la liste, ou attrape une main, un pied ou la tête directement dans l’image : ça marche comme un mannequin articulé de dessinateur.', 'Pick a pose from the list, or grab a hand, a foot or the head right in the picture: it works like an artist’s wooden mannequin.'] },
+  { p:'frame', el:'#side', t:['Le cadre, en un clic', 'Framing, in one click'],
+    d:['Le raccourci si la 3D te fait peur : choisis la valeur (gros plan, plan américain…) ou un « plan tout prêt », et la caméra se place toute seule.', 'The shortcut if 3D scares you: pick the shot size (close-up, cowboy shot…) or a “ready-made shot”, and the camera places itself.'] },
+  { el:'#stageWrap', t:['Bouger la caméra, si tu veux', 'Move the camera, if you want'],
+    d:['Glisse dans le vide pour tourner autour, molette pour avancer, clic droit pour te décaler. Perdu ? Ctrl+Z, ou reclique sur une valeur de plan dans Cadrage.', 'Drag empty space to orbit, wheel to move in, right-click to pan. Lost? Ctrl+Z, or click a shot size again in Framing.'] },
+  { el:'#nav', t:['Ou avec des boutons', 'Or with buttons'],
+    d:['Ces flèches font la même chose, sans manipulation compliquée. Les touches Z Q S D aussi.', 'These arrows do the same thing, no tricky handling. The W A S D keys too.'] },
+  { p:'text', el:'#side', t:['Action et dialogue', 'Action & dialogue'],
+    d:['Écris ce qu’on voit et ce qu’on entend : ça s’affiche sous chaque case, comme sur une vraie planche.', 'Write what we see and hear: it shows under each panel, just like a real board.'] },
+  { el:'#tbExport', t:['Partager', 'Share'],
+    d:['Exporte ta planche (PDF ou images) ou une animatique vidéo. Tout s’enregistre tout seul dans ton navigateur.', 'Export your board (PDF or images) or a video animatic. Everything saves itself in your browser.'] },
+  { t:['À toi de jouer !', 'Your turn!'],
+    d:['Tu retrouves cette visite à tout moment dans l’onglet Aide. Bon tournage !', 'You can find this tour anytime in the Help tab. Happy shooting!'] },
+];
+let _tour = null;
+function startTour(){
+  const i = document.querySelector('.intro'); if(i){ lsSet('raging3d_intro', '1'); i.remove(); }
+  // lancée depuis l'accueil : on ouvre le dernier storyboard (ou l'exemple), puis la visite commence
+  if(document.body.classList.contains('on-home')){ const l = libGet(); if(l.length) openBoard(l[0].id); else addBoard(exampleDoc(), true); setTimeout(startTour, 350); return; }
+  if(S.view === 'sheet') S.view = 'stage';
+  _tour = { i:0, panel:S.panel };
+  let el = document.querySelector('.tour');
+  if(!el){ el = document.createElement('div'); el.className = 'tour'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); }
+  tourShow();
+}
+function tourShow(){
+  const el = document.querySelector('.tour'); if(!el || !_tour) return;
+  const st = TOUR[_tour.i], n = TOUR.length, last = _tour.i === n - 1;
+  if(st.p && S.panel !== st.p) setPanel(st.p);
+  const tg = st.el && document.querySelector(st.el);
+  if(tg && tg.scrollIntoView) tg.scrollIntoView({ block:'nearest' });
+  const r = tg && tg.getBoundingClientRect();
+  const has = r && r.width > 4 && r.height > 4;
+  el.innerHTML = `${has ? `<div class="tour-hole" style="left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px"></div>` : '<div class="tour-veil"></div>'}
+    <div class="tour-card">
+      <div class="tour-h"><span class="tour-n">${_tour.i + 1} / ${n}</span><b>${esc(L(...st.t))}</b></div>
+      <p>${esc(L(...st.d))}</p>
+      <div class="tour-dots">${TOUR.map((x, k) => `<i class="${k === _tour.i ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="tour-f">${last ? '<span></span>' : `<button class="btn btn-sm tour-skip" data-act="tourEnd">${L('Passer', 'Skip')}</button>`}<span class="grow"></span>
+        ${_tour.i ? `<button class="btn btn-sm" data-act="tourPrev">${icon('left')}${L('Précédent', 'Back')}</button>` : ''}
+        <button class="btn btn-sm btn-primary" data-act="${last ? 'tourEnd' : 'tourNext'}">${last ? L('Terminer', 'Finish') : L('Suivant', 'Next')}${last ? '' : icon('right')}</button></div>
+    </div>`;
+  // la bulle se pose à côté de ce qu'on montre, sans jamais sortir de l'écran
+  const card = el.querySelector('.tour-card'), cw = card.offsetWidth, ch = card.offsetHeight, W = innerWidth, H = innerHeight, m = 14;
+  let x = (W - cw)/2, y = (H - ch)/2;
+  if(has){
+    if(r.right + m + cw <= W - m) { x = r.right + m; y = r.top; }
+    else if(r.left - m - cw >= m) { x = r.left - m - cw; y = r.top; }
+    else if(r.bottom + m + ch <= H - m) { x = r.left + r.width/2 - cw/2; y = r.bottom + m; }
+    else if(r.top - m - ch >= m) { x = r.left + r.width/2 - cw/2; y = r.top - m - ch; }
+    else { x = r.left + 16; y = r.bottom - ch - 16; }   // la zone remplit l'écran (l'image) : la bulle se met dans un coin, pas au milieu
+  }
+  card.style.left = Math.round(clamp(x, m, W - cw - m)) + 'px'; card.style.top = Math.round(clamp(y, m, H - ch - m)) + 'px';
+  const b = card.querySelector('.btn-primary'); if(b) b.focus({ preventScroll:true });
+}
+function tourGo(d){ if(!_tour) return; _tour.i = clamp(_tour.i + d, 0, TOUR.length - 1); tourShow(); }
+function endTour(){
+  const el = document.querySelector('.tour'); if(el) el.remove();
+  if(_tour && _tour.panel && S.panel !== _tour.panel) setPanel(_tour.panel);
+  _tour = null;
 }
 
 function videoType(){
@@ -1103,6 +1177,7 @@ const ACT = {
   playBoard:() => playBoard(), stopBoard, previewShot:() => playBoard(S.i),
   introOk:() => { lsSet('raging3d_intro', '1'); const i = document.querySelector('.intro'); if(i) i.remove(); },
   intro:() => showIntro(true),
+  tourStart:() => startTour(), tourNext:() => tourGo(1), tourPrev:() => tourGo(-1), tourEnd:() => endTour(),
   pose:b => setPose(b.dataset.id),
   resetPart,
   target:b => focusChar(+b.dataset.c),
@@ -1255,12 +1330,13 @@ function bindEvents(){
   document.addEventListener('keyup', e => { const k = NAV_KEYS[e.key.toLowerCase()]; if(k && NAV.keys.delete(k)) navEnd(); });
   window.addEventListener('blur', () => { if(NAV.keys.size){ NAV.keys.clear(); navEnd(); } });
   c.addEventListener('contextmenu', e => e.preventDefault());
-  window.addEventListener('resize', fitStage);
+  window.addEventListener('resize', () => { fitStage(); if(_tour) tourShow(); });
   if(window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(document.getElementById('stageWrap'));
   document.addEventListener('keydown', e => {
     const tag = (e.target.tagName || '').toLowerCase();
     if((tag === 'input' && e.target.type !== 'range' && e.target.type !== 'checkbox') || tag === 'textarea' || tag === 'select') return;
     if(document.body.classList.contains('on-home')) return;   // sur l'accueil, les raccourcis de l'atelier dorment
+    if(_tour){ e.preventDefault(); if(e.key === 'Escape') endTour(); else if(e.key === 'ArrowRight' || e.key === 'Enter') (_tour.i === TOUR.length - 1 ? endTour() : tourGo(1)); else if(e.key === 'ArrowLeft') tourGo(-1); return; }
     if(document.querySelector('.modal-bd')){ if(e.key === 'Escape'){ const i = document.querySelector('.intro'); if(i) ACT.introOk(); } return; }
     const mod = e.ctrlKey || e.metaKey;
     if(mod && e.key.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
