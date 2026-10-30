@@ -22,4 +22,22 @@
   <url><loc>https://ragingstudio.com/board/</loc><image:image><image:loc>https://ragingstudio.com/assets/shot-board-light.webp</image:loc></image:image><lastmod>2026-10-28</lastmod><priority>0.9</priority></url>
   <url><loc>https://ragingstudio.com/guide.html</loc><lastmod>2026-10-25</lastmod><priority>0.6</priority></url>
   <url><loc>https://ragingstudio.com/privacy.html</loc><lastmod>2026-10-25</lastmod><priority>0.3</priority></url>
+  <!-- modèle de storyboard -->
+  <url>
+    <loc>https://ragingstudio.com/storyboard-template/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/storyboard-template/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/modele-storyboard/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/storyboard-template/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ragingstudio.com/fr/modele-storyboard/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ragingstudio.com/storyboard-template/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ragingstudio.com/fr/modele-storyboard/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ragingstudio.com/storyboard-template/"/>
+    <lastmod>2026-10-26</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <!-- /modèle de storyboard -->
 </urlset>
