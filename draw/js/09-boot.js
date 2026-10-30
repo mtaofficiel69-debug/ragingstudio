@@ -148,7 +148,7 @@ const ACT = {
   },
   newDrawLayer:() => { const o = mkDraw(S.doc.w/2, S.doc.h/2, S.doc.w, S.doc.h); insertObj(o, S.doc.objects.length); S.sel = [o.id]; renderSide(); renderLayersIfOpen(); toast(L('Nouveau calque de dessin : dessine !','New drawing layer: draw away!')); },
   brushType:el => { S.brush.tool = el.dataset.id; document.querySelectorAll('[data-act="brushType"]').forEach(b => b.classList.toggle('on', b.dataset.id === S.brush.tool)); if(S.tool !== 'brush') setTool('brush'); },
-  brushColor:el => { S.brush.color = el.dataset.id; if(S.tool !== 'brush' && S.tool !== 'eraser') setTool('brush'); else renderSide(); renderFlyoutIf('draw'); },
+  brushColor:el => { S.brush.color = el.dataset.id; if(S.tool !== 'brush' && S.tool !== 'eraser' && S.tool !== 'bucket') setTool('brush'); else renderSide(); renderFlyoutIf('draw'); },
   // couleurs et peintures
   pickColor:el => {
     const bind = el.dataset.bindColor, tg = el.dataset.target;

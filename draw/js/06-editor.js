@@ -9,6 +9,7 @@ const S = {
   sel:[], tool:'select', prevTool:'select',
   brush:{tool:'round', size:22, color:'#FFFFFF', opacity:1, smooth:55},
   eraser:{size:60, opacity:1},
+  bucket:{tol:16, contig:true},
   zoom:1, panX:0, panY:0, fitted:false, autoFit:true,
   flyout:'templates', rtab:'props',
   history:[], hpos:-1,
@@ -190,7 +191,7 @@ function renderDock(){
   const t = S.tool;
   const b = (tool, ic, label, key) => `<button class="dk ${t===tool?'on':''}" data-act="tool" data-id="${tool}" title="${label} (${key})">${icon(ic)}</button>`;
   el.innerHTML = b('select','cursor',L('Sélection','Select'),'V') + b('hand','hand',L('Main','Hand'),'H') + '<span class="dk-sep"></span>' +
-    b('brush','brush',L('Pinceau','Brush'),'B') + b('eraser','eraser',L('Gomme','Eraser'),'E') + '<span class="dk-sep"></span>' +
+    b('brush','brush',L('Pinceau','Brush'),'B') + b('eraser','eraser',L('Gomme','Eraser'),'E') + b('bucket','bucket',L('Pot de peinture','Paint bucket'),'G') + '<span class="dk-sep"></span>' +
     b('text','typeT',L('Texte','Text'),'T') + b('rect','rect',L('Rectangle','Rectangle'),'R') + b('ellipse','ellipse',L('Ellipse','Ellipse'),'O') +
     b('line','line',L('Trait','Line'),'L') + '<button class="dk" data-act="addImage" title="' + L('Image','Image') + ' (I)">' + icon('image') + '</button>' +
     b('pipette','pipette',L('Pipette','Eyedropper'),'K');
@@ -208,7 +209,7 @@ function cursorFor(t){
   if(t === 'hand') return 'grab';
   if(t === 'brush' || t === 'eraser') return 'none';
   if(t === 'text') return 'text';
-  if(t === 'pipette') return 'crosshair';
+  if(t === 'pipette' || t === 'bucket') return 'crosshair';
   if(['rect','ellipse','line','triangle','star'].includes(t)) return 'crosshair';
   return 'default';
 }
@@ -489,6 +490,7 @@ function onPointerDown(e){
   if(e.button !== 0) return;
   const t = S.tool;
   if(t === 'pipette'){ pipetteAt(sx, sy); return; }
+  if(t === 'bucket'){ bucketAt(p); return; }
   if(t === 'brush' || t === 'eraser'){ startPaint(p, e); return; }
   if(t === 'text'){
     const hit = pickAt(p.x, p.y, o => o.type === 'text');
@@ -853,15 +855,102 @@ function pipetteAt(sx, sy){
 }
 function applyPickedColor(col){
   const sel = selObjs().filter(o => o.fill);
-  if(sel.length && S.prevTool !== 'brush'){
+  if(sel.length && S.prevTool !== 'brush' && S.prevTool !== 'bucket'){
     sel.forEach(o => { o.fill = solid(col); touch(o); });
     commit(); renderSide();
     toast(L('Couleur appliquée : ','Colour applied: ') + col.toUpperCase());
   }else{
     S.brush.color = col; renderSide();
-    toast(L('Couleur du pinceau : ','Brush colour: ') + col.toUpperCase());
+    toast((S.prevTool === 'bucket' ? L('Couleur du pot de peinture : ','Paint bucket colour: ') : L('Couleur du pinceau : ','Brush colour: ')) + col.toUpperCase());
   }
   requestRender();
+}
+
+/* ---------- Pot de peinture ----------
+   Sur une forme, un texte ou un décor d'une seule couleur : c'est sa couleur qui change (il reste modifiable).
+   Partout ailleurs (dessin, photo, fond) : la zone de même couleur se remplit, comme dans un logiciel de dessin.
+   Le remplissage devient un élément à part, posé juste au-dessus de ce qu'on a touché : on peut le déplacer,
+   le gommer, l'effacer, ou cliquer dessus avec une autre couleur pour le repeindre. */
+const BUCKET_AREA = 6e6;   // au-delà, la zone est cherchée sur une image réduite : reste rapide sur les vieux PC
+async function bucketAt(p){
+  const d = S.doc; if(!d || S.drag) return;
+  if(p.x < 0 || p.y < 0 || p.x >= d.w || p.y >= d.h) return;
+  const col = toHex(S.brush.color), tol = clamp(S.bucket.tol, 0, 100)*2.55;
+  // l'affiche telle qu'on la voit (sans le grain ni le vignettage, qui troubleraient les zones)
+  const k = Math.min(1, Math.sqrt(BUCKET_AREA/(d.w*d.h)));
+  const W = Math.max(1, Math.round(d.w*k)), H = Math.max(1, Math.round(d.h*k));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d', {willReadFrequently:true});
+  g.setTransform(k, 0, 0, k, 0, 0);
+  g.fillStyle = makePaint(g, d.bg, 0, 0, d.w, d.h); g.fillRect(0, 0, d.w, d.h);
+  d.objects.forEach(o => drawObject(g, o, k, {}, d));
+  let px;
+  try{ px = g.getImageData(0, 0, W, H).data; }catch(e){ toast(L('Impossible de remplir ici.','Can’t fill here.'), 'warn'); return; }
+  const sx = Math.min(W - 1, Math.floor(p.x*k)), sy = Math.min(H - 1, Math.floor(p.y*k)), s0 = (sy*W + sx)*4;
+  const sr = px[s0], sg = px[s0 + 1], sb = px[s0 + 2];
+  // l'élément touché, le plus haut
+  let hi = -1;
+  for(let i = d.objects.length - 1; i >= 0; i--){ const o = d.objects[i]; if(o.visible && hitObject(o, p.x, p.y, 0, d)){ hi = i; break; } }
+  const hit = hi >= 0 ? d.objects[hi] : null;
+  const near = cc => { const q = parseColor(cc); return Math.max(Math.abs(q.r - sr), Math.abs(q.g - sg), Math.abs(q.b - sb)) <= Math.max(tol, 12); };
+  if(hit && !hit.locked && (hit.type === 'shape' || hit.type === 'text' || hit.type === 'path') && hit.fill && hit.fill.type === 'solid' && near(hit.fill.color)){
+    hit.fill = solid(col); touch(hit); commit(); renderSide(); requestRender(); return;
+  }
+  if(hit && !hit.locked && hit.bucket && near(hit.bucket)){ recolorBucket(hit, col); return; }
+  // la zone : les pixels voisins de la même couleur (ou tous ceux de cette couleur)
+  const n = W*H, m = new Uint8Array(n);
+  const same = j => { const q = j*4; return Math.abs(px[q] - sr) <= tol && Math.abs(px[q + 1] - sg) <= tol && Math.abs(px[q + 2] - sb) <= tol; };
+  let x1 = W, y1 = H, x2 = -1, y2 = -1;
+  if(S.bucket.contig){
+    const st = [sy*W + sx];
+    while(st.length){
+      let j = st.pop(); if(m[j]) continue;
+      const y = (j/W)|0; let x = j - y*W;
+      while(x > 0 && !m[j - 1] && same(j - 1)){ x--; j--; }
+      if(x < x1) x1 = x; if(y < y1) y1 = y; if(y > y2) y2 = y;
+      let up = false, dn = false;
+      while(x < W && !m[j] && same(j)){
+        m[j] = 1;
+        if(y > 0){ const u = j - W; if(!m[u] && same(u)){ if(!up){ st.push(u); up = true; } } else up = false; }
+        if(y < H - 1){ const v = j + W; if(!m[v] && same(v)){ if(!dn){ st.push(v); dn = true; } } else dn = false; }
+        x++; j++;
+      }
+      if(x - 1 > x2) x2 = x - 1;
+    }
+  }else{
+    for(let j = 0; j < n; j++) if(same(j)){ m[j] = 1; const y = (j/W)|0, x = j - y*W; if(x < x1) x1 = x; if(x > x2) x2 = x; if(y < y1) y1 = y; if(y > y2) y2 = y; }
+  }
+  if(x2 < 0) return;
+  // un pixel de plus tout autour : la couleur passe sous les bords adoucis des traits, sans liseré blanc
+  x1 = Math.max(0, x1 - 1); y1 = Math.max(0, y1 - 1); x2 = Math.min(W - 1, x2 + 1); y2 = Math.min(H - 1, y2 + 1);
+  const bw = x2 - x1 + 1, bh = y2 - y1 + 1, h1 = new Uint8Array(bw*bh);
+  for(let y = 0; y < bh; y++){ const r = (y + y1)*W + x1; for(let x = 0; x < bw; x++){ const j = r + x; h1[y*bw + x] = m[j] | (x > 0 ? m[j - 1] : 0) | (x < bw - 1 ? m[j + 1] : 0); } }
+  const out = document.createElement('canvas'); out.width = bw; out.height = bh;
+  const og = out.getContext('2d'), id = og.createImageData(bw, bh), od = id.data, q = parseColor(col);
+  for(let y = 0; y < bh; y++) for(let x = 0; x < bw; x++){
+    const j = y*bw + x;
+    if(h1[j] | (y > 0 ? h1[j - bw] : 0) | (y < bh - 1 ? h1[j + bw] : 0)){ const o4 = j*4; od[o4] = q.r; od[o4 + 1] = q.g; od[o4 + 2] = q.b; od[o4 + 3] = 255; }
+  }
+  og.putImageData(id, 0, 0);
+  const aid = await bucketAsset(out.toDataURL('image/png')); if(!aid || S.doc !== d) return;
+  const o = mkImage(aid, (x1 + bw/2)/k, (y1 + bh/2)/k, bw/k, bh/k, bw, bh, {name:L('Remplissage','Fill'), bucket:col});
+  insertObj(o, hi + 1);
+  commit(); renderLayersIfOpen(); requestRender();
+}
+async function bucketAsset(src){
+  const im = new Image(); im.src = src;
+  try{ await im.decode(); }catch(e){ return null; }
+  const id = uid('a'); S.doc.assets[id] = src; IMG[id] = im;
+  return id;
+}
+async function recolorBucket(o, col){
+  const im = getImage(S.doc, o.asset); if(!im) return;
+  const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+  const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+  g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
+  const id = await bucketAsset(c.toDataURL('image/png')); if(!id || !objById(o.id)) return;
+  o.asset = id; o.bucket = col; touch(o);
+  commit(); renderSide(); requestRender();
 }
 
 /* ---------- Édition de texte sur l'affiche ---------- */
@@ -1116,7 +1205,7 @@ function onKeyDown(e){
   }
   if(e.key === '+' || e.key === '='){ zoomStep(1); return; }
   if(e.key === '-'){ zoomStep(-1); return; }
-  const map = {v:'select', h:'hand', b:'brush', e:'eraser', t:'text', r:'rect', o:'ellipse', l:'line', k:'pipette'};
+  const map = {v:'select', h:'hand', b:'brush', e:'eraser', t:'text', r:'rect', o:'ellipse', l:'line', k:'pipette', g:'bucket'};
   if(map[k]){ setTool(map[k]); return; }
   if(k === 'i'){ pickImageFile(null); return; }
 }

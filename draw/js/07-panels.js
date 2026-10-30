@@ -13,6 +13,7 @@ function bindTargets(el){
   if(t === 'doc') return S.doc ? [S.doc] : [];
   if(t === 'brush') return [S.brush];
   if(t === 'eraser') return [S.eraser];
+  if(t === 'bucket') return [S.bucket];
   if(t === 'S') return [S];
   return selObjs();
 }
@@ -50,7 +51,7 @@ function applyBind(el){
   if(el.dataset.target === 'S' || el.dataset.target === 'brush' || el.dataset.target === 'eraser') renderBrushPreview();
   positionTextEdit();
   requestRender();
-  if(el.dataset.target !== 'brush' && el.dataset.target !== 'eraser' && el.dataset.target !== 'S') scheduleSave();
+  if(el.dataset.target !== 'brush' && el.dataset.target !== 'eraser' && el.dataset.target !== 'bucket' && el.dataset.target !== 'S') scheduleSave();
   if(path === 'name' || path === 'text') renderLayersIfOpen();
 }
 function setFieldFromModel(el){
@@ -276,6 +277,7 @@ function renderLayersIfOpen(){
 function propsHtml(){
   if(S.tool === 'brush') return brushPanel();
   if(S.tool === 'eraser') return eraserPanel();
+  if(S.tool === 'bucket') return bucketPanel();
   const sel = selObjs();
   if(!sel.length) return docPanel();
   if(sel.length > 1) return multiPanel(sel);
@@ -318,6 +320,15 @@ function eraserPanel(){
       fRange(L('Taille','Size'), 'size', 2, 600, 1, {target:'eraser', unit:'px'}) +
       fRange(L('Force','Strength'), 'opacity', 5, 100, 1, {target:'eraser', mul:100, unit:'%'})) +
     `<div class="hint">${icon('bulb')}<span>${L('Rien n’est perdu : sélectionne l’élément et choisis « Restaurer ce qui a été gommé » pour tout récupérer.','Nothing is lost: select the element and choose “Restore what was erased” to get everything back.')}</span></div>` +
+    `<div class="pbtns"><button class="btn btn-sm" data-act="tool" data-id="select">${icon('cursor')} ${L('Terminer','Done')}</button></div>`;
+}
+function bucketPanel(){
+  return `<div class="ph"><span class="ph-ico">${icon('bucket')}</span><div><b>${L('Pot de peinture','Paint bucket')}</b><small>${L('Clique sur une partie du dessin : elle se remplit de la couleur. Sur une forme ou un texte, c’est sa couleur qui change.','Click a part of the drawing: it fills with the colour. On a shape or a text, its colour changes.')}</small></div></div>` +
+    sec('fill', L('Couleur','Colour'), quickSwatches('brush')) +
+    sec('brush', L('Remplissage','Fill'),
+      fRange(L('Tolérance','Tolerance'), 'tol', 0, 100, 1, {target:'bucket', unit:'%'}) +
+      fToggle(L('Seulement la zone touchée','Only the touched area'), 'contig', {target:'bucket'})) +
+    `<div class="hint">${icon('bulb')}<span>${L('Plus la tolérance est haute, plus les teintes proches se remplissent aussi. Chaque remplissage est un élément à part : déplace-le, gomme-le, ou clique dessus avec une autre couleur.','The higher the tolerance, the more similar shades fill too. Each fill is its own element: move it, erase it, or click it with another colour.')}</span></div>` +
     `<div class="pbtns"><button class="btn btn-sm" data-act="tool" data-id="select">${icon('cursor')} ${L('Terminer','Done')}</button></div>`;
 }
 function docPanel(){
@@ -577,5 +588,5 @@ function flyDraw(){
     fRange(L('Taille','Size'), 'size', 1, 400, 1, {target:'brush', unit:'px'}) +
     fRange(L('Opacité','Opacity'), 'opacity', 5, 100, 1, {target:'brush', mul:100, unit:'%'}) +
     `<div class="fly-lbl">${L('Couleur','Colour')}</div>` + quickSwatches('brush') +
-    `<div class="pbtns"><button class="btn btn-sm btn-primary" data-act="tool" data-id="brush">${icon('brush')} ${L('Dessiner','Draw')}</button><button class="btn btn-sm" data-act="tool" data-id="eraser">${icon('eraser')} ${L('Gommer','Erase')}</button></div>`;
+    `<div class="pbtns"><button class="btn btn-sm btn-primary" data-act="tool" data-id="brush">${icon('brush')} ${L('Dessiner','Draw')}</button><button class="btn btn-sm" data-act="tool" data-id="eraser">${icon('eraser')} ${L('Gommer','Erase')}</button><button class="btn btn-sm" data-act="tool" data-id="bucket">${icon('bucket')} ${L('Remplir','Fill')}</button></div>`;
 }
