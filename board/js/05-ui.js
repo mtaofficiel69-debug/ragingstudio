@@ -101,6 +101,7 @@ function renderTop(){
         <span class="save-status" id="saveStatus"><i></i><span></span></span>
       </div>
       <div class="topbar-right">
+        <button class="btn tb-tour" data-act="tourStart" id="tbTour">${icon('help')}<span class="tb-lbl" id="tbTourLbl"></span></button>
         <div class="lang-flags" role="group" aria-label="Language / Langue"><button class="lang-flag" data-act="lang" data-l="fr">FR</button><button class="lang-flag" data-act="lang" data-l="en">EN</button></div>
         <button class="ib" data-act="theme" id="tbTheme"></button>
         <div class="menu-wrap">
@@ -121,6 +122,7 @@ function renderTop(){
   document.querySelectorAll('.lang-flag').forEach(b => b.classList.toggle('active', b.dataset.l === getLang()));
   const th = document.getElementById('tbTheme'); th.innerHTML = icon(theme() === 'dark' ? 'sun' : 'moon'); th.title = theme() === 'dark' ? L('Mode clair', 'Light mode') : L('Mode sombre', 'Dark mode');
   document.getElementById('tbExportLbl').textContent = L('Exporter', 'Export');
+  document.getElementById('tbTourLbl').textContent = L('Guide', 'Guide'); document.getElementById('tbTour').title = L('Visite guidée : découvre Raging Board pas à pas, en 2 minutes', 'Guided tour: discover Raging Board step by step, in 2 minutes');
   document.getElementById('exportMenu').innerHTML = exportList();
   renderSaved();
 }
@@ -962,7 +964,7 @@ const TOUR = [
   { el:'#tbExport', t:['Partager', 'Share'],
     d:['Exporte ta planche (PDF ou images) ou une animatique vidéo. Tout s’enregistre tout seul dans ton navigateur.', 'Export your board (PDF or images) or a video animatic. Everything saves itself in your browser.'] },
   { t:['À toi de jouer !', 'Your turn!'],
-    d:['Tu retrouves cette visite à tout moment dans l’onglet Aide. Bon tournage !', 'You can find this tour anytime in the Help tab. Happy shooting!'] },
+    d:['Tu retrouves cette visite à tout moment avec le bouton « Guide » en haut à droite, ou dans l’onglet Aide. Bon tournage !', 'You can find this tour anytime with the “Guide” button at the top right, or in the Help tab. Happy shooting!'] },
 ];
 let _tour = null;
 function startTour(){
