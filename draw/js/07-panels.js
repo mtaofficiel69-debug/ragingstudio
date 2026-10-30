@@ -327,9 +327,9 @@ function bucketPanel(){
     sec('fill', L('Couleur','Colour'), quickSwatches('brush')) +
     sec('brush', L('Remplissage','Fill'),
       fRange(L('Tolérance','Tolerance'), 'tol', 0, 100, 1, {target:'bucket', unit:'%'}) +
-      fRange(L('Fermer les trous','Close gaps'), 'gap', 0, 40, 1, {target:'bucket', unit:'px'}) +
+      fRange(L('Anti-fuite','Close gaps'), 'gap', 0, 40, 1, {target:'bucket', unit:'px'}) +
       fToggle(L('Seulement la zone touchée','Only the touched area'), 'contig', {target:'bucket'})) +
-    `<div class="hint">${icon('bulb')}<span>${L('Plus la tolérance est haute, plus les teintes proches se remplissent aussi. « Fermer les trous » empêche la couleur de déborder par un trait mal fermé. Chaque remplissage est un élément à part : déplace-le, gomme-le, ou clique dessus avec une autre couleur.','The higher the tolerance, the more similar shades fill too. “Close gaps” stops the colour leaking out of a line that isn’t quite closed. Each fill is its own element: move it, erase it, or click it with another colour.')}</span></div>` +
+    `<div class="hint">${icon('bulb')}<span>${L('Plus la tolérance est haute, plus les teintes proches se remplissent aussi. « Anti-fuite » bouche les petits trous d’un trait mal fermé, pour que la couleur ne déborde pas. Chaque remplissage est un élément à part : déplace-le, gomme-le, ou clique dessus avec une autre couleur.','The higher the tolerance, the more similar shades fill too. “Close gaps” stops the colour leaking out of a line that isn’t quite closed. Each fill is its own element: move it, erase it, or click it with another colour.')}</span></div>` +
     `<div class="pbtns"><button class="btn btn-sm" data-act="tool" data-id="select">${icon('cursor')} ${L('Terminer','Done')}</button></div>`;
 }
 function docPanel(){
@@ -589,5 +589,5 @@ function flyDraw(){
     fRange(L('Taille','Size'), 'size', 1, 400, 1, {target:'brush', unit:'px'}) +
     fRange(L('Opacité','Opacity'), 'opacity', 5, 100, 1, {target:'brush', mul:100, unit:'%'}) +
     `<div class="fly-lbl">${L('Couleur','Colour')}</div>` + quickSwatches('brush') +
-    `<div class="pbtns"><button class="btn btn-sm btn-primary" data-act="tool" data-id="brush">${icon('brush')} ${L('Dessiner','Draw')}</button><button class="btn btn-sm" data-act="tool" data-id="eraser">${icon('eraser')} ${L('Gommer','Erase')}</button><button class="btn btn-sm" data-act="tool" data-id="bucket">${icon('bucket')} ${L('Remplir','Fill')}</button></div>`;
+    `<div class="pbtns"><button class="btn btn-sm btn-primary" data-act="tool" data-id="brush">${icon('brush')} ${L('Dessiner','Draw')}</button><button class="btn btn-sm" data-act="tool" data-id="eraser">${icon('eraser')} ${L('Gommer','Erase')}</button></div>`;
 }
