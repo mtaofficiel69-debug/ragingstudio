@@ -877,3 +877,10 @@ html[data-theme="dark"] .tour-n{color:var(--accent-ink);}
 .tour-cta > span{flex:1; min-width:170px; font-size:12.5px; line-height:1.45;}
 .tour-cta > span b{display:block; font-size:13px; color:var(--ink);}
 .tour-cta .btn{margin-left:auto;}
+/* la visite guidée, en haut à droite : bien visible pour les nouveaux, discrète pour les autres */
+.topbar .btn.tb-tour{gap:6px; margin-right:6px; padding:6px 12px 6px 10px; border-radius:999px; background:var(--accent-tint); color:var(--accent-2); font-size:13.5px; font-weight:600;}
+.topbar .btn.tb-tour .icon{color:var(--accent);}
+.topbar .btn.tb-tour:hover{background:var(--accent-soft); color:var(--accent-ink);}
+html[data-theme="dark"] .topbar .btn.tb-tour{color:var(--accent-ink);}
+html[data-theme="dark"] .topbar .btn.tb-tour:hover{background:var(--accent-soft); color:#fff;}
+@media (max-width:1180px){ .topbar .btn.tb-tour{padding:7px 9px;} }
