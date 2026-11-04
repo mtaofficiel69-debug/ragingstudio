@@ -346,6 +346,7 @@ const POSES = [
   { id:'cross', g:'move', fr:'Bras croisés', en:'Arms crossed', y:0, j:{ armR:[10, 40, 90], foreR:[90, 0], armL:[15, 50, -90], foreL:[90, 0], head:[-4, 0, 0] } },
   { id:'hips', g:'move', fr:'Mains sur les hanches', en:'Hands on hips', y:0, j:{ armR:[-35, 0, 90], foreR:[70, 0], armL:[-35, 0, -90], foreL:[70, 0], chest:[-4, 0, 0] } },
   { id:'point', g:'gest', fr:'Pointer', en:'Pointing', y:0, j:{ armR:[88, 8, 0], foreR:[4, 0], head:[0, -12, 0], chest:[0, -10, 0], handR:[-8, 0] } },
+  { id:'fridge', g:'gest', fr:'Ouvrir le frigo', en:'Opening the fridge', y:0, j:{ armL:[62, 0, 26], foreL:[18, 0], handL:[0, 0], armR:[52, -8, 0], foreR:[38, 0], spine:[6, 0, 0], chest:[4, 8, 0], head:[16, 10, 0] } },
   { id:'wave', g:'gest', fr:'Saluer', en:'Waving', y:0, j:{ armR:[105, -10, -90], foreR:[80, 0], handR:[-10, 0], head:[-4, -6, 0] } },
   { id:'think', g:'gest', fr:'Réfléchir', en:'Thinking', y:0, j:{ armR:[25, 2, 60], foreR:[132, 0], armL:[15, 50, -90], foreL:[90, 0], head:[10, 0, 4], handR:[0, 0] } },
   { id:'phone', g:'gest', prop:'phone', fr:'Au téléphone', en:'On the phone', y:0, j:{ head:[6, 0, -10], armR:[57, 180, 87], foreR:[138, 7], handR:[0, 0] } },
@@ -928,6 +929,7 @@ const SET_DEF = {
   },
   // la cuisine : le plan de travail, l'évier, la cuisinière et sa hotte, le frigo, la table au milieu
   kitchen:{
+    fridges:[[2.1, -2.45, 0, '#E9E6E0']],
     spawn:[{ x:0.4, z:-1.8, ry:180 }, { x:-0.45, z:-0.05, ry:0, pose:'sit' }],
     cam:{ tx:0, ty:1.1, tz:-0.6, yaw:-30, pitch:-10, dist:4.2, lens:24 },
     build(g){
@@ -947,8 +949,7 @@ const SET_DEF = {
       box(g, -2.2, 1.85, Z0 + 0.175, 2.4, 0.7, 0.35, '#E9E6E0'); for(let k = 0; k < 4; k++) box(g, -3.25 + k * 0.6, 1.62, Z0 + 0.355, 0.02, 0.12, 0.02, M);
       // sur le plan de travail : la bouilloire, la planche, la corbeille de fruits
       cyl(g, -0.3, 1.08, Z0 + 0.3, 0.08, 0.1, 0.17, '#B4232C', 10); box(g, -2.5, 0.92, Z0 + 0.35, 0.4, 0.02, 0.28, '#B9935F');
-      // le frigo
-      box(g, 2.1, 0.95, Z0 + 0.35, 0.75, 1.9, 0.66, '#E9E6E0'); box(g, 2.1, 1.3, Z0 + 0.682, 0.73, 0.012, 0.005, '#BFC4CA'); [[1.65, 0.45], [0.85, 0.6]].forEach(([y, h]) => box(g, 2.4, y, Z0 + 0.7, 0.03, h, 0.03, M));
+      // le frigo : un vrai, qui s'ouvre (voir « fridges » plus bas)
       // la fenêtre (à droite)
       pane(g, [X1 - 0.015, -0.8], [X1 - 0.015, 0.8], 1.2, '#A9C9DE', 1.0);
       wall(g, [X1 - 0.025, -0.85], [X1 - 0.025, 0.85], 0.06, '#F4F2EE', 0.96); wall(g, [X1 - 0.025, -0.85], [X1 - 0.025, 0.85], 0.06, '#F4F2EE', 2.18); [-0.83, 0, 0.83].forEach(z => wall(g, [X1 - 0.025, z - 0.03], [X1 - 0.025, z + 0.03], 1.2, '#F4F2EE', 1.0));
@@ -1605,43 +1606,205 @@ Object.assign(SET_DEF, {
       [[-60, -30], [-64, -20], [-58, 30], [-66, 40], [60, -60], [62, 20], [58, 70]].forEach(([x, z], i) => tree(g, x, z, 1.2 + (i % 3) * 0.2));
     },
   },
+  /* ---------- La forêt : une grande prairie sèche au pied des montagnes, des centaines de sapins, et la cabane ----------
+     Les arbres, les rochers et les souches ne retiennent pas la caméra : on la pose où l'on veut. Seuls les murs de la cabane
+     l'arrêtent (on y entre par la porte, ou d'un clic sur une pièce). Les sapins lointains sont plus simples : la carte reste légère. */
   forest:{
-    sky:{ top:'#93B4C8', hor:'#D9E0D8', low:'#6E8064' }, fog:[18, 90],
-    cam:{ tx:0, ty:1.1, tz:0.5, yaw:-20, pitch:-4, dist:7, lens:28 },
+    sky:{ top:'#8796A3', hor:'#E1E1DA', low:'#7A7558' }, fog:[60, 600],
+    cam:camLook([9.5, 1.75, 21], [1.2, 1.55, 10.5], 28),
+    view:'nature', freeCam:true, camLim:[-190, -190, 190, 190, 60],
+    roomH:2.5, box:[-4.5, -3, 4.5, 3],
+    rooms:[['Pièce principale', 'Main room', 0, [-4.43, -2.93, 1.73, 2.93]], ['Salle d’eau', 'Shower room', 0, [1.87, -2.93, 4.43, 2.93]]],
+    garden:['Dehors', 'Outside', -1, [9.5, 1.75, 21], [1.2, 1.55, 10.5]],
+    fridges:[[1.25, -2.6, 0, '#E8E1CF']],
     build(g, gl){
-      floor(g, -150, -150, 150, 150, 0, '#56703F');
-      // la clairière, le sentier qui la traverse, le ruisseau
-      cyl(g, 0, 0.006, 0, 9, 9, 0.004, '#7D8A4E', 18);
-      for(let i = -40; i < 40; i++){ const z = i * 1.5, x = Math.sin(z * 0.08) * 2.5; box(g, x, 0.009, z, 1.4, 0.004, 1.7, '#8E7A5A', Math.cos(z * 0.08) * 0.2); }
-      for(let i = -40; i < 40; i++){ const z = i * 1.5, x = 9 + Math.sin(z * 0.1 + 1) * 1.6; box(g, x, 0.012, z, 1.6, 0.004, 1.8, '#4C7186', Math.cos(z * 0.1 + 1) * 0.16); [-1, 1].forEach(sd => ball(g, x + sd * 0.95, 0.05, z, 0.25, 0.14, 0.4, '#8C8A84', 5)); }
-      box(g, 9, 0.12, 2, 2.6, 0.08, 1.2, '#7A5C42'); [7.85, 10.15].forEach(x => box(g, x, 0.04, 2, 0.3, 0.08, 1.3, '#5E4532'));   // une passerelle, posée sur les berges
-      [-0.56, 0.56].forEach(dz => { box(g, 9, 0.86, 2 + dz, 2.6, 0.06, 0.06, '#6E5440'); [7.8, 9, 10.2].forEach(x => box(g, x, 0.51, 2 + dz, 0.06, 0.7, 0.06, '#6E5440')); });
-      // le feu de camp, les rondins autour
-      cyl(g, -1.6, 0.1, -1.8, 0.55, 0.6, 0.1, '#6F6A63', 10); for(let i = 0; i < 5; i++) box(g, -1.6, 0.15, -1.8, 0.08, 0.08, 0.9, '#4A3626', i * 0.63);
-      ball(g, -1.6, 0.32, -1.8, 0.25, 0.32, 0.25, '#E8823A', 6); ball(g, -1.6, 0.26, -1.8, 0.16, 0.2, 0.16, '#F3C64A', 6);
-      [[-1.6, -3.1, 0], [-3.0, -1.6, Math.PI / 2], [-0.2, -1.2, 1.1]].forEach(([x, z, r]) => { cyl(g, x - Math.sin(r) * 0, 0.22, z, 0.22, 0.22, 1.8, '#6B4E37', 9, 'x'); });
-      // la cabane de bois (on peut entrer : la porte est ouverte)
-      const CX0 = -9, CX1 = -4, CZ0 = 3, CZ1 = 8, CH = 2.5;
-      floor(g, CX0, CZ0, CX1, CZ1, 0.15, '#8A6A4A'); box(g, (CX0 + CX1) / 2, 0.07, (CZ0 + CZ1) / 2, CX1 - CX0 + 0.3, 0.14, CZ1 - CZ0 + 0.3, '#5E4532');
-      partition(g, [CX0, CZ0], [CX1, CZ0], 0.15, CH, '#8A6545', [[1.8, 2.8]]);
-      partition(g, [CX1, CZ0], [CX1, CZ1], 0.15, CH, '#7F5C3E', [[1.6, 3.2]]);
-      partition(g, [CX1, CZ1], [CX0, CZ1], 0.15, CH, '#8A6545');
-      partition(g, [CX0, CZ1], [CX0, CZ0], 0.15, CH, '#7F5C3E', [[2.0, 3.0]]);
-      for(let y = 0.4; y < CH; y += 0.32) [[CX0 - 0.06, 'z'], [CX1 + 0.06, 'z']].forEach(([x]) => box(g, x, y, (CZ0 + CZ1) / 2, 0.04, 0.03, CZ1 - CZ0, '#5E4532'));
-      prism(g, [[CZ0 - 0.5, CH + 0.1], [CZ1 + 0.5, CH + 0.1], [(CZ0 + CZ1) / 2, CH + 1.9]], CX0 - 0.5, CX1 + 0.5, '#4E3B2C'); prism(g, [[CZ1 + 0.5, CH + 0.1], [CZ0 - 0.5, CH + 0.1], [(CZ0 + CZ1) / 2, CH + 1.8]], CX0 - 0.4, CX1 + 0.4, '#6E5440');
-      gl && [[CZ0 + 1.8, CZ0 + 2.8]].forEach(([a, b]) => wall2(gl, [CX0 + 0.02, a], [CX0 + 0.02, b], 0.8, '#A9C4D2', 1.2));
-      box(g, CX0 + 0.8, 0.88, CZ1 - 1, 1.2, 0.06, 0.7, '#6E5440'); [[-0.52, -0.28], [0.52, -0.28], [-0.52, 0.28], [0.52, 0.28]].forEach(([a, b]) => box(g, CX0 + 0.8 + a, 0.5, CZ1 - 1 + b, 0.06, 0.7, 0.06, '#5E4532'));
-      box(g, CX0 + 0.8, 0.6, CZ1 - 1.75, 0.4, 0.05, 0.4, '#6E5440'); [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]].forEach(([a, b]) => box(g, CX0 + 0.8 + a, 0.37, CZ1 - 1.75 + b, 0.04, 0.44, 0.04, '#5E4532'));
-      box(g, CX1 - 0.6, 0.27, CZ1 - 1.2, 0.95, 0.24, 1.95, '#5E4532'); box(g, CX1 - 0.6, 0.48, CZ1 - 1.2, 0.9, 0.18, 1.9, '#3D5A80'); box(g, CX0 + 0.5, 1.0, CZ0 + 0.6, 0.6, 1.7, 0.5, '#4A3626');
-      // les sapins tout autour, plus serrés au loin, quelques rochers et souches
-      let r = 7;
-      const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
-      for(let i = 0; i < 160; i++){ const a = rnd() * Math.PI * 2, d = 11 + rnd() * 48, x = Math.cos(a) * d, z = Math.sin(a) * d;
-        if(Math.abs(x - Math.sin(z * 0.08) * 2.5) < 2 || Math.abs(x - 9) < 3 || (x > -11 && x < -2 && z > 1 && z < 10) || Math.hypot(x + 12, z + 10) < 4) continue;
-        const k = 1.4 + rnd() * 1.3; (i % 7 === 0 ? tree(g, x, z, k * 0.8, '#55804E', '#61905A') : pine(g, x, z, k, ['#3F6B4A', '#355E42', '#48744F'][i % 3])); }
-      [[3, -5, 0.6], [-6, -6, 0.9], [4.5, 6, 0.5], [12, -9, 1.1]].forEach(([x, z, k]) => ball(g, x, 0.2 * k, z, 0.9 * k, 0.55 * k, 0.7 * k, '#8C8A84', 7));
-      [[5, -1.5], [-5.5, 0], [2, 7.5]].forEach(([x, z]) => cyl(g, x, 0.35, z, 0.3, 0.34, 0.35, '#6B4E37', 9));
-      for(let i = 0; i < 40; i++){ const a = rnd() * 6.28, d = 6 + rnd() * 10, x = Math.cos(a) * d, z = Math.sin(a) * d; if((x > -10 && x < -3 && z > 2 && z < 9) || Math.abs(x - Math.sin(z * 0.08) * 2.5) < 1.2 || Math.abs(x - 9) < 1.6) continue; ball(g, x, 0.2, z, 0.5, 0.35, 0.5, '#4C7A46', 6); }
+      let seed = 11;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, pick = a => a[Math.floor(rnd() * a.length)];
+      const MEADOW = '#8E8552', X0 = -4.5, X1 = 4.5, Z0 = -3, Z1 = 3, H = 2.5, PZ = 5.3, PX1 = 1.7;   // la cabane et son porche
+      // le sol : la prairie sèche (percée sous la cabane et le porche : rien n'y clignote), des taches d'herbe plus verte ou plus jaune
+      floorHole(g, -260, -260, 260, 260, 0, MEADOW, [X0 - 0.08, Z0 - 0.08, X1 + 0.08, PZ + 0.08]);
+      const free = (x, z, m) => !(x > X0 - m && x < X1 + m && z > Z0 - m && z < PZ + m);
+      for(let i = 0; i < 140; i++){ const a = rnd() * 6.283, d = 6 + rnd() * 110, x = Math.cos(a) * d, z = Math.sin(a) * d, w = 3 + rnd() * 9, l = 3 + rnd() * 9;
+        if(!free(x, z, Math.max(w, l) / 2 + 0.5) || Math.abs(x - 40) < l / 2 + 5) continue;
+        { const a2 = rnd() * 3, c2 = Math.cos(a2), s2 = Math.sin(a2), y = 0.004 + (i % 4) * 0.003, P = (u, v) => [x + u * c2 + v * s2, y, z - u * s2 + v * c2], m0 = MAT, e0 = EDGE_ON; MAT = 1; EDGE_ON = 0;
+          quad(g, P(-w / 2, l / 2), P(w / 2, l / 2), P(w / 2, -l / 2), P(-w / 2, -l / 2), hexRGB(pick(['#7F7C4A', '#9E915B', '#7A7F49', '#A09358', '#857A4A']))); MAT = m0; EDGE_ON = e0; } }
+      // la route goudronnée, sa ligne pointillée, ses bas-côtés et ses poteaux électriques
+      floor(g, 34.5, -260, 45.5, 260, 0.012, '#7D7464'); floor(g, 36, -260, 44, 260, 0.02, '#4A4C4F');
+      for(let z = -258; z < 258; z += 7) box(g, 40, 0.024, z, 0.14, 0.004, 3, '#E8E4D8');
+      [36.25, 43.75].forEach(x => floor(g, x - 0.06, -260, x + 0.06, 260, 0.024, '#D9D4C6'));
+      for(let z = -250; z <= 250; z += 34){ box(g, 46.8, 4.3, z, 0.2, 8.6, 0.2, '#5E4A3A'); box(g, 46.8, 8.1, z, 1.8, 0.12, 0.12, '#4A3A2E'); }
+      // le chemin de terre, du porche à la route
+      for(let i = 0; i <= 26; i++){ const t = i / 26, x = -1.45 + t * 38, z = PZ + 0.8 + Math.sin(t * 3.0) * 6 + t * 14, a = Math.atan2(38, 6 * 3.0 * Math.cos(t * 3.0) + 14);
+        box(g, x, 0.016, z, 1.5, 0.003, 1.9, '#8C7656', a); }
+      // les montagnes au loin (un sommet enneigé), et une ligne de collines boisées
+      const peak = (x, z, r, h, c, snow) => { const m0 = MAT; MAT = 1; cyl(g, x, h, z, 0.5, r, h, hexRGB(c).map(v => v * 0.72), 9); if(snow){ cyl(g, x, h + 0.15, z, 0.4, r * 0.46, h * 0.44, '#FFFFFF', 9); } MAT = m0; };
+      peak(-30, -290, 130, 190, '#5F6B72', true); peak(-150, -250, 95, 95, '#66737A', false); peak(120, -270, 110, 120, '#5C6870', true); peak(240, -150, 90, 80, '#68757B', false);
+      peak(-260, -90, 95, 85, '#66727A', false); peak(-250, 120, 90, 70, '#6A767C', false); peak(230, 140, 95, 75, '#68747A', false); peak(40, 290, 100, 80, '#6A767C', false);
+      [[-90, -120, 45, 9], [70, -125, 50, 8], [130, 40, 40, 7], [-125, 60, 45, 8], [20, 135, 55, 9], [-60, 120, 35, 6]].forEach(([x, z, r, h]) => ball(g, x, 0, z, r, h, r, '#7E7B4E', 14));
+      // la cabane : les murs de rondins, son soubassement de pierre, le porche couvert, le toit de tôle
+      const C0 = COLL, wl = (a, b) => { if(COLL) collOf(g).w.push([a[0], a[1], b[0], b[1], 0, H]); };
+      const LOG = '#5C4636', LOG2 = '#4E3B2E', IN = '#A9845F', T = 0.16;
+      // un morceau de mur plein : le bois clair dedans, les rondins dehors (une face, tournée vers l'extérieur), le soubassement de pierre
+      const piece = (ax, az, bx, bz, y0, y1, out) => {
+        const alongX = Math.abs(bx - ax) > Math.abs(bz - az), len = Math.hypot(bx - ax, bz - az), mx = (ax + bx) / 2, mz = (az + bz) / 2, o = T / 2 + 0.004;
+        if(len < 0.02 || y1 - y0 < 0.02) return;
+        box(g, mx, (y0 + y1) / 2, mz, alongX ? len : T, y1 - y0, alongX ? T : len, IN);
+        const C = COLL; COLL = null;
+        const nx = alongX ? 0 : out, nz = alongX ? out : 0, A = [ax + nx * o, az + nz * o], B = [bx + nx * o, bz + nz * o];
+        const fw = alongX ? ((out > 0) === (ax < bx)) : ((out < 0) === (az < bz));
+        wall(g, fw ? A : B, fw ? B : A, y1 - y0, LOG, y0);
+        const e0 = EDGE_ON; EDGE_ON = 0;
+        for(let y = 0.42; y < H - 0.05; y += 0.27) if(y > y0 + 0.02 && y < y1 - 0.02) box(g, mx + nx * 0.012, y, mz + nz * 0.012, alongX ? len : 0.024, 0.035, alongX ? 0.024 : len, LOG2);
+        if(y0 < 0.34) box(g, mx + nx * 0.03, (y0 + 0.34) / 2, mz + nz * 0.03, alongX ? len : 0.06, 0.34 - y0, alongX ? 0.06 : len, '#7A746A');
+        EDGE_ON = e0; COLL = C;
+      };
+      // une fenêtre : dehors la vitre (allumée la nuit), dedans le dehors vu à travers, et son cadre clair des deux côtés
+      const glassAt = (ax, az, bx, bz, y0, y1, out) => {
+        const alongX = Math.abs(bx - ax) > Math.abs(bz - az), mx = (ax + bx) / 2, mz = (az + bz) / 2, len = Math.hypot(bx - ax, bz - az);
+        const nx = alongX ? 0 : out, nz = alongX ? out : 0;
+        { const m0 = MAT; MAT = 7; box(g, mx + nx * 0.02, (y0 + y1) / 2, mz + nz * 0.02, alongX ? len : 0.02, y1 - y0, alongX ? 0.02 : len, '#3F4C56'); MAT = m0; }
+        const i0 = [ax - nx * 0.03, az - nz * 0.03], i1 = [bx - nx * 0.03, bz - nz * 0.03], fw = alongX ? ((out < 0) === (ax < bx)) : ((out > 0) === (az < bz));
+        pane(g, fw ? i0 : i1, fw ? i1 : i0, y1 - y0, '#A9C4D2', y0);
+        const fr = (u, y, w, h) => [1, -1].forEach(sd => box(g, (alongX ? u : mx) + nx * sd * (T / 2 + 0.02), y, (alongX ? mz : u) + nz * sd * (T / 2 + 0.02), alongX ? w : 0.03, h, alongX ? 0.03 : w, '#E4DDCF'));
+        const u0 = alongX ? Math.min(ax, bx) : Math.min(az, bz), u1 = u0 + len;
+        fr(u0, (y0 + y1) / 2, 0.07, y1 - y0 + 0.14); fr(u1, (y0 + y1) / 2, 0.07, y1 - y0 + 0.14); fr((u0 + u1) / 2, y0, len + 0.14, 0.07); fr((u0 + u1) / 2, y1, len + 0.14, 0.07); fr((u0 + u1) / 2, (y0 + y1) / 2, 0.04, y1 - y0);
+      };
+      // un mur entier avec ses ouvertures : [début, fin, bas, haut] (une porte commence au sol). Les vitres arrêtent la caméra, pas les portes.
+      const wallLine = (ax, az, bx, bz, gaps, out) => {
+        const alongX = Math.abs(bx - ax) > Math.abs(bz - az), at = u => alongX ? [u, az] : [ax, u], u0 = alongX ? ax : az, u1 = alongX ? bx : bz;
+        let u = u0;
+        gaps.forEach(([a, b, y0, y1]) => { piece(...at(u), ...at(a), 0, H, out); if(y0 > 0) piece(...at(a), ...at(b), 0, y0, out); piece(...at(a), ...at(b), y1, H, out);
+          if(y0 > 0) glassAt(...at(a), ...at(b), y0, y1, out); u = b; });
+        piece(...at(u), ...at(u1), 0, H, out);
+        // les obstacles : tout le mur, sauf les portes
+        let v = u0; gaps.filter(gp => gp[2] === 0).forEach(([a, b]) => { wl(at(v), at(a)); v = b; }); wl(at(v), at(u1));
+      };
+      // devant : la fenêtre près du lit, la porte, la fenêtre de la table, la petite fenêtre de la salle d'eau ; au fond : la fenêtre de l'évier ;
+      // à gauche : une fenêtre près du poêle ; à droite : celle de la salle d'eau
+      wallLine(X0, Z1, X1, Z1, [[-3.8, -2.8, 0.95, 1.95], [-1.95, -1.05, 0, 2.05], [0.2, 1.2, 0.95, 1.95], [3.0, 3.6, 1.45, 1.95]], 1);
+      wallLine(X0, Z0, X1, Z0, [[-0.95, 0.05, 1.15, 1.95]], -1);
+      wallLine(X0, Z0, X0, Z1, [[-0.6, 0.6, 0.95, 1.95]], -1);
+      wallLine(X1, Z0, X1, Z1, [[-1.5, -0.9, 1.4, 1.95]], 1);
+      // la cloison entre la pièce principale et la salle d'eau (sa porte, côté entrée)
+      partition(g, [1.8, Z0], [1.8, Z1], 0, H, IN, [[4.55, 5.35]]); wl([1.8, Z0], [1.8, 1.55]); wl([1.8, 2.35], [1.8, Z1]);
+      // les sols et les plafonds
+      floor(g, X0, Z0, 1.8, Z1, 0.003, '#8A6B4E'); floor(g, 1.8, Z0, X1, Z1, 0.003, '#B9B2A4');
+      { const e0 = EDGE_ON; EDGE_ON = 0; for(let x = X0 + 0.18; x < 1.8; x += 0.18) box(g, x, 0.006, 0, 0.012, 0.003, Z1 - Z0, '#6E543E');
+        for(let x = 1.95; x < X1; x += 0.3) box(g, x, 0.006, 0, 0.01, 0.003, Z1 - Z0, '#9C968A'); for(let z = Z0 + 0.3; z < Z1; z += 0.3) box(g, 3.15, 0.006, z, X1 - 1.8, 0.003, 0.01, '#9C968A'); EDGE_ON = e0; }
+      floor(g, X0, Z0, X1, Z1, H, '#8F6F50', true);
+      { const e0 = EDGE_ON; EDGE_ON = 0; [-3.2, -1.2, 0.8, 2.8].forEach(x => box(g, x, H - 0.07, 0, 0.14, 0.14, Z1 - Z0, '#6E543E')); EDGE_ON = e0; }   // les poutres
+      // la porte d'entrée, grande ouverte vers l'intérieur
+      box(g, -1.95 + 0.43 * Math.cos(1.35), 1.02, Z1 - 0.09 - 0.43 * Math.sin(1.35), 0.86, 2.02, 0.05, '#6E4E36', 1.35); box(g, -1.95 + 0.8 * Math.cos(1.35), 1.0, Z1 - 0.09 - 0.8 * Math.sin(1.35) + 0.04, 0.03, 0.03, 0.1, '#C9A64B', 1.35);
+      // le toit : deux pans de tôle sombre, les pignons en planches
+      prism(g, [[Z0 - 0.1, H + 0.02], [Z1 + 0.1, H + 0.02], [0, H + 1.55]], X0 - 0.1, X1 + 0.1, '#6A5242');
+      [[Z0 - 0.6, 0], [Z1 + 0.6, 0]].forEach(([ze]) => { const s = Math.sign(ze); prism(g, [[ze, H - 0.12], [0, H + 1.62], [0, H + 1.72], [ze, H - 0.02]], X0 - 0.45, X1 + 0.45, '#4E5552'); });
+      box(g, 0, H + 1.7, 0, X1 - X0 + 0.95, 0.08, 0.16, '#3F4542');
+      cyl(g, -3.95, H + 1.75, 1.55, 0.1, 0.1, 1.2, '#2C2E33', 8); cyl(g, -3.95, H + 1.82, 1.55, 0.16, 0.16, 0.07, '#2C2E33', 8);   // le conduit du poêle, au-dessus du toit
+      // le porche : son plancher, ses poteaux, sa rambarde, son toit, une lanterne
+      floor(g, X0, Z1, PX1, PZ, 0.012, '#7A5E44'); { const e0 = EDGE_ON; EDGE_ON = 0; for(let x = X0 + 0.16; x < PX1; x += 0.16) box(g, x, 0.016, (Z1 + PZ) / 2, 0.01, 0.003, PZ - Z1, '#5E4634'); EDGE_ON = e0; }
+      box(g, (X0 + PX1) / 2, 0.06, PZ - 0.04, PX1 - X0, 0.12, 0.08, '#4E3B2E');
+      [X0 + 0.1, -2.15, -0.85, PX1 - 0.1].forEach(x => box(g, x, (H - 0.3) / 2, PZ - 0.12, 0.13, H - 0.3, 0.13, '#5C4636'));
+      [[X0 + 0.1, -2.15], [-0.85, PX1 - 0.1]].forEach(([a, b]) => { box(g, (a + b) / 2, 0.92, PZ - 0.12, b - a, 0.07, 0.07, '#6E543E'); box(g, (a + b) / 2, 0.12, PZ - 0.12, b - a, 0.06, 0.06, '#6E543E');
+        const e0 = EDGE_ON; EDGE_ON = 0; for(let x = a + 0.2; x < b - 0.1; x += 0.2) box(g, x, 0.52, PZ - 0.12, 0.04, 0.78, 0.04, '#6E543E'); EDGE_ON = e0; });
+      box(g, X0 + 0.1, 0.92, (Z1 + PZ) / 2, 0.07, 0.07, PZ - Z1, '#6E543E');
+      prism(g, [[Z1, H + 0.02], [PZ + 0.3, H - 0.32], [PZ + 0.3, H - 0.24], [Z1, H + 0.1]], X0 - 0.25, PX1 + 0.25, '#4E5552');
+      box(g, (X0 + PX1) / 2, H - 0.34, PZ - 0.12, PX1 - X0 + 0.1, 0.12, 0.14, '#4E3B2E');
+      box(g, -2.3, 2.0, Z1 + 0.12, 0.05, 0.12, 0.2, '#2C2E33'); box(g, -2.3, 1.82, Z1 + 0.22, 0.16, 0.24, 0.16, '#2C2E33'); box(g, -2.3, 1.8, Z1 + 0.22, 0.1, 0.16, 0.1, '#FFE4A8');   // la lanterne (allumée la nuit)
+      // le banc du porche, le seau, la pile de bois contre le mur
+      box(g, -3.55, 0.45, 4.7, 1.5, 0.06, 0.38, '#7A5E44'); [-4.2, -2.9].forEach(x => box(g, x, 0.22, 4.7, 0.08, 0.44, 0.32, '#5E4634')); box(g, -3.55, 0.78, 4.86, 1.5, 0.3, 0.05, '#7A5E44'); [-4.25, -2.85].forEach(x => box(g, x, 0.62, 4.86, 0.06, 0.34, 0.06, '#5E4634'));
+      cyl(g, 0.9, 0.3, 4.2, 0.17, 0.14, 0.3, '#7D858C', 10);
+      { const e0 = EDGE_ON; EDGE_ON = 0; for(let r = 0; r < 4; r++) for(let k = 0; k < 7 - r; k++) cyl(g, X1 + 0.45, 0.16 + r * 0.26, -2.4 + k * 0.27 + r * 0.13, 0.13, 0.13, 1.1, pick(['#8A6A4C', '#7A5C42', '#9C7A58']), 7, 'x');
+        box(g, X1 + 0.45, 1.25, -1.6, 1.3, 0.05, 2.1, '#4E5552'); EDGE_ON = e0; }
+      // le billot et la hache, le tonneau de pluie
+      cyl(g, 6.2, 0.45, 1.2, 0.36, 0.4, 0.45, '#7A5C42', 10); cyl(g, 6.2, 0.46, 1.2, 0.33, 0.33, 0.01, '#B9935F', 10);
+      box(g, 6.3, 0.62, 1.15, 0.05, 0.36, 0.05, '#8A6A4C', 0.4); box(g, 6.32, 0.8, 1.13, 0.16, 0.07, 0.03, '#9AA0A8', 0.4);
+      cyl(g, X1 + 0.5, 0.9, 2.5, 0.38, 0.38, 0.9, '#5E4634', 12); cyl(g, X1 + 0.5, 0.91, 2.5, 0.34, 0.34, 0.01, '#3E4A52', 12);
+      // DEDANS — la pièce principale : le lit (au fond à gauche), la table de chevet et sa lampe
+      box(g, -3.4, 0.2, -1.95, 1.5, 0.3, 2.0, '#6E543E'); box(g, -3.4, 0.43, -1.95, 1.42, 0.16, 1.94, '#F2EFE8');
+      box(g, -3.4, 0.53, -1.6, 1.46, 0.06, 1.3, '#8E3B34'); { const e0 = EDGE_ON; EDGE_ON = 0; [-1.25, -1.9].forEach(z => box(g, -3.4, 0.565, z, 1.47, 0.01, 0.06, '#C9B48F')); EDGE_ON = e0; }
+      [-3.75, -3.05].forEach(x => box(g, x, 0.58, -2.68, 0.55, 0.12, 0.32, '#F7F5F0')); box(g, -3.4, 0.72, -2.95, 1.6, 1.0, 0.07, '#5E4532');
+      box(g, -2.35, 0.3, -2.7, 0.45, 0.5, 0.4, '#6E543E'); cyl(g, -2.35, 0.62, -2.7, 0.06, 0.07, 0.07, '#2C2E33', 8); cyl(g, -2.35, 0.86, -2.7, 0.1, 0.16, 0.22, '#F2E6C9', 10);
+      floor(g, -3.9, -0.6, -2.4, 0.5, 0.008, '#3D5A80');
+      // le poêle à bois et son tuyau, la réserve de bûches, le fauteuil
+      box(g, -3.95, 0.03, 1.55, 1.1, 0.06, 1.0, '#7A746A'); box(g, -3.95, 0.45, 1.55, 0.6, 0.7, 0.55, '#24262B'); box(g, -3.65, 0.42, 1.55, 0.02, 0.3, 0.32, '#3A3D44');
+      cyl(g, -3.95, H, 1.55, 0.08, 0.08, H - 0.8, '#24262B', 8);
+      { const e0 = EDGE_ON; EDGE_ON = 0; for(let k = 0; k < 5; k++) cyl(g, -4.25, 0.1 + (k % 2) * 0.17, 0.75 + k * 0.08, 0.08, 0.08, 0.45, '#8A6A4C', 7, 'x'); EDGE_ON = e0; }
+      box(g, -2.9, 0.22, 1.85, 0.8, 0.44, 0.78, '#6B4E37'); box(g, -3.25, 0.66, 1.85, 0.14, 0.5, 0.78, '#6B4E37'); box(g, -2.85, 0.48, 1.85, 0.66, 0.1, 0.66, '#8E3B34');
+      // la cuisine, le long du mur du fond : le plan de travail, l'évier, la cuisinière, les étagères, le frigo
+      box(g, -0.45, 0.43, -2.62, 2.5, 0.86, 0.58, '#6E543E'); box(g, -0.45, 0.885, -2.6, 2.56, 0.05, 0.64, '#C9B48F');
+      { const e0 = EDGE_ON; EDGE_ON = 0; [-1.25, -0.45, 0.35].forEach(x => box(g, x, 0.45, -2.325, 0.01, 0.72, 0.005, '#4E3B2E')); EDGE_ON = e0; }
+      box(g, -0.45, 0.915, -2.62, 0.55, 0.012, 0.4, '#9AA0A8'); box(g, -0.45, 1.05, -2.85, 0.03, 0.28, 0.03, '#9AA0A8'); box(g, -0.45, 1.17, -2.76, 0.03, 0.03, 0.18, '#9AA0A8');
+      box(g, 0.45, 0.92, -2.6, 0.62, 0.02, 0.5, '#24262B'); [[0.3, -2.72], [0.6, -2.72], [0.3, -2.48], [0.6, -2.48]].forEach(([x, z]) => cyl(g, x, 0.935, z, 0.08, 0.08, 0.01, '#3A3D44', 10));
+      cyl(g, 0.3, 1.04, -2.72, 0.1, 0.1, 0.1, '#9AA0A8', 10); cyl(g, -1.35, 1.02, -2.7, 0.07, 0.09, 0.12, '#B4232C', 10);
+      [1.45, 1.85].forEach(y => { box(g, -0.45, y, -2.8, 2.3, 0.04, 0.3, '#6E543E');
+        const e0 = EDGE_ON; EDGE_ON = 0; for(let k = 0; k < 7; k++) cyl(g, -1.45 + k * 0.32, y + 0.12, -2.8, 0.06, 0.06, 0.2, pick(['#C9A64B', '#B4232C', '#E9E6E0', '#3D5A80', '#6B8F3A']), 8); EDGE_ON = e0; });
+      // la table à manger, ses quatre chaises, la suspension au-dessus
+      box(g, -0.45, 0.75, 0.7, 1.4, 0.06, 0.85, '#7A5C42'); [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]].forEach(([a, b]) => box(g, -0.45 + a, 0.36, 0.7 + b, 0.07, 0.72, 0.07, '#5E4532'));
+      const chair = (x, z, f) => { box(g, x, 0.45, z, 0.42, 0.05, 0.42, '#6E543E'); box(g, x, 0.75, z - f * 0.19, 0.42, 0.55, 0.05, '#6E543E');
+        [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(([a, b]) => box(g, x + a, 0.215, z + b, 0.04, 0.43, 0.04, '#5E4532')); };
+      [-0.8, -0.1].forEach(x => { chair(x, 0.05, 1); chair(x, 1.35, -1); });
+      cyl(g, -0.45, 0.83, 0.7, 0.1, 0.12, 0.08, '#E9E6E0', 10); cyl(g, -0.2, 0.84, 0.55, 0.05, 0.04, 0.12, '#3E7A4A', 8);
+      box(g, -0.45, H - 0.3, 0.7, 0.012, 0.6, 0.012, '#2C2E33'); cyl(g, -0.45, H - 0.6, 0.7, 0.06, 0.24, 0.22, '#2F4A36', 10); ball(g, -0.45, H - 0.82, 0.7, 0.06, 0.06, 0.06, '#FFE4A8', 7);
+      // le portemanteau près de la porte, une étagère de livres, un fusil de chasse accroché
+      box(g, -2.45, 1.6, 2.86, 0.6, 0.06, 0.05, '#5E4532'); [-2.65, -2.45, -2.25].forEach(x => box(g, x, 1.52, 2.82, 0.03, 0.1, 0.06, '#2C2E33')); box(g, -2.65, 1.2, 2.8, 0.3, 0.6, 0.12, '#3D5A80');
+      box(g, -4.33, 1.5, -0.1, 0.25, 0.04, 1.3, '#6E543E'); { const e0 = EDGE_ON; EDGE_ON = 0; for(let k = 0; k < 10; k++) box(g, -4.33, 1.63, -0.68 + k * 0.12, 0.2, 0.22 + (k % 3) * 0.03, 0.08, pick(['#8E3B34', '#2F6E4F', '#C9B48F', '#3D5A80'])); EDGE_ON = e0; }
+      // DEDANS — la salle d'eau : la douche au fond, les toilettes, le lavabo et son miroir
+      box(g, 3.95, 0.04, -2.45, 0.9, 0.08, 0.9, '#E9E6E0'); box(g, 3.95, 1.05, -1.98, 0.9, 2.0, 0.02, '#C9D6DE'); box(g, 4.3, 1.85, -2.6, 0.04, 0.3, 0.04, '#9AA0A8'); cyl(g, 4.25, 1.98, -2.6, 0.07, 0.07, 0.02, '#9AA0A8', 10);
+      box(g, 4.17, 0.22, -0.4, 0.45, 0.44, 0.38, '#F4F2EE'); box(g, 4.36, 0.62, -0.4, 0.14, 0.42, 0.38, '#F4F2EE');
+      box(g, 4.2, 0.82, 0.9, 0.42, 0.12, 0.55, '#F4F2EE'); box(g, 4.3, 0.42, 0.9, 0.2, 0.7, 0.16, '#E3E6EA'); box(g, 4.4, 1.45, 0.9, 0.02, 0.6, 0.5, '#B9D3E1');
+      box(g, 4.38, 1.3, 1.9, 0.04, 0.04, 0.6, '#9AA0A8'); box(g, 4.36, 1.05, 1.9, 0.04, 0.5, 0.5, '#5B8FD6');
+      cyl(g, 2.3, 0.3, -2.6, 0.2, 0.17, 0.3, '#C9B48F', 10);
+      box(g, 3.15, H - 0.01, 0, 0.5, 0.02, 0.5, '#F7F5F0');   // le plafonnier (allumé la nuit)
+      // DEHORS — le coin du feu, dans la prairie : un cercle de pierres, des bûches pour s'asseoir
+      const FX = 8, FZ = 14;
+      for(let k = 0; k < 10; k++){ const a = k / 10 * 6.283; ball(g, FX + Math.cos(a) * 0.62, 0.08, FZ + Math.sin(a) * 0.62, 0.17, 0.12, 0.15, '#8C8A84', 6); }
+      for(let k = 0; k < 4; k++) box(g, FX, 0.12, FZ, 0.09, 0.09, 0.85, '#4A3626', k * 0.78);
+      ball(g, FX, 0.32, FZ, 0.24, 0.3, 0.24, '#E8823A', 6); ball(g, FX, 0.26, FZ, 0.15, 0.2, 0.15, '#F3C64A', 6);
+      [[FX, FZ - 1.7, 0], [FX + 1.6, FZ + 0.6, 1.2], [FX - 1.6, FZ + 0.6, -1.2]].forEach(([x, z, r]) => box(g, x, 0.22, z, 1.5, 0.42, 0.42, '#6B4E37', r));
+      // les rochers (on peut monter dessus), quelques blocs épars
+      const rock = (x, z, w, h, d, r, c) => box(g, x, h / 2, z, w, h, d, c || '#9C7A5A', r);
+      [[-14, 18, 2.6, 1.0, 1.8, 0.3], [-15.6, 19.2, 1.6, 0.8, 1.4, 0.9, '#8E7B6B'], [-12.6, 19.6, 1.4, 0.7, 1.2, 1.4], [-14.6, 16.7, 1.6, 0.6, 1.1, 2.1, '#8E7B6B'], [-13.2, 17.0, 1.0, 1.25, 0.9, 0.7]].forEach(r => rock(...r));
+      [[22, -6, 1.6, 0.7, 1.2, 0.5], [-26, -4, 1.8, 0.9, 1.4, 1.1, '#8E7B6B'], [16, 30, 1.2, 0.5, 1.0, 2.0], [-8, 34, 1.4, 0.6, 1.1, 0.4, '#8E7B6B'], [30, 12, 1.0, 0.45, 0.8, 1.7]].forEach(r => rock(...r));
+      // SANS OBSTACLE pour la caméra : les sapins, les arbres morts, les souches, les buissons (on les dessine sans les noter)
+      COLL = null;
+      const cone = (x, y0, z, r, h, c, seg, rot) => {   // un étage de branches : un cône, un peu irrégulier
+        const C = typeof c === 'string' ? hexRGB(c) : c, m0 = MAT, e0 = EDGE_ON; MAT = 2; EDGE_ON = 0; const top = [x, y0 + h, z], pts = [];
+        for(let i = 0; i < seg; i++){ const a = rot + i / seg * 6.283, rr = r * (0.85 + 0.3 * ((i * 7 + seg) % 5) / 4); pts.push([x + Math.cos(a) * rr, y0 + (i % 2) * h * 0.06, z + Math.sin(a) * rr]); }
+        for(let i = 0; i < seg; i++){ const a = pts[i], b = pts[(i + 1) % seg]; tri(g, a, top, b, C); tri(g, a, b, [x, y0 + h * 0.22, z], C.map(v => v * 0.7)); }
+        MAT = m0; EDGE_ON = e0; };
+      const trunk = (x, z, h, r, c, seg) => { const C = hexRGB(c), m0 = MAT, e0 = EDGE_ON; MAT = 0; EDGE_ON = 0;
+        for(let i = 0; i < seg; i++){ const a0 = i / seg * 6.283, a1 = (i + 1) / seg * 6.283; quad(g, [x + Math.cos(a0) * r, 0, z + Math.sin(a0) * r], [x + Math.cos(a1) * r, 0, z + Math.sin(a1) * r], [x + Math.cos(a1) * r * 0.25, h, z + Math.sin(a1) * r * 0.25], [x + Math.cos(a0) * r * 0.25, h, z + Math.sin(a0) * r * 0.25], C); }
+        MAT = m0; EDGE_ON = e0; };
+      const GREENS = ['#2E4935', '#334F3A', '#2A4232', '#36553C', '#2C4636'];
+      const fir = (x, z, h, near) => {   // un grand sapin : un tronc fin et ses étages de branches, plus serrés en haut
+        const c = pick(GREENS), rot = rnd() * 6.283, n = near ? 6 : 3, seg = near ? 7 : 5, R = h * (0.12 + rnd() * 0.04);
+        trunk(x, z, h * 0.86, h * 0.016 + 0.06, '#4E3B2E', near ? 6 : 4);
+        for(let i = 0; i < n; i++){ const t = i / n, y0 = h * (0.22 + t * 0.68), r = R * (1 - t * 0.8), hh = h * (near ? 0.19 : 0.3) * (1 - t * 0.25);
+          cone(x, y0, z, r, hh, hexRGB(c).map(v => v * (0.92 + t * 0.2)).map(v => Math.min(1, v)), seg, rot + i * 0.7); }
+      };
+      const snag = (x, z, h) => { trunk(x, z, h, 0.16, '#7B6E62', 5); for(let k = 0; k < 5; k++){ const y = h * (0.35 + k * 0.12), a = rnd() * 6.283, l = 0.6 + rnd() * 1.1;
+        box(g, x + Math.cos(a) * l / 2, y, z + Math.sin(a) * l / 2, l, 0.05, 0.05, '#7B6E62', -a); } };
+      const inClear = (x, z) => Math.hypot((x - 5) / 1.25, z - 13) < 15;
+      let nTree = 0;
+      for(let i = 0; i < 2600 && nTree < 540; i++){
+        const a = rnd() * 6.283, d = 7 + Math.pow(rnd(), 0.8) * 118, x = Math.cos(a) * d, z = Math.sin(a) * d;
+        if(!free(x, z, 3.2) || Math.abs(x - 40) < 6.5 || Math.hypot(x + 14, z - 18) < 3.5) continue;
+        if(inClear(x, z) && rnd() > 0.06) continue;                     // la clairière devant la cabane : presque vide
+        if(d > 60 && rnd() > 0.85) continue;
+        const h = 9 + rnd() * 10 + (d > 50 ? 3 : 0);
+        if(rnd() < 0.05) snag(x, z, h * 0.7); else fir(x, z, h, Math.hypot(x - 2, z - 6) < 45);
+        nTree++;
+      }
+      // au loin, tout autour : une ligne de forêt serrée (des cônes simples)
+      for(let i = 0; i < 200; i++){ const a = i / 200 * 6.283 + rnd() * 0.02, d = 128 + rnd() * 40, x = Math.cos(a) * d, z = Math.sin(a) * d; if(Math.abs(x - 40) < 6) continue;
+        trunk(x, z, 4, 0.4, '#3E3128', 4); cone(x, 3, z, 3.6 + rnd() * 2, 16 + rnd() * 10, pick(GREENS), 5, rnd() * 6); }
+      // les souches et les arbres coupés, dans la prairie ; des buissons bas
+      for(let i = 0; i < 70; i++){ const a = rnd() * 6.283, d = 6 + rnd() * 45, x = 5 + Math.cos(a) * d * 1.2, z = 12 + Math.sin(a) * d; if(!free(x, z, 1.5) || Math.abs(x - 40) < 6 || Math.hypot(x - FX, z - FZ) < 2.6) continue;
+        const r = 0.22 + rnd() * 0.25, h = 0.3 + rnd() * 0.5; const m0 = MAT; MAT = 0; cyl(g, x, h, z, r * 0.9, r, h, '#6B5643', 8); cyl(g, x, h + 0.005, z, r * 0.85, r * 0.85, 0.01, '#A08869', 8); MAT = m0; }
+      for(let i = 0; i < 6; i++){ const x = -20 + rnd() * 50, z = 8 + rnd() * 30; if(!free(x, z, 2) || Math.abs(x - 40) < 7) continue; const m0 = MAT; MAT = 0; cyl(g, x, 0.22, z, 0.2, 0.22, 3 + rnd() * 3, '#7A6450', 7, 'x'); MAT = m0; }
+      for(let i = 0; i < 60; i++){ const a = rnd() * 6.283, d = 8 + rnd() * 60, x = Math.cos(a) * d, z = Math.sin(a) * d; if(!free(x, z, 2) || Math.abs(x - 40) < 6 || inClear(x, z)) continue;
+        cone(x, 0, z, 0.5 + rnd() * 0.6, 0.6 + rnd() * 0.5, pick(['#4C5E3A', '#55663F', '#465736']), 5, rnd() * 6); }
+      COLL = C0;
     },
   },
 });
@@ -1932,6 +2095,7 @@ Object.assign(SET_DEF, {
       ['Grenier', 'Attic', 3, [-5, -4, 5, 4], null, 'roof'],
     ],
     garden:['Le jardin', 'Garden', -1, [7.5, 3.4, 17], [0, 2.6, 4.7]],
+    fridges:[[4.6, 0.6, -90, '#D9DCE0']], freeCam:true,
     build(g, gl, L){
       const H = HOUSE, W0 = '#E6DDCC', WOOD = '#9C7B5B', top = H.h * 3;
       // le jardin (percé sous la maison : son plancher ne clignote pas)
@@ -1980,7 +2144,7 @@ Object.assign(SET_DEF, {
       box(g0, 0.55, 1.0, -2.0, 0.4, 2.0, 1.4, '#7A5C42');
       box(g0, -2.3, 0.3, -1.6, 0.5, 0.6, 0.5, '#B9B0A0'); cyl(g0, -2.3, 1.0, -1.6, 0.12, 0.18, 0.4, '#F2E6C9', 10);
       box(g0, 4.65, 0.45, -1.5, 0.65, 0.9, 4.8, '#E9E6E0'); box(g0, 4.65, 0.92, -1.5, 0.7, 0.05, 4.85, '#5E636C'); box(g0, 4.65, 0.93, -2.6, 0.45, 0.04, 0.6, '#9AA0A8');
-      box(g0, 4.6, 0.95, 0.6, 0.7, 1.9, 0.7, '#D9DCE0'); box(g0, 4.65, 1.75, -1.5, 0.35, 0.6, 4.6, '#E9E6E0');
+      box(g0, 4.8, 1.75, -1.825, 0.35, 0.6, 3.95, '#E9E6E0');   // les placards du haut, contre le mur (le frigo, à côté : un vrai, qui s'ouvre, voir « fridges »)
       box(g0, 2.6, 0.75, -1.8, 1.4, 0.05, 0.9, '#8A6A4A'); [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]].forEach(([a, b]) => box(g0, 2.6 + a, 0.37, -1.8 + b, 0.05, 0.74, 0.05, '#6E5440'));
       [[2.0, -2.55], [3.2, -2.55], [2.0, -1.05], [3.2, -1.05]].forEach(([x, z]) => { box(g0, x, 0.45, z, 0.42, 0.05, 0.42, '#7A5C42'); [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(([a, b]) => box(g0, x + a, 0.21, z + b, 0.035, 0.42, 0.035, '#6E5440')); box(g0, x, 0.72, z + (z < -1.8 ? -0.19 : 0.19), 0.42, 0.55, 0.04, '#7A5C42'); });
       cyl(g0, 2.6, 2.9, -1.8, 0.01, 0.01, 0.7, '#2C2E33', 4); cyl(g0, 2.6, 2.2, -1.8, 0.05, 0.25, 0.2, '#2F6E4F', 10);
@@ -2155,7 +2319,7 @@ const SPOTS = {
   warehouse:[ ['Au milieu, face à face', 'In the middle, facing', -0.8, 1.8, 120], ['En face', 'Opposite', 0.6, 1.0, -60], ['Entre les rayonnages', 'Between the racks', -5.0, 2.6, 90], ['Caché derrière une caisse', 'Hiding behind a crate', -3.0, -1.5, 180, 'crouch'] ],
   country:[ ['Au bord de la route', 'By the roadside', 4.3, 1.0, -90], ['Sur la route', 'On the road', 0.9, 3.0, 180, 'walk'], ['Près de la clôture', 'By the fence', -5.0, -1.6, 90], ['Dans le champ', 'In the field', -12.0, -6.0, 30] ],
   airfield:[ ['Sur le tarmac', 'On the apron', -2.0, 4.0, 60], ['En face', 'Facing', 0.2, 5.4, -120], ['Dans le hangar', 'In the hangar', -22, -9, 90], ['Au bord de la piste', 'By the runway', 4.2, 20, 90], ['Sur l’aire de l’hélico', 'On the helipad', -6, 11, 180, null, 0.04], ['Au pied de la tour', 'At the tower', -35.4, 10, 90] ],
-  forest:[ ['Dans la clairière', 'In the clearing', 0.2, 0.6, 200], ['En face', 'Facing', -0.9, -0.6, 30], ['Sur le sentier', 'On the path', 1.2, -12, 0, 'walk'], ['Assis sur un rondin', 'Sitting on a log', -0.7, -3.1, 0, 'sit'], ['Sur la passerelle', 'On the footbridge', 9, 2, 90, null, 0.16], ['Dans la cabane', 'In the cabin', -6.5, 5.5, 160, null, 0.15], ['Entre les arbres', 'Among the trees', -12, -10, 40] ],
+  forest:[ ['Devant la cabane', 'In front of the cabin', -1.0, 7.2, 180], ['Sur le porche', 'On the porch', -1.5, 4.3, 0], ['Sur le banc du porche', 'On the porch bench', -3.55, 4.55, 0, 'sit'], ['À table', 'At the table', -0.8, 0.12, 0, 'sit'], ['À table, en face', 'At the table, opposite', -0.1, 1.28, 180, 'sit'], ['Devant le frigo', 'By the fridge', 1.39, -1.75, 180], ['Assis sur le lit', 'Sitting on the bed', -3.4, -0.75, 0, 'sit'], ['Près du poêle', 'By the stove', -2.9, 1.8, 270, 'sit'], ['Dans la salle d’eau', 'In the shower room', 3.0, 0.6, 90], ['Au coin du feu', 'By the campfire', 8, 12.3, 0, 'sit'], ['Dans la clairière', 'In the clearing', 4, 19, 200], ['Sur les rochers', 'On the rocks', -14, 18, 160, null, 1.0], ['Sur la route', 'On the road', 39, 26, 180, 'walk'], ['Entre les arbres', 'Among the trees', -22, -14, 40] ],
   hotel:[ ['Assis sur le lit', 'Sitting on the bed', -0.6, 0.75, 180, 'sit', -0.25], ['Debout, en face', 'Standing, facing', -0.8, -0.7, 0], ['À la fenêtre', 'At the window', -3.0, -0.2, -90], ['Au bureau', 'At the desk', 0.75, 0.9, 90, 'sit'], ['Allongé sur le lit', 'Lying on the bed', -1.0, 1.9, 180, 'lie', 0.66], ['Dans la salle de bain', 'In the bathroom', 2.5, 1.2, 90], ['À la porte', 'At the door', 2.7, -2.4, 0] ],
   parking:[ ['Dans l’allée', 'In the aisle', -1.0, 0.4, 70], ['En face', 'Facing', 0.6, -0.4, -110], ['À la portière', 'At the car door', -4.5, 3.7, 90], ['Contre un pilier', 'Against a pillar', 0.0, 2.55, 180], ['Devant l’ascenseur', 'At the lift', -13.2, 0.0, 90], ['En marchant', 'Walking', 6.0, 0.8, -90, 'walk'] ],
   diner:[ ['Dans la voiture, côté malle', 'In the car booth, back seat', -5.55, -4.02, 0, 'sit'], ['Dans la voiture, en face', 'In the car booth, facing', -5.55, -2.48, 180, 'sit'], ['Sur la piste de danse', 'On the dance floor', 5.2, 0.3, -90, null, 0.2], ['En face, sur la piste', 'Facing, on the dance floor', 4.5, 0.3, 90, null, 0.2], ['Au comptoir', 'At the counter', 1.5, 3.55, 0, 'sit', -0.1], ['Près du juke-box', 'By the jukebox', 5.7, -2.2, -60], ['Entre les tables', 'Between the tables', 1.4, -0.6, 200] ],
@@ -2540,7 +2704,64 @@ const OBJ_DEF = {
   campfire:{ fr:'Feu de camp', en:'Campfire', cat:'nature', cols:['#6B4E36'], label:0.7, sh:[0.4, 0.4] },
   parasol:{ fr:'Parasol', en:'Parasol', cat:'nature', cols:['#B4232C', '#3D5A80', '#E8B923', '#2F6E4F'], label:2.7, sh:[0.25, 0.25], pv:1.2 },
 };
-function objGeo(kind, col){
+/* ---------- Le frigo : un vrai frigo, qui s'ouvre ----------
+   Face avant vers +z, posé au sol. La caisse est ouverte devant : un intérieur clair, ses clayettes, le compartiment du haut ;
+   la porte tourne sur sa charnière (à gauche, vue de face) et s'ouvre vers celui qui la tient. Ouvert, l'intérieur s'éclaire
+   (la nuit, il reste allumé : une vraie lumière de frigo). Rempli : bouteilles, boîtes, fruits, sur les clayettes et dans la porte.
+   Tout est fabriqué une fois (pour chaque couleur, ouvert ou non, rempli ou non) : rien de plus à calculer à chaque image. */
+const FRIDGE = { w:0.72, d:0.66, h:1.86 };
+function fridgeGeo(g, col, open, full){
+  const C = typeof col === 'string' ? hexRGB(col) : col, dk = k => C.map(v => v * k), W = FRIDGE.w, D = FRIDGE.d, H = FRIDGE.h, t = 0.035, z0 = -D / 2, z1 = D / 2;
+  const IN = '#EEF1F3', SH = '#C9D6DE', K = '#2C2E33', M = '#9AA0A8', m0 = MAT;
+  // la caisse : le fond, les côtés, le dessus, le socle (ouverte devant)
+  box(g, 0, H / 2, z0 + t / 2, W, H, t, C); [-1, 1].forEach(s => box(g, s * (W / 2 - t / 2), H / 2, 0, t, H, D, C));
+  box(g, 0, H - t / 2, 0, W, t, D, C); box(g, 0, 0.065, 0.01, W, 0.13, D - 0.02, dk(0.82)); box(g, 0, 0.065, z1 - 0.012, W - 0.1, 0.07, 0.006, K);
+  // l'intérieur : clair, et allumé quand la porte est ouverte
+  const iw = W - 2 * t - 0.01, ih = H - 0.13 - t - 0.01, iy = 0.13 + ih / 2;
+  MAT = open ? 5 : 0;
+  box(g, 0, iy, z0 + t + 0.006, iw, ih, 0.012, IN); [-1, 1].forEach(s => box(g, s * (iw / 2 + 0.002), iy, 0.02, 0.012, ih, D - t - 0.04, IN));
+  box(g, 0, H - t - 0.008, 0.02, iw, 0.012, D - t - 0.04, IN); box(g, 0, 0.137, 0.02, iw, 0.012, D - t - 0.04, IN);
+  box(g, 0, H - t - 0.05, z0 + 0.12, 0.16, 0.04, 0.06, '#FFF4D6');   // l'ampoule
+  MAT = m0;
+  // le compartiment du haut (le freezer), les clayettes, les bacs à légumes
+  box(g, 0, 1.5, 0.0, iw, 0.02, D - t - 0.18, '#DDE2E6'); box(g, 0, 1.5, z1 - 0.15, iw, 0.06, 0.02, '#D3D8DD');
+  [0.48, 0.82, 1.16].forEach(y => { const e0 = EDGE_ON; box(g, 0, y, -0.02, iw - 0.01, 0.012, D - t - 0.2, SH); EDGE_ON = e0; box(g, 0, y + 0.004, z1 - 0.14, iw - 0.01, 0.018, 0.012, '#B9C4CC'); });
+  box(g, 0, 0.27, -0.02, iw - 0.03, 0.24, D - t - 0.22, '#DDE6EA'); box(g, 0, 0.27, z1 - 0.13, iw - 0.03, 0.2, 0.01, '#C9D6DE');
+  // rempli : sur les clayettes, de quoi faire un repas (bouteilles, briques, boîtes, fruits, légumes)
+  if(full){
+    const e0 = EDGE_ON; EDGE_ON = 0;
+    const bottle = (x, y, z, c, h) => { cyl(g, x, y + h * 0.75, z, 0.032, 0.032, h * 0.75, c, 8); cyl(g, x, y + h, z, 0.013, 0.03, h * 0.25, c, 8); };
+    // en bas, dans le bac : des légumes
+    [[-0.18, '#3E8E3A'], [-0.05, '#E2642B'], [0.1, '#B4232C'], [0.22, '#6B8F3A']].forEach(([x, c], i) => ball(g, x, 0.36, -0.05 + (i % 2) * 0.08, 0.06, 0.05, 0.06, c, 7));
+    // 1re clayette : des boîtes et un plat
+    box(g, -0.17, 0.53, -0.08, 0.2, 0.09, 0.16, '#E9C46A'); box(g, 0.06, 0.52, -0.1, 0.16, 0.07, 0.14, '#5B8FD6'); cyl(g, 0.2, 0.54, -0.04, 0.08, 0.08, 0.06, '#E9E6E0', 10); ball(g, 0.2, 0.555, -0.04, 0.06, 0.02, 0.06, '#C2462F', 8);
+    // 2e clayette : des briques de lait, des yaourts
+    [[-0.2, '#F4F2EE'], [-0.1, '#3D7FB4']].forEach(([x, c]) => { box(g, x, 0.93, -0.1, 0.07, 0.2, 0.07, c); box(g, x, 1.035, -0.1, 0.07, 0.02, 0.05, c); });
+    [0.04, 0.11, 0.18].forEach((x, i) => cyl(g, x, 0.88, -0.02 - (i % 2) * 0.08, 0.03, 0.03, 0.06, ['#F4F2EE', '#E8A0B4', '#F4F2EE'][i], 8));
+    // 3e clayette : des bouteilles, un pot, un fromage
+    bottle(-0.2, 1.17, -0.12, '#3E7A4A', 0.26); bottle(-0.12, 1.17, -0.1, '#8E3B34', 0.24); cyl(g, 0.05, 1.26, -0.06, 0.05, 0.05, 0.09, '#C9A64B', 10); box(g, 0.18, 1.2, -0.08, 0.14, 0.05, 0.1, '#F2D27A');
+    // en haut (le freezer) : des boîtes givrées
+    box(g, -0.1, 1.58, -0.08, 0.22, 0.13, 0.2, '#BFD7E6'); box(g, 0.14, 1.56, -0.06, 0.16, 0.1, 0.16, '#E8EEF2');
+    EDGE_ON = e0;
+  }
+  // la porte : elle tourne sur sa charnière (côté gauche, vue de face) ; ouverte, elle vient vers celui qui la tient
+  const a = open ? -105 * D2R : 0, c = Math.cos(a), s = Math.sin(a), hx = -W / 2, hz = z1, dw = 0.055;
+  const P = (u, y, w, su, sy, sw, cc) => box(g, hx + u * c + w * s, y, hz - u * s + w * c, su, sy, sw, cc, a);
+  P(W / 2, 0.13 + (H - 0.14) / 2, dw / 2, W, H - 0.14, dw, C);                          // le panneau
+  P(W / 2, 1.5, dw + 0.002, W - 0.02, 0.008, 0.004, dk(0.75));                           // la ligne du freezer
+  P(W - 0.07, 1.62, dw + 0.03, 0.03, 0.34, 0.03, M); P(W - 0.07, 1.06, dw + 0.03, 0.03, 0.5, 0.03, M);   // les poignées
+  if(open){
+    // dedans, la porte a ses balconnets (et, rempli : des bouteilles, des œufs, du beurre)
+    P(W / 2, 0.13 + (H - 0.14) / 2, -0.004, W - 0.08, H - 0.24, 0.008, IN);
+    [0.5, 0.95, 1.3].forEach(y => { P(W / 2, y, -0.06, W - 0.1, 0.012, 0.1, '#DDE2E6'); P(W / 2, y + 0.05, -0.105, W - 0.1, 0.09, 0.008, '#D3D8DD'); });
+    if(full){ const e0 = EDGE_ON; EDGE_ON = 0;
+      [[0.15, '#3E7A4A'], [0.27, '#E9C46A'], [0.39, '#F4F2EE'], [0.52, '#8E3B34']].forEach(([u, cc], i) => P(u, 0.51 + (i % 2 ? 0.1 : 0.12), -0.06, 0.06, i % 2 ? 0.2 : 0.24, 0.06, cc));
+      [0.2, 0.3, 0.4].forEach(u => P(u, 1.33, -0.06, 0.05, 0.05, 0.05, '#F2E6C9')); P(0.55, 1.33, -0.06, 0.14, 0.05, 0.07, '#F2D27A');
+      [0.2, 0.36].forEach(u => P(u, 1.0, -0.06, 0.07, 0.1, 0.06, '#C2462F'));
+      EDGE_ON = e0; }
+  }
+}
+function objGeo(kind, col, st){
   const g = geo(), C = col || OBJ_DEF[kind].cols[0], H = hexRGB(C), dk = k => H.map(v => v * k), M = '#9AA0A8', K = '#2C2E33';
   const m0 = MAT; MAT = 0;
   if(kind === 'chair'){ box(g, 0, 0.45, 0, 0.44, 0.05, 0.44, C); box(g, 0, 0.75, -0.2, 0.44, 0.55, 0.04, C); box(g, 0, 0.88, -0.2, 0.44, 0.08, 0.05, dk(0.8));
@@ -2584,8 +2805,7 @@ function objGeo(kind, col){
     [[-0.19, -0.16], [0.19, -0.16], [-0.19, 0.16], [0.19, 0.16]].forEach(([x, z]) => box(g, x, 0.035, z, 0.04, 0.07, 0.04, dk(0.7)));
     cyl(g, 0.08, 0.6, -0.04, 0.06, 0.07, 0.03, K, 10); cyl(g, 0.08, 0.72, -0.04, 0.01, 0.01, 0.12, K, 6); cyl(g, 0.08, 0.86, -0.04, 0.07, 0.11, 0.15, '#F2E6C9', 10); }
   else if(kind === 'stool'){ cyl(g, 0, 0.78, 0, 0.19, 0.19, 0.06, C, 12); cyl(g, 0, 0.72, 0, 0.025, 0.025, 0.68, K, 6); cyl(g, 0, 0.04, 0, 0.2, 0.2, 0.04, K, 12); cyl(g, 0, 0.3, 0, 0.15, 0.15, 0.02, K, 12); }
-  else if(kind === 'fridge'){ box(g, 0, 0.92, 0, 0.7, 1.8, 0.68, C); box(g, 0, 1.24, 0.342, 0.68, 0.012, 0.005, dk(0.7));
-    [[1.5, 0.4], [0.8, 0.6]].forEach(([y, h]) => box(g, 0.28, y, 0.36, 0.03, h, 0.03, dk(0.7))); [[-0.3, -0.28], [0.3, -0.28], [-0.3, 0.28], [0.3, 0.28]].forEach(([x, z]) => box(g, x, 0.01, z, 0.05, 0.02, 0.05, K)); }
+  else if(kind === 'fridge') fridgeGeo(g, C, st && st.open, st && st.full);
   else if(kind === 'rug'){ box(g, 0, 0.006, 0, 2.0, 0.012, 1.4, C); box(g, 0, 0.0125, 0, 1.6, 0.002, 1.0, dk(0.72)); box(g, 0, 0.0135, 0, 1.2, 0.002, 0.6, C); }
   else if(kind === 'mirror'){ box(g, 0, 0.95, 0, 0.6, 1.6, 0.05, C); box(g, 0, 0.95, 0.027, 0.5, 1.5, 0.005, '#C9D6DE'); box(g, 0, 0.075, 0, 0.6, 0.15, 0.4, C); box(g, 0, 0.62, -0.08, 0.05, 1.0, 0.04, dk(0.8)); }
   else if(kind === 'flowers'){ cyl(g, 0, 0.36, 0, 0.09, 0.07, 0.36, C, 10); [[-0.05, 0.03], [0.05, -0.02], [0, 0.05], [0.02, -0.06]].forEach(([x, z], i) => {
@@ -2734,8 +2954,8 @@ function propGeo(id){
    Repère du véhicule : il regarde vers +z ; la selle du pilote est en z = -0.2, celle du passager en -0.55. */
 const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['car', 'Voiture', 'Car'], ['police', 'Voiture de police', 'Police car'], ['heli', 'Hélicoptère', 'Helicopter'], ['plane', 'Avion', 'Plane']];
 const MOTO_COLS = ['#B4232C', '#24262B', '#3D5A80', '#E8B923'];
-function vehicleGeo(kind, col, glass){
-  if(VEH_DEF[kind] && VEH_DEF[kind].obj) return objGeo(kind, col);
+function vehicleGeo(kind, col, glass, st){
+  if(VEH_DEF[kind] && VEH_DEF[kind].obj) return objGeo(kind, col, st);
   const g = geo(), K = '#1E2025', M = '#9AA0A8', C = col || MOTO_COLS[0];
   MAT = 4; try {
   if(kind === 'heli') return heliGeo(col, glass);

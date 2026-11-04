@@ -884,3 +884,10 @@ html[data-theme="dark"] .tour-n{color:var(--accent-ink);}
 html[data-theme="dark"] .topbar .btn.tb-tour{color:var(--accent-ink);}
 html[data-theme="dark"] .topbar .btn.tb-tour:hover{background:var(--accent-soft); color:#fff;}
 @media (max-width:1180px){ .topbar .btn.tb-tour{padding:7px 9px;} }
+/* le frigo : fermé ou ouvert, rempli ou non, et qui l'ouvre */
+.fridge-c{margin:12px 0 4px; padding:10px 12px 12px; border:1px solid var(--hair); border-radius:12px; background:var(--surface-soft);}
+.fridge-h{display:flex; align-items:center; gap:7px; margin-bottom:8px; font-size:13px;}
+.fridge-h .icon{width:15px; height:15px; color:var(--accent);}
+.fridge-c .ftog{margin:8px 0 6px;}
+.fridge-c .ftog small{display:block; font-size:11px; color:var(--ink-soft);}
+.fridge-by{width:100%; justify-content:center;}

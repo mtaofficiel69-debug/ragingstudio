@@ -332,6 +332,7 @@ function addVehicle(kind){
   edit(() => {
     const K = VEH_DEF[kind] ? kind : 'moto', D = VEH_DEF[K], dd = K === 'moto' || D.obj ? Math.min(d, 4) : Math.max(d, 6);
     const nv = { id:uidS(), kind:K, col:D.cols[s.vehicles.filter(o => o.kind === K).length % D.cols.length], x:round(c.tx - Math.sin(y) * dd, 2), y:0, z:round(c.tz - Math.cos(y) * dd, 2), ry:round(c.yaw + (D.obj ? 0 : 90), 0) };
+    if(K === 'fridge') nv.full = true;   // un frigo posé est rempli (on le vide d'un clic)
     const lv = SET_DEF[s.set].levels; if(lv) nv.y = lv.reduce((b, l) => l <= c.ty + 0.3 ? l : b, 0);
     if(D.obj) nv.y = supportY(s, nv, nv.y);
     s.vehicles.push(nv);
@@ -605,7 +606,11 @@ function physOf(id){
   if(!closed){ let x0 = -30, z0 = -30, x1 = 30, z1 = 30;
     boxes.forEach(b => { const r = Math.hypot(b[3], b[5]); x0 = Math.min(x0, b[0] - r - 10); x1 = Math.max(x1, b[0] + r + 10); z0 = Math.min(z0, b[2] - r - 10); z1 = Math.max(z1, b[2] + r + 10); });
     walls.forEach(w => { x0 = Math.min(x0, w[0] - 10, w[2] - 10); x1 = Math.max(x1, w[0] + 10, w[2] + 10); z0 = Math.min(z0, w[1] - 10, w[3] - 10); z1 = Math.max(z1, w[1] + 10, w[3] + 10); });
-    lim = [x0, z0, x1, z1, 40]; }
+    lim = d.camLim || [x0, z0, x1, z1, 40]; }
+  // un lieu « libre » (la forêt, la maison de campagne) : les meubles, les arbres, les rochers ne retiennent plus la caméra,
+  // seuls les murs, le sol et les plafonds l'arrêtent : on la pose où l'on veut, même dans une petite pièce
+  // (les cloisons, minces et hautes, restent des murs : on ne traverse pas d'une pièce à l'autre au travers)
+  if(d.freeCam){ const keep = boxes.filter(b => Math.min(b[3], b[5]) - CAM_R <= 0.1 && b[4] - CAM_R >= 1.0); boxes.length = 0; keep.forEach(b => boxes.push(b)); }
   return PHYS[id] = { boxes, walls, rooms, closed, lim };
 }
 /* la caméra est-elle dans le lieu ? (dans une de ses pièces pour un lieu fermé, dans ses limites dehors) */
@@ -875,10 +880,38 @@ function initMeshes(){
 }
 /* un véhicule (forme et couleur), fabriqué une fois */
 R.veh = {};
-function vehMesh(v){ const k = v.kind + v.col; if(!R.veh[k]){ const G = geo(), g = vehicleGeo(v.kind, v.col, G); R.veh[k] = GL.mesh(g); R.veh[k + ':l'] = GL.mesh(edgeLines(g)); R.veh[k + ':g'] = G.p.length ? GL.mesh(G) : null; } return R.veh[k]; }
-function vehGlass(v){ vehMesh(v); return R.veh[v.kind + v.col + ':g']; }
-function vehLines(v){ vehMesh(v); return R.veh[v.kind + v.col + ':l']; }
+// un frigo ouvert ou fermé, rempli ou vide : quatre formes toutes prêtes pour chaque couleur
+const vehKey = v => v.kind + v.col + (v.kind === 'fridge' ? (v.open ? 'o' : 'c') + (v.full ? 'f' : 'e') : '');
+function vehMesh(v){ const k = vehKey(v); if(!R.veh[k]){ const G = geo(), g = vehicleGeo(v.kind, v.col, G, v); R.veh[k] = GL.mesh(g); R.veh[k + ':l'] = GL.mesh(edgeLines(g)); R.veh[k + ':g'] = G.p.length ? GL.mesh(G) : null; } return R.veh[k]; }
+function vehGlass(v){ vehMesh(v); return R.veh[vehKey(v) + ':g']; }
+function vehLines(v){ vehMesh(v); return R.veh[vehKey(v) + ':l']; }
 const vehMat = v => M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R));
+/* ouvrir, fermer, remplir un frigo : celui du lieu (src 's', son numéro) ou un frigo posé comme accessoire (src 'v') */
+function setFridge(src, i, key, val){
+  const sh = shot();
+  edit(() => {
+    if(src === 'v'){ const v = sh.vehicles[i]; if(v) v[key] = val; return; }
+    const a = sh.fridges = (sh.fridges || []).slice(); a[i] = Object.assign({ open:false, full:true }, a[i], { [key]:val });
+  });
+}
+/* le personnage choisi va ouvrir le frigo : il se place devant, un peu à droite (la porte s'ouvre à gauche), tourné vers lui,
+   une main sur la porte, l'autre vers l'intérieur. La porte s'ouvre. */
+function openFridgeBy(src, i){
+  const sh = shot(), f = src === 'v' ? sh.vehicles[i] : setFridges(sh)[i], c = S.sel ? S.sel.c : S.target, ch = sh.chars[c]; if(!f || !ch) return;
+  const a = (f.ry || 0) * D2R, fx = Math.sin(a), fz = Math.cos(a), rx = Math.cos(a), rz = -Math.sin(a), d = FRIDGE.d / 2 + 0.52, sd = 0.14;
+  edit(() => {
+    if(ch.on) delete ch.on;
+    putOnSpot(ch, 'fridge', f.y || null);
+    ch.root.x = round(f.x + fx * d + rx * sd, 2); ch.root.z = round(f.z + fz * d + rz * sd, 2); ch.root.ry = round((((f.ry || 0) + 180) % 360 + 360) % 360, 0);
+    if(src === 'v') f.open = true;
+    else { const A = sh.fridges = (sh.fridges || []).slice(); A[i] = Object.assign({ open:false, full:true }, A[i], { open:true }); }
+  });
+}
+/* les frigos du lieu (cuisine, maison, cabane) : ils font partie du décor, mais chaque plan garde s'ils sont ouverts et remplis */
+function setFridges(sh){
+  const d = SET_DEF[sh.set], F = d && d.fridges; if(!F) return [];
+  return F.map((f, i) => { const st = (sh.fridges || [])[i] || {}; return { kind:'fridge', col:f[3] || '#E9E6E0', x:f[0], z:f[1], ry:f[2] || 0, y:f[4] || 0, open:!!st.open, full:st.full !== false, set:i }; });
+}
 /* les étages qu'on dessine : tous, toujours (la caméra ne passe plus à travers les plafonds) */
 function levelsShown(sh, cam){
   const d = SET_DEF[sh.set]; if(!d.levels) return [];
@@ -1027,7 +1060,7 @@ function drawFrame(sh, w, h, clean, o){
     const show = SM.levels.length ? levelsShown(sh, cam) : [], pm = [SM.panes].concat(SM.levelPanes.filter((m, i) => show[i])).filter(Boolean);
     if(pm.length) GL.drawPanes(pm, vp, eye); }
   else if(!final){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.disable(gl.CULL_FACE); GL.draw(R.phGrid, { flat:true, col:[1, 1, 1], a:0.38 }); gl.enable(gl.CULL_FACE); gl.depthMask(true); gl.disable(gl.BLEND); }   // la grille du sol : pour caler la caméra sur la photo
-  (sh.vehicles || []).forEach(v => { const M = vehMat(v); GL.draw(vehMesh(v), { m:M, vc:true, floor:v.y || 0 }); if(!fast){ gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(vehLines(v), { m:M, flat:true, lines:true, col:INK, a:0.3 }); gl.depthMask(true); gl.disable(gl.BLEND); } });
+  (sh.vehicles || []).concat(setFridges(sh)).forEach(v => { const M = vehMat(v); GL.draw(vehMesh(v), { m:M, vc:true, floor:v.y || 0 }); if(!fast){ gl.enable(gl.BLEND); gl.depthMask(false); GL.draw(vehLines(v), { m:M, flat:true, lines:true, col:INK, a:0.3 }); gl.depthMask(true); gl.disable(gl.BLEND); } });
   // une ombre douce sous chaque personnage (trois disques très légers, pas de calcul d'ombre)
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   chars.forEach((ch, c) => {
@@ -1153,7 +1186,7 @@ function checkHidden(){
   const vp = viewProj(cam, R.canvas.width / R.canvas.height);
   GL.beginPick(w, h, vp); GL.view(camEye(cam), []);
   const SM = setMesh(sh.set); drawSet(SM, sh, cam, { raw:true, col:[0, 0, 0] }); if(SM.tex.length) GL.drawTex(texList(SM), vp, camEye(cam), true);
-  (sh.vehicles || []).forEach(v => GL.draw(vehMesh(v), { m:vehMat(v), raw:true, col:[0, 0, 0] }));
+  (sh.vehicles || []).concat(setFridges(sh)).forEach(v => GL.draw(vehMesh(v), { m:vehMat(v), raw:true, col:[0, 0, 0] }));
   const mats = sh.chars.map(ch => charMatrices(ch));
   sh.chars.forEach((ch, c) => { const P = lookMesh(lookOf(ch, c)).parts; for(const J of JOINTS) GL.draw(P[J.id], { m:mats[c][J.id], raw:true, col:[(c * 32 + J.idx + 1) / 255, 0, 0] }); });
   const out = [];
@@ -1644,6 +1677,8 @@ function bringHere(){
 }
 function goRoom(k){
   const s = shot(), f = (SET_DEF[s.set].floors || [])[k]; if(!f) return;
-  camEdit(() => { s.cam = camLook(f[3], f[4], f[2] < 0 ? 28 : 22); s.info.size = 'pe'; s.info.angle = 'neu'; });
+  // une petite pièce (une salle d'eau, un palier) : un objectif plus large, pour la voir en entier depuis son coin
+  const r = f[5] && f[5][3], small = r ? Math.min(r[2] - r[0], r[3] - r[1]) : 9, lens = f[2] < 0 ? 28 : small < 2.8 ? 16 : small < 4 ? 18 : 22;
+  camEdit(() => { s.cam = camLook(f[3], f[4], lens); s.info.size = 'pe'; s.info.angle = 'neu'; });
   S.room = k; S.planLevel = f[2];
 }
