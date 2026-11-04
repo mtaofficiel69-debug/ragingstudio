@@ -309,10 +309,17 @@ const GL = {
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // le ciel et le vignettage : un seul triangle qui couvre l'écran
-    this.win = prog(`attribute vec3 aP; uniform mat4 uVP; varying vec3 vW; void main(){ vW = aP; gl_Position = uVP * vec4(aP, 1.0); }`,
-      `precision mediump float; uniform vec3 uEye; uniform vec3 uWinT; uniform vec3 uWinH; uniform float uView; uniform vec3 uGrade; uniform float uBW; varying vec3 vW;
+    this.win = prog(`attribute vec3 aP; attribute vec3 aN; uniform mat4 uVP; varying vec3 vW; varying vec3 vN; void main(){ vW = aP; vN = aN; gl_Position = uVP * vec4(aP, 1.0); }`,
+      `#ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+      #else
+      precision mediump float;
+      #endif
+      uniform vec3 uEye; uniform vec3 uWinT; uniform vec3 uWinH; uniform float uView; uniform vec3 uGrade; uniform float uBW; varying vec3 vW; varying vec3 vN;
       ${BW_GLSL}
-      float hash(float x){ return fract(sin(x * 91.17) * 43758.55); }
+      /* un nombre au hasard, toujours le même pour un même bâtiment : calculé sur de petits nombres (sinon, sur une carte graphique
+         peu précise, les immeubles se déformaient et leurs fenêtres partaient en tous sens) */
+      float hash(float x){ return fract(sin(mod(x, 289.0) * 12.9898) * 437.5853); }
       /* ce qu'on voit par une fenêtre : le ciel, une ligne d'immeubles (ou de collines et d'arbres) au loin, le sol */
       /* une rangée d'immeubles vue de loin : k bâtiments par radian, des hauteurs variées, des annexes plus basses,
          parfois un édicule sur le toit, et des fenêtres en grille (le jour elles reflètent le ciel, la nuit certaines s'allument) */
@@ -360,10 +367,18 @@ const GL = {
       void main(){
         float night = clamp((0.9 - dot(uGrade, vec3(0.3333))) * 3.0, 0.0, 1.0);
         vec3 c = mix(outside(normalize(vW - uEye), night), vec3(0.86, 0.92, 0.98), 0.12) * mix(vec3(1.0), uGrade, 0.5);
+        // une vraie vitre, pour toutes les fenêtres : une teinte de verre, un reflet qui monte quand on la regarde de biais,
+        // de fines traînées de lumière en travers ; la nuit, la vitre renvoie un peu la pièce éclairée
+        vec3 V = normalize(uEye - vW); float fr = pow(1.0 - abs(dot(normalize(vN), V)), 3.0);
+        float sd = fract(dot(vW, vec3(0.37, 0.52, 0.37)) * 0.85 + 0.13), band = smoothstep(0.0, 0.02, sd) * (1.0 - smoothstep(0.05, 0.09, sd)) + 0.5 * smoothstep(0.16, 0.17, sd) * (1.0 - smoothstep(0.18, 0.2, sd));
+        vec3 refl = mix(mix(vec3(0.42, 0.42, 0.44), uWinH * 0.75, 0.35), vec3(0.32, 0.27, 0.2), night);
+        c *= vec3(0.95, 0.985, 1.0);
+        c = mix(c, refl, 0.07 + 0.42 * fr + 0.14 * night);
+        c = mix(c, vec3(0.95, 0.97, 1.0), band * (0.1 + 0.3 * fr) * (1.0 - 0.75 * night));
         if(uBW > 0.5) c = bwTone(c, -0.02);
         gl_FragColor = vec4(c, 1.0);
       }`);
-    if(this.win){ const K = this.winLoc = {}; ['aP', 'uVP', 'uEye', 'uWinT', 'uWinH', 'uView', 'uGrade', 'uBW'].forEach(k => K[k] = k[0] === 'a' ? gl.getAttribLocation(this.win, k) : gl.getUniformLocation(this.win, k)); }
+    if(this.win){ const K = this.winLoc = {}; ['aP', 'aN', 'uVP', 'uEye', 'uWinT', 'uWinH', 'uView', 'uGrade', 'uBW'].forEach(k => K[k] = k[0] === 'a' ? gl.getAttribLocation(this.win, k) : gl.getUniformLocation(this.win, k)); }
     this.sky = prog(`attribute vec2 aQ; uniform mat4 uInv; varying vec3 vD; varying vec2 vQ;
         void main(){ vQ = aQ; vec4 a = uInv * vec4(aQ, -1.0, 1.0), b = uInv * vec4(aQ, 1.0, 1.0); vD = b.xyz / b.w - a.xyz / a.w; gl_Position = vec4(aQ, 0.999, 1.0); }`,
       `precision mediump float; uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow; uniform float uMode; uniform float uBW; uniform vec2 uAsp;
@@ -567,9 +582,10 @@ const GL = {
     const wt = E.winT || [0.53, 0.69, 0.83], wh = E.winH || [0.86, 0.9, 0.93], g = E.grade || [1, 1, 1];
     gl.uniform3f(K.uWinT, wt[0], wt[1], wt[2]); gl.uniform3f(K.uWinH, wh[0], wh[1], wh[2]); gl.uniform1f(K.uView, E.view === 'nature' ? 1 : 0);
     gl.uniform3f(K.uGrade, g[0], g[1], g[2]); gl.uniform1f(K.uBW, E.bw ? 1 : 0);
-    gl.enableVertexAttribArray(K.aP);
-    meshes.forEach(m => { gl.bindBuffer(gl.ARRAY_BUFFER, m.p); gl.vertexAttribPointer(K.aP, 3, gl.FLOAT, false, 0, 0); gl.drawArrays(gl.TRIANGLES, 0, m.count); });
-    gl.disableVertexAttribArray(K.aP); gl.useProgram(this.prog);
+    gl.enableVertexAttribArray(K.aP); if(K.aN >= 0) gl.enableVertexAttribArray(K.aN);
+    meshes.forEach(m => { gl.bindBuffer(gl.ARRAY_BUFFER, m.p); gl.vertexAttribPointer(K.aP, 3, gl.FLOAT, false, 0, 0);
+      if(K.aN >= 0){ gl.bindBuffer(gl.ARRAY_BUFFER, m.n); gl.vertexAttribPointer(K.aN, 3, gl.FLOAT, false, 0, 0); } gl.drawArrays(gl.TRIANGLES, 0, m.count); });
+    gl.disableVertexAttribArray(K.aP); if(K.aN >= 0) gl.disableVertexAttribArray(K.aN); gl.useProgram(this.prog);
   },
   drawSky(vp, top, hor, low, mode, aspect){
     const gl = this.gl, K = this.skyLoc; if(!this.sky) return;
