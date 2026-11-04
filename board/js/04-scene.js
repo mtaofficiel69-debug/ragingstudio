@@ -890,9 +890,25 @@ const vehMat = v => M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R
 function setFridge(src, i, key, val){
   const sh = shot();
   edit(() => {
+    // on referme le frigo : celui qui le tenait ouvert lâche la porte (il se remet debout, à sa place)
+    if(key === 'open' && !val){ const f = src === 'v' ? sh.vehicles[i] : setFridges(sh)[i];
+      if(f) sh.chars.forEach(ch => { if(ch.pose === 'fridge' && Math.hypot(ch.root.x - f.x, ch.root.z - f.z) < 1.4) putOnSpot(ch, 'stand', f.y || null); }); }
     if(src === 'v'){ const v = sh.vehicles[i]; if(v) v[key] = val; return; }
     const a = sh.fridges = (sh.fridges || []).slice(); a[i] = Object.assign({ open:false, full:true }, a[i], { [key]:val });
   });
+}
+/* des plans tout prêts autour d'un frigo (dans son repère : x à sa droite, z devant lui) : depuis l'intérieur du frigo, par-dessus l'épaule,
+   de côté, en plan large, en plongée sur ce qu'il contient */
+const FRIDGE_SHOTS = [
+  ['inside', 'Depuis le frigo', 'From inside the fridge', [0.0, 1.33, -0.1], [0.12, 1.56, 1.0], 20, 'pr'],
+  ['ots', 'Par-dessus l’épaule', 'Over the shoulder', [0.55, 1.72, 1.45], [-0.05, 1.05, 0.0], 28, 'pm'],
+  ['side', 'De côté', 'From the side', [1.55, 1.45, 0.95], [0.0, 1.2, 0.55], 26, 'pa'],
+  ['wide', 'Plan large', 'Wide shot', [1.9, 1.65, 3.2], [0.0, 1.0, 0.45], 24, 'pe'],
+  ['top', 'Ce qu’il y a dedans', 'What’s inside', [-0.22, 1.9, 0.62], [0.0, 0.95, -0.1], 30, 'gp'],
+];
+function fridgeShot(src, i, id){
+  const sh = shot(), f = src === 'v' ? sh.vehicles[i] : setFridges(sh)[i], P = FRIDGE_SHOTS.find(x => x[0] === id); if(!f || !P) return;
+  camEdit(() => { sh.cam = localCam({ x:f.x, y:f.y || 0, z:f.z }, f.ry || 0, P[3], P[4], P[5]); sh.info.size = P[6]; sh.info.angle = id === 'top' ? 'plo' : id === 'inside' ? 'con' : 'neu'; });
 }
 /* le personnage choisi va ouvrir le frigo : il se place devant, un peu à droite (la porte s'ouvre à gauche), tourné vers lui,
    une main sur la porte, l'autre vers l'intérieur. La porte s'ouvre. */

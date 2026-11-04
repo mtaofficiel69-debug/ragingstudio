@@ -891,3 +891,5 @@ html[data-theme="dark"] .topbar .btn.tb-tour:hover{background:var(--accent-soft)
 .fridge-c .ftog{margin:8px 0 6px;}
 .fridge-c .ftog small{display:block; font-size:11px; color:var(--ink-soft);}
 .fridge-by{width:100%; justify-content:center;}
+.fridge-l{margin:12px 0 6px; font-size:12px; font-weight:600; color:var(--ink-soft);}
+.fridge-c .cars{margin:0;}

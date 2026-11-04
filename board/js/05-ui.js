@@ -466,7 +466,8 @@ function fridgeCtl(src, i, st, title){
   return `<div class="fridge-c"><div class="fridge-h">${icon('fridge')}<b>${esc(title)}</b></div>
     <div class="seg wide">${b(0, L('Fermé', 'Closed'))}${b(1, L('Ouvert', 'Open'))}</div>
     <label class="ftog"><span>${L('Rempli de nourriture', 'Filled with food')}<small>${L('Se voit quand il est ouvert', 'Shows when it’s open')}</small></span><input type="checkbox" data-act="fridgeFull" data-src="${src}" data-i="${i}" ${st.full ? 'checked' : ''}><i class="tg"></i></label>
-    ${who ? `<button class="btn btn-sm fridge-by" data-act="fridgeBy" data-src="${src}" data-i="${i}" title="${esc(L('Le personnage choisi se place devant le frigo et l’ouvre', 'The chosen character stands at the fridge and opens it'))}">${icon('pose')}${who} ${L('l’ouvre', 'opens it')}</button>` : ''}</div>`;
+    ${who ? `<button class="btn btn-sm fridge-by" data-act="fridgeBy" data-src="${src}" data-i="${i}" title="${esc(L('Le personnage choisi se place devant le frigo et l’ouvre', 'The chosen character stands at the fridge and opens it'))}">${icon('pose')}${who} ${L('l’ouvre', 'opens it')}</button>` : ''}
+    <div class="fridge-l">${L('Plans tout prêts', 'Ready-made shots')}</div><div class="cars">${FRIDGE_SHOTS.map(P => `<button class="car-t" data-act="fridgeShot" data-src="${src}" data-i="${i}" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div></div>`;
 }
 const PANEL_HTML = {
   place(){
@@ -1226,6 +1227,7 @@ const ACT = {
   vehCol:b => { const v = shot().vehicles[S.veh]; if(v) edit(() => { v.col = b.dataset.c; }); },
   fridge:b => setFridge(b.dataset.src, +b.dataset.i, 'open', b.dataset.v === '1'),
   fridgeBy:b => openFridgeBy(b.dataset.src, +b.dataset.i),
+  fridgeShot:b => fridgeShot(b.dataset.src, +b.dataset.i, b.dataset.id),
   mount:b => mountVehicle(S.veh < 0 ? 0 : S.veh, +b.dataset.seat), vehShot:b => vehShot(S.veh < 0 ? 0 : S.veh, b.dataset.id),
   gunShot:b => gunShot(b.dataset.id), prop:b => setProp(b.dataset.id),
   addCrowd:b => addCrowd(b.dataset.kind),
