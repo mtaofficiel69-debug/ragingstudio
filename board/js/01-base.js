@@ -39,6 +39,7 @@ function fmtTime(t){ return (Math.round(t * 10) / 10).toFixed(1).replace('.', ge
 function icon(name, cls){
   const p = {
     back:'<path d="M13 8H3.5M7.5 4 3.5 8l4 4"/>',
+    fridge:'<rect x="3.5" y="1.5" width="9" height="13" rx="1.3"/><path d="M3.5 6.2h9M5.6 3.4v1.3M5.6 8v2.6"/>',
     undo:'<path d="M4 4v4h4"/><path d="M4 8a6 6 0 1 1 2 4.5"/>',
     redo:'<path d="M12 4v4H8"/><path d="M12 8a6 6 0 1 0-2 4.5"/>',
     export:'<path d="M8 10V2M4 6l4-4 4 4"/><path d="M2 13h12"/>',

@@ -459,6 +459,15 @@ function mapImage(part, file){
     im.src = r.result; };
   r.readAsDataURL(file);
 }
+/* un frigo : fermé ou ouvert, rempli ou vide, et le personnage choisi qui va l'ouvrir (src 's' : celui du lieu, 'v' : un accessoire) */
+function fridgeCtl(src, i, st, title){
+  const t = S.sel ? S.sel.c : S.target, who = shot().chars[t] ? charName(t) : '';
+  const b = (v, lab) => `<button class="${!!st.open === !!v ? 'on' : ''}" data-act="fridge" data-src="${src}" data-i="${i}" data-v="${v}">${lab}</button>`;
+  return `<div class="fridge-c"><div class="fridge-h">${icon('fridge')}<b>${esc(title)}</b></div>
+    <div class="seg wide">${b(0, L('Fermé', 'Closed'))}${b(1, L('Ouvert', 'Open'))}</div>
+    <label class="ftog"><span>${L('Rempli de nourriture', 'Filled with food')}<small>${L('Se voit quand il est ouvert', 'Shows when it’s open')}</small></span><input type="checkbox" data-act="fridgeFull" data-src="${src}" data-i="${i}" ${st.full ? 'checked' : ''}><i class="tg"></i></label>
+    ${who ? `<button class="btn btn-sm fridge-by" data-act="fridgeBy" data-src="${src}" data-i="${i}" title="${esc(L('Le personnage choisi se place devant le frigo et l’ouvre', 'The chosen character stands at the fridge and opens it'))}">${icon('pose')}${who} ${L('l’ouvre', 'opens it')}</button>` : ''}</div>`;
+}
 const PANEL_HTML = {
   place(){
     const sh = shot(), groups = [[L('Intérieurs', 'Indoors'), ['garage', 'office', 'living', 'cafe', 'hall', 'warehouse', 'hotel', 'parking', 'diner', 'bank', 'police', 'hospital', 'metro', 'bar', 'school', 'shop', 'meeting', 'bedroom', 'kitchen', 'bath', 'house']], [L('Extérieurs', 'Outdoors'), ['alley', 'taxi', 'park', 'roof', 'forest', 'gas', 'station']], [L('Grands espaces', 'Wide open spaces'), ['street', 'beach', 'stadium', 'country', 'airfield']]];
@@ -469,6 +478,7 @@ const PANEL_HTML = {
     return ph('place', L('Lieu', 'Place'), esc(L(cur.fr, cur.en)), jumpBar((fl ? [['rooms', L('Pièces', 'Rooms')]] : []).concat(groups.map(([t], k) => [gid[k], t])))) +
       `<div class="pb"><button class="myplace ${sh.set === 'photo' ? 'on' : ''}" data-act="photoPick" title="${esc(L('Ton vrai décor en photo, les personnages devant. Tu peux aussi glisser une image sur la vue 3D.', 'Your real location in a photo, the characters in front. You can also drop an image on the 3D view.'))}"><span class="mp-ic">${icon('image')}</span><span class="mp-t"><b>${L('Ma photo', 'My photo')}</b><small>${sh.set === 'photo' && sh.photo ? L('Changer de photo', 'Change the photo') : L('Ton propre décor · JPG, PNG', 'Your own set · JPG, PNG')}</small></span>${icon('plus')}</button><input type="file" id="photoFile" accept="image/*" hidden>
       <button class="myplace ${SET_DEF[sh.set] && SET_DEF[sh.set].custom ? 'on' : ''}" data-act="${SET_DEF[sh.set] && SET_DEF[sh.set].custom ? 'mapEdit' : 'mapNew'}" title="${esc(L('Fabrique ton propre lieu : sa taille, son sol, ses murs, tes textures', 'Build your own place: its size, floor, walls, your textures'))}"><span class="mp-ic">${icon('grid')}</span><span class="mp-t"><b>${SET_DEF[sh.set] && SET_DEF[sh.set].custom ? L('Modifier ce lieu', 'Edit this place') : L('Créer mon lieu', 'Create my place')}</b><small>${L('Taille, sol, murs, tes textures', 'Size, floor, walls, your textures')}</small></span>${icon(SET_DEF[sh.set] && SET_DEF[sh.set].custom ? 'right' : 'plus')}</button>
+      ${setFridges(sh).map((fr, i, A) => fridgeCtl('s', i, fr, A.length > 1 ? L('Frigo ', 'Fridge ') + (i + 1) : L('Le frigo', 'The fridge'))).join('')}
       ${lbl(L('Moment de la journée', 'Time of day'))}<div class="seg wide">${Object.keys(TIMES).map(k => `<button class="${(sh.info.time || 'day') === k ? 'on' : ''}" data-act="info" data-k="time" data-v="${k}">${icon(k === 'night' ? 'moon' : k === 'dusk' ? 'sunset' : 'sun')}${esc(L(TIMES[k].fr, TIMES[k].en))}</button>`).join('')}</div>${fl}${groups.map(([t, ids], k) => lblId(t, gid[k]) + `<div class="ptiles">${ids.map(id => { const st = SETS.find(x => x.id === id); return `<button class="ptile ${sh.set === id ? 'on' : ''}" data-act="place" data-id="${id}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${esc(L(st.fr, st.en))}</span></button>`; }).join('')}</div>`).join('')}</div>`;
   },
   /* « Mon lieu » : on le fabrique ici (la taille, le sol, les murs, le plafond, les fenêtres), puis on le meuble avec les accessoires */
@@ -617,6 +627,7 @@ const PANEL_HTML = {
       ${D.seats.length ? lbl(L('Mettre ', 'Seat ') + charName(t) + L(' à la place…', ' as…')) : ''}<div class="chips">${D.seats.map((st, i) => { const c = on(v).find(c => c.on.seat === i), me = c && sh.chars.indexOf(c) === t; return `<button class="chip ${me ? 'on' : ''}" data-act="mount" data-seat="${i}">${esc(L(st.fr, st.en))}${c && !me ? `<small>· ${esc(who(i))}</small>` : ''}</button>`; }).join('')}</div>
       ${D.fly ? `<label class="fr"><span class="fl">${L('Altitude', 'Altitude')}</span><input type="range" data-act="vehAlt" min="0" max="60" step="0.5" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 1)} m</b></label>`
         : `<label class="fr" title="${esc(L('Il ne traverse ni le sol ni les meubles : il se pose dessus', 'It never goes through the floor or furniture: it rests on them'))}"><span class="fl">${L('Hauteur', 'Height')}</span><input type="range" data-act="vehAlt" min="${(SET_DEF[sh.set].levels || [0]).reduce((b, l) => l <= (v.y || 0) + 0.3 ? l : b, 0)}" max="${(SET_DEF[sh.set].levels || [0]).reduce((b, l) => l <= (v.y || 0) + 0.3 ? l : b, 0) + 4}" step="0.02" value="${v.y || 0}"><b class="fv">${round(v.y || 0, 2)} m</b></label>`}
+      ${v.kind === 'fridge' ? fridgeCtl('v', k, v, L('Ce frigo', 'This fridge')) : ''}
       ${D.shots.length ? lbl(L('Prises de vue', 'Shots')) : ''}<div class="cars">${D.shots.map(P => `<button class="car-t" data-act="vehShot" data-id="${P[0]}">${sizeGlyph(P[6])}<span>${esc(L(P[1], P[2]))}</span></button>`).join('')}</div>` : '';
     return ph('car', L('Accessoires', 'Props'), vs.length ? vs.length + ' ' + L('dans ce plan', 'in this shot') : L('Véhicules et objets', 'Vehicles and objects'), jumpBar([['veh', L('Véhicules', 'Vehicles')]].concat(OBJ_CATS.map(([c, fr, en]) => ['o-' + c, L(fr, en)])))) +
       `<div class="pb">${lblId(L('Véhicules', 'Vehicles'), 'veh')}<div class="vadd">${Object.keys(VEH_DEF).filter(id => !VEH_DEF[id].obj).map(id => `<button class="vtile" data-act="addVeh" data-kind="${id}">${icon(VEH_DEF[id].ic)}<span>${esc(L(VEH_DEF[id].fr, VEH_DEF[id].en))}</span></button>`).join('')}</div>
@@ -1213,6 +1224,8 @@ const ACT = {
   floor:b => { lsSet('raging3d_roomtip', '1'); goRoom(+b.dataset.k); renderHead(); renderPanel(); },
   addVeh:b => addVehicle(b.dataset.kind || 'moto'), removeVeh:b => removeVehicle(+b.dataset.k), pickVeh:b => { S.veh = +b.dataset.k; renderPanel(); requestRender(); },
   vehCol:b => { const v = shot().vehicles[S.veh]; if(v) edit(() => { v.col = b.dataset.c; }); },
+  fridge:b => setFridge(b.dataset.src, +b.dataset.i, 'open', b.dataset.v === '1'),
+  fridgeBy:b => openFridgeBy(b.dataset.src, +b.dataset.i),
   mount:b => mountVehicle(S.veh < 0 ? 0 : S.veh, +b.dataset.seat), vehShot:b => vehShot(S.veh < 0 ? 0 : S.veh, b.dataset.id),
   gunShot:b => gunShot(b.dataset.id), prop:b => setProp(b.dataset.id),
   addCrowd:b => addCrowd(b.dataset.kind),
@@ -1296,6 +1309,7 @@ function bindEvents(){
     if(t.dataset.act === 'room' && t.value !== ''){ goRoom(+t.value); renderHead(); renderPanel(); }
     if(t.dataset.act === 'walk') edit(() => { shot().info.walk = t.checked; });
     if(t.dataset.act === 'mapTog') ACT.mapTog(t);
+    if(t.dataset.act === 'fridgeFull') setFridge(t.dataset.src, +t.dataset.i, 'full', t.checked);
     if(t.dataset.act === 'gridTog'){ S.grid = t.checked; renderHead(); renderView(); }
     if(t.dataset.act === 'proTog'){ S.pro = t.checked; lsSet('raging3d_pro', S.pro ? '1' : '0'); renderHead(); renderView(); }
     if(t.dataset.act === 'finalTog') setFinal(t.checked);

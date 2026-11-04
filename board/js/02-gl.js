@@ -369,10 +369,31 @@ const GL = {
       `precision mediump float; uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow; uniform float uMode; uniform float uBW; uniform vec2 uAsp;
         ${BW_GLSL}
         varying vec3 vD; varying vec2 vQ;
+        float skyHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float skyNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(skyHash(i), skyHash(i + vec2(1.0, 0.0)), f.x), mix(skyHash(i + vec2(0.0, 1.0)), skyHash(i + vec2(1.0, 1.0)), f.x), f.y); }
         void main(){
           if(uMode > 0.5){ float r = length(vQ * uAsp); gl_FragColor = vec4(0.0, 0.0, 0.0, smoothstep(0.62, 1.42, r) * 0.32); return; }
           vec3 d = normalize(vD);
           vec3 c = d.y > 0.0 ? mix(uHor, uTop, pow(clamp(d.y * 1.7, 0.0, 1.0), 0.75)) : mix(uHor, uLow, clamp(-d.y * 4.0, 0.0, 1.0));
+          // le ciel vit un peu : des nuages doux (quelques calculs, seulement sur le ciel), une lueur du côté du soleil ;
+          // la nuit, des étoiles et la lune. Le jour, le soir et la nuit gardent leurs couleurs.
+          float night = clamp((0.25 - dot(uTop, vec3(0.3333))) * 6.0, 0.0, 1.0);
+          if(d.y > 0.0){
+            vec3 sun = normalize(vec3(0.45, 0.22, 0.55));
+            c += mix(vec3(0.07, 0.06, 0.04), vec3(0.0), night) * pow(max(dot(d, sun), 0.0), 6.0);
+            vec2 uv = d.xz / (d.y + 0.14) * 1.4;
+            float n = skyNoise(uv) * 0.62 + skyNoise(uv * 2.13 + 3.7) * 0.38;
+            float k = smoothstep(0.46, 0.8, n) * smoothstep(0.0, 0.22, d.y) * 0.85;
+            vec3 lit = mix(mix(uHor, vec3(1.0), 0.45), uTop * 0.55 + uHor * 0.35, smoothstep(0.55, 0.9, n));   // le dessous des nuages, plus sombre
+            c = mix(c, mix(lit, uTop * 1.6 + vec3(0.03), night), k * mix(1.0, 0.55, night));
+            if(night > 0.0){
+              vec2 g = floor(d.xz / (d.y + 0.25) * 140.0);
+              c += vec3(0.85, 0.88, 1.0) * step(0.9965, skyHash(g)) * smoothstep(0.08, 0.35, d.y) * (1.0 - k) * night;
+              vec3 moon = normalize(vec3(-0.45, 0.42, -0.78)); float m = dot(d, moon);
+              c += vec3(0.75, 0.78, 0.86) * (smoothstep(0.9993, 0.9996, m) + 0.18 * pow(max(m, 0.0), 60.0)) * night;
+            }
+          }
           if(uBW > 0.5) c = bwTone(c, 0.0);
           gl_FragColor = vec4(c, 1.0);
         }`);
