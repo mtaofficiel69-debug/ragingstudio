@@ -611,7 +611,7 @@ function physOf(id){
   // seuls les murs, le sol et les plafonds l'arrêtent : on la pose où l'on veut, même dans une petite pièce
   // (les cloisons, minces et hautes, restent des murs : on ne traverse pas d'une pièce à l'autre au travers)
   if(d.freeCam){ const keep = boxes.filter(b => Math.min(b[3], b[5]) - CAM_R <= 0.1 && b[4] - CAM_R >= 1.0); boxes.length = 0; keep.forEach(b => boxes.push(b)); }
-  return PHYS[id] = { boxes, walls, rooms, closed, lim };
+  return PHYS[id] = { boxes, walls, rooms, closed, lim, free:!!d.freeCam };
 }
 /* la caméra est-elle dans le lieu ? (dans une de ses pièces pour un lieu fermé, dans ses limites dehors) */
 function physIn(P, p){
@@ -744,7 +744,7 @@ function camSettle(c, e0, t0, restore, zoom){
       if(k < d0) for(let a = d0; a > k; a -= 0.04){ if(bad(Math.max(k, a - 0.04))){ k = a; break; } }
       c.dist = k; return;
     }
-    if(f >= Math.min(c.dist, 0.3) && (P.closed || nd > pd - 0.6) && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
+    if(f >= Math.min(c.dist, 0.3) && (P.closed || P.free || nd > pd - 0.6) && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
   }
   const v = [e[0] - c.tx, e[1] - c.ty, e[2] - c.tz], d = Math.hypot(...v); if(d < 0.05) return;
   const yaw = Math.atan2(v[0], v[2]) / D2R;
@@ -915,6 +915,28 @@ const FRIDGE_SHOTS = [
 function fridgeShot(src, i, id){
   const sh = shot(), f = src === 'v' ? sh.vehicles[i] : setFridges(sh)[i], P = FRIDGE_SHOTS.find(x => x[0] === id); if(!f || !P) return;
   camEdit(() => { sh.cam = localCam({ x:f.x, y:f.y || 0, z:f.z }, f.ry || 0, P[3], P[4], P[5]); sh.info.size = P[6]; sh.info.angle = id === 'top' ? 'plo' : id === 'inside' ? 'con' : 'neu'; });
+}
+/* le garage : le palan (accroché à la poutre du plafond) et la chaise. Le personnage choisi y est suspendu par les pieds ou ligoté,
+   et des plans tout prêts pour ces scènes (dans le repère du lieu) */
+const GARAGE_SHOTS = [
+  ['hangLow', 'Le pendu, en contre-plongée', 'Hanging man, low angle', [1.9, 0.35, -0.2], [0.6, 1.7, 1.6], 22, 'pe', 'con'],
+  ['hangFace', 'À hauteur de son visage', 'At his face level', [0.62, 0.9, 0.35], [0.6, 0.92, 1.6], 35, 'gp', 'neu'],
+  ['hangOts', 'Par-dessus l’épaule de celui qui l’interroge', 'Over the interrogator’s shoulder', [-0.55, 1.65, -0.55], [0.6, 1.15, 1.6], 28, 'pm', 'neu'],
+  ['hangWide', 'Le pendu, plan large', 'Hanging man, wide shot', [3.3, 2.1, -3.3], [0.4, 1.3, 1.4], 22, 'pe', 'plo'],
+  ['tiedFace', 'Le ligoté, de face', 'Tied man, from the front', [3.0, 1.15, 1.95], [3.0, 1.05, 3.3], 35, 'pr', 'neu'],
+  ['tiedHigh', 'Le ligoté, en plongée', 'Tied man, high angle', [2.2, 2.6, 1.8], [3.0, 0.8, 3.3], 24, 'pm', 'plo'],
+  ['tiedOts', 'L’interrogatoire, par-dessus l’épaule', 'The interrogation, over the shoulder', [2.55, 1.7, 1.1], [3.0, 1.0, 3.3], 30, 'pm', 'neu'],
+  ['tiedSide', 'Le ligoté, de profil', 'Tied man, in profile', [1.55, 1.1, 3.3], [3.0, 0.95, 3.3], 35, 'pr', 'neu'],
+];
+function garageShot(id){
+  const sh = shot(), P = GARAGE_SHOTS.find(x => x[0] === id); if(!P) return;
+  camEdit(() => { sh.cam = camLook(P[3], P[4], P[5]); sh.info.size = P[6]; sh.info.angle = P[7]; });
+}
+/* accrocher au palan (« hang »), ligoter sur la chaise (« tied »), ou libérer (debout, à côté) */
+function garageDo(what){
+  const sh = shot(), c = S.sel ? S.sel.c : S.target, ch = sh.chars[c]; if(!ch) return;
+  if(what === 'free'){ edit(() => { putOnSpot(ch, 'stand'); ch.root.x = 0.6; ch.root.z = 0.5; ch.root.ry = 180; }); return; }
+  const k = (SPOTS.garage || []).findIndex(p => p[5] === what); if(k >= 0) placeAt(k);
 }
 /* le personnage choisi va ouvrir le frigo : il se place devant, un peu à droite (la porte s'ouvre à gauche), tourné vers lui,
    une main sur la porte, l'autre vers l'intérieur. La porte s'ouvre. */
@@ -1155,7 +1177,9 @@ function benchmark(){
   const t1 = performance.now();
   while(n < 3){ drawFrame(); sync(); n++; }
   const ms = (performance.now() - t1) / n; R.slow = ms > 20;
-  const scale = ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
+  const scale = ms > 90 ? 0.5 : ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
+  // un très vieil ordinateur dans la forêt : on la reconstruit en version légère (une fois pour toutes), puis on remesure
+  if(ms > 28 && !FOREST_LITE && S.doc && shot().set === 'forest'){ FOREST_LITE = true; dropSet('forest'); setMesh('forest'); requestRender(); clearTimeout(R.benchT); R.benchT = setTimeout(benchmark, 800); }
   const was = R.bench; R.bench = ms;
   if(scale !== R.scale || (was > 32) !== (ms > 32) || (was > 60) !== (ms > 60)){ R.scale = scale; fitStage(); }
 }
