@@ -280,6 +280,15 @@ const GL = {
             L = mix(L, vec3(0.68, 0.72, 0.74), step(0.5, dot(vC, vec3(0.3333))));
             c = mix(c, L, night);
           }
+          else if(mt > 8.5){                                                                                    // l'eau : de petites rides (qui s'effacent au loin : rien ne grésille), le ciel qui s'y reflète de biais, un éclat de soleil
+            float dw = distance(vW, uEye), k = 1.0 - smoothstep(12.0, 70.0, dw);
+            float r = sin(vW.x * 0.9 + vW.z * 0.35) * 0.5 + sin(vW.x * 0.23 - vW.z * 1.3) * 0.35 + sin((vW.x + vW.z) * 2.7) * 0.15 * (1.0 - smoothstep(4.0, 18.0, dw));
+            vec3 nw = normalize(vec3(0.07 * r * k, 1.0, 0.07 * k * sin(vW.z * 1.1 + vW.x * 0.4))), ve = normalize(uEye - vW);
+            float fw = max(dot(nw, ve), 0.0);
+            c = base * (0.74 + 0.1 * r * k + 0.16 * max(dot(nw, uL), 0.0));
+            c = mix(c, vec3(0.74, 0.82, 0.88) * (0.55 + 0.45 * dot(uGrade, vec3(0.3333))), pow(1.0 - fw, 3.0) * 0.6);
+            c += vec3(0.55, 0.52, 0.46) * pow(max(dot(nw, normalize(uL + ve)), 0.0), 90.0) * (0.4 + 0.6 * k);
+          }
           if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
           // dedans aussi, un peu de profondeur : le fond d'une grande pièce recule à peine, le premier plan ressort
           else c *= 1.0 - 0.1 * smoothstep(6.0, 18.0, distance(vW, uEye));
