@@ -754,9 +754,8 @@ function fitStage(){
   let w = W, h = W * 9 / 16; if(h > H){ h = H; w = H * 16 / 9; }
   st.style.width = Math.max(160, Math.floor(w)) + 'px'; st.style.height = Math.max(90, Math.floor(h)) + 'px';
   if(S.rec) return;
-  // toujours la même finesse, qu'on bouge ou non : un pixel calculé par pixel d'écran (plus d'image floue en mouvement)…
-  // …sauf sur un ordinateur trop lent : la résolution baisse alors (R.scale, mesuré par benchmark), la fluidité d'abord
-  const k = Math.max(1, Math.min(window.devicePixelRatio || 1, 1.5)) * (R.scale || 1);
+  // toujours la même finesse, qu'on bouge ou non, sur tous les ordinateurs : au moins un pixel calculé par pixel d'écran (jamais d'image floue)
+  const k = Math.max(1, Math.min(window.devicePixelRatio || 1, 1.5));
   R.canvas.width = Math.round(Math.max(160, w) * k); R.canvas.height = Math.round(Math.max(90, h) * k);
   R.baseW = R.canvas.width; R.baseH = R.canvas.height; R.cssW = Math.max(160, w); R.sharp = false;
   requestRender();
