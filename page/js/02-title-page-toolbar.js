@@ -7,11 +7,12 @@
 const TP_FONT_CATS = [
   {id:'all', fr:'Toutes', en:'All'}, {id:'mono', fr:'Machine à écrire', en:'Typewriter'},
   {id:'sans', fr:'Sans empattement', en:'Sans serif'}, {id:'serif', fr:'Avec empattement', en:'Serif'},
-  {id:'display', fr:'Affiche', en:'Display'}, {id:'hand', fr:'Manuscrit', en:'Handwriting'}
+  {id:'display', fr:'Affiche', en:'Display'}, {id:'hand', fr:'Manuscrit', en:'Handwriting'},
+  {id:'horror', fr:'Horreur', en:'Horror'}, {id:'mine', fr:'Mes polices', en:'My fonts'}
 ];
 const TP_FONT_CAT_OF = {mono:'mono', special:'mono', display:'sans', sans:'sans', serif:'serif', garamond:'serif', cinzel:'display', bebas:'display', hand:'hand'};
 (function(){
-  const GENERIC = {mono:'monospace', sans:'sans-serif', serif:'serif', display:'sans-serif', hand:'cursive'};
+  const GENERIC = {mono:'monospace', sans:'sans-serif', serif:'serif', display:'sans-serif', hand:'cursive', horror:'sans-serif'};
   const MORE = [
   ['mono','Cutive Mono',0],
   ['mono','Anonymous Pro',1],
@@ -139,7 +140,15 @@ const TP_FONT_CAT_OF = {mono:'mono', special:'mono', display:'sans', sans:'sans'
   ['hand','Tangerine',1],
   ['hand','Pinyon Script',0],
   ['hand','Mr Dafoe',0],
-  ['hand','Rancho',0]
+  ['hand','Rancho',0],
+  // l'horreur : des lettres épaisses, usées, abîmées, comme sur les affiches des films d'horreur des années 70 (polices libres)
+  ['horror','Frijole',0],
+  ['horror','Rubik Distressed',0],
+  ['horror','Rubik Dirt',0],
+  ['horror','Butcherman',0],
+  ['horror','Eater',0],
+  ['horror','Metal Mania',0],
+  ['horror','Nosifer',0]
   ];
   MORE.forEach(r=>{
     const id = 'g_' + r[1].toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
@@ -260,6 +269,7 @@ function tpFmPopHtml(k){
       ${items}
       <div class="tp-fm-empty" style="display:none;"></div>
     </div>
+    <button type="button" class="tp-fm-imp" data-act="tpFontImport" title="${esc(L('Ta propre police (.ttf, .otf, .woff, .woff2) : elle reste dans ton navigateur, avec tes projets','Your own font (.ttf, .otf, .woff, .woff2): it stays in your browser, with your projects'))}">＋ ${L('Importer ma police…','Import my font…')}</button>
     <div class="tp-fm-foot"><span>↑ ↓ ${L('naviguer','browse')}</span><span>↵ ${L('choisir','pick')}</span><span>${L('Échap fermer','Esc close')}</span></div></div>`;
 }
 function tpFmFilter(){
@@ -911,6 +921,51 @@ function hexToRgba(hex, alpha){
   const r = parseInt(h.substring(0,2),16)||0, g = parseInt(h.substring(2,4),16)||0, b = parseInt(h.substring(4,6),16)||0;
   return `rgba(${r},${g},${b},${alpha})`;
 }
+/* MES POLICES : un fichier de police à soi (.ttf, .otf, .woff, .woff2), gardé dans le navigateur (IndexedDB), jamais envoyé ailleurs.
+   Il rejoint la liste des polices (catégorie « Mes polices »), s'affiche sur la page de titre et passe dans le PDF comme les autres. */
+const TP_MY_FONTS_KEY = 'scriptmm_tp_my_fonts';
+function tpRegisterMyFont(rec){
+  if(TP_FONTS.some(f=>f.id===rec.id)) return Promise.resolve();
+  // la police porte le nom de son fichier (avec un numéro si ce nom est déjà pris par une autre police de la liste)
+  let fam = String(rec.label || 'Ma police').replace(/['"\\,;]/g, '').trim() || 'Ma police', n = 2; const base = fam;
+  while(TP_FONTS.some(f=>tpFontRealName(f).toLowerCase()===fam.toLowerCase())) fam = base + ' (' + (n++) + ')';
+  let ff; try{ ff = new FontFace(fam, rec.data); }catch(e){ return Promise.resolve(); }
+  return ff.load().then(f=>{
+    document.fonts.add(f);
+    TP_FONT_CAT_OF[rec.id] = 'mine';
+    TP_FONTS.push({id:rec.id, label:rec.label, family:"'"+fam+"',sans-serif", bold:false, cat:'mine', more:true});
+    TP_RASTER_FONTS.add(fam);
+  }).catch(()=>{});
+}
+function tpLoadMyFonts(){
+  if(typeof idbGet !== 'function' || typeof FontFace === 'undefined') return;
+  idbGet(TP_MY_FONTS_KEY).then(list=>Promise.all((list||[]).map(tpRegisterMyFont))).then(()=>{
+    // une page de titre déjà affichée avec une de ces polices : on la redessine
+    const tp = document.querySelector('#tpPreviewShell .titlepage');
+    if(tp && S.project) applyTPDesignVars(tp, ensureTPDesign(S.project));
+  }).catch(()=>{});
+}
+function tpFontImport(){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2';
+  inp.onchange = ()=>{
+    const file = inp.files && inp.files[0]; if(!file) return;
+    if(file.size > 8e6){ alert(L('Ce fichier est trop lourd pour une police (8 Mo au plus).','This file is too large for a font (8 MB max).')); return; }
+    file.arrayBuffer().then(buf=>{
+      const label = file.name.replace(/\.(ttf|otf|woff2?|)$/i,'').replace(/[_-]+/g,' ').trim().slice(0,40) || L('Ma police','My font');
+      const rec = {id:'my_' + Date.now().toString(36), label, data:buf};
+      let ok = true; try{ new FontFace('probe', buf); }catch(e){ ok = false; }
+      if(!ok){ alert(L('Ce fichier n\u2019est pas une police lisible (.ttf, .otf, .woff, .woff2).','This file is not a readable font (.ttf, .otf, .woff, .woff2).')); return; }
+      return tpRegisterMyFont(rec).then(()=>{
+        if(!TP_FONTS.some(f=>f.id===rec.id)){ alert(L('Cette police n\u2019a pas pu être chargée.','This font could not be loaded.')); return; }
+        idbGet(TP_MY_FONTS_KEY).then(list=>idbSet(TP_MY_FONTS_KEY, (list||[]).concat([rec]))).catch(()=>{});
+        tpFmSnap = null;
+        tpFmPick(tpSel + '|' + rec.id);   // elle s'applique tout de suite à ce qui est sélectionné
+        tpRenderToolbar(); tpFmSetCat('mine');
+      });
+    }).catch(()=>{});
+  };
+  inp.click();
+}
 function tpFontFamily(id){ return (TP_FONTS.find(f=>f.id===id)||TP_FONTS[0]).family; }
 function tpPatternCss(design){
   const c = hexToRgba(design.color||'#000000', .16);
@@ -1024,3 +1079,4 @@ function migrateOldStorage(){
     localStorage.setItem(IDX_KEY, oldRaw);
   }catch(e){}
 }
+window.addEventListener('load', ()=>{ try{ tpLoadMyFonts(); }catch(e){} });   // mes polices importées, rechargées au démarrage
