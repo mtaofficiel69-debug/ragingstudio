@@ -29,6 +29,11 @@ const TP_FONT_CAT_OF = {mono:'mono', special:'mono', display:'sans', sans:'sans'
   ['mono','Share Tech Mono',0],
   ['sans','Roboto',1],
   ['sans','Open Sans',1],
+  // Trade Gothic est une police commerciale (on ne peut pas la publier) : ses équivalents libres les plus proches.
+  // On les trouve en tapant « Trade Gothic » dans la recherche ; sa version achetée s'ajoute avec « Importer ma police… »
+  ['sans','Pathway Gothic One',0,'Trade Gothic Condensed'],
+  ['sans','News Cycle',1,'Trade Gothic'],
+  ['sans','Archivo Narrow',1,'Trade Gothic Narrow'],
   ['sans','Lato',1],
   ['sans','Montserrat',1],
   ['sans','Poppins',1],
@@ -153,7 +158,7 @@ const TP_FONT_CAT_OF = {mono:'mono', special:'mono', display:'sans', sans:'sans'
   MORE.forEach(r=>{
     const id = 'g_' + r[1].toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     TP_FONT_CAT_OF[id] = r[0];
-    TP_FONTS.push({id, label:r[1], family:"'"+r[1]+"',"+GENERIC[r[0]], bold:!!r[2], cat:r[0], more:true});
+    TP_FONTS.push({id, label:r[1], family:"'"+r[1]+"',"+GENERIC[r[0]], bold:!!r[2], cat:r[0], more:true, alias:r[3]||''});
   });
 })();
 const TP_RASTER_FONTS = new Set(TP_FONTS.filter(f=>f.more).map(f=>f.label));
@@ -250,7 +255,7 @@ function tpFmPopHtml(k){
   const head = (g,fr,en)=>`<div class="tp-fm-grp" data-grp="${g}">${L(fr,en)}</div>`;
   const item = (x,g)=>{
     const fav = tpFavs.includes(x.id);
-    return `<div class="tp-fm-item ${cur===x.id?'active':''}" role="option" style="font-family:${x.family}" data-act="tpFmPick" data-id="${k}|${x.id}" data-grp="${g}" data-name="${esc((tpFontRealName(x)+' '+x.label).toLowerCase())}"><span class="tp-fm-nm">${esc(tpFontRealName(x))}</span>${x.more?'':`<small>${esc(x.label)}</small>`}<button type="button" class="tp-fm-star ${fav?'on':''}" data-act="tpFmFav" data-id="${x.id}" title="${fav?L('Retirer des favoris','Remove from favorites'):L('Ajouter aux favoris','Add to favorites')}" aria-label="${L('Favori','Favorite')}">${fav?'★':'☆'}</button></div>`;
+    return `<div class="tp-fm-item ${cur===x.id?'active':''}" role="option" style="font-family:${x.family}" data-act="tpFmPick" data-id="${k}|${x.id}" data-grp="${g}" data-name="${esc((tpFontRealName(x)+' '+x.label+' '+(x.alias||'')).toLowerCase())}"><span class="tp-fm-nm">${esc(tpFontRealName(x))}</span>${x.more?(x.alias?`<small>${esc(L('proche de ','close to ')+x.alias)}</small>`:''):`<small>${esc(x.label)}</small>`}<button type="button" class="tp-fm-star ${fav?'on':''}" data-act="tpFmFav" data-id="${x.id}" title="${fav?L('Retirer des favoris','Remove from favorites'):L('Ajouter aux favoris','Add to favorites')}" aria-label="${L('Favori','Favorite')}">${fav?'★':'☆'}</button></div>`;
   };
   const favs = tpFavs.map(byId).filter(Boolean);
   let items = '';
