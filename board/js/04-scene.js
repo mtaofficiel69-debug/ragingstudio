@@ -235,7 +235,7 @@ const SHOT_RECIPES = [
   ['pov', 'Ce qu’il voit', 'What they see', 'La caméra à la place de ses yeux.', 'The camera in place of their eyes.', { size:'pov' }],
   ['reveal', 'La révélation', 'The reveal', 'La caméra s’élève et dévoile la scène.', 'The camera rises and unveils the scene.', { size:'pe', angle:'neu', side:'tq', move:'grue' }],
   ['shock', 'Le choc', 'The shock', 'Effet Vertigo : le monde bascule autour de lui.', 'Dolly zoom: the world lurches around them.', { size:'pr', angle:'neu', side:'face', move:'vertigo' }],
-  ['trunk', 'Vu du coffre (Tarantino)', 'Trunk shot (Tarantino)', 'Très bas, vers le haut, les personnages penchés sur nous.', 'Very low, looking up, the characters leaning over us.', { size:'pa', angle:'sol', side:'face', pitch:24 }],
+  ['trunk', 'Vu du coffre', 'Trunk shot', 'Très bas, vers le haut, les personnages penchés sur nous.', 'Very low, looking up, the characters leaning over us.', { size:'pa', angle:'sol', side:'face', pitch:24 }],
   ['overhead', 'Vu du ciel', 'God’s eye view', 'Tout droit d’en haut : la mise en place de la scène.', 'Straight down from above: the layout of the scene.', { size:'pe', angle:'dess' }],
   ['profile', 'De profil', 'In profile', 'De côté : il regarde ailleurs, on l’observe.', 'From the side: they look away, we watch them.', { size:'pm', angle:'neu', side:'prof' }],
   ['behind', 'De dos, vers l’inconnu', 'From behind, into the unknown', 'On le suit de dos : on découvre avec lui.', 'We follow them from behind: we discover with them.', { size:'pa', angle:'neu', side:'dos', move:'follow' }],
@@ -744,7 +744,7 @@ function camSettle(c, e0, t0, restore, zoom){
       if(k < d0) for(let a = d0; a > k; a -= 0.04){ if(bad(Math.max(k, a - 0.04))){ k = a; break; } }
       c.dist = k; return;
     }
-    if(f >= Math.min(c.dist, 0.3) && nd > pd - 0.6 && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
+    if(f >= Math.min(c.dist, 0.3) && (P.closed || nd > pd - 0.6) && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
   }
   const v = [e[0] - c.tx, e[1] - c.ty, e[2] - c.tz], d = Math.hypot(...v); if(d < 0.05) return;
   const yaw = Math.atan2(v[0], v[2]) / D2R;
@@ -814,7 +814,10 @@ const camEye = c => camEyeRaw(c);
 function viewProj(c, aspect){
   const e = camEye(c), r = (c.roll || 0) * D2R;
   // le débullé tourne l'image autour de l'axe de la caméra ; on voit loin dans les grands espaces
-  return M4.mul(M4.persp(fovOf(c.lens), aspect, 0.06, 320), M4.mul(M4.rz(r), M4.lookAt(e, [c.tx, c.ty, c.tz], [0, 1, 0])));
+  // le plan proche s'éloigne un peu quand la caméra est loin de ce qu'elle regarde : la profondeur est bien plus précise au loin
+  // (les surfaces proches l'une de l'autre ne scintillent plus, même sur les vieilles cartes graphiques), et de près rien ne change
+  const near = Math.min(0.25, Math.max(0.06, (c.dist || 0) * 0.022));
+  return M4.mul(M4.persp(fovOf(c.lens), aspect, near, 320), M4.mul(M4.rz(r), M4.lookAt(e, [c.tx, c.ty, c.tz], [0, 1, 0])));
 }
 /* la caméra glisse jusqu'au nouveau cadrage au lieu de sauter (un quart de seconde) */
 const TWEEN_MS = 320;
@@ -834,6 +837,9 @@ function camEdit(fn, keepLens){ const before = clone(shot().cam); edit(() => { f
 /* un geste de caméra (tourner, se décaler, zoomer, avancer) : l'objectif y va physiquement */
 function camGesture(c, fn, zoom){
   const e0 = camEyeRaw(c), t0 = [c.tx, c.ty, c.tz];
+  // le recul choisi est retenu dès le premier geste : tourner contre une paroi (une rame de métro, un couloir) rapproche la caméra,
+  // puis elle reprend sa distance dès que la place revient (avant, elle restait collée tout près)
+  if(!zoom && CAM_WANT.cam !== c) camWant(c);
   fn(); keepCam(c);
   const asked = c.dist; camSettle(c, e0, t0, !zoom, zoom);
   if(zoom){ camWant(c); CAM_WANT.dist = Math.min(asked, c.dist + 1.5); }
@@ -876,7 +882,7 @@ function initMeshes(){
     quad(a, [-0.5, 0, 0], [-0.5, 0, 1], [0.5, 0, 1], [0.5, 0, 0], C); tri(b, [-0.5, 0, 0], [0, 0, 1], [0.5, 0, 0], C);
     R.arShaft = GL.mesh(a); R.arHead = GL.mesh(b); }
   R.props = {}; R.propsOut = {};
-  PROPS.map(p => p[0]).concat(['holster']).forEach(id => { R.props[id] = GL.mesh(propGeo(id)); R.propsOut[id] = GL.mesh(smoothNormals(propGeo(id))); });
+  PROPS.map(p => p[0]).concat(['holster', 'rope', 'ropeWrap', 'ropeRing']).forEach(id => { R.props[id] = GL.mesh(propGeo(id)); R.propsOut[id] = GL.mesh(smoothNormals(propGeo(id))); });
 }
 /* un véhicule (forme et couleur), fabriqué une fois */
 R.veh = {};
@@ -1014,6 +1020,12 @@ function gearOf(ch, M){
   const out = [], G = ch.gear || {};
   if(G.holster && ch.prop !== 'gun'){ const m = M4.mul(M.pelvis, M4.trans(-0.19, 0.02, 0.02)); out.push(['holster', m], ['gun', m]); }
   if(G.sling && ch.prop !== 'rifle') out.push(['rifle', M4.mul(M.chest, M4.mul(M4.trans(0, 0.1, -0.17), M4.mul(M4.rz(-0.75), M4.ry(Math.PI))))]);
+  // suspendu par les pieds : les tours de corde aux chevilles, et la corde qui monte jusqu'au crochet (sous la poutre du lieu, ou à 3 m)
+  if(ch.pose === 'hang'){ const a = M4.apply(M.shinL, [0, -0.36, 0]), b = M4.apply(M.shinR, [0, -0.36, 0]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+    const d = typeof shot === 'function' && S.doc ? SET_DEF[shot().set] : null, top = Math.max(m[1] + 0.2, (d && d.hangTop) || (d && d.roomH ? d.roomH - 0.05 : 3.0));
+    out.push(['rope', M4.mul(M4.trans(m[0], m[1], m[2]), [1,0,0,0, 0,top - m[1],0,0, 0,0,1,0, 0,0,0,1])], ['ropeWrap', M4.mul(M.shinL, M4.trans(...M4.apply(M4.invert(M.shinL), m)))]); }
+  // ligoté sur la chaise : les liens autour du torse (bras compris) et de la taille
+  if(ch.pose === 'tied') out.push(['ropeRing', M4.mul(M.chest, M4.trans(0, 0.1, -0.03))], ['ropeRing', M4.mul(M.spine, M4.trans(0, 0.04, -0.02))]);
   return out;
 }
 /* le regard : la tête (et un peu le torse) se tourne vers la caméra ou vers un autre personnage, à chaque image.
@@ -1107,7 +1119,7 @@ function drawFrame(sh, w, h, clean, o){
     gearOf(ch, mats[c]).forEach(([id, m]) => GL.draw(R.propsOut[id], { m, flat:true, col:INK, out:px })); });
   gl.cullFace(gl.BACK);
   chars.forEach((ch, c) => { if(ch.prop && R.props[ch.prop]) GL.draw(R.props[ch.prop], { m:mats[c].handR, col:[1, 1, 1], mul:true, char:ch.prop !== 'gun' && ch.prop !== 'rifle' });   // l'arme garde son éclat de métal
-    gearOf(ch, mats[c]).forEach(([id, m]) => GL.draw(R.props[id], { m, col:[1, 1, 1], mul:true, char:id === 'holster' })); });
+    gearOf(ch, mats[c]).forEach(([id, m]) => GL.draw(R.props[id], { m, col:[1, 1, 1], mul:true, char:id === 'holster' || id.startsWith('rope') })); });
   chars.forEach((ch, c) => {
     const P = lookMesh(lookOf(ch, c)).parts;
     for(const J of JOINTS){ const [tint, k] = tintOf(c, J.id); GL.draw(P[J.id], { m:mats[c][J.id], col:[1, 1, 1], tint, tintK:k, mul:true, char:true }); }
