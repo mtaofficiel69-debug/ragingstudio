@@ -610,7 +610,9 @@ function physOf(id){
   // un lieu « libre » (la forêt, la maison de campagne) : les meubles, les arbres, les rochers ne retiennent plus la caméra,
   // seuls les murs, le sol et les plafonds l'arrêtent : on la pose où l'on veut, même dans une petite pièce
   // (les cloisons, minces et hautes, restent des murs : on ne traverse pas d'une pièce à l'autre au travers)
-  if(d.freeCam){ const keep = boxes.filter(b => Math.min(b[3], b[5]) - CAM_R <= 0.1 && b[4] - CAM_R >= 1.0); boxes.length = 0; keep.forEach(b => boxes.push(b)); }
+  // (et seulement les cloisons : longues et hautes. Un tronc, un poteau, un piquet ne la retiennent plus : en filant entre les arbres,
+  // elle ne bute plus sur un tronc pour revenir d'un coup à sa place — ce qui ressemblait à une téléportation)
+  if(d.freeCam){ const keep = boxes.filter(b => Math.min(b[3], b[5]) - CAM_R <= 0.1 && b[4] - CAM_R >= 1.0 && Math.max(b[3], b[5]) - CAM_R >= 0.45); boxes.length = 0; keep.forEach(b => boxes.push(b)); }
   // les cloisons (hautes, longues et minces) comptent comme des murs : la caméra ne les traverse jamais, même quand elle suit un mur
   const wb = boxes.filter(b => b[4] - CAM_R >= 0.9 && Math.max(b[3], b[5]) - CAM_R >= 0.45 && Math.min(b[3], b[5]) - CAM_R <= 0.16);
   return PHYS[id] = { boxes, walls, rooms, closed, lim, free:!!d.freeCam, wb };
