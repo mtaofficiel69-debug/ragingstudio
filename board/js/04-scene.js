@@ -611,7 +611,9 @@ function physOf(id){
   // seuls les murs, le sol et les plafonds l'arrêtent : on la pose où l'on veut, même dans une petite pièce
   // (les cloisons, minces et hautes, restent des murs : on ne traverse pas d'une pièce à l'autre au travers)
   if(d.freeCam){ const keep = boxes.filter(b => Math.min(b[3], b[5]) - CAM_R <= 0.1 && b[4] - CAM_R >= 1.0); boxes.length = 0; keep.forEach(b => boxes.push(b)); }
-  return PHYS[id] = { boxes, walls, rooms, closed, lim, free:!!d.freeCam };
+  // les cloisons (hautes, longues et minces) comptent comme des murs : la caméra ne les traverse jamais, même quand elle suit un mur
+  const wb = boxes.filter(b => b[4] - CAM_R >= 0.9 && Math.max(b[3], b[5]) - CAM_R >= 0.45 && Math.min(b[3], b[5]) - CAM_R <= 0.16);
+  return PHYS[id] = { boxes, walls, rooms, closed, lim, free:!!d.freeCam, wb };
 }
 /* la caméra est-elle dans le lieu ? (dans une de ses pièces pour un lieu fermé, dans ses limites dehors) */
 function physIn(P, p){
@@ -748,13 +750,25 @@ function camSettle(c, e0, t0, restore, zoom){
     // Un meuble, un tronc qui passe entre elle et le sujet ne la fait plus sauter devant lui (elle restait « téléportée » d'un coup)
     if(P.closed || P.free){
       const fw = physRay(P, t, dir, c.dist, true), kw = Math.max(0.05, Math.min(c.dist, fw)), qw = [t[0] + dir[0] * kw, t[1] + dir[1] * kw, t[2] + dir[2] * kw];
-      if(fw >= Math.min(c.dist, 0.3) && physHit(P, qw) < 0 && !physWall(P, e0, qw)){ c.dist = kw; return; }
+      if(fw >= Math.min(c.dist, 0.3) && physHit(P, qw) < 0 && !physWall(P, e0, qw) && !physCrossW(P, e0, qw)){ c.dist = kw; return; }   // jamais à travers une cloison
     }
     if(f >= Math.min(c.dist, 0.3) && nd > pd - 0.6 && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
   }
   const v = [e[0] - c.tx, e[1] - c.ty, e[2] - c.tz], d = Math.hypot(...v); if(d < 0.05) return;
   const yaw = Math.atan2(v[0], v[2]) / D2R;
   c.yaw = yaw + Math.round((c.yaw - yaw) / 360) * 360; c.pitch = clamp(-Math.asin(clamp(v[1] / d, -1, 1)) / D2R, -89, 89); c.dist = d;
+}
+/* le point est-il dans une cloison (une de celles qui ne contiennent pas déjà le point de départ « from ») ? */
+function physHitW(P, q, from){
+  for(const b of P.wb || []){ const inB = p => { const px = p[0] - b[0], pz = p[2] - b[2], lx = px * b[6] - pz * b[7], lz = px * b[7] + pz * b[6]; return Math.abs(p[1] - b[1]) <= b[4] && Math.abs(lx) <= b[3] && Math.abs(lz) <= b[5]; };
+    if(inB(q) && !(from && inB(from))) return true; }
+  return false;
+}
+/* passer de a à b traverse-t-il une cloison ? (par petits pas) */
+function physCrossW(P, a, b){
+  const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / 0.05));
+  for(let i = 1; i <= n; i++){ const t = i / n; if(physHitW(P, [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t], a)) return true; }
+  return false;
 }
 /* jusqu'où l'objectif peut reculer depuis le point visé t, dans la direction dir (sans traverser ni sortir du lieu) */
 function physRay(P, t, dir, maxd, wallsOnly){
@@ -763,7 +777,7 @@ function physRay(P, t, dir, maxd, wallsOnly){
   let p = t, d = 0;
   while(d < maxd){
     const nd = Math.min(maxd, d + 0.04), q = [t[0] + dir[0] * nd, t[1] + dir[1] * nd, t[2] + dir[2] * nd];
-    if(Math.abs(physY(P, q) - q[1]) > 1e-6 || (!wallsOnly && physHit(P, q, skip) >= 0) || physWall(P, p, q) || (inT && !physIn(P, q))) return Math.max(0, d - 0.02);
+    if(Math.abs(physY(P, q) - q[1]) > 1e-6 || (wallsOnly ? physHitW(P, q, t) : physHit(P, q, skip) >= 0) || physWall(P, p, q) || (inT && !physIn(P, q))) return Math.max(0, d - 0.02);
     p = q; d = nd;
   }
   return d;
@@ -1013,7 +1027,7 @@ function sharpen(){
   return;   // l'image garde toujours la même finesse : plus de bascule floue / nette quand on bouge puis qu'on s'arrête
   if(!R.canvas || !R.baseW || R.sharp || S.rec || S.play) return;
   if(R.raf || DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || document.hidden || _wheelSnap){ R.sharpT = setTimeout(sharpen, R.bench > 45 ? 900 : 220); return; }
-  if(R.bench > 60 || R.scale < 1) return;   // un ordinateur lent : on garde l'image telle quelle, la fluidité d'abord
+  if(R.bench > 45) return;   // un ordinateur lent : l'image reste à la résolution de l'écran (nette), sans le suréchantillonnage en plus
   const dpr = window.devicePixelRatio || 1, want = Math.min(2, Math.max(dpr, 1) * (R.bench > 20 ? 1 : R.bench > 12 ? 1.5 : 2)), base = R.baseW / (R.cssW || R.baseW);
   let k = want / base; if(R.baseW * R.baseH * k * k > 4.2e6) k = Math.sqrt(4.2e6 / (R.baseW * R.baseH));
   if(k < 1.08) return;
@@ -1095,9 +1109,7 @@ function drawFrame(sh, w, h, clean, o){
   // dès qu'on s'arrête, l'image complète revient
   const moving = !clean && !o && (DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || _wheelSnap);
   // on mesure le temps entre deux images quand on bouge : si l'ordinateur peine, on passe en image simplifiée
-  if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true;
-    // un très vieil ordinateur qui peine encore en image simplifiée : la résolution baisse d'un cran (une fois par seconde au plus)
-    if(R.dtAvg > 45 && R.scale > 0.45 && now - (R.downT || 0) > 1000){ R.downT = now; R.scale = Math.max(0.45, Math.round((R.scale - 0.1) * 100) / 100); R.dtAvg = 33; setTimeout(fitStage, 0); } } }
+  if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true; } }
   const fast = moving && R.slow;
   const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh));
   const vp = viewProj(cam, w / h), eye = camEye(cam);
