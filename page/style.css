@@ -987,6 +987,8 @@
   .tp-fm-star.on{color:#D9A521;}
   .tp-fm-star:hover{background:#3699D41a;}
   @media (hover:none){ .tp-fm-star{opacity:.65;} }
+  .tp-fm-imp{flex:none; margin:6px 10px 2px; padding:7px 10px; border:1px dashed var(--hair); border-radius:8px; background:var(--surface-soft); color:var(--accent-2); font-family:var(--sans); font-size:12.5px; font-weight:600; text-align:left; cursor:pointer;}
+  .tp-fm-imp:hover{border-color:var(--accent); background:#3699D414;}
   .tp-fm-foot{flex:none; display:flex; gap:14px; padding:7px 12px; border-top:1px solid var(--hair); background:var(--surface-soft); font-family:var(--sans); font-size:11.5px; color:var(--ink-soft);}
   /* v52b : section de la hauteur de l'écran, sans défilement de page ; seul le panneau de droite défile au besoin. */
   .tp-root{display:flex; flex-direction:column; min-height:0;}
