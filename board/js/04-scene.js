@@ -744,20 +744,26 @@ function camSettle(c, e0, t0, restore, zoom){
       if(k < d0) for(let a = d0; a > k; a -= 0.04){ if(bad(Math.max(k, a - 0.04))){ k = a; break; } }
       c.dist = k; return;
     }
-    if(f >= Math.min(c.dist, 0.3) && (P.closed || P.free || nd > pd - 0.6) && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
+    // dans une pièce, une rame, une maison ou la forêt : seuls les murs (et les sols, les plafonds) rapprochent la caméra sur sa ligne de visée.
+    // Un meuble, un tronc qui passe entre elle et le sujet ne la fait plus sauter devant lui (elle restait « téléportée » d'un coup)
+    if(P.closed || P.free){
+      const fw = physRay(P, t, dir, c.dist, true), kw = Math.max(0.05, Math.min(c.dist, fw)), qw = [t[0] + dir[0] * kw, t[1] + dir[1] * kw, t[2] + dir[2] * kw];
+      if(fw >= Math.min(c.dist, 0.3) && physHit(P, qw) < 0 && !physWall(P, e0, qw)){ c.dist = kw; return; }
+    }
+    if(f >= Math.min(c.dist, 0.3) && nd > pd - 0.6 && (physHit(P, q) < 0 || physHit(P, e0) >= 0) && !physWall(P, e0, q)){ c.dist = nd; return; }
   }
   const v = [e[0] - c.tx, e[1] - c.ty, e[2] - c.tz], d = Math.hypot(...v); if(d < 0.05) return;
   const yaw = Math.atan2(v[0], v[2]) / D2R;
   c.yaw = yaw + Math.round((c.yaw - yaw) / 360) * 360; c.pitch = clamp(-Math.asin(clamp(v[1] / d, -1, 1)) / D2R, -89, 89); c.dist = d;
 }
 /* jusqu'où l'objectif peut reculer depuis le point visé t, dans la direction dir (sans traverser ni sortir du lieu) */
-function physRay(P, t, dir, maxd){
+function physRay(P, t, dir, maxd, wallsOnly){
   const skip = new Set(); for(let i = physHit(P, t); i >= 0; i = physHit(P, t, skip)) skip.add(i);
   const inT = physIn(P, t);
   let p = t, d = 0;
   while(d < maxd){
     const nd = Math.min(maxd, d + 0.04), q = [t[0] + dir[0] * nd, t[1] + dir[1] * nd, t[2] + dir[2] * nd];
-    if(Math.abs(physY(P, q) - q[1]) > 1e-6 || physHit(P, q, skip) >= 0 || physWall(P, p, q) || (inT && !physIn(P, q))) return Math.max(0, d - 0.02);
+    if(Math.abs(physY(P, q) - q[1]) > 1e-6 || (!wallsOnly && physHit(P, q, skip) >= 0) || physWall(P, p, q) || (inT && !physIn(P, q))) return Math.max(0, d - 0.02);
     p = q; d = nd;
   }
   return d;
@@ -849,13 +855,13 @@ function camGesture(c, fn, zoom){
 const R = { canvas:null, sets:{}, parts:{}, out:{}, blob:null, raf:0, crowds:new Map(), scale:1 };
 function setMesh(id){
   if(!R.sets[id]){ const o = setGeo(id); R.sets[id] = { g:GL.mesh(o.g), gl:GL.mesh(edgeLines(o.g)), glass:o.glass.p.length ? GL.mesh(o.glass) : null, levels:o.levels.map(l => GL.mesh(l)), levelsL:o.levels.map(l => GL.mesh(edgeLines(l))),
-    panes:o.panes ? GL.mesh(o.panes) : null, levelPanes:o.levelPanes.map(l => l ? GL.mesh(l) : null), tex:o.tex.map(([key, m]) => ({ key, mesh:GL.texMesh(m) })) }; }
+    water:(o.water || []).map(([m, i]) => ({ m:GL.mesh(m), lv:i })), panes:o.panes ? GL.mesh(o.panes) : null, levelPanes:o.levelPanes.map(l => l ? GL.mesh(l) : null), tex:o.tex.map(([key, m]) => ({ key, mesh:GL.texMesh(m) })) }; }
   return R.sets[id];
 }
 /* « Mon lieu » a changé : on le refait (ses formes, ses obstacles, ses vignettes) */
 function dropSet(id){
   const M = R.sets && R.sets[id];
-  if(M && GL.gl){ [M.g, M.gl, M.glass, M.panes].concat(M.levels, M.levelsL, M.levelPanes).forEach(m => m && GL.free(m)); (M.tex || []).forEach(t => [t.mesh.p, t.mesh.u, t.mesh.l].forEach(b => GL.gl.deleteBuffer(b))); }
+  if(M && GL.gl){ [M.g, M.gl, M.glass, M.panes].concat(M.levels, M.levelsL, M.levelPanes, (M.water || []).map(w => w.m)).forEach(m => m && GL.free(m)); (M.tex || []).forEach(t => [t.mesh.p, t.mesh.u, t.mesh.l].forEach(b => GL.gl.deleteBuffer(b))); }
   if(R.sets) delete R.sets[id]; delete SET_COLL[id]; delete PHYS[id];
   [...PLACE_PREV.keys()].forEach(k => { if(k.startsWith(id + ':')) PLACE_PREV.delete(k); }); THUMBS.clear();
 }
@@ -969,6 +975,7 @@ function drawSet(SM, sh, cam, o, lines){
   if(lines){ gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
   const lv = SET_DEF[sh.set].levels || [];
   GL.draw(SM.g, o); SM.levels.forEach((m, i) => { if(show[i]) GL.draw(m, Object.assign({}, o, { floor:lv[i] || 0 })); });
+  (SM.water || []).forEach(w => { if(!w.lv || show[w.lv - 1]) GL.draw(w.m, Object.assign({}, o, { water:!o.raw && !o.flat, floor:w.lv ? lv[w.lv - 1] || 0 : 0 })); });   // l'eau, à part
   if(lines){
     gl.disable(gl.POLYGON_OFFSET_FILL); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     const L = { flat:true, lines:true, col:INK, a:0.3 };
@@ -1006,8 +1013,8 @@ function sharpen(){
   return;   // l'image garde toujours la même finesse : plus de bascule floue / nette quand on bouge puis qu'on s'arrête
   if(!R.canvas || !R.baseW || R.sharp || S.rec || S.play) return;
   if(R.raf || DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || document.hidden || _wheelSnap){ R.sharpT = setTimeout(sharpen, R.bench > 45 ? 900 : 220); return; }
-  if(R.bench > 90) return;   // un ordinateur très lent : on garde l'image telle quelle, la fluidité d'abord
-  const dpr = window.devicePixelRatio || 1, want = Math.min(2, Math.max(dpr, 1) * (R.bench > 45 ? 1 : R.bench > 25 ? 1.5 : 2)), base = R.baseW / (R.cssW || R.baseW);
+  if(R.bench > 60 || R.scale < 1) return;   // un ordinateur lent : on garde l'image telle quelle, la fluidité d'abord
+  const dpr = window.devicePixelRatio || 1, want = Math.min(2, Math.max(dpr, 1) * (R.bench > 20 ? 1 : R.bench > 12 ? 1.5 : 2)), base = R.baseW / (R.cssW || R.baseW);
   let k = want / base; if(R.baseW * R.baseH * k * k > 4.2e6) k = Math.sqrt(4.2e6 / (R.baseW * R.baseH));
   if(k < 1.08) return;
   R.canvas.width = Math.round(R.baseW * k); R.canvas.height = Math.round(R.baseH * k); R.sharp = true;
@@ -1088,7 +1095,9 @@ function drawFrame(sh, w, h, clean, o){
   // dès qu'on s'arrête, l'image complète revient
   const moving = !clean && !o && (DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || _wheelSnap);
   // on mesure le temps entre deux images quand on bouge : si l'ordinateur peine, on passe en image simplifiée
-  if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true; } }
+  if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true;
+    // un très vieil ordinateur qui peine encore en image simplifiée : la résolution baisse d'un cran (une fois par seconde au plus)
+    if(R.dtAvg > 45 && R.scale > 0.45 && now - (R.downT || 0) > 1000){ R.downT = now; R.scale = Math.max(0.45, Math.round((R.scale - 0.1) * 100) / 100); R.dtAvg = 33; setTimeout(fitStage, 0); } } }
   const fast = moving && R.slow;
   const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh));
   const vp = viewProj(cam, w / h), eye = camEye(cam);
@@ -1177,7 +1186,7 @@ function benchmark(){
   const t1 = performance.now();
   while(n < 3){ drawFrame(); sync(); n++; }
   const ms = (performance.now() - t1) / n; R.slow = ms > 20;
-  const scale = ms > 90 ? 0.5 : ms > 60 ? 0.6 : ms > 32 ? 0.75 : 1;
+  const scale = ms > 80 ? 0.45 : ms > 55 ? 0.55 : ms > 36 ? 0.67 : ms > 24 ? 0.8 : 1;
   // un très vieil ordinateur dans la forêt : on la reconstruit en version légère (une fois pour toutes), puis on remesure
   if(ms > 28 && !FOREST_LITE && S.doc && shot().set === 'forest'){ FOREST_LITE = true; dropSet('forest'); setMesh('forest'); requestRender(); clearTimeout(R.benchT); R.benchT = setTimeout(benchmark, 800); }
   const was = R.bench; R.bench = ms;

@@ -89,7 +89,7 @@ function box(g, x, y, z, w, h, d, col, ry){
 /* une vitre de fenêtre : on y voit le dehors (le ciel, la ville ou la campagne au loin), calculé selon la direction du regard :
    la vue tourne avec la caméra, comme à travers une vraie fenêtre. Les vitres ont leur propre petit programme
    (le calcul ne se fait que sur elles : le reste de l'image ne coûte pas un calcul de plus) */
-let PANES = null;
+let PANES = null, WATERS = null;   // les vitres et l'eau : rangées à part pendant la construction d'un lieu
 function pane(g, a, b, h, col, y0){ let q = g; if(PANES){ q = PANES.get(g); if(!q) PANES.set(g, q = geo()); } wall(q, a, b, h, col, y0); }
 function wall(g, a, b, h, col, y0){
   if(COLL && h >= 0.4 && Math.hypot(b[0] - a[0], b[1] - a[1]) >= 0.4) collOf(g).w.push([a[0], a[1], b[0], b[1], y0 || 0, (y0 || 0) + h]);
@@ -217,7 +217,7 @@ const GL = {
     const fs = `precision mediump float;
       uniform vec3 uL; uniform float uFlat; uniform float uA; uniform vec3 uTint; uniform float uTintK;
       uniform vec3 uEye; uniform vec3 uT[6]; uniform float uNT; uniform float uX; uniform float uChar;
-      uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass; uniform float uLine; uniform float uFloor;
+      uniform vec3 uFogC; uniform vec2 uFog; uniform float uBW; uniform float uGlass; uniform float uLine; uniform float uFloor; uniform float uWater;
       uniform vec3 uGrade; uniform vec3 uGradeC;
       varying vec3 vN; varying vec3 vC; varying vec3 vW; varying vec3 vN2; varying float vM;
       /* le décor qui se trouve entre la caméra et un personnage (un tube autour de la ligne de vue) */
@@ -246,6 +246,17 @@ const GL = {
           float lc = dot(c, vec3(0.299, 0.587, 0.114)); c = mix(vec3(lc), c, 1.22);                  // des couleurs un peu plus franches que le décor
           c += vec3(0.3, 0.3, 0.31) * pow(1.0 - f, 2.2) * (0.5 + 0.5 * h);                       // un liseré clair tout autour : le personnage se détache du fond
           c *= mix(0.84, 1.0, smoothstep(0.0, 0.85, vW.y - uFloor));                              // un peu plus sombre près du sol : il touche le décor
+        } else if(uWater > 0.5){
+          // l'eau (dessinée à part, voir drawSet) : de petites rides (qui s'effacent au loin : rien ne grésille), le ciel qui s'y reflète de biais, un éclat de soleil.
+          // Elle a sa propre branche, choisie pour tout l'objet : les vieilles cartes graphiques ne la calculent plus pour chaque pixel du décor
+          float dw = distance(vW, uEye), k = 1.0 - smoothstep(12.0, 70.0, dw);
+          float r = sin(vW.x * 0.9 + vW.z * 0.35) * 0.5 + sin(vW.x * 0.23 - vW.z * 1.3) * 0.35;
+          vec3 nw = normalize(vec3(0.07 * r * k, 1.0, 0.07 * k * sin(vW.z * 1.1 + vW.x * 0.4))), ve = normalize(uEye - vW);
+          float fw = max(dot(nw, ve), 0.0);
+          c = base * (0.74 + 0.1 * r * k + 0.16 * max(dot(nw, uL), 0.0));
+          c = mix(c, vec3(0.74, 0.82, 0.88) * (0.55 + 0.45 * dot(uGrade, vec3(0.3333))), pow(1.0 - fw, 3.0) * 0.6);
+          c += vec3(0.55, 0.52, 0.46) * pow(max(dot(nw, normalize(uL + ve)), 0.0), 90.0) * (0.4 + 0.6 * k);
+          if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
         } else {
           // une lumière du ciel un peu froide par-dessus, un rebond chaud par-dessous, et un soleil doux
           // qui « enveloppe » les formes (aussi léger à calculer que l'ancien éclairage)
@@ -280,15 +291,6 @@ const GL = {
             L = mix(L, vec3(0.68, 0.72, 0.74), step(0.5, dot(vC, vec3(0.3333))));
             c = mix(c, L, night);
           }
-          else if(mt > 8.5){                                                                                    // l'eau : de petites rides (qui s'effacent au loin : rien ne grésille), le ciel qui s'y reflète de biais, un éclat de soleil
-            float dw = distance(vW, uEye), k = 1.0 - smoothstep(12.0, 70.0, dw);
-            float r = sin(vW.x * 0.9 + vW.z * 0.35) * 0.5 + sin(vW.x * 0.23 - vW.z * 1.3) * 0.35 + sin((vW.x + vW.z) * 2.7) * 0.15 * (1.0 - smoothstep(4.0, 18.0, dw));
-            vec3 nw = normalize(vec3(0.07 * r * k, 1.0, 0.07 * k * sin(vW.z * 1.1 + vW.x * 0.4))), ve = normalize(uEye - vW);
-            float fw = max(dot(nw, ve), 0.0);
-            c = base * (0.74 + 0.1 * r * k + 0.16 * max(dot(nw, uL), 0.0));
-            c = mix(c, vec3(0.74, 0.82, 0.88) * (0.55 + 0.45 * dot(uGrade, vec3(0.3333))), pow(1.0 - fw, 3.0) * 0.6);
-            c += vec3(0.55, 0.52, 0.46) * pow(max(dot(nw, normalize(uL + ve)), 0.0), 90.0) * (0.4 + 0.6 * k);
-          }
           if(uFog.x < 300.0) c = mix(c, uFogC, smoothstep(3.0, 26.0, distance(vW, uEye)) * 0.14);
           // dedans aussi, un peu de profondeur : le fond d'une grande pièce recule à peine, le premier plan ressort
           else c *= 1.0 - 0.1 * smoothstep(6.0, 18.0, distance(vW, uEye));
@@ -314,7 +316,7 @@ const GL = {
     const p = prog(vs, fs); if(!p) return false;
     gl.useProgram(p); this.prog = p;
     ['aP', 'aN', 'aC', 'aS', 'aM'].forEach(k => this.loc[k] = gl.getAttribLocation(p, k));
-    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine', 'uFloor', 'uGrade', 'uGradeC'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
+    ['uVP', 'uM', 'uCol', 'uVC', 'uL', 'uFlat', 'uA', 'uTint', 'uTintK', 'uEye', 'uT', 'uNT', 'uX', 'uChar', 'uOut', 'uFogC', 'uFog', 'uBW', 'uGlass', 'uLine', 'uFloor', 'uWater', 'uGrade', 'uGradeC'].forEach(k => this.loc[k] = gl.getUniformLocation(p, k));
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     const l = [0.45, 0.82, 0.36], n = Math.hypot(...l); gl.uniform3f(this.loc.uL, l[0]/n, l[1]/n, l[2]/n);
     // le ciel et le vignettage : un seul triangle qui couvre l'écran
@@ -483,7 +485,7 @@ const GL = {
     const c = o.col || [1, 1, 1]; gl.uniform3f(L.uCol, c[0], c[1], c[2]);
     gl.uniform1f(L.uVC, o.mul ? 2 : o.vc ? 1 : 0); gl.uniform1f(L.uChar, o.char ? 1 : 0); gl.uniform1f(L.uFlat, o.raw ? 2 : o.flat ? 1 : 0); gl.uniform1f(L.uA, o.a == null ? 1 : o.a);
     const t = o.tint || [0, 0, 0]; gl.uniform3f(L.uTint, t[0], t[1], t[2]); gl.uniform1f(L.uTintK, o.tintK || 0);
-    gl.uniform1f(L.uX, o.x || 0); gl.uniform1f(L.uOut, o.out || 0); gl.uniform1f(L.uGlass, o.glass ? 1 : 0);
+    gl.uniform1f(L.uX, o.x || 0); gl.uniform1f(L.uOut, o.out || 0); gl.uniform1f(L.uGlass, o.glass ? 1 : 0); gl.uniform1f(L.uWater, o.water ? 1 : 0);
     gl.uniform1f(L.uLine, o.lines ? 1 : 0); gl.uniform1f(L.uFloor, o.floor || 0);
     gl.drawArrays(o.lines ? gl.LINES : gl.TRIANGLES, 0, mesh.count);
   },
