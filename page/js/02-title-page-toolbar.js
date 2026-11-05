@@ -29,6 +29,11 @@ const TP_FONT_CAT_OF = {mono:'mono', special:'mono', display:'sans', sans:'sans'
   ['mono','Share Tech Mono',0],
   ['sans','Roboto',1],
   ['sans','Open Sans',1],
+  // Trade Gothic est une police commerciale (on ne peut pas la publier) : ses équivalents libres les plus proches.
+  // On les trouve en tapant « Trade Gothic » dans la recherche ; sa version achetée s'ajoute avec « Importer ma police… »
+  ['sans','Pathway Gothic One',0,'Trade Gothic Condensed'],
+  ['sans','News Cycle',1,'Trade Gothic'],
+  ['sans','Archivo Narrow',1,'Trade Gothic Narrow'],
   ['sans','Lato',1],
   ['sans','Montserrat',1],
   ['sans','Poppins',1],
@@ -153,7 +158,7 @@ const TP_FONT_CAT_OF = {mono:'mono', special:'mono', display:'sans', sans:'sans'
   MORE.forEach(r=>{
     const id = 'g_' + r[1].toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     TP_FONT_CAT_OF[id] = r[0];
-    TP_FONTS.push({id, label:r[1], family:"'"+r[1]+"',"+GENERIC[r[0]], bold:!!r[2], cat:r[0], more:true});
+    TP_FONTS.push({id, label:r[1], family:"'"+r[1]+"',"+GENERIC[r[0]], bold:!!r[2], cat:r[0], more:true, alias:r[3]||''});
   });
 })();
 const TP_RASTER_FONTS = new Set(TP_FONTS.filter(f=>f.more).map(f=>f.label));
@@ -250,7 +255,7 @@ function tpFmPopHtml(k){
   const head = (g,fr,en)=>`<div class="tp-fm-grp" data-grp="${g}">${L(fr,en)}</div>`;
   const item = (x,g)=>{
     const fav = tpFavs.includes(x.id);
-    return `<div class="tp-fm-item ${cur===x.id?'active':''}" role="option" style="font-family:${x.family}" data-act="tpFmPick" data-id="${k}|${x.id}" data-grp="${g}" data-name="${esc((tpFontRealName(x)+' '+x.label).toLowerCase())}"><span class="tp-fm-nm">${esc(tpFontRealName(x))}</span>${x.more?'':`<small>${esc(x.label)}</small>`}<button type="button" class="tp-fm-star ${fav?'on':''}" data-act="tpFmFav" data-id="${x.id}" title="${fav?L('Retirer des favoris','Remove from favorites'):L('Ajouter aux favoris','Add to favorites')}" aria-label="${L('Favori','Favorite')}">${fav?'★':'☆'}</button></div>`;
+    return `<div class="tp-fm-item ${cur===x.id?'active':''}" role="option" style="font-family:${x.family}" data-act="tpFmPick" data-id="${k}|${x.id}" data-grp="${g}" data-name="${esc((tpFontRealName(x)+' '+x.label+' '+(x.alias||'')).toLowerCase())}"><span class="tp-fm-nm">${esc(tpFontRealName(x))}</span>${x.more?(x.alias?`<small>${esc(L('proche de ','close to ')+x.alias)}</small>`:''):`<small>${esc(x.label)}</small>`}<button type="button" class="tp-fm-star ${fav?'on':''}" data-act="tpFmFav" data-id="${x.id}" title="${fav?L('Retirer des favoris','Remove from favorites'):L('Ajouter aux favoris','Add to favorites')}" aria-label="${L('Favori','Favorite')}">${fav?'★':'☆'}</button></div>`;
   };
   const favs = tpFavs.map(byId).filter(Boolean);
   let items = '';
@@ -924,12 +929,64 @@ function hexToRgba(hex, alpha){
 /* MES POLICES : un fichier de police à soi (.ttf, .otf, .woff, .woff2), gardé dans le navigateur (IndexedDB), jamais envoyé ailleurs.
    Il rejoint la liste des polices (catégorie « Mes polices »), s'affiche sur la page de titre et passe dans le PDF comme les autres. */
 const TP_MY_FONTS_KEY = 'scriptmm_tp_my_fonts';
+/* Une police faite soi-même n'a souvent qu'une casse : ses lettres (souvent dessinées en capitales) sont rangées dans les minuscules,
+   et les majuscules sont vides — un titre en MAJUSCULES s'affichait alors dans une autre police. On complète sa table des caractères :
+   chaque casse absente reprend les dessins de l'autre, et une lettre accentuée absente reprend sa lettre de base (é → e, Ç → C…).
+   Rien n'est redessiné : seule la table qui relie les caractères aux dessins (« cmap ») est réécrite. Renvoie { buf, added }. */
+function tpFontFillCase(buf){
+  try{
+    const dv = new DataView(buf), n = dv.getUint16(4), tabs = [];
+    for(let i = 0; i < n; i++){ const o = 12 + i * 16; tabs.push({ tag:String.fromCharCode(dv.getUint8(o), dv.getUint8(o+1), dv.getUint8(o+2), dv.getUint8(o+3)), off:dv.getUint32(o+8), len:dv.getUint32(o+12) }); }
+    const cm = tabs.find(t=>t.tag==='cmap'); if(!cm) return { buf, added:0 };
+    // lire la table des caractères (formats 4 et 12)
+    const map = new Map(), nsub = dv.getUint16(cm.off + 2); let best = null;
+    for(let i = 0; i < nsub; i++){ const pid = dv.getUint16(cm.off + 4 + i*8), eid = dv.getUint16(cm.off + 6 + i*8), so = cm.off + dv.getUint32(cm.off + 8 + i*8), fmt = dv.getUint16(so);
+      const score = fmt === 12 ? 3 : fmt === 4 ? 2 : 0; if(score && (pid === 3 || pid === 0) && (!best || score > best.score)) best = { so, fmt, score }; }
+    if(!best) return { buf, added:0 };
+    const so = best.so;
+    if(best.fmt === 4){ const sc = dv.getUint16(so + 6) / 2, eo = so + 14, st = eo + sc*2 + 2, dl = st + sc*2, ro = dl + sc*2;
+      for(let k = 0; k < sc; k++){ const end = dv.getUint16(eo + k*2), start = dv.getUint16(st + k*2), delta = dv.getInt16(dl + k*2), rof = dv.getUint16(ro + k*2);
+        for(let c = start; c <= end && c !== 0xFFFF; c++){ let g; if(!rof) g = (c + delta) & 0xFFFF; else { const a = ro + k*2 + rof + (c - start)*2; g = dv.getUint16(a); if(g) g = (g + delta) & 0xFFFF; } if(g) map.set(c, g); } } }
+    else { const ng = dv.getUint32(so + 12); for(let k = 0; k < ng; k++){ const o = so + 16 + k*12, a = dv.getUint32(o), b = dv.getUint32(o+4), g0 = dv.getUint32(o+8); for(let c = a; c <= b; c++) map.set(c, g0 + c - a); } }
+    // compléter : l'autre casse, puis les lettres accentuées
+    let added = 0; const put = (c, from) => { if(!map.has(c) && map.has(from)){ map.set(c, map.get(from)); added++; } };
+    for(let c = 97; c <= 122; c++){ put(c - 32, c); put(c, c - 32); }
+    [['àáâãäå','a'],['èéêë','e'],['ìíîï','i'],['òóôõö','o'],['ùúûü','u'],['ç','c'],['ñ','n'],['ýÿ','y']].forEach(([list, base])=>{
+      for(const ch of list){ put(ch.charCodeAt(0), base.charCodeAt(0)); put(ch.toUpperCase().charCodeAt(0), base.toUpperCase().charCodeAt(0)); } });
+    if(!added) return { buf, added:0 };
+    // écrire la nouvelle table : format 4 (plan de base), et format 12 en plus s'il y a des caractères au-delà
+    const codes = [...map.keys()].sort((a, b)=>a - b), bmp = codes.filter(c=>c < 0xFFFF);
+    const segs = []; bmp.forEach(c=>{ const g = map.get(c), L_ = segs[segs.length-1]; if(L_ && c === L_.e + 1 && g === L_.g + (c - L_.s)) L_.e = c; else segs.push({ s:c, e:c, g }); });
+    segs.push({ s:0xFFFF, e:0xFFFF, g:0 });
+    const sc = segs.length, len4 = 16 + sc*8, big = codes.some(c=>c > 0xFFFF);
+    const groups = []; if(big) codes.forEach(c=>{ const g = map.get(c), L_ = groups[groups.length-1]; if(L_ && c === L_.e + 1 && g === L_.g + (c - L_.s)) L_.e = c; else groups.push({ s:c, e:c, g }); });
+    const len12 = big ? 16 + groups.length*12 : 0, nsubs = big ? 2 : 1, cmLen = 4 + nsubs*8 + len4 + len12;
+    const cb = new DataView(new ArrayBuffer(cmLen)); cb.setUint16(0, 0); cb.setUint16(2, nsubs);
+    cb.setUint16(4, 3); cb.setUint16(6, 1); cb.setUint32(8, 4 + nsubs*8); if(big){ cb.setUint16(12, 3); cb.setUint16(14, 10); cb.setUint32(16, 4 + nsubs*8 + len4); }
+    let o = 4 + nsubs*8; const log2 = Math.floor(Math.log2(sc)), sr = 2 * Math.pow(2, log2);
+    cb.setUint16(o, 4); cb.setUint16(o+2, len4); cb.setUint16(o+4, 0); cb.setUint16(o+6, sc*2); cb.setUint16(o+8, sr); cb.setUint16(o+10, log2); cb.setUint16(o+12, sc*2 - sr);
+    segs.forEach((sg, k)=>{ cb.setUint16(o+14 + k*2, sg.e); cb.setUint16(o+16 + sc*2 + k*2, sg.s); cb.setUint16(o+16 + sc*4 + k*2, sg.s === 0xFFFF ? 1 : (sg.g - sg.s) & 0xFFFF); cb.setUint16(o+16 + sc*6 + k*2, 0); });
+    if(big){ o += len4; cb.setUint16(o, 12); cb.setUint16(o+2, 0); cb.setUint32(o+4, len12); cb.setUint32(o+8, 0); cb.setUint32(o+12, groups.length);
+      groups.forEach((gr, k)=>{ cb.setUint32(o+16 + k*12, gr.s); cb.setUint32(o+20 + k*12, gr.e); cb.setUint32(o+24 + k*12, gr.g); }); }
+    // reconstruire le fichier : les mêmes tables, la nouvelle « cmap » à la place de l'ancienne, alignées sur 4 octets, sommes de contrôle à jour
+    const parts = tabs.map(t=>({ tag:t.tag, data:t.tag === 'cmap' ? new Uint8Array(cb.buffer) : new Uint8Array(buf, t.off, t.len) })).sort((a, b)=>a.tag < b.tag ? -1 : 1);
+    const hdr = 12 + parts.length*16; let total = hdr; parts.forEach(pt=>{ pt.off = total; total += (pt.data.length + 3) & ~3; });
+    const out = new Uint8Array(total), od = new DataView(out.buffer); out.set(new Uint8Array(buf, 0, 12), 0);
+    const sum = (u8, off, l) => { let s_ = 0; const dv2 = new DataView(u8.buffer, u8.byteOffset); for(let i = 0; i < l; i += 4){ let w = 0; for(let j = 0; j < 4; j++) w = (w * 256) + (i + j < l ? dv2.getUint8(off + i + j) : 0); s_ = (s_ + w) >>> 0; } return s_; };
+    parts.forEach((pt, i)=>{ out.set(pt.data, pt.off); const r = 12 + i*16; for(let j = 0; j < 4; j++) od.setUint8(r + j, pt.tag.charCodeAt(j)); od.setUint32(r + 8, pt.off); od.setUint32(r + 12, pt.data.length); });
+    const head = parts.find(pt=>pt.tag === 'head'); if(head) od.setUint32(head.off + 8, 0);
+    parts.forEach((pt, i)=> od.setUint32(12 + i*16 + 4, sum(out, pt.off, pt.data.length)));
+    if(head) od.setUint32(head.off + 8, (0xB1B0AFBA - sum(out, 0, total)) >>> 0);
+    return { buf:out.buffer, added };
+  }catch(e){ return { buf, added:0 }; }
+}
 function tpRegisterMyFont(rec){
   if(TP_FONTS.some(f=>f.id===rec.id)) return Promise.resolve();
   // la police porte le nom de son fichier (avec un numéro si ce nom est déjà pris par une autre police de la liste)
   let fam = String(rec.label || 'Ma police').replace(/['"\\,;]/g, '').trim() || 'Ma police', n = 2; const base = fam;
   while(TP_FONTS.some(f=>tpFontRealName(f).toLowerCase()===fam.toLowerCase())) fam = base + ' (' + (n++) + ')';
-  let ff; try{ ff = new FontFace(fam, rec.data); }catch(e){ return Promise.resolve(); }
+  const fx = tpFontFillCase(rec.data);   // une casse ou des accents manquants : complétés avec les dessins existants
+  let ff; try{ ff = new FontFace(fam, fx.buf); }catch(e){ return Promise.resolve(); }
   return ff.load().then(f=>{
     document.fonts.add(f);
     TP_FONT_CAT_OF[rec.id] = 'mine';
@@ -958,6 +1015,7 @@ function tpFontImport(){
       return tpRegisterMyFont(rec).then(()=>{
         if(!TP_FONTS.some(f=>f.id===rec.id)){ alert(L('Cette police n\u2019a pas pu être chargée.','This font could not be loaded.')); return; }
         idbGet(TP_MY_FONTS_KEY).then(list=>idbSet(TP_MY_FONTS_KEY, (list||[]).concat([rec]))).catch(()=>{});
+        if(tpFontFillCase(buf).added && typeof toast === 'function') toast(L('Ta police n\u2019avait qu\u2019une casse (ou pas d\u2019accents) : les lettres manquantes reprennent tes dessins.','Your font had only one letter case (or no accents): the missing letters reuse your drawings.'));
         tpFmSnap = null;
         tpFmPick(tpSel + '|' + rec.id);   // elle s'applique tout de suite à ce qui est sélectionné
         tpRenderToolbar(); tpFmSetCat('mine');
