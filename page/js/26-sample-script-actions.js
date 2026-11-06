@@ -1021,7 +1021,7 @@ const ACTIONS = {
   restoreScene, purgeScene, createVersion, restoreVersion, setFormat, saveSettings,
   compareVersion, closeCompare,
   toggleTagFilter, showCharDetail, runReportChar, reportPreset,
-  tpPill, tpPanelTab, tpFmFav, tpFullscreen, tpFullscreenExit, tpTbFont, tpTbColorToggle, tpTbColor, tpTbSizeStep, tpTbFmt, tpTbAlign, tpTbReset, tpFmPick, tpFmSetCat, tpFontImport, tpSetFont, tpSetAlign, tpSetColor, tpSetBg, tpSetPattern, tpRemoveImage,
+  tpPill, tpPanelTab, tpFmFav, tpFullscreen, tpFullscreenExit, tpTbFont, tpTbColorToggle, tpTbColor, tpTbSizeStep, tpTbFmt, tpTbAlign, tpTbReset, tpTbRot, tpFmPick, tpFmSetCat, tpFontImport, tpSetFont, tpSetAlign, tpSetColor, tpSetBg, tpSetPattern, tpRemoveImage,
   tpToggleDraw, tpFinishDraw, tpClearDrawing, tpSetPenColor, tpSetPenSize,
   tpFreeImgCenter, tpFreeImgRatio, tpFreeImgRemove, tpFtxAdd, tpFtxDel,
   toggleTheme, goToPage, toggleTypewriterMode,

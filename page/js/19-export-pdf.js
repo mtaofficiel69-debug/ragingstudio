@@ -262,6 +262,9 @@ function rpFountainUnderline(el, t){
    position, sa largeur utile, sa police et son alignement. Rien n'est
    décidé ici — on ne fait que constater ce que le navigateur a calculé. */
 function pdfReadSheet(sheet){
+  // Page de titre : les textes tournés sont relevés « droits » (leur rotation est ôtée le temps du relevé, puis remise),
+  // et l'angle et le centre du bloc sont notés : le PDF les redessine tournés (voir tpRasterBlock)
+  const tpRot = [...sheet.querySelectorAll('[data-tprot]')].map(n => { const t = n.style.transform; n.style.transform = t.replace(/\s*rotate\([^)]*\)/, ''); return [n, t]; });
   const pr = sheet.getBoundingClientRect();
   const scs = getComputedStyle(sheet);
   // Ton d'encre "discret" (numéro de scène en marge…) : relevé sur une
@@ -386,6 +389,7 @@ function pdfReadSheet(sheet){
     const marks = pdfMarksFor(el, own, text);   // v85
 
     page.blocks.push({
+      _rotEl: tpRot.length ? el.closest('[data-tprot]') : null,
       text,
       xPt: (r.left - pr.left + padL) * PX_TO_PT,
       yPt: (r.top - pr.top + baseline) * PX_TO_PT,
@@ -410,6 +414,10 @@ function pdfReadSheet(sheet){
     });
   });
 
+  page.blocks.forEach(b => { const n = b._rotEl; delete b._rotEl; if(!n) return;
+    const q = n.getBoundingClientRect(); b.rot = +n.getAttribute('data-tprot') || 0;
+    b.cxPt = ((q.left + q.right) / 2 - pr.left) * PX_TO_PT; b.cyPt = ((q.top + q.bottom) / 2 - pr.top) * PX_TO_PT; });
+  tpRot.forEach(([n, t]) => { n.style.transform = t; });
   // Cadres des cartons : le PDF ne connaît pas les bordures CSS, on les redessine en traits.
   sheet.querySelectorAll('.line--card').forEach(el=>{
     const cs = getComputedStyle(el), r = el.getBoundingClientRect();
@@ -489,7 +497,7 @@ function pdfPaintPage(doc, page){
 
   page.blocks.forEach(b=>{
     // v51 : page de titre seulement — polices ajoutées et texte souligné (voir tpRasterBlock).
-    if(page.pattern && b.text && b.fam && (tpIsRasterFam(b.fam) || b.under)){ try{ tpRasterBlock(doc, b); return; }catch(e){} }
+    if(page.pattern && b.text && b.fam && (tpIsRasterFam(b.fam) || b.under || b.rot)){ try{ tpRasterBlock(doc, b); return; }catch(e){} }   // un texte tourné aussi
     const isBold = !!b.bold;
     doc.setFont(b.font, isBold ? (b.italic ? 'bolditalic' : 'bold') : (b.italic ? 'italic' : 'normal'));
     doc.setFontSize(b.fontPt);
