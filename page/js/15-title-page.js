@@ -460,12 +460,20 @@ function tpSetPos(d, k, x, y){
   if(!x && !y) delete d.pos[k]; else d.pos[k] = { x, y };
 }
 /* Pose (ou retire) le décalage de chaque bloc. Idempotent : appelé à la construction de la page, à chaque changement de style et après chaque re-décoration. */
+/* La rotation de chaque texte (en degrés, design.rot) : elle tourne le bloc autour de son centre, après son décalage. */
+function tpRotOf(d, k){ const v = d && d.rot && +d.rot[k]; return isFinite(v) ? v : 0; }
+function tpSetRot(d, k, deg){
+  if(!d.rot || typeof d.rot !== 'object') d.rot = {};
+  deg = Math.round(((+deg || 0) % 360 + 540) % 360 - 180);   // de -180 à 180
+  if(!deg) delete d.rot[k]; else d.rot[k] = deg;
+}
 function tpApplyPositions(tp, d){
   if(!tp) return;
   d = d || ensureTPDesign(S.project);
   const put = (n, k) => {
-    const q = tpPosOf(d, k);
-    n.style.transform = (q.x || q.y) ? `translate(calc(var(--page-w,21cm) * ${q.x/100}), calc(var(--page-h,29.7cm) * ${q.y/100}))` : '';
+    const q = tpPosOf(d, k), a = tpRotOf(d, k);
+    n.style.transform = ((q.x || q.y) ? `translate(calc(var(--page-w,21cm) * ${q.x/100}), calc(var(--page-h,29.7cm) * ${q.y/100}))` : '') + (a ? ` rotate(${a}deg)` : '');
+    if(a) n.setAttribute('data-tprot', a); else n.removeAttribute('data-tprot');   // l'export PDF relève les textes tournés à part
   };
   for(const k in TP_POS_SEL){
     const n = tp.querySelector(TP_POS_SEL[k]); if(!n) continue;
@@ -589,7 +597,8 @@ function tpMakeMoveHandle(tp){
     e.preventDefault(); e.stopPropagation();
     const k = h.dataset.k; if(!tpEl(k)) return;
     const d = ensureTPDesign(S.project);
-    tpSetPos(d, k, 0, tpIsFtx(k) ? tpPosOf(d, k).y : 0);   // texte libre : recentré, à la même hauteur tpApplyPositions(tp, d); tpUpdateMoveHandle(); scheduleAutosave();
+    tpSetPos(d, k, 0, tpIsFtx(k) ? tpPosOf(d, k).y : 0);   // texte libre : recentré, à la même hauteur
+    tpApplyPositions(tp, d); tpUpdateMoveHandle(); scheduleAutosave();
   });
   tp.appendChild(h);
   return h;

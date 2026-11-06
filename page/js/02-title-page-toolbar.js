@@ -355,6 +355,7 @@ function tpToolbarHtml(){
   return `<span class="tp-fm-wrap"><button type="button" class="tp-tb-btn tp-tb-font ${tpFmOpen?'open':''}" data-act="tpTbFont" title="${none?hint:L('Police','Font')}"${off}><span class="tp-fm-name" style="font-family:${f.family}">${esc(tpFontRealName(f))}</span><span class="tp-fm-caret">▾</span></button>${tpFmOpen?tpFmPopHtml(k):''}</span>
     ${sizeGroup}
     <span class="tp-tb-sep"></span>${alignBtns}
+    <span class="tp-tb-sep"></span><span class="tp-tb-size tp-tb-rot"><button type="button" class="tp-tb-btn" data-act="tpTbRot" data-id="-15" title="${(page||none)?hint:L('Tourner vers la gauche (15°)','Rotate left (15°)')}"${dis}>↺</button><input id="tpTbRot" type="text" inputmode="numeric" value="${(page||none)?'':tpRotOf(d,k)+'°'}" title="${(page||none)?hint:L('Angle (en degrés, de -180 à 180) : tape une valeur puis Entrée','Angle (degrees, -180 to 180): type a value then Enter')}"${dis}><button type="button" class="tp-tb-btn" data-act="tpTbRot" data-id="15" title="${(page||none)?hint:L('Tourner vers la droite (15°)','Rotate right (15°)')}"${dis}>↻</button></span>
     <span class="tp-tb-sep"></span>
     <span class="tp-col-wrap"><button type="button" class="tp-tb-btn" data-act="tpTbColorToggle" title="${none?hint:L('Couleur du texte','Text color')}"${off}><span class="tp-tb-dot" style="background:${col}"></span><span class="tp-fm-caret">▾</span></button>${colPop}</span>
     <span class="tp-tb-sep"></span><button type="button" class="tp-tb-btn txt" data-act="tpTbReset" title="${(page||none)?hint:L('Remettre ce texte comme la page','Reset this text to the page style')}"${dis}>${L('Réinitialiser','Reset')}</button>${tpIsFtx(k) ? `<button type="button" class="tp-tb-btn tp-tb-del" data-act="tpFtxDel" data-id="${k}" title="${L('Supprimer ce texte','Delete this text')}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h11M6.5 4V2.5h3V4M4 4l.7 9.5h6.6L12 4M6.8 6.5v4.5M9.2 6.5v4.5"/></svg></button>` : ''}`;
@@ -502,6 +503,9 @@ function tpSetSize(v){
   ensureTPDesign(S.project)[tpEl(tpSel).size] = n;
   tpStyleChanged();
 }
+/* tourner le texte choisi : par pas de 15° (↺ ↻), ou d'un angle tapé (Maj : par pas de 1°) */
+function tpTbRot(id){ if(tpSel==='page' || tpSel==='none') return; const d = ensureTPDesign(S.project); tpSetRot(d, tpSel, tpRotOf(d, tpSel) + (parseInt(id,10)||0)); tpStyleChanged(); }
+function tpTbRotSet(v){ if(tpSel==='page' || tpSel==='none') return; const n = parseFloat(String(v).replace(',', '.').replace(/[^0-9.\-]/g,'')); if(!isFinite(n)) { tpRenderToolbar(); return; } tpSetRot(ensureTPDesign(S.project), tpSel, n); tpStyleChanged(); }
 function tpTbSizeStep(id){ if(tpSel==='page' || tpSel==='none') return; tpSetSize(tpSizeOf(ensureTPDesign(S.project), tpSel) + (parseInt(id,10)||0)); }
 function tpTbFmt(id){
   if(tpSel==='page' || tpSel==='none') return;
@@ -522,6 +526,7 @@ function tpTbReset(){
   d[tpSel+'Font'] = ''; d[tpSel+'Color'] = ''; d[tpSel+'Align'] = '';
   if(d.fmt) delete d.fmt[tpSel];
   if(d.pos && !e.free) delete d.pos[tpSel];   // un texte libre garde sa place
+  if(d.rot) delete d.rot[tpSel];               // et le texte redevient droit
   d[e.size] = def[e.size];
   tpStyleChanged();
 }
@@ -652,10 +657,11 @@ document.addEventListener('input', e=>{
     const dot = document.querySelector('.tp-tb .tp-tb-dot'); if(dot) dot.style.background = t.value;
   }
 });
-document.addEventListener('change', e=>{ if(e.target && e.target.id==='tpTbSize') tpSetSize(e.target.value); });
+document.addEventListener('change', e=>{ if(e.target && e.target.id==='tpTbSize') tpSetSize(e.target.value); if(e.target && e.target.id==='tpTbRot') tpTbRotSet(e.target.value); });
 document.addEventListener('keydown', e=>{
   const t = e.target;
   if(t && t.id==='tpTbSize' && e.key==='Enter'){ e.preventDefault(); tpSetSize(t.value); return; }
+  if(t && t.id==='tpTbRot' && e.key==='Enter'){ e.preventDefault(); tpTbRotSet(t.value); return; }
   if(t && t.classList && t.classList.contains('tp-fm-search')){
     if(e.key==='ArrowDown'){ e.preventDefault(); tpFmMove(1); return; }
     if(e.key==='ArrowUp'){ e.preventDefault(); tpFmMove(-1); return; }
@@ -909,7 +915,16 @@ function tpRasterBlock(doc, b){
       ctx.beginPath(); ctx.moveTo(x0, y + b.fontPt*K*0.13); ctx.lineTo(x0 + w, y + b.fontPt*K*0.13); ctx.stroke();
     }
   });
-  doc.addImage(cv.toDataURL('image/png'), 'PNG', b.xPt - pad / K, b.yPt - top, cv.width / K, cv.height / K, undefined, 'FAST');
+  let X = b.xPt - pad / K, Y = b.yPt - top, out = cv;
+  if(b.rot){   // un texte tourné : l'image du texte tourne autour du centre de son bloc, comme à l'écran
+    const a = b.rot * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), cx = (b.cxPt - X) * K, cy = (b.cyPt - Y) * K;
+    const pts = [[0, 0], [cv.width, 0], [0, cv.height], [cv.width, cv.height]].map(([px, py]) => [cx + (px - cx) * ca - (py - cy) * sa, cy + (px - cx) * sa + (py - cy) * ca]);
+    const x0 = Math.min(...pts.map(p=>p[0])), y0 = Math.min(...pts.map(p=>p[1])), x1 = Math.max(...pts.map(p=>p[0])), y1 = Math.max(...pts.map(p=>p[1]));
+    out = document.createElement('canvas'); out.width = Math.ceil(x1 - x0); out.height = Math.ceil(y1 - y0);
+    const c2 = out.getContext('2d'); c2.translate(-x0, -y0); c2.translate(cx, cy); c2.rotate(a); c2.translate(-cx, -cy); c2.drawImage(cv, 0, 0);
+    X += x0 / K; Y += y0 / K;
+  }
+  doc.addImage(out.toDataURL('image/png'), 'PNG', X, Y, out.width / K, out.height / K, undefined, 'FAST');
 }
 const TP_PATTERNS = [
   {id:'none', label:'Aucun'},
