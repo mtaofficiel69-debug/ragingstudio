@@ -452,7 +452,7 @@
             <label class="rd-fc rd-fc-cust" title="${esc(L('Autre couleur…', 'Other colour…'))}"><i></i>${esc(L('Autre', 'Other'))}<input type="color" class="rd-flt-col" value="#7a3cc8" aria-label="${esc(L('Autre couleur de filtre', 'Other filter colour'))}"></label>
             <span class="rd-flt-k" hidden><span class="rd-l">${esc(L('Intensité', 'Strength'))}</span><input type="range" class="rd-flt-r" min="10" max="100" step="5" value="100" aria-label="${esc(L('Intensité du filtre', 'Filter strength'))}"><span class="rd-v rd-flt-v">100 %</span></span>
           </div>
-          <div class="rd-stage"><div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><canvas class="rd-pv" width="960" height="540" hidden></canvas><div class="rd-tint"></div><canvas class="rd-selov" width="960" height="540"></canvas><div class="rp-draw-guides"></div>
+          <div class="rd-work"><div class="rd-stage"><div class="rd-zoom" role="group" aria-label="${esc(L('Zoom', 'Zoom'))}"><button type="button" data-z="out" title="${esc(L('Dézoomer (Ctrl −)', 'Zoom out (Ctrl −)'))}">${svg('<path d="M3.5 8h9"/>', 13)}</button><button type="button" data-z="fit" class="rd-zv" title="${esc(L('Ajuster à la fenêtre (Ctrl 0)', 'Fit to window (Ctrl 0)'))}">100 %</button><button type="button" data-z="in" title="${esc(L('Zoomer (Ctrl +) · Ctrl + molette : zoomer là où pointe la souris · Espace + glisser : se déplacer', 'Zoom in (Ctrl +) · Ctrl + wheel: zoom where the mouse points · Space + drag: move around'))}">${svg('<path d="M3.5 8h9M8 3.5v9"/>', 13)}</button></div><div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-lb" width="960" height="540"></canvas><canvas class="rd-la" width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><canvas class="rd-pv" width="960" height="540" hidden></canvas><div class="rd-tint"></div><canvas class="rd-selov" width="960" height="540"></canvas><div class="rp-draw-guides"></div>
             <div class="rp-crop-bar rd-selbar" hidden><span class="h">${esc(L('Glisse pour déplacer · coins pour agrandir · rond pour tourner', 'Drag to move · corners to resize · circle to rotate'))}</span>
               <button type="button" data-sel="dup" title="${esc(L('Dupliquer (Ctrl+D) : une copie se pose à côté, prête à être déplacée', 'Duplicate (Ctrl+D): a copy lands next to it, ready to move'))}">${svg('<rect x="5.5" y="5.5" width="8" height="8" rx="1.3"/><path d="M10.5 3.5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h.5"/>', 14)}<span>${esc(L('Dupliquer', 'Duplicate'))}</span></button>
               <button type="button" data-sel="flipx" title="${esc(L('Miroir gauche ↔ droite', 'Mirror left ↔ right'))}">${svg('<path d="M8 1.8v12.4" stroke-dasharray="1.6 1.6"/><path d="M5.8 4.2L2 11.8h3.8zM10.2 4.2l3.8 7.6h-3.8z"/>', 14)}<span>${esc(L('Miroir', 'Mirror'))}</span></button>
@@ -467,7 +467,20 @@
               <input type="range" min="0" max="1000" value="500" aria-label="${esc(L('Zoom', 'Zoom'))}">
               <button type="button" data-crop="in" title="${esc(L('Zoomer', 'Zoom in'))}">${svg('<path d="M3.5 8h9M8 3.5v9"/>', 13)}</button>
               <button type="button" class="ok" data-crop="ok" title="${esc(L('Valider le cadrage (Entrée)', 'Apply the framing (Enter)'))}">${esc(L('OK', 'OK'))}</button></div></div></div>
-          <div class="rd-status" aria-live="polite"><span class="rd-st-tool"></span><span class="rd-st-keys"><kbd>Ctrl</kbd><kbd>Z</kbd> ${esc(L('annuler', 'undo'))}<i></i><kbd>V</kbd> ${esc(L('sélection', 'select'))}<i></i><kbd>[</kbd><kbd>]</kbd> ${esc(L('épaisseur', 'size'))}</span></div>
+          <div class="rd-layers" aria-label="${esc(L('Calques', 'Layers'))}">
+            <div class="rd-lh"><span>${esc(L('Calques', 'Layers'))}</span><button type="button" data-ly="add" title="${esc(L('Nouveau calque, au-dessus du calque actif', 'New layer, above the active one'))}">${svg('<path d="M8 3.5v9M3.5 8h9"/>', 13)}</button></div>
+            <div class="rd-ll" role="listbox" aria-label="${esc(L('Liste des calques', 'Layer list'))}"></div>
+            <div class="rd-lo"><span class="rd-l">${esc(L('Opacité', 'Opacity'))}</span><input type="range" class="rd-ly-op" min="0" max="100" step="5" value="100" aria-label="${esc(L('Opacité du calque', 'Layer opacity'))}"><span class="rd-v rd-ly-opv">100 %</span></div>
+            <div class="rd-lb-acts">
+              <button type="button" data-ly="up" title="${esc(L('Monter le calque', 'Move layer up'))}">${svg('<path d="M8 12.5v-9M4.5 7L8 3.5 11.5 7"/>', 13)}</button>
+              <button type="button" data-ly="down" title="${esc(L('Descendre le calque', 'Move layer down'))}">${svg('<path d="M8 3.5v9M4.5 9L8 12.5 11.5 9"/>', 13)}</button>
+              <button type="button" data-ly="dup" title="${esc(L('Dupliquer le calque', 'Duplicate layer'))}">${svg('<rect x="5.5" y="5.5" width="8" height="8" rx="1.3"/><path d="M10.5 3.5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h.5"/>', 13)}</button>
+              <button type="button" data-ly="merge" title="${esc(L('Fusionner avec le calque du dessous', 'Merge with the layer below'))}">${svg('<path d="M4 3.5l4 4 4-4M8 7.5v5M3.5 12.5h9"/>', 13)}</button>
+              <button type="button" data-ly="del" title="${esc(L('Supprimer le calque', 'Delete layer'))}">${svg('<path d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8"/>', 13)}</button>
+            </div>
+          </div>
+          </div>
+          <div class="rd-status" aria-live="polite"><span class="rd-st-tool"></span><span class="rd-st-keys"><kbd>Ctrl</kbd><kbd>Z</kbd> ${esc(L('annuler', 'undo'))}<i></i><kbd>V</kbd> ${esc(L('sélection', 'select'))}<i></i><kbd>[</kbd><kbd>]</kbd> ${esc(L('épaisseur', 'size'))}<i></i><kbd>Ctrl</kbd>${esc(L('+ molette zoom', '+ wheel zoom'))}<i></i><kbd>${esc(L('Espace', 'Space'))}</kbd> ${esc(L('déplacer', 'pan'))}</span></div>
         </div></div>
       <div class="rp-draw-act"><button type="button" class="btn btn-ghost" data-a="cancel">${esc(L('Annuler', 'Cancel'))}</button>
         <button type="button" class="btn btn-primary" data-a="save">${svg('<path d="M3.5 8.5l3 3 6-7"/>', 15)}${esc(L('Enregistrer le plan', 'Save the shot'))}</button></div></div>`;
@@ -475,7 +488,7 @@
     const cvw = bg.querySelector('.rp-draw-cv'), cv = bg.querySelector('canvas'), cx = cv.getContext('2d', { willReadFrequently:true });
     const ov = bg.querySelector('.rd-ov'), ox = ov.getContext('2d');
     cx.fillStyle = '#fff'; cx.fillRect(0, 0, 960, 540);
-    if(frame){
+    if(frame && !(frame.lay && frame.lay.l && frame.lay.l.length)){
       const im = new Image();
       im.onload = () => { const k = Math.min(960 / im.naturalWidth, 540 / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k; cx.drawImage(im, (960 - w) / 2, (540 - h) / 2, w, h); origIm = im; };
       im.src = frame.raw || frame.src;
@@ -507,8 +520,7 @@
     /* le filtre « cuit » dans l'image enregistrée : exactement le calcul de l'aperçu (niveaux de gris CSS puis produit) */
     function fltBake(withLayer){
       const t = document.createElement('canvas'); t.width = 960; t.height = 540;
-      const tx = t.getContext('2d'); tx.drawImage(cv, 0, 0);
-      if(withLayer){ tx.save(); tx.globalAlpha = tool === 'marker' ? 0.42 * opac : opac; if(tool === 'marker') tx.globalCompositeOperation = 'multiply'; tx.drawImage(ov, 0, 0); tx.restore(); }
+      const tx = t.getContext('2d'); lyFlatten(tx, withLayer);
       const img = tx.getImageData(0, 0, 960, 540), d = img.data, k = flt.k, m = fltMul();
       for(let i = 0; i < d.length; i += 4){
         const r = d[i], g = d[i + 1], b = d[i + 2];
@@ -524,14 +536,14 @@
     const pv = bg.querySelector('.rd-pv'), pvx = pv.getContext('2d');
     let fltDirty = true, fltLast = 0;
     ['pointerdown', 'pointermove', 'pointerup', 'keydown', 'keyup', 'click', 'input', 'wheel'].forEach(ev => bg.addEventListener(ev, () => { fltDirty = true; }, true));
-    (function fltLoop(t){
+    requestAnimationFrame(function fltLoop(t){
       if(!bg.isConnected) return;
       if(flt.c !== 'none' && (fltDirty || t - fltLast > 400)){ fltDirty = false; fltLast = t; pvx.clearRect(0, 0, 960, 540); pvx.drawImage(fltBake(true), 0, 0); }
       requestAnimationFrame(fltLoop);
-    })(0);
-    const snap = () => { hist.push(cx.getImageData(0, 0, 960, 540)); if(hist.length > 30) hist.shift(); fwd.length = 0; };
+    });
+    const snap = () => { const h = cx.getImageData(0, 0, 960, 540); h._ly = lyCur().id; hist.push(h); if(hist.length > 30) hist.shift(); fwd.length = 0; };
     const pt = e => { const r = cv.getBoundingClientRect(); return { x:(e.clientX - r.left) * 960 / r.width, y:(e.clientY - r.top) * 540 / r.height, p:(e.pointerType === 'pen' && e.pressure) ? e.pressure : 0.5 }; };
-    const style = (p, c) => { c = c || cx; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = tool === 'eraser' ? '#fff' : color; c.fillStyle = c.strokeStyle; c.lineWidth = (tool === 'eraser' ? size * 3 : tool === 'marker' ? size * 2.5 + 6 : size) * (p === 0.5 ? 1 : (0.5 + p)); c.setLineDash(dash && tool !== 'eraser' && tool !== 'marker' ? [c.lineWidth * 2.4 + 2, c.lineWidth * 2 + 4] : []); };
+    const style = (p, c) => { c = c || cx; c.globalCompositeOperation = (tool === 'eraser' && c === cx && !lyCur().paper) ? 'destination-out' : 'source-over'; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = tool === 'eraser' ? '#fff' : color; c.fillStyle = c.strokeStyle; c.lineWidth = (tool === 'eraser' ? size * 3 : tool === 'marker' ? size * 2.5 + 6 : size) * (p === 0.5 ? 1 : (0.5 + p)); c.setLineDash(dash && tool !== 'eraser' && tool !== 'marker' ? [c.lineWidth * 2.4 + 2, c.lineWidth * 2 + 4] : []); };
     const isShape = () => tool === 'line' || tool === 'arrow' || tool === 'rect' || tool === 'ellipse';
     /* trait sur un calque à part (marqueur, opacité < 100 %, pointillés) : posé d'un coup à la fin, sans surépaisseur aux jointures */
     const layered = () => tool === 'marker' || (tool !== 'eraser' && (opac < 1 || dash));
@@ -603,7 +615,7 @@
        pour ne pas laisser de liseré blanc. */
     function bucketAt(p){
       const W = 960, H = 540, x0 = Math.max(0, Math.min(W - 1, Math.floor(p.x))), y0 = Math.max(0, Math.min(H - 1, Math.floor(p.y)));
-      const img = cx.getImageData(0, 0, W, H), d = img.data, px = new Uint32Array(d.buffer);
+      const img = cx.getImageData(0, 0, W, H), px = new Uint32Array(img.data.buffer), d = LY.length > 1 ? lyFlatData() : img.data;
       const probe = document.createElement('canvas').getContext('2d'); probe.fillStyle = color; probe.fillRect(0, 0, 1, 1);
       const c = probe.getImageData(0, 0, 1, 1).data;                          // couleur choisie → RGB (tout format CSS)
       const i0 = (y0 * W + x0) * 4, sr = d[i0], sg = d[i0 + 1], sb = d[i0 + 2];
@@ -631,13 +643,14 @@
       cx.putImageData(img, 0, 0);
     }
     function pickAt(p){
-      const d = cx.getImageData(Math.max(0, Math.min(959, Math.floor(p.x))), Math.max(0, Math.min(539, Math.floor(p.y))), 1, 1).data;
+      const fx0 = Math.max(0, Math.min(959, Math.floor(p.x))), fy0 = Math.max(0, Math.min(539, Math.floor(p.y)));
+      const d = LY.length > 1 ? lyFlatData().slice((fy0 * 960 + fx0) * 4, (fy0 * 960 + fx0) * 4 + 4) : cx.getImageData(fx0, fy0, 1, 1).data;
       setColor('#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join(''));
     }
     function mirror(){
       commitText(); cropEnd(true); snap();
       const t = document.createElement('canvas'); t.width = 960; t.height = 540; t.getContext('2d').drawImage(cv, 0, 0);
-      cx.save(); cx.setTransform(-1, 0, 0, 1, 960, 0); cx.drawImage(t, 0, 0); cx.restore();
+      cx.clearRect(0, 0, 960, 540); cx.save(); cx.setTransform(-1, 0, 0, 1, 960, 0); cx.drawImage(t, 0, 0); cx.restore();
       lastCrop = null;
     }
     /* cadrer : l'image (celle d'origine si rien n'a encore été dessiné, sinon le dessin actuel) se déplace
@@ -661,7 +674,7 @@
       cropDraw();
     }
     function cropDraw(){
-      const c = crop; cx.fillStyle = '#fff'; cx.fillRect(0, 0, 960, 540);
+      const c = crop; lyBlank();
       cx.imageSmoothingQuality = 'high'; cx.drawImage(c.src, c.ox, c.oy, c.sw * c.s, c.sh * c.s);
       cropRange.value = Math.round(Math.log(c.s / c.min) / Math.log(c.max / c.min) * 1000);
     }
@@ -707,7 +720,7 @@
     });
     /* texte : un champ posé sur le dessin, validé par Entrée ou en cliquant ailleurs */
     function textAt(p){
-      const fpx = Math.round(size * 2.2 + 14), r = cv.getBoundingClientRect(), k = r.width / 960;
+      const fpx = Math.round(size * 2.2 + 14), r = { width:cv.offsetWidth }, k = r.width / 960;
       const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'rp-draw-txt'; inp.maxLength = 120;
       inp.placeholder = L('Texte…', 'Text…');
       inp.style.left = Math.round(p.x * k) + 'px'; inp.style.top = Math.round(p.y * k) + 'px';
@@ -729,7 +742,7 @@
        tourner (rond, Maj = pas de 15°), dupliquer, miroir, supprimer. Le blanc du papier ne suit pas (transparent). */
     const selov = bg.querySelector('.rd-selov'), sox = selov.getContext('2d'), selBar = bg.querySelector('.rd-selbar');
     const kSc = () => (cv.getBoundingClientRect().width || 960) / 960;
-    const isWhite = (d, q) => d[q] > 240 && d[q + 1] > 240 && d[q + 2] > 240;
+    const isWhite = (d, q) => d[q + 3] < 12 || (d[q] > 240 && d[q + 1] > 240 && d[q + 2] > 240);
     function selLift(mask, x0, y0, x1, y1, baseImg){
       const cur = cx.getImageData(0, 0, 960, 540), s = cur.data;
       x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(959, Math.ceil(x1)); y1 = Math.min(539, Math.ceil(y1));
@@ -747,8 +760,8 @@
         const i = y * 960 + x; if(mask && !mask[i]) continue;
         const q = i * 4; if(isWhite(s, q)) continue;
         const o = ((y - mny) * w + (x - mnx)) * 4;
-        fd[o] = s[q]; fd[o + 1] = s[q + 1]; fd[o + 2] = s[q + 2]; fd[o + 3] = 255;
-        if(!baseImg){ bd[q] = bd[q + 1] = bd[q + 2] = 255; bd[q + 3] = 255; }
+        fd[o] = s[q]; fd[o + 1] = s[q + 1]; fd[o + 2] = s[q + 2]; fd[o + 3] = s[q + 3];
+        if(!baseImg){ if(lyCur().paper){ bd[q] = bd[q + 1] = bd[q + 2] = 255; bd[q + 3] = 255; } else bd[q + 3] = 0; }
       }
       fxc.putImageData(fi, 0, 0);
       snap();                                                         // état d'avant : Échap / Ctrl+Z y reviennent
@@ -817,7 +830,7 @@
     function selLast(){
       if(tool !== 'select') setTool('select'); else commitText();
       const prev = hist[hist.length - 1];
-      if(!prev){ snack(L('Rien à prendre : dessine d’abord un trait.', 'Nothing to pick up: draw a stroke first.')); return; }
+      if(!prev || prev._ly !== lyCur().id){ snack(L('Rien à prendre : dessine d’abord un trait.', 'Nothing to pick up: draw a stroke first.')); return; }
       const cur = cx.getImageData(0, 0, 960, 540).data, pd = prev.data, m = new Uint8Array(960 * 540);
       let x0 = 960, y0 = 540, x1 = -1, y1 = -1;
       for(let i = 0; i < m.length; i++){ const q = i * 4; if(Math.abs(cur[q] - pd[q]) > 10 || Math.abs(cur[q + 1] - pd[q + 1]) > 10 || Math.abs(cur[q + 2] - pd[q + 2]) > 10){ m[i] = 1; const x = i % 960, y = (i / 960) | 0; if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y; } }
@@ -892,6 +905,175 @@
       return false;
     }
     selBar.addEventListener('mousedown', e => { if(e.target.closest('button')) e.preventDefault(); });
+    /* ===== CALQUES =====
+       Le calque actif EST le dessin principal (cv) : tous les outils travaillent dessus sans changement. Les calques
+       du dessous et du dessus sont peints sur deux toiles d'affichage (rd-lb / rd-la). Le premier calque, « Fond »,
+       est le papier blanc (la gomme y peint en blanc) ; les autres sont transparents (la gomme efface vraiment). */
+    const lbC = bg.querySelector('.rd-lb'), lbx = lbC.getContext('2d'), laC = bg.querySelector('.rd-la'), lax = laC.getContext('2d');
+    const lyNewCanvas = () => { const c = document.createElement('canvas'); c.width = 960; c.height = 540; return c; };
+    let lySeq = 0;
+    const LY = [{ id:++lySeq, name:L('Fond', 'Background'), vis:true, op:1, paper:true, c:lyNewCanvas() }];
+    let lyAct = 0;
+    function lyCur(){ return LY[lyAct]; }
+    function lyBlank(){ if(lyCur().paper){ cx.fillStyle = '#fff'; cx.fillRect(0, 0, 960, 540); } else cx.clearRect(0, 0, 960, 540); }
+    function lyStore(){ const c = LY[lyAct].c.getContext('2d'); c.clearRect(0, 0, 960, 540); c.drawImage(cv, 0, 0); }
+    function lyLoad(){ cx.save(); cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = 1; cx.clearRect(0, 0, 960, 540); cx.drawImage(LY[lyAct].c, 0, 0); cx.restore(); }
+    function lyFlatten(c, withOv){
+      c.fillStyle = '#fff'; c.fillRect(0, 0, 960, 540);
+      LY.forEach((ly, i) => {
+        if(!ly.vis) return;
+        c.save(); c.globalAlpha = ly.op; c.drawImage(i === lyAct ? cv : ly.c, 0, 0); c.restore();
+        if(i === lyAct && withOv){ c.save(); c.globalAlpha = (tool === 'marker' ? 0.42 * opac : opac) * ly.op; if(tool === 'marker') c.globalCompositeOperation = 'multiply'; c.drawImage(ov, 0, 0); c.restore(); }
+      });
+    }
+    function lyFlatData(){ const t = lyNewCanvas(), c = t.getContext('2d', { willReadFrequently:true }); lyFlatten(c); return c.getImageData(0, 0, 960, 540).data; }
+    function lyPaintSides(){
+      lbx.clearRect(0, 0, 960, 540); lax.clearRect(0, 0, 960, 540);
+      LY.forEach((ly, i) => { if(!ly.vis || i === lyAct) return; const c = i < lyAct ? lbx : lax; c.save(); c.globalAlpha = ly.op; c.drawImage(ly.c, 0, 0); c.restore(); });
+      cv.style.opacity = lyCur().vis ? String(lyCur().op) : '0';
+      fltDirty = true;
+    }
+    const EYE = svg('<path d="M1.8 8s2.3-4.3 6.2-4.3S14.2 8 14.2 8s-2.3 4.3-6.2 4.3S1.8 8 1.8 8z"/><circle cx="8" cy="8" r="1.9"/>', 14);
+    const EYE_OFF = svg('<path d="M2.5 2.5l11 11M6.4 4a6.6 6.6 0 0 1 1.6-.3c3.9 0 6.2 4.3 6.2 4.3a11 11 0 0 1-1.9 2.4M4.1 5.3A10.6 10.6 0 0 0 1.8 8s2.3 4.3 6.2 4.3a6 6 0 0 0 2.4-.5"/>', 14);
+    function lyThumb(i){
+      const t = document.createElement('canvas'); t.width = 48; t.height = 27; const c = t.getContext('2d');
+      c.fillStyle = LY[i].paper ? '#fff' : 'rgba(0,0,0,0)'; c.fillRect(0, 0, 48, 27); c.drawImage(i === lyAct ? cv : LY[i].c, 0, 0, 48, 27);
+      return t.toDataURL();
+    }
+    const lyList = bg.querySelector('.rd-ll'), lyOp = bg.querySelector('.rd-ly-op'), lyOpV = bg.querySelector('.rd-ly-opv');
+    function lyUI(){
+      lyList.innerHTML = LY.map((ly, i) => i).reverse().map(i => { const ly = LY[i];
+        return `<div class="rd-li${i === lyAct ? ' sel' : ''}${ly.vis ? '' : ' off'}" data-i="${i}" role="option" aria-selected="${i === lyAct}" title="${esc(L('Clique pour dessiner sur ce calque · double-clic pour le renommer', 'Click to draw on this layer · double-click to rename'))}">
+          <button type="button" class="rd-eye" data-ly="vis" data-i="${i}" title="${esc(ly.vis ? L('Masquer', 'Hide') : L('Afficher', 'Show'))}" aria-pressed="${ly.vis}">${ly.vis ? EYE : EYE_OFF}</button>
+          <img class="rd-lt${ly.paper ? ' paper' : ''}" alt="" src="${lyThumb(i)}"><span class="rd-ln">${esc(ly.name)}</span></div>`; }).join('');
+      lyOp.value = Math.round(lyCur().op * 100); lyOpV.textContent = Math.round(lyCur().op * 100) + ' %';
+      const many = LY.length > 1;
+      bg.querySelector('[data-ly="up"]').disabled = lyAct >= LY.length - 1;
+      bg.querySelector('[data-ly="down"]').disabled = lyAct <= 0;
+      bg.querySelector('[data-ly="merge"]').disabled = lyAct <= 0;
+      bg.querySelector('[data-ly="del"]').disabled = !many;
+    }
+    let lyThumbT = null;
+    const lyThumbSoon = () => { clearTimeout(lyThumbT); lyThumbT = setTimeout(() => { const im = lyList.querySelector('.rd-li.sel img'); if(im) im.src = lyThumb(lyAct); }, 250); };
+    ['pointerup', 'keyup', 'click'].forEach(ev => bg.addEventListener(ev, lyThumbSoon));
+    function lyGo(id){
+      const i = LY.findIndex(ly => ly.id === id); if(i < 0) return false;
+      if(i !== lyAct){ commitText(); cropEnd(true); lyStore(); lyAct = i; lyLoad(); lyPaintSides(); lyUI(); }
+      return true;
+    }
+    function lySwitch(i){ if(i === lyAct || !LY[i]) return; lyGo(LY[i].id); }
+    function lyAction(k, b){
+      commitText(); cropEnd(true);
+      if(k === 'vis'){ const i = +b.dataset.i; LY[i].vis = !LY[i].vis; lyPaintSides(); lyUI(); return; }
+      if(k === 'add'){
+        lyStore(); LY.splice(lyAct + 1, 0, { id:++lySeq, name:L('Calque ', 'Layer ') + (LY.filter(x => !x.paper).length + 1), vis:true, op:1, paper:false, c:lyNewCanvas() });
+        lyAct++; lyLoad(); lyPaintSides(); lyUI(); return;
+      }
+      if(k === 'dup'){
+        lyStore(); const src = LY[lyAct], c = lyNewCanvas(); c.getContext('2d').drawImage(src.c, 0, 0);
+        LY.splice(lyAct + 1, 0, { id:++lySeq, name:src.name + L(' (copie)', ' (copy)'), vis:true, op:src.op, paper:false, c });
+        lyAct++; lyLoad(); lyPaintSides(); lyUI(); return;
+      }
+      if(k === 'up' || k === 'down'){
+        const j = lyAct + (k === 'up' ? 1 : -1); if(j < 0 || j >= LY.length) return;
+        lyStore(); const t = LY[j]; LY[j] = LY[lyAct]; LY[lyAct] = t; lyAct = j; lyPaintSides(); lyUI(); return;
+      }
+      if(k === 'merge'){
+        if(lyAct <= 0) return;
+        lyStore(); const top = LY[lyAct], dst = LY[lyAct - 1], c = dst.c.getContext('2d');
+        if(top.vis){ c.save(); c.globalAlpha = top.op; c.drawImage(top.c, 0, 0); c.restore(); }
+        LY.splice(lyAct, 1); lyAct--; hist.length = 0; fwd.length = 0; lyLoad(); lyPaintSides(); lyUI(); return;
+      }
+      if(k === 'del'){
+        if(LY.length < 2) return;
+        const gone = LY[lyAct];
+        LY.splice(lyAct, 1); lyAct = Math.max(0, lyAct - 1);
+        if(gone.paper && !LY.some(x => x.paper)) LY[0].paper = true;
+        lyLoad(); lyPaintSides(); lyUI();
+        snack(L('Calque « ', 'Layer “') + gone.name + L(' » supprimé.', '” deleted.'));
+      }
+    }
+    lyList.addEventListener('click', e => {
+      if(e.target.closest('.rd-eye')) return;
+      const r = e.target.closest('.rd-li'); if(r) lySwitch(+r.dataset.i);
+    });
+    lyList.addEventListener('dblclick', e => {
+      const r = e.target.closest('.rd-li'); if(!r || e.target.closest('.rd-eye')) return;
+      const i = +r.dataset.i, sp = r.querySelector('.rd-ln');
+      const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'rd-lrn'; inp.value = LY[i].name; inp.maxLength = 40;
+      sp.replaceWith(inp); inp.focus(); inp.select();
+      const done = ok => { if(ok && inp.value.trim()) LY[i].name = inp.value.trim(); lyUI(); };
+      inp.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); done(true); } else if(ev.key === 'Escape'){ ev.preventDefault(); done(false); } });
+      inp.addEventListener('blur', () => done(true));
+    });
+    lyOp.addEventListener('input', () => { lyCur().op = (+lyOp.value) / 100; lyOpV.textContent = lyOp.value + ' %'; lyPaintSides(); });
+    /* plan rouvert avec ses calques */
+    if(frame && frame.lay && frame.lay.l && frame.lay.l.length){
+      LY.length = 0;
+      frame.lay.l.forEach(d => LY.push({ id:++lySeq, name:d.n || L('Calque', 'Layer'), vis:d.v !== 0, op:d.o == null ? 1 : d.o, paper:!!d.p, c:lyNewCanvas() }));
+      lyAct = Math.max(0, Math.min(LY.length - 1, frame.lay.a | 0));
+      cx.clearRect(0, 0, 960, 540);
+      let left = frame.lay.l.length;
+      frame.lay.l.forEach((d, i) => { const im = new Image(); im.onload = () => { LY[i].c.getContext('2d').drawImage(im, 0, 0); if(i === lyAct) lyLoad(); if(--left === 0){ lyPaintSides(); lyUI(); } }; im.src = d.src; });
+    }
+    lyPaintSides(); lyUI();
+
+    /* ===== ZOOM =====
+       La feuille entière (dessin, calques, sélection, repères) est agrandie d'un bloc : tous les outils restent
+       justes, car ils lisent la position de la souris sur la feuille telle qu'elle est affichée. */
+    const stage = bg.querySelector('.rd-stage'), zv = bg.querySelector('.rd-zv');
+    stage.appendChild(cropBar); stage.appendChild(selBar);                    // les barres ne grossissent pas avec le zoom
+    let zz = 1, ztx = 0, zty = 0, zSpace = false, zPan = null;
+    function zClamp(){
+      const W0 = cvw.offsetWidth, H0 = cvw.offsetHeight, M = 60;
+      ztx = W0 * zz <= W0 ? (W0 - W0 * zz) / 2 : Math.min(M, Math.max(W0 - W0 * zz - M, ztx));
+      zty = H0 * zz <= H0 ? (H0 - H0 * zz) / 2 : Math.min(M, Math.max(H0 - H0 * zz - M, zty));
+    }
+    function zApply(){
+      zClamp();
+      cvw.style.transformOrigin = '0 0';
+      cvw.style.transform = (zz === 1 && !ztx && !zty) ? '' : 'translate(' + ztx + 'px,' + zty + 'px) scale(' + zz + ')';
+      zv.textContent = Math.round(zz * 100) + ' %';
+      stage.classList.toggle('rd-zoomed', zz > 1.001);
+      if(sel || marq) selUI();
+    }
+    function zAt(px, py, nz){
+      nz = Math.max(0.5, Math.min(8, nz));
+      const r = cvw.getBoundingClientRect(), ox0 = r.left - ztx, oy0 = r.top - zty;
+      const lx = (px - ox0 - ztx) / zz, ly = (py - oy0 - zty) / zz;
+      ztx = px - ox0 - nz * lx; zty = py - oy0 - nz * ly; zz = nz; zApply();
+    }
+    function zBy(f){ const r = cvw.getBoundingClientRect(), s = stage.getBoundingClientRect(); zAt(s.left + s.width / 2, s.top + s.height / 2, zz * f); }
+    function zFit(){ zz = 1; ztx = 0; zty = 0; zApply(); }
+    function zResize(){ zApply(); }
+    window.addEventListener('resize', zResize);
+    stage.addEventListener('wheel', e => {
+      if(crop) return;
+      if(e.ctrlKey || e.metaKey){ e.preventDefault(); zAt(e.clientX, e.clientY, zz * Math.exp(-e.deltaY * 0.0025)); return; }
+      if(zz > 1.001){ e.preventDefault(); ztx -= e.shiftKey ? e.deltaY : e.deltaX; zty -= e.shiftKey ? 0 : e.deltaY; zApply(); }
+    }, { passive:false });
+    /* se déplacer : Espace + glisser, ou bouton du milieu */
+    cvw.addEventListener('pointerdown', e => {
+      if(!(zSpace || e.button === 1)) return;
+      e.preventDefault(); e.stopPropagation();
+      zPan = { x:e.clientX, y:e.clientY, tx:ztx, ty:zty }; stage.classList.add('rd-panning');
+      try{ cvw.setPointerCapture(e.pointerId); }catch(err){}
+    }, true);
+    cvw.addEventListener('pointermove', e => { if(!zPan) return; e.stopPropagation(); ztx = zPan.tx + e.clientX - zPan.x; zty = zPan.ty + e.clientY - zPan.y; zApply(); }, true);
+    const zPanEnd = e => { if(!zPan) return; e.stopPropagation(); zPan = null; stage.classList.remove('rd-panning'); };
+    cvw.addEventListener('pointerup', zPanEnd, true); cvw.addEventListener('pointercancel', zPanEnd, true);
+    function zKey(e){
+      const mk = e.ctrlKey || e.metaKey, typing = e.target && e.target.tagName === 'INPUT' && e.target.type === 'text';
+      if(e.key === ' ' && !typing && !mk){ e.preventDefault(); e.stopPropagation(); if(!zSpace){ zSpace = true; stage.classList.add('rd-pan'); } return true; }
+      if(mk && !e.altKey && (e.key === '+' || e.key === '=' || e.key === '-' || e.key === '_' || e.key === '0')){
+        e.preventDefault(); e.stopPropagation();
+        if(e.key === '0') zFit(); else zBy(e.key === '-' || e.key === '_' ? 1 / 1.25 : 1.25);
+        return true;
+      }
+      return false;
+    }
+    function zKeyUp(e){ if(e.key === ' '){ zSpace = false; stage.classList.remove('rd-pan'); } }
+    document.addEventListener('keyup', zKeyUp, true);
     cv.addEventListener('pointerdown', e => {
       if(!crop && (sel || tool === 'select')){ e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(err){} if(selDown(pt(e), e)) return; }
       e.preventDefault(); commitText(); try{ cv.setPointerCapture(e.pointerId); }catch(err){}
@@ -931,17 +1113,21 @@
       if(path){ flushLayer(); path = null; return; }
       if(!moved){ cx.beginPath(); cx.arc(last.x, last.y, cx.lineWidth / 2, 0, Math.PI * 2); cx.fill(); }
       else { cx.beginPath(); cx.moveTo(prevMid.x, prevMid.y); cx.lineTo(last.x, last.y); cx.stroke(); }
+      cx.globalCompositeOperation = 'source-over';
     };
     cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
-    const undo = () => { const h = hist.pop(); if(h){ fwd.push(cx.getImageData(0, 0, 960, 540)); cx.putImageData(h, 0, 0); } };
-    const redo = () => { const h = fwd.pop(); if(h){ hist.push(cx.getImageData(0, 0, 960, 540)); cx.putImageData(h, 0, 0); } };
-    const close = () => { bg.remove(); document.removeEventListener('keydown', onKey, true); };
+    /* chaque état mémorisé sait à quel calque il appartient : annuler revient sur ce calque */
+    const undo = () => { let h; while((h = hist.pop()) && !lyGo(h._ly)); if(h){ const c = cx.getImageData(0, 0, 960, 540); c._ly = h._ly; fwd.push(c); cx.putImageData(h, 0, 0); } };
+    const redo = () => { let h; while((h = fwd.pop()) && !lyGo(h._ly)); if(h){ const c = cx.getImageData(0, 0, 960, 540); c._ly = h._ly; hist.push(c); cx.putImageData(h, 0, 0); } };
+    const close = () => { bg.remove(); document.removeEventListener('keydown', onKey, true); document.removeEventListener('keyup', zKeyUp, true); window.removeEventListener('resize', zResize); };
     function onKey(e){
       if(txt && e.target === txt.el){
         if(e.key === 'Enter'){ e.preventDefault(); commitText(); }
         else if(e.key === 'Escape'){ e.preventDefault(); const t = txt; txt = null; t.el.remove(); }
         e.stopPropagation(); return;
       }
+      if(e.target && e.target.classList && e.target.classList.contains('rd-lrn')) return;   // renommage d'un calque : on tape librement
+      if(zKey(e)) return;
       {
         const mk = e.ctrlKey || e.metaKey, kk = (e.key || '').toLowerCase(), onBtn = e.target && e.target.tagName === 'BUTTON';
         if(!crop && mk && kk === 'a'){ e.preventDefault(); e.stopPropagation(); selAll(); return; }
@@ -985,6 +1171,8 @@
       else if(b.dataset.a === 'crop'){ if(crop) cropEnd(true); else cropStart(); }
       else if(b.dataset.a === 'mirror') mirror();
       else if(b.dataset.a === 'filter') fltToggle();
+      else if(b.dataset.z){ const k = b.dataset.z; if(k === 'fit') zFit(); else zBy(k === 'in' ? 1.25 : 1 / 1.25); }
+      else if(b.dataset.ly) lyAction(b.dataset.ly, b);
       else if(b.dataset.a === 'selall') selAll();
       else if(b.dataset.a === 'sellast') selLast();
       else if(b.dataset.sel){
@@ -996,15 +1184,18 @@
       else if(b.dataset.a === 'guides'){ const g = bg.querySelector('.rp-draw-guides'); g.classList.toggle('on'); b.classList.toggle('sel', g.classList.contains('on')); if(crop) crop.guides = g.classList.contains('on'); }
       else if(b.dataset.a === 'undo'){ commitText(); if(crop) cropEnd(false); else undo(); }
       else if(b.dataset.a === 'redo'){ cropEnd(true); redo(); }
-      else if(b.dataset.a === 'clear'){ commitText(); cropEnd(true); snap(); cx.fillStyle = '#fff'; cx.fillRect(0, 0, 960, 540); }
+      else if(b.dataset.a === 'clear'){ commitText(); cropEnd(true); snap(); lyBlank(); }
       else if(b.dataset.a === 'cancel') close();
       else if(b.dataset.a === 'save'){
         commitText(); cropEnd(true);
         const kind = frame ? frame.k : 'draw';
         const enc = c => kind === 'img' ? c.toDataURL('image/jpeg', 0.85) : c.toDataURL('image/png');
-        const on = flt.c !== 'none', src = enc(on ? fltBake() : cv), extra = on ? { raw:enc(cv), flt:{ c:flt.c, k:flt.k } } : null;
-        if(frame){ frame.src = src; if(extra) Object.assign(frame, extra); else { delete frame.raw; delete frame.flt; } }
-        else store().frames.push(Object.assign({ id:uid(), pg:page, k:'draw', src, cap:'' }, extra || {}, sc ? { sc:sc } : {}, sq ? { sq:sq } : {}));
+        const flat = document.createElement('canvas'); flat.width = 960; flat.height = 540; lyFlatten(flat.getContext('2d'));
+        const on = flt.c !== 'none', src = enc(on ? fltBake() : flat), extra = on ? { raw:enc(flat), flt:{ c:flt.c, k:flt.k } } : null;
+        /* calques gardés dans le plan pour pouvoir le retravailler (une seule couche : rien de plus à garder) */
+        const lay = LY.length > 1 ? { a:lyAct, l:LY.map((ly, i) => ({ n:ly.name, v:ly.vis ? 1 : 0, o:ly.op, p:ly.paper ? 1 : 0, src:(i === lyAct ? cv : ly.c).toDataURL('image/png') })) } : null;
+        if(frame){ frame.src = src; if(extra) Object.assign(frame, extra); else { delete frame.raw; delete frame.flt; } if(lay) frame.lay = lay; else delete frame.lay; }
+        else store().frames.push(Object.assign({ id:uid(), pg:page, k:'draw', src, cap:'' }, extra || {}, lay ? { lay } : {}, sc ? { sc:sc } : {}, sq ? { sq:sq } : {}));
         close(); save(); sbChanged();
       }
     });
@@ -1314,6 +1505,48 @@
   .rp-draw.v92 .rp-draw-act .btn-primary svg{stroke-width:2;}
   html[data-theme="dark"] .rp-draw.v92 .rd-stage canvas:first-child{box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 14px 34px rgba(0,0,0,.45);}
   @media (max-width:760px){ .rd-st-keys{display:none;} .rd-stage{padding:8px;} }
+  /* v94 : calques + zoom */
+  .rp-draw.v92{width:min(1300px,100%);}
+  .rd-work{display:flex; gap:12px; align-items:stretch; min-width:0;}
+  .rd-work .rd-stage{flex:1; min-width:0;}
+  .rd-layers{flex:none; width:196px; display:flex; flex-direction:column; gap:6px; padding:8px; border:1px solid var(--hair); border-radius:14px; background:var(--surface-soft);}
+  .rd-lh{display:flex; align-items:center; justify-content:space-between; padding:2px 2px 2px 6px;}
+  .rd-lh span{font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft);}
+  .rd-lh button, .rd-lb-acts button{width:26px; height:26px; display:grid; place-items:center; padding:0; border:1px solid var(--hair); border-radius:7px; background:var(--surface); color:var(--ink-soft); cursor:pointer;}
+  .rd-lh button:hover, .rd-lb-acts button:hover:not(:disabled){border-color:var(--accent); color:var(--accent);}
+  .rd-lb-acts button:disabled{opacity:.38; cursor:default;}
+  .rd-ll{flex:1; display:flex; flex-direction:column; gap:3px; min-height:60px; max-height:none; overflow-y:auto;}
+  .rd-li{display:flex; align-items:center; gap:6px; height:36px; padding:0 6px 0 3px; border-radius:9px; border:1px solid transparent; cursor:pointer; user-select:none;}
+  .rd-li:hover{background:color-mix(in srgb, var(--accent) 7%, transparent);}
+  .rd-li.sel{background:var(--surface); border-color:color-mix(in srgb, var(--accent) 55%, transparent); box-shadow:inset 3px 0 0 var(--accent);}
+  .rd-li.off .rd-lt, .rd-li.off .rd-ln{opacity:.45;}
+  .rd-eye{flex:none; width:24px; height:24px; display:grid; place-items:center; padding:0; border:0; border-radius:6px; background:none; color:var(--ink-soft); cursor:pointer;}
+  .rd-eye:hover{color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, transparent);}
+  .rd-lt{flex:none; width:40px; height:22.5px; border-radius:4px; box-shadow:0 0 0 1px var(--hair);
+    background:repeating-conic-gradient(#e6e6e6 0 25%, #fff 0 50%) 0 0/8px 8px;}
+  .rd-lt.paper{background:#fff;}
+  .rd-ln{flex:1; min-width:0; font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rd-li.sel .rd-ln{color:var(--accent);}
+  .rd-lrn{flex:1; min-width:0; height:24px; padding:0 6px; border:1px solid var(--accent); border-radius:6px; background:var(--surface); color:var(--ink); font:inherit; font-size:12.5px; outline:none;}
+  .rd-lo{display:flex; align-items:center; gap:6px; padding:2px 4px;}
+  .rd-lo input[type=range]{flex:1; min-width:0; accent-color:var(--accent);}
+  .rd-lo .rd-v{min-width:36px; text-align:right;}
+  .rd-lb-acts{display:flex; gap:4px; justify-content:space-between; padding:0 2px 2px;}
+  .rd-stage{overflow:hidden;}
+  .rp-draw.v92 .rd-stage canvas:first-child{position:relative; z-index:1; background:transparent;}
+  .rp-draw.v92 canvas.rd-lb, .rp-draw.v92 canvas.rd-la{position:absolute; inset:0; height:100%; border-color:transparent; pointer-events:none; border-radius:8px;}
+  .rp-draw.v92 canvas.rd-lb{z-index:0; background:#fff;}
+  .rp-draw.v92 canvas.rd-la{z-index:2; background:transparent;}
+  .rp-draw.v92 canvas.rd-ov{z-index:3;} .rp-draw.v92 canvas.rd-pv{z-index:4;} .rd-tint{z-index:4;}
+  .rp-draw.v92 canvas.rd-selov{z-index:5;} .rp-draw.v92 .rp-draw-guides{z-index:5;} .rp-draw.v92 .rp-draw-txt{z-index:6;}
+  .rd-stage > .rp-crop-bar{z-index:7;}
+  .rd-zoom{position:absolute; top:10px; right:10px; z-index:7; display:flex; align-items:center; gap:2px; padding:3px; border:1px solid var(--hair); border-radius:999px; background:var(--surface); box-shadow:var(--shadow-md);}
+  .rd-zoom button{height:26px; min-width:26px; display:grid; place-items:center; padding:0 6px; border:0; border-radius:999px; background:none; color:var(--ink); font:inherit; font-size:12px; font-weight:650; font-variant-numeric:tabular-nums; cursor:pointer;}
+  .rd-zoom button:hover{background:color-mix(in srgb, var(--accent) 10%, transparent); color:var(--accent);}
+  .rd-zoom .rd-zv{min-width:52px;}
+  .rd-stage.rd-pan .rp-draw-cv, .rd-stage.rd-pan canvas{cursor:grab !important;}
+  .rd-stage.rd-panning .rp-draw-cv, .rd-stage.rd-panning canvas{cursor:grabbing !important;}
+  @media (max-width:900px){ .rd-work{flex-direction:column;} .rd-layers{width:auto;} .rd-ll{max-height:150px;} }
   .rd-tint{position:absolute; inset:0; pointer-events:none; border-radius:10px; mix-blend-mode:multiply; background:transparent; transition:background .12s;}
   .rd-flt{display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:7px 10px; border:1px solid var(--hair); border-radius:12px; background:var(--surface-soft); animation:rpCropIn .14s ease;}
   .rd-flt[hidden]{display:none;}
