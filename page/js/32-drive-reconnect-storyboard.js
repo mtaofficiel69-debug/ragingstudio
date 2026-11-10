@@ -452,7 +452,7 @@
             <label class="rd-fc rd-fc-cust" title="${esc(L('Autre couleur…', 'Other colour…'))}"><i></i>${esc(L('Autre', 'Other'))}<input type="color" class="rd-flt-col" value="#7a3cc8" aria-label="${esc(L('Autre couleur de filtre', 'Other filter colour'))}"></label>
             <span class="rd-flt-k" hidden><span class="rd-l">${esc(L('Intensité', 'Strength'))}</span><input type="range" class="rd-flt-r" min="10" max="100" step="5" value="100" aria-label="${esc(L('Intensité du filtre', 'Filter strength'))}"><span class="rd-v rd-flt-v">100 %</span></span>
           </div>
-          <div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><div class="rd-tint"></div><canvas class="rd-selov" width="960" height="540"></canvas><div class="rp-draw-guides"></div>
+          <div class="rd-stage"><div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><canvas class="rd-pv" width="960" height="540" hidden></canvas><div class="rd-tint"></div><canvas class="rd-selov" width="960" height="540"></canvas><div class="rp-draw-guides"></div>
             <div class="rp-crop-bar rd-selbar" hidden><span class="h">${esc(L('Glisse pour déplacer · coins pour agrandir · rond pour tourner', 'Drag to move · corners to resize · circle to rotate'))}</span>
               <button type="button" data-sel="dup" title="${esc(L('Dupliquer (Ctrl+D) : une copie se pose à côté, prête à être déplacée', 'Duplicate (Ctrl+D): a copy lands next to it, ready to move'))}">${svg('<rect x="5.5" y="5.5" width="8" height="8" rx="1.3"/><path d="M10.5 3.5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h.5"/>', 14)}<span>${esc(L('Dupliquer', 'Duplicate'))}</span></button>
               <button type="button" data-sel="flipx" title="${esc(L('Miroir gauche ↔ droite', 'Mirror left ↔ right'))}">${svg('<path d="M8 1.8v12.4" stroke-dasharray="1.6 1.6"/><path d="M5.8 4.2L2 11.8h3.8zM10.2 4.2l3.8 7.6h-3.8z"/>', 14)}<span>${esc(L('Miroir', 'Mirror'))}</span></button>
@@ -466,10 +466,11 @@
               <button type="button" data-crop="out" title="${esc(L('Dézoomer', 'Zoom out'))}">${svg('<path d="M3.5 8h9"/>', 13)}</button>
               <input type="range" min="0" max="1000" value="500" aria-label="${esc(L('Zoom', 'Zoom'))}">
               <button type="button" data-crop="in" title="${esc(L('Zoomer', 'Zoom in'))}">${svg('<path d="M3.5 8h9M8 3.5v9"/>', 13)}</button>
-              <button type="button" class="ok" data-crop="ok" title="${esc(L('Valider le cadrage (Entrée)', 'Apply the framing (Enter)'))}">${esc(L('OK', 'OK'))}</button></div></div>
+              <button type="button" class="ok" data-crop="ok" title="${esc(L('Valider le cadrage (Entrée)', 'Apply the framing (Enter)'))}">${esc(L('OK', 'OK'))}</button></div></div></div>
+          <div class="rd-status" aria-live="polite"><span class="rd-st-tool"></span><span class="rd-st-keys"><kbd>Ctrl</kbd><kbd>Z</kbd> ${esc(L('annuler', 'undo'))}<i></i><kbd>V</kbd> ${esc(L('sélection', 'select'))}<i></i><kbd>[</kbd><kbd>]</kbd> ${esc(L('épaisseur', 'size'))}</span></div>
         </div></div>
       <div class="rp-draw-act"><button type="button" class="btn btn-ghost" data-a="cancel">${esc(L('Annuler', 'Cancel'))}</button>
-        <button type="button" class="btn btn-primary" data-a="save">${esc(L('Enregistrer le plan', 'Save the shot'))}</button></div></div>`;
+        <button type="button" class="btn btn-primary" data-a="save">${svg('<path d="M3.5 8.5l3 3 6-7"/>', 15)}${esc(L('Enregistrer le plan', 'Save the shot'))}</button></div></div>`;
     document.body.appendChild(bg);
     const cvw = bg.querySelector('.rp-draw-cv'), cv = bg.querySelector('canvas'), cx = cv.getContext('2d', { willReadFrequently:true });
     const ov = bg.querySelector('.rd-ov'), ox = ov.getContext('2d');
@@ -489,8 +490,8 @@
     const fltMul = () => { if(flt.c === 'none' || flt.c === 'bw') return [255, 255, 255]; const c = hexRgb(flt.c); return c.map(v => Math.round(255 + (v - 255) * flt.k)); };
     function fltShow(){
       const on = flt.c !== 'none', m = fltMul();
-      [cv, ov].forEach(c => { c.style.filter = on ? 'grayscale(' + flt.k + ')' : ''; });
-      tint.style.background = on && flt.c !== 'bw' ? 'rgb(' + m.join(',') + ')' : 'transparent';
+      /* aperçu calculé au pixel près sur un calque à part (plus de filtre CSS : il rendait le dessin flou) */
+      pv.hidden = !on; fltDirty = true;
       fltRow.querySelectorAll('[data-flt]').forEach(b => b.classList.toggle('sel', b.dataset.flt === flt.c));
       const cust = fltRow.querySelector('.rd-fc-cust'), isCust = on && flt.c !== 'bw' && !FLT.some(f => f[0] === flt.c);
       cust.classList.toggle('sel', isCust); if(isCust){ cust.querySelector('i').style.background = flt.c; cust.querySelector('input').value = flt.c; }
@@ -504,9 +505,10 @@
       fltRow.hidden = !o; fltBtn.classList.toggle('sel', o); fltBtn.setAttribute('aria-expanded', o ? 'true' : 'false');
     }
     /* le filtre « cuit » dans l'image enregistrée : exactement le calcul de l'aperçu (niveaux de gris CSS puis produit) */
-    function fltBake(){
+    function fltBake(withLayer){
       const t = document.createElement('canvas'); t.width = 960; t.height = 540;
       const tx = t.getContext('2d'); tx.drawImage(cv, 0, 0);
+      if(withLayer){ tx.save(); tx.globalAlpha = tool === 'marker' ? 0.42 * opac : opac; if(tool === 'marker') tx.globalCompositeOperation = 'multiply'; tx.drawImage(ov, 0, 0); tx.restore(); }
       const img = tx.getImageData(0, 0, 960, 540), d = img.data, k = flt.k, m = fltMul();
       for(let i = 0; i < d.length; i += 4){
         const r = d[i], g = d[i + 1], b = d[i + 2];
@@ -518,6 +520,15 @@
       tx.putImageData(img, 0, 0);
       return t;
     }
+    /* aperçu du filtre : recalculé à chaque image tant que quelque chose bouge dans l'éditeur */
+    const pv = bg.querySelector('.rd-pv'), pvx = pv.getContext('2d');
+    let fltDirty = true, fltLast = 0;
+    ['pointerdown', 'pointermove', 'pointerup', 'keydown', 'keyup', 'click', 'input', 'wheel'].forEach(ev => bg.addEventListener(ev, () => { fltDirty = true; }, true));
+    (function fltLoop(t){
+      if(!bg.isConnected) return;
+      if(flt.c !== 'none' && (fltDirty || t - fltLast > 400)){ fltDirty = false; fltLast = t; pvx.clearRect(0, 0, 960, 540); pvx.drawImage(fltBake(true), 0, 0); }
+      requestAnimationFrame(fltLoop);
+    })(0);
     const snap = () => { hist.push(cx.getImageData(0, 0, 960, 540)); if(hist.length > 30) hist.shift(); fwd.length = 0; };
     const pt = e => { const r = cv.getBoundingClientRect(); return { x:(e.clientX - r.left) * 960 / r.width, y:(e.clientY - r.top) * 540 / r.height, p:(e.pointerType === 'pen' && e.pressure) ? e.pressure : 0.5 }; };
     const style = (p, c) => { c = c || cx; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = tool === 'eraser' ? '#fff' : color; c.fillStyle = c.strokeStyle; c.lineWidth = (tool === 'eraser' ? size * 3 : tool === 'marker' ? size * 2.5 + 6 : size) * (p === 0.5 ? 1 : (0.5 + p)); c.setLineDash(dash && tool !== 'eraser' && tool !== 'marker' ? [c.lineWidth * 2.4 + 2, c.lineWidth * 2 + 4] : []); };
@@ -526,6 +537,8 @@
     const layered = () => tool === 'marker' || (tool !== 'eraser' && (opac < 1 || dash));
     const cursorFor = t => t === 'text' ? 'text' : t === 'bucket' ? BUCKET_CUR : t === 'picker' ? PICK_CUR : 'crosshair';
     function refreshOpts(){
+      const stl = bg.querySelector('.rd-st-tool');
+      if(stl){ let nm = ''; GROUPS.forEach(g => g[1].forEach(t => { if(t[0] === tool) nm = t[1]; })); stl.innerHTML = svg(IC[tool] || '', 14) + '<b>' + esc(nm) + '</b><span>' + esc((TIPS[tool] || '').replace(/^[^:·]*[:·]\s*/, '')) + '</span>'; }
       const show = (SHOW[tool] || '').split(' ');
       bg.querySelectorAll('.rd-o').forEach(o => { o.hidden = show.indexOf(o.dataset.o) < 0; });
       const dot = bg.querySelector('.rd-dot b'), w = Math.max(2, Math.min(24, tool === 'eraser' ? size * 3 : tool === 'marker' ? size * 2.5 + 6 : size));
@@ -1271,6 +1284,36 @@
   .rd-selbar .rd-ang{min-width:44px; font-variant-numeric:tabular-nums;}
   .rd-selbar .rd-ang.dim{color:var(--ink-soft);}
   @media (max-width:760px){ .rd-selbar button span{display:none;} }
+  /* v93 : éditeur de dessin embelli — feuille posée sur un plan de travail, réglages regroupés, aide de l'outil */
+  .rp-draw.v92{border-radius:18px; padding:16px 18px 16px;}
+  .rp-draw.v92 .rd-head{padding:0 0 12px; margin:0 0 14px; border-bottom:1px solid var(--hair);}
+  .rp-draw.v92 .rd-head h3{display:flex; align-items:center; gap:9px; font-size:16px; letter-spacing:-.01em;}
+  .rp-draw.v92 .rd-head h3::before{content:''; width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);}
+  .rp-draw.v92 .rd-tools{border-radius:14px; padding:8px; box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+  .rp-draw.v92 .rd-tools button{transition:background .12s, box-shadow .12s;}
+  .rp-draw.v92 .rd-opts{padding:6px 12px; border:1px solid var(--hair); border-radius:12px; background:var(--surface-soft); min-height:46px; box-sizing:border-box;}
+  .rp-draw.v92 .rd-flt{border-radius:12px;}
+  .rd-stage{position:relative; padding:16px; border:1px solid var(--hair); border-radius:14px;
+    background-color:var(--surface-soft); background-image:radial-gradient(color-mix(in srgb, var(--ink-soft) 22%, transparent) 1px, transparent 1.2px); background-size:16px 16px;}
+  .rd-stage .rp-draw-cv{margin:0 auto;}
+  .rp-draw.v92 .rd-stage .rp-draw-cv{max-width:calc((100vh - 320px) * 16 / 9);}
+  .rp-draw.v92 .rd-stage canvas:first-child{border-color:transparent; border-radius:8px; box-shadow:0 0 0 1px rgba(0,0,0,.06), 0 2px 6px rgba(15,20,30,.08), 0 14px 34px rgba(15,20,30,.12);}
+  .rp-draw.v92 .rd-stage canvas.rd-ov, .rp-draw.v92 .rd-stage canvas.rd-selov, .rp-draw.v92 .rd-stage canvas.rd-pv{border-radius:8px;}
+  .rp-draw.v92 canvas.rd-pv{position:absolute; inset:0; height:100%; background:transparent; border-color:transparent; pointer-events:none;}
+  .rp-draw.v92 canvas.rd-pv[hidden]{display:none;}
+  .rd-status{display:flex; align-items:center; gap:12px; min-height:30px; padding:0 4px; font-size:12.5px; color:var(--ink-soft);}
+  .rd-st-tool{display:flex; align-items:center; gap:7px; min-width:0; flex:1;}
+  .rd-st-tool svg{flex:none; color:var(--accent);}
+  .rd-st-tool b{color:var(--ink); font-weight:650;}
+  .rd-st-tool span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rd-st-keys{display:flex; align-items:center; gap:4px; flex:none; white-space:nowrap;}
+  .rd-st-keys i{width:1px; height:14px; background:var(--hair); margin:0 6px;}
+  .rd-status kbd{font:600 10px var(--sans); color:var(--ink-soft); border:1px solid var(--hair); border-bottom-width:2px; border-radius:5px; padding:0 5px; background:var(--surface); line-height:15px;}
+  .rp-draw.v92 .rp-draw-act{margin-top:14px; padding-top:14px; border-top:1px solid var(--hair); align-items:center;}
+  .rp-draw.v92 .rp-draw-act .btn-primary{display:inline-flex; align-items:center; gap:7px; padding-left:16px; padding-right:18px;}
+  .rp-draw.v92 .rp-draw-act .btn-primary svg{stroke-width:2;}
+  html[data-theme="dark"] .rp-draw.v92 .rd-stage canvas:first-child{box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 14px 34px rgba(0,0,0,.45);}
+  @media (max-width:760px){ .rd-st-keys{display:none;} .rd-stage{padding:8px;} }
   .rd-tint{position:absolute; inset:0; pointer-events:none; border-radius:10px; mix-blend-mode:multiply; background:transparent; transition:background .12s;}
   .rd-flt{display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:7px 10px; border:1px solid var(--hair); border-radius:12px; background:var(--surface-soft); animation:rpCropIn .14s ease;}
   .rd-flt[hidden]{display:none;}
