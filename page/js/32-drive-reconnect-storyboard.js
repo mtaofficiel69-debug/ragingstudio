@@ -407,6 +407,14 @@
     const cur = (paths, hx, hy) => 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#fff" stroke-width="3">' + paths + '</g><g stroke="#1b1b1f" stroke-width="1.3">' + paths + '</g></svg>') + '") ' + hx + ' ' + hy + ', crosshair';
     const BUCKET_CUR = cur('<path d="M2.9 7.6L7.4 3.1l5.3 5.3-4.5 4.5a1.6 1.6 0 0 1-2.3 0L2.9 9.9a1.6 1.6 0 0 1 0-2.3z"/><path d="M14.1 10.4s1.1 1.5 1.1 2.3a1.1 1.1 0 0 1-2.2 0c0-.8 1.1-2.3 1.1-2.3z"/>', 21, 21);
     const PICK_CUR = cur('<path d="M10.5 2.7a1.9 1.9 0 0 1 2.8 2.8l-1.7 1.7-2.8-2.8z"/><path d="M9.6 5.5L3.5 11.6 3 13l1.4-.5 6.1-6.1"/>', 4, 20);
+    /* filtre de couleur façon Godard : le plan passe en monochrome teinté (les noirs restent noirs, le blanc prend la couleur),
+       aperçu en direct ; le dessin d'origine est gardé à part (frame.raw) pour changer ou enlever le filtre plus tard. */
+    const FLT = [['none', L('Aucun', 'None')], ['bw', L('Noir et blanc', 'Black & white')], ['#E3262E', L('Rouge', 'Red')], ['#2D5FD8', L('Bleu', 'Blue')], ['#F3C613', L('Jaune', 'Yellow')], ['#1E9E57', L('Vert', 'Green')], ['#B5814E', L('Sépia', 'Sepia')]];
+    function fltSwatch(c){
+      if(c === 'none') return 'background:linear-gradient(135deg, #fff 45%, #D64545 45%, #D64545 55%, #fff 55%)';
+      if(c === 'bw') return 'background:linear-gradient(90deg, #1b1b1f 50%, #fff 50%)';
+      return 'background:' + c;
+    }
     const toolBtn = t => `<button type="button" data-tool="${t[0]}" class="${t[0] === 'pen' ? 'sel' : ''}" title="${esc(TIPS[t[0]] + ' (' + t[2] + ')')}">${svg(IC[t[0]], 16)}<span>${esc(t[1])}</span><kbd>${t[2]}</kbd></button>`;
     const bg = document.createElement('div'); bg.id = 'rpDrawBg'; bg.className = 'rp-draw-bg rp-ui';
     bg.innerHTML = `<div class="rp-draw v92" role="dialog" aria-modal="true" aria-label="${esc(frame ? L('Modifier le plan', 'Edit the shot') : L('Dessiner un plan', 'Draw a shot'))}">
@@ -416,6 +424,7 @@
           <button type="button" data-a="redo" title="${esc(L('Rétablir (Ctrl+Y)', 'Redo (Ctrl+Y)'))}">${svg('<path d="M12 7H6a3 3 0 0 0 0 6h4M12 7l-2.5-2.5M12 7l-2.5 2.5"/>', 15)}</button><i></i>
           <button type="button" data-a="guides" title="${esc(L('Repères de cadrage (tiers) — non enregistrés', 'Framing guides (thirds) — not saved'))}">${svg('<path d="M6 2.5v11M10 2.5v11M2.5 6h11M2.5 10h11"/>', 15)}<span>${esc(L('Repères', 'Guides'))}</span></button>
           <button type="button" data-a="mirror" title="${esc(L('Retourner le dessin (miroir gauche ↔ droite), pour changer le sens du regard ou du mouvement', 'Flip the drawing (left ↔ right mirror), to change the direction of a look or a move'))}">${svg('<path d="M8 1.8v12.4" stroke-dasharray="1.6 1.6"/><path d="M5.8 4.2L2 11.8h3.8zM10.2 4.2l3.8 7.6h-3.8z"/>', 15)}<span>${esc(L('Miroir', 'Mirror'))}</span></button>
+          <button type="button" data-a="filter" class="rd-flt-btn" aria-expanded="false" title="${esc(L('Filtre de couleur sur tout le plan (noir et blanc, rouge, bleu…) — le dessin reste visible et modifiable', 'Colour filter over the whole shot (black & white, red, blue…) — the drawing stays visible and editable'))}">${svg('<circle cx="6.2" cy="6.6" r="4.1"/><circle cx="9.8" cy="6.6" r="4.1"/><circle cx="8" cy="9.8" r="4.1"/>', 15)}<span>${esc(L('Filtre', 'Filter'))}</span><b class="rd-flt-dot" hidden></b></button>
           <button type="button" data-a="clear" title="${esc(L('Tout effacer', 'Clear all'))}">${svg('<path d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8"/>', 15)}<span>${esc(L('Tout effacer', 'Clear all'))}</span></button>
         </div></div>
       <div class="rd-body">
@@ -432,7 +441,12 @@
             <div class="rd-o" data-o="fill"><button type="button" class="rd-chip" data-a="fill" title="${esc(L('Remplir l’intérieur des rectangles et ellipses', 'Fill the inside of rectangles and ellipses'))}">${svg('<rect x="3" y="4" width="10" height="8" rx="1.2" fill="currentColor" fill-opacity=".35"/>', 14)}<span>${esc(L('Remplir', 'Fill'))}</span></button></div>
             <div class="rd-o rd-hint" data-o="pick">${esc(L('Clique sur le dessin pour prendre sa couleur.', 'Click the drawing to pick its colour.'))}</div>
           </div>
-          <div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><div class="rp-draw-guides"></div>
+          <div class="rd-flt" hidden role="group" aria-label="${esc(L('Filtre de couleur', 'Colour filter'))}"><span class="rd-l">${esc(L('Filtre', 'Filter'))}</span>
+            ${FLT.map(f => `<button type="button" class="rd-fc${f[0] === 'none' ? ' sel' : ''}" data-flt="${f[0]}" title="${esc(f[1])}"><i style="${fltSwatch(f[0])}"></i>${esc(f[1])}</button>`).join('')}
+            <label class="rd-fc rd-fc-cust" title="${esc(L('Autre couleur…', 'Other colour…'))}"><i></i>${esc(L('Autre', 'Other'))}<input type="color" class="rd-flt-col" value="#7a3cc8" aria-label="${esc(L('Autre couleur de filtre', 'Other filter colour'))}"></label>
+            <span class="rd-flt-k" hidden><span class="rd-l">${esc(L('Intensité', 'Strength'))}</span><input type="range" class="rd-flt-r" min="10" max="100" step="5" value="100" aria-label="${esc(L('Intensité du filtre', 'Filter strength'))}"><span class="rd-v rd-flt-v">100 %</span></span>
+          </div>
+          <div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><div class="rd-tint"></div><div class="rp-draw-guides"></div>
             <div class="rp-crop-bar" hidden><span class="h">${esc(L('Glisse l’image pour la placer · molette pour zoomer', 'Drag the picture to place it · scroll to zoom'))}</span>
               <button type="button" data-crop="cover" title="${esc(L('L’image remplit tout le cadre', 'The picture fills the whole frame'))}">${esc(L('Remplir', 'Fill'))}</button>
               <button type="button" data-crop="contain" title="${esc(L('Toute l’image est visible', 'The whole picture is visible'))}">${esc(L('Image entière', 'Whole picture'))}</button>
@@ -450,10 +464,46 @@
     if(frame){
       const im = new Image();
       im.onload = () => { const k = Math.min(960 / im.naturalWidth, 540 / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k; cx.drawImage(im, (960 - w) / 2, (540 - h) / 2, w, h); origIm = im; };
-      im.src = frame.src;
+      im.src = frame.raw || frame.src;
     }
     let color = COLORS[0][0], size = 3, tool = 'pen', fill = false, hist = [], fwd = [], last = null, prevMid = null, down = false, moved = false, start = null, base = null, txt = null, origIm = null, crop = null, lastCrop = null;
     let opac = 1, dash = false, path = null, prevTool = 'pen';
+    let flt = (frame && frame.raw && frame.flt) ? { c:frame.flt.c, k:frame.flt.k || 1 } : { c:'none', k:1 };
+    const fltRow = bg.querySelector('.rd-flt'), fltBtn = bg.querySelector('[data-a="filter"]'), tint = bg.querySelector('.rd-tint');
+    const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    /* couleur du calque « produit » : blanc → couleur du filtre selon l'intensité */
+    const fltMul = () => { if(flt.c === 'none' || flt.c === 'bw') return [255, 255, 255]; const c = hexRgb(flt.c); return c.map(v => Math.round(255 + (v - 255) * flt.k)); };
+    function fltShow(){
+      const on = flt.c !== 'none', m = fltMul();
+      [cv, ov].forEach(c => { c.style.filter = on ? 'grayscale(' + flt.k + ')' : ''; });
+      tint.style.background = on && flt.c !== 'bw' ? 'rgb(' + m.join(',') + ')' : 'transparent';
+      fltRow.querySelectorAll('[data-flt]').forEach(b => b.classList.toggle('sel', b.dataset.flt === flt.c));
+      const cust = fltRow.querySelector('.rd-fc-cust'), isCust = on && flt.c !== 'bw' && !FLT.some(f => f[0] === flt.c);
+      cust.classList.toggle('sel', isCust); if(isCust){ cust.querySelector('i').style.background = flt.c; cust.querySelector('input').value = flt.c; }
+      fltRow.querySelector('.rd-flt-k').hidden = !on;
+      fltRow.querySelector('.rd-flt-r').value = Math.round(flt.k * 100); fltRow.querySelector('.rd-flt-v').textContent = Math.round(flt.k * 100) + ' %';
+      const dot = fltBtn.querySelector('.rd-flt-dot'); dot.hidden = !on; dot.style.cssText = on ? fltSwatch(flt.c === 'bw' ? 'bw' : flt.c) : '';
+      fltBtn.classList.toggle('on', on);
+    }
+    function fltToggle(open){
+      const o = open == null ? fltRow.hidden : open;
+      fltRow.hidden = !o; fltBtn.classList.toggle('sel', o); fltBtn.setAttribute('aria-expanded', o ? 'true' : 'false');
+    }
+    /* le filtre « cuit » dans l'image enregistrée : exactement le calcul de l'aperçu (niveaux de gris CSS puis produit) */
+    function fltBake(){
+      const t = document.createElement('canvas'); t.width = 960; t.height = 540;
+      const tx = t.getContext('2d'); tx.drawImage(cv, 0, 0);
+      const img = tx.getImageData(0, 0, 960, 540), d = img.data, k = flt.k, m = fltMul();
+      for(let i = 0; i < d.length; i += 4){
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        const R = (0.2126 + 0.7874 * (1 - k)) * r + (0.7152 - 0.7152 * (1 - k)) * g + (0.0722 - 0.0722 * (1 - k)) * b;
+        const G = (0.2126 - 0.2126 * (1 - k)) * r + (0.7152 + 0.2848 * (1 - k)) * g + (0.0722 - 0.0722 * (1 - k)) * b;
+        const B = (0.2126 - 0.2126 * (1 - k)) * r + (0.7152 - 0.7152 * (1 - k)) * g + (0.0722 + 0.9278 * (1 - k)) * b;
+        d[i] = R * m[0] / 255; d[i + 1] = G * m[1] / 255; d[i + 2] = B * m[2] / 255;
+      }
+      tx.putImageData(img, 0, 0);
+      return t;
+    }
     const snap = () => { hist.push(cx.getImageData(0, 0, 960, 540)); if(hist.length > 30) hist.shift(); fwd.length = 0; };
     const pt = e => { const r = cv.getBoundingClientRect(); return { x:(e.clientX - r.left) * 960 / r.width, y:(e.clientY - r.top) * 540 / r.height, p:(e.pointerType === 'pen' && e.pressure) ? e.pressure : 0.5 }; };
     const style = (p, c) => { c = c || cx; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = tool === 'eraser' ? '#fff' : color; c.fillStyle = c.strokeStyle; c.lineWidth = (tool === 'eraser' ? size * 3 : tool === 'marker' ? size * 2.5 + 6 : size) * (p === 0.5 ? 1 : (0.5 + p)); c.setLineDash(dash && tool !== 'eraser' && tool !== 'marker' ? [c.lineWidth * 2.4 + 2, c.lineWidth * 2 + 4] : []); };
@@ -708,7 +758,9 @@
     bg.addEventListener('mousedown', e => { bg._d = e.target === bg; });
     bg.addEventListener('input', e => {
       const t = e.target;
-      if(t.matches && t.matches('input[type="color"]')){ setColor(t.value); return; }
+      if(t.matches && t.matches('input[type="color"]') && !t.classList.contains('rd-flt-col')){ setColor(t.value); return; }
+      if(t.classList.contains('rd-flt-col')){ flt.c = t.value; fltShow(); return; }
+      if(t.classList.contains('rd-flt-r')){ flt.k = (+t.value) / 100; fltShow(); return; }
       if(t.classList.contains('rd-size')){ setSize(+t.value); return; }
       if(t.classList.contains('rd-op')){ opac = (+t.value) / 100; bg.querySelector('.rd-op-v').textContent = t.value + ' %'; refreshOpts(); }
     });
@@ -721,6 +773,8 @@
       else if(b.dataset.a === 'fill'){ fill = !fill; b.classList.toggle('sel', fill); b.setAttribute('aria-pressed', fill ? 'true' : 'false'); }
       else if(b.dataset.a === 'crop'){ if(crop) cropEnd(true); else cropStart(); }
       else if(b.dataset.a === 'mirror') mirror();
+      else if(b.dataset.a === 'filter') fltToggle();
+      else if(b.dataset.flt){ flt.c = b.dataset.flt; fltShow(); }
       else if(b.dataset.a === 'guides'){ const g = bg.querySelector('.rp-draw-guides'); g.classList.toggle('on'); b.classList.toggle('sel', g.classList.contains('on')); if(crop) crop.guides = g.classList.contains('on'); }
       else if(b.dataset.a === 'undo'){ commitText(); if(crop) cropEnd(false); else undo(); }
       else if(b.dataset.a === 'redo'){ cropEnd(true); redo(); }
@@ -729,12 +783,15 @@
       else if(b.dataset.a === 'save'){
         commitText(); cropEnd(true);
         const kind = frame ? frame.k : 'draw';
-        const src = kind === 'img' ? cv.toDataURL('image/jpeg', 0.85) : cv.toDataURL('image/png');
-        if(frame){ frame.src = src; } else store().frames.push(Object.assign({ id:uid(), pg:page, k:'draw', src, cap:'' }, sc ? { sc:sc } : {}, sq ? { sq:sq } : {}));
+        const enc = c => kind === 'img' ? c.toDataURL('image/jpeg', 0.85) : c.toDataURL('image/png');
+        const on = flt.c !== 'none', src = enc(on ? fltBake() : cv), extra = on ? { raw:enc(cv), flt:{ c:flt.c, k:flt.k } } : null;
+        if(frame){ frame.src = src; if(extra) Object.assign(frame, extra); else { delete frame.raw; delete frame.flt; } }
+        else store().frames.push(Object.assign({ id:uid(), pg:page, k:'draw', src, cap:'' }, extra || {}, sc ? { sc:sc } : {}, sq ? { sq:sq } : {}));
         close(); save(); sbChanged();
       }
     });
     refreshOpts();
+    fltShow(); if(flt.c !== 'none') fltToggle(true);
   }
 
   /* ---- événements de la colonne (délégation) ---- */
@@ -1003,6 +1060,21 @@
   .rd-hint{font-size:12.5px; color:var(--ink-soft);}
   .rp-draw.v92 .rp-draw-cv{width:100%; max-width:calc((100vh - 250px) * 16 / 9);}
   .rp-draw.v92 canvas.rd-ov{position:absolute; inset:0; height:100%; background:transparent; border-color:transparent; pointer-events:none;}
+  .rd-tint{position:absolute; inset:0; pointer-events:none; border-radius:10px; mix-blend-mode:multiply; background:transparent; transition:background .12s;}
+  .rd-flt{display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:7px 10px; border:1px solid var(--hair); border-radius:12px; background:var(--surface-soft); animation:rpCropIn .14s ease;}
+  .rd-flt[hidden]{display:none;}
+  .rd-fc{position:relative; display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px 0 5px; border:1px solid var(--hair); border-radius:999px; background:var(--surface); color:var(--ink); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;}
+  .rd-fc i{width:18px; height:18px; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(0,0,0,.16); flex:none;}
+  .rd-fc:hover{border-color:var(--accent);}
+  .rd-fc.sel{border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 9%, var(--surface)); box-shadow:0 0 0 2px rgba(54,153,212,.22);}
+  .rd-fc-cust i{background:conic-gradient(#E3262E, #F3C613, #1E9E57, #2D5FD8, #8E5BD0, #E3262E);}
+  .rd-fc-cust input{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; padding:0; border:0;}
+  .rd-flt-k{display:inline-flex; align-items:center; gap:6px; margin-left:6px;}
+  .rd-flt-k[hidden]{display:none;}
+  .rd-flt-k input[type=range]{width:96px; accent-color:var(--accent);}
+  .rd-acts button.rd-flt-btn{position:relative;}
+  .rd-flt-dot{width:10px; height:10px; border-radius:50%; box-shadow:0 0 0 1.5px var(--surface), 0 0 0 2.5px var(--hair);}
+  .rd-flt-dot[hidden]{display:none;}
   @media (max-width:760px){
     .rd-body{flex-direction:column;}
     .rd-tools{width:auto; align-self:stretch; flex-direction:row; flex-wrap:wrap;}
