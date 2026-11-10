@@ -34,6 +34,8 @@
     img:'<path d="M8 11V3M5 6l3-3 3 3M3 13h10"/>',
     draw:'<path d="M11.2 2.3a1.6 1.6 0 0 1 2.3 2.3L5.4 12.7l-2.9.8.8-2.9z"/>',
     paste:'<rect x="4" y="3.5" width="8" height="9.5" rx="1.4"/><path d="M6.5 3.5V2.5h3v1"/>',
+    dup:'<rect x="5.5" y="5.5" width="8" height="8" rx="1.3"/><path d="M10.5 3.5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h.5"/>',
+    mL:'<path d="M10 3.5L5.5 8l4.5 4.5"/>', mR:'<path d="M6 3.5L10.5 8 6 12.5"/>', mU:'<path d="M3.5 10L8 5.5l4.5 4.5"/>', mD:'<path d="M3.5 6L8 10.5 12.5 6"/>',
     mv:'<path d="M5.5 3v10M3 5.5L5.5 3 8 5.5M10.5 13V3M8 10.5l2.5 2.5 2.5-2.5"/>',
     edit:'<path d="M3 13l.7-3L10.8 3a1.4 1.4 0 0 1 2 2L5.7 12.2 3 13z"/>',
     del:'<path d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8"/>',
@@ -125,6 +127,12 @@
           <button type="button" data-sb="dl" title="${esc(L('Télécharger ce plan…', 'Download this shot…'))}">${ic(I.dl, 13)}</button>
           <button type="button" data-sb="edit" title="${esc(L('Dessiner dessus / cadrer', 'Draw on it / frame it'))}">${ic(I.edit, 13)}</button>
           <button type="button" data-sb="del" title="${esc(L('Supprimer ce plan', 'Delete this shot'))}">${ic(I.del, 13)}</button>
+        </div>
+        <div class="sbt-move" role="group" aria-label="${esc(L('Déplacer ou dupliquer le plan ', 'Move or duplicate shot ') + x.num)}">
+          <button type="button" data-sb="mprev" title="${esc(L('Reculer d’une place (passe à la séquence d’avant si c’est le premier plan)', 'Move one place earlier (goes to the previous sequence if it is the first shot)'))}">${ic(I.mL, 14)}</button>
+          <span class="sbt-mg" data-sb="grip" title="${esc(L('Glisse la vignette pour la déplacer · Ctrl ou Alt en la lâchant = une copie', 'Drag the thumbnail to move it · hold Ctrl or Alt when dropping = a copy'))}">${ic(I.grip, 13)}</span>
+          <button type="button" data-sb="dup" class="sbt-mdup" title="${esc(L('Dupliquer : la copie se pose juste après', 'Duplicate: the copy lands right after'))}">${ic(I.dup, 13)}<span>${esc(L('Dupliquer', 'Duplicate'))}</span></button>
+          <button type="button" data-sb="mnext" title="${esc(L('Avancer d’une place (passe à la séquence d’après si c’est le dernier plan)', 'Move one place later (goes to the next sequence if it is the last shot)'))}">${ic(I.mR, 14)}</button>
         </div></div>
       <input class="sbt-cap" type="text" maxlength="200" placeholder="${esc(L('Légende (cadrage, mouvement…)', 'Caption (framing, movement…)'))}" value="${esc(f.cap || '')}">
       <button type="button" class="sbt-meta${hasShot(f) ? ' on' : ''}" data-sb="shot" title="${esc(L('Découpage du plan : valeur, angle, mouvement, focale, matériel…', 'Shot details: size, angle, movement, lens, equipment…'))}">${ic(I.cam, 13)}<span>${esc(sum || s.gear || L('Découpage', 'Shot details'))}</span></button>
@@ -137,7 +145,8 @@
   function shotRow(x){
     const f = x.f, s = shotOf(f);
     return `<tr class="sbt-r${s.done ? ' done' : ''}" data-id="${f.id}">
-      <td class="p"><span class="sbt-th" title="${esc(L('Voir en grand', 'View large'))}"><img src="${f.src}" alt="" loading="lazy" decoding="async"></span><b>${x.num}</b></td>
+      <td class="p"><span class="sbt-th" title="${esc(L('Voir en grand', 'View large'))}"><img src="${f.src}" alt="" loading="lazy" decoding="async"></span><b>${x.num}</b>
+        <span class="sbt-rmv"><button type="button" data-sb="mprev" title="${esc(L('Monter d’une place', 'Move up one place'))}">${ic(I.mU, 13)}</button><button type="button" data-sb="mnext" title="${esc(L('Descendre d’une place', 'Move down one place'))}">${ic(I.mD, 13)}</button><button type="button" data-sb="dup" title="${esc(L('Dupliquer le plan', 'Duplicate the shot'))}">${ic(I.dup, 13)}</button></span></td>
       <td class="d"><input class="sbt-cap sbt-ti" type="text" maxlength="200" value="${esc(f.cap || '')}" placeholder="${esc(L('Ce qui se passe dans le plan…', 'What happens in the shot…'))}" aria-label="${esc(L('Description', 'Description'))}"></td>
       <td>${shotSel('size', s.size, 'sbt-ti')}</td><td>${shotSel('angle', s.angle, 'sbt-ti')}</td><td>${shotSel('move', s.move, 'sbt-ti')}</td>
       <td class="l">${shotLens(s.lens, 'sbt-ti')}</td><td class="g">${shotGear(s.gear, 'sbt-ti')}</td>
@@ -225,6 +234,33 @@
     f.sq = sq;
     R().save(); refresh(); flashF(f.id);
     return was;
+  }
+  /* avancer / reculer d'une place ; au bord d'une séquence, le plan passe dans la séquence voisine */
+  function stepShot(f, dir){
+    const seqs = st().seqs, qi = seqs.findIndex(q => q.id === f.sq);
+    const sibs = R().sbOrdered().filter(x => x.sq === f.sq).map(x => x.f), i = sibs.indexOf(f);
+    let was = null;
+    if(dir < 0){
+      if(i > 0) was = moveTo(f, f.sq, sibs[i - 1]);
+      else if(qi > 0) was = moveTo(f, seqs[qi - 1].id);
+      else { R().snack(L('C’est déjà le tout premier plan.', 'This is already the very first shot.')); return; }
+    } else {
+      if(i >= 0 && i < sibs.length - 1) was = moveTo(f, f.sq, null, sibs[i + 1]);
+      else if(qi >= 0 && qi < seqs.length - 1){ const nq = seqs[qi + 1], first = R().sbOrdered().find(x => x.sq === nq.id); was = moveTo(f, nq.id, first ? first.f : null); }
+      else { R().snack(L('C’est déjà le tout dernier plan.', 'This is already the very last shot.')); return; }
+    }
+    if(was && was.sq !== f.sq){ const q = seqById(f.sq); R().snack(L('Plan passé dans « ', 'Shot moved to “') + R().seqLabel(q, scenesById()) + L(' ».', '”.'), () => undoMove(f, was)); }
+    const btn = document.querySelector('[data-id="' + f.id + '"] [data-sb="' + (dir < 0 ? 'mprev' : 'mnext') + '"]'); if(btn) btn.focus({ preventScroll:true });
+  }
+  /* dupliquer : copie complète (image, dessin d'origine, calques, filtre, légende, découpage) posée juste après */
+  function dupShot(f, sq, before, after){
+    const c = JSON.parse(JSON.stringify(f)); c.id = R().uid();
+    const arr = st().frames;
+    if(sq){ c.sq = sq; if(before) arr.splice(arr.indexOf(before), 0, c); else if(after) arr.splice(arr.indexOf(after) + 1, 0, c); else arr.push(c); }
+    else arr.splice(arr.indexOf(f) + 1, 0, c);
+    R().save(); refresh(); flashF(c.id);
+    R().snack(L('Plan dupliqué.', 'Shot duplicated.'), () => { const j = st().frames.indexOf(c); if(j >= 0) st().frames.splice(j, 1); R().SELS.delete(c.id); R().save(); refresh(); });
+    return c;
   }
   function undoMove(f, was){
     const arr = st().frames, j = arr.indexOf(f); if(j >= 0) arr.splice(j, 1);
@@ -356,7 +392,7 @@
       if(im){ const list = R().sbOrdered(), i = list.findIndex(x => x.f.id === im.closest('[data-id]').dataset.id); openViewer(Math.max(0, i), false); }
       return;
     }
-    const a = b.dataset.sb, fEl = b.closest('.sbt-f'), f = fEl ? frameById(fEl.dataset.id) : null, qEl = b.closest('.sbt-sq'), q = qEl ? seqById(qEl.dataset.sq) : null;
+    const a = b.dataset.sb, fEl = b.closest('.sbt-f, .sbt-r'), f = fEl ? frameById(fEl.dataset.id) : null, qEl = b.closest('.sbt-sq'), q = qEl ? seqById(qEl.dataset.sq) : null;
     if(a === 'play' || a === 'manual') openViewer(0, a === 'play');
     else if(a === 'dlall') R().dlOpen();
     else if(a === 'clearsel'){ R().SELS.clear(); refresh(); }
@@ -375,6 +411,8 @@
     else if(!f) return;
     else if(a === 'sel'){ if(R().SELS.has(f.id)) R().SELS.delete(f.id); else R().SELS.add(f.id); refresh(); }
     else if(a === 'mv') moveMenu(b, f);
+    else if(a === 'mprev' || a === 'mnext') stepShot(f, a === 'mprev' ? -1 : 1);
+    else if(a === 'dup') dupShot(f);
     else if(a === 'shot') shotMenu(b, f);
     else if(a === 'dl') R().dlOpen(f.id);
     else if(a === 'edit') R().drawOpen(f.pg, f);
@@ -403,15 +441,16 @@
     if(g){ dragSq = g.closest('.sbt-sq').dataset.sq; try{ e.dataTransfer.setData('text/plain', 'sbq:' + dragSq); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setDragImage(g.closest('.sbt-sh'), 20, 20); }catch(err){} g.closest('.sbt-sq').classList.add('dragging'); return; }
     const im = e.target.closest && e.target.closest('#sbtWrap .sbt-img'); if(!im) return;
     drag = im.closest('.sbt-f').dataset.id;
-    try{ e.dataTransfer.setData('text/plain', 'sbt:' + drag); e.dataTransfer.effectAllowed = 'move'; }catch(err){}
+    try{ e.dataTransfer.setData('text/plain', 'sbt:' + drag); e.dataTransfer.effectAllowed = 'copyMove'; }catch(err){}
     im.closest('.sbt-f').classList.add('dragging');
   });
-  document.addEventListener('dragend', () => { drag = null; dragSq = null; clearMarks(); document.querySelectorAll('#sbtWrap .dragging').forEach(x => x.classList.remove('dragging')); });
+  document.addEventListener('dragend', () => { drag = null; dragSq = null; clearMarks(); const w0 = $('sbtWrap'); if(w0) w0.classList.remove('sbt-copying'); document.querySelectorAll('#sbtWrap .dragging').forEach(x => x.classList.remove('dragging')); });
   document.addEventListener('dragover', e => {
     const w = $('sbtWrap'); if(!w || !w.contains(e.target)) return;
     const files = e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') >= 0;
     if(!drag && !dragSq && !files) return;
     e.preventDefault(); clearMarks();
+    if(drag){ try{ e.dataTransfer.dropEffect = (e.ctrlKey || e.altKey || e.metaKey) ? 'copy' : 'move'; }catch(err){} w.classList.toggle('sbt-copying', !!(e.ctrlKey || e.altKey || e.metaKey)); }
     const sec = e.target.closest('.sbt-sq');
     if(dragSq){ if(sec && sec.dataset.sq !== dragSq){ const r = sec.getBoundingClientRect(); sec.classList.add(e.clientY > r.top + r.height / 2 ? 'sq-a' : 'sq-b'); } }
     else {
@@ -438,7 +477,8 @@
     const f = frameById(drag), card = e.target.closest('.sbt-f'); clearMarks(); if(!f) return;
     let before = null, after = null;
     if(card && card.dataset.id !== drag){ const t = frameById(card.dataset.id), r = card.getBoundingClientRect(); if(e.clientX > r.left + r.width / 2) after = t; else before = t; }
-    moveTo(f, q.id, before, after); drag = null;
+    if(e.ctrlKey || e.altKey || e.metaKey) dupShot(f, q.id, before, after); else moveTo(f, q.id, before, after);
+    drag = null; w.classList.remove('sbt-copying');
   });
   /* Ctrl+V en survolant une séquence : l'image copiée s'y ajoute */
   let hoverSq = null;
@@ -697,6 +737,21 @@
   .sbt-f.sel .sbt-chk{background:var(--accent); border-color:var(--accent); color:#fff;}
   .sbt-f.sel .sbt-img{outline:2px solid var(--accent); outline-offset:2px;}
   @media (hover:none){ .sbt-tools, .sbt-chk{opacity:1;} }
+  .sbt-move{position:absolute; left:50%; bottom:7px; transform:translate(-50%, 4px); display:flex; align-items:center; gap:2px; padding:3px; border-radius:999px; background:rgba(15,17,21,.78); box-shadow:0 4px 14px rgba(0,0,0,.25); opacity:0; transition:opacity .14s ease, transform .14s ease; white-space:nowrap;}
+  .sbt-img:hover .sbt-move, .sbt-img:focus-within .sbt-move{opacity:1; transform:translate(-50%, 0);}
+  .sbt-move button{height:26px; min-width:26px; display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:0 6px; border:0; border-radius:999px; background:none; color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:pointer;}
+  .sbt-move button:hover{background:var(--accent);}
+  .sbt-mg{display:grid; place-items:center; width:20px; height:26px; color:rgba(255,255,255,.7); cursor:grab;}
+  @container (max-width:230px){ .sbt-mdup span{display:none;} }
+  .sbt-img{container-type:inline-size;}
+  @media (hover:none){ .sbt-move{opacity:1; transform:translate(-50%, 0);} }
+  .sbt-tbl td.p{position:relative;}
+  .sbt-rmv{position:absolute; left:4px; top:50%; transform:translateY(-50%); display:inline-flex; gap:1px; padding:2px; border-radius:999px; background:rgba(15,17,21,.82); box-shadow:0 3px 10px rgba(0,0,0,.25); opacity:0; pointer-events:none; transition:opacity .12s ease; z-index:1;}
+  .sbt-r:hover .sbt-rmv, .sbt-r:focus-within .sbt-rmv{opacity:1; pointer-events:auto;}
+  .sbt-rmv button{width:21px; height:21px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:none; color:#fff; cursor:pointer;}
+  .sbt-rmv button:hover{background:var(--accent);}
+  @media (hover:none){ .sbt-rmv{opacity:1;} }
+  #sbtWrap.sbt-copying .sbt-f.over-b .sbt-img, #sbtWrap.sbt-copying .sbt-f.over-a .sbt-img{outline:2px dashed var(--accent); outline-offset:2px;}
   .sbt-f.dragging{opacity:.4;}
   .sbt-f.over-b .sbt-img{box-shadow:-4px 0 0 var(--accent);} .sbt-f.over-a .sbt-img{box-shadow:4px 0 0 var(--accent);}
   .sbt-f.flash .sbt-img{animation:rpSbFlash 1.2s ease;}
