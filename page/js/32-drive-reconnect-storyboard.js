@@ -385,15 +385,18 @@
       text:'<path d="M3 4.6V3h10v1.6M8 3v10M6 13h4"/>',
       bucket:'<path d="M2.9 7.6L7.4 3.1l5.3 5.3-4.5 4.5a1.6 1.6 0 0 1-2.3 0L2.9 9.9a1.6 1.6 0 0 1 0-2.3z"/><path d="M3.2 8.6h9.3M5.6 1.6l1.8 1.5"/><path d="M14.1 10.4s1.1 1.5 1.1 2.3a1.1 1.1 0 0 1-2.2 0c0-.8 1.1-2.3 1.1-2.3z" fill="currentColor"/>',
       picker:'<path d="M10.5 2.7a1.9 1.9 0 0 1 2.8 2.8l-1.7 1.7-2.8-2.8z"/><path d="M9.6 5.5L3.5 11.6 3 13l1.4-.5 6.1-6.1M8.3 4.2l3.5 3.5"/>',
-      crop:'<path d="M4.5 1.5v10h10M1.5 4.5h10v10"/>'
+      crop:'<path d="M4.5 1.5v10h10M1.5 4.5h10v10"/>',
+      select:'<path d="M2.5 5V2.5H5M8 2.5h1.5M2.5 8v1.5M12.5 5V2.5H10M2.5 11v2.5H5" stroke-dasharray="0"/><path d="M8.2 7.6l5.6 2.2-2.4.9-.9 2.4z" fill="currentColor"/>'
     };
     const GROUPS = [
+      [L('Sélection', 'Select'), [['select', L('Sélection', 'Select'), 'V']]],
       [L('Dessin', 'Draw'), [['pen', L('Crayon', 'Pencil'), 'B'], ['marker', L('Marqueur', 'Marker'), 'M'], ['eraser', L('Gomme', 'Eraser'), 'E']]],
       [L('Formes', 'Shapes'), [['line', L('Ligne', 'Line'), 'L'], ['arrow', L('Flèche', 'Arrow'), 'A'], ['rect', L('Rectangle', 'Rectangle'), 'R'], ['ellipse', L('Ellipse', 'Ellipse'), 'O']]],
       [L('Couleur & texte', 'Colour & text'), [['text', L('Texte', 'Text'), 'T'], ['bucket', L('Seau', 'Bucket'), 'G'], ['picker', L('Pipette', 'Eyedropper'), 'I']]],
       [L('Image', 'Picture'), [['crop', L('Cadrer', 'Frame'), 'C']]]
     ];
     const TIPS = {
+      select:L('Sélection : clique sur un dessin pour le prendre, ou trace un cadre autour, puis déplace, agrandis, tourne, duplique', 'Select: click a drawing to pick it up, or drag a box around it, then move, resize, rotate, duplicate'),
       pen:L('Crayon : trait à main levée', 'Pencil: freehand stroke'), marker:L('Marqueur : trait large et transparent, pour ombrer ou surligner', 'Marker: wide see-through stroke, to shade or highlight'),
       eraser:L('Gomme : efface en blanc', 'Eraser: erases to white'), line:L('Ligne · Maj = droite', 'Line · Shift = straight'),
       arrow:L('Flèche · mouvement de caméra ou de personnage · Maj = droite', 'Arrow · camera or character move · Shift = straight'),
@@ -401,9 +404,9 @@
       text:L('Texte : clique où écrire', 'Text: click where to write'), bucket:L('Seau : colorie la zone cliquée', 'Bucket: fills the clicked area'),
       picker:L('Pipette : prend une couleur du dessin', 'Eyedropper: picks a colour from the drawing'), crop:L('Cadrer : déplacer et zoomer l’image dans le cadre', 'Frame: move and zoom the picture in the frame')
     };
-    const KEYS = { b:'pen', m:'marker', e:'eraser', l:'line', a:'arrow', r:'rect', o:'ellipse', t:'text', g:'bucket', i:'picker' };
+    const KEYS = { v:'select', b:'pen', m:'marker', e:'eraser', l:'line', a:'arrow', r:'rect', o:'ellipse', t:'text', g:'bucket', i:'picker' };
     /* réglages montrés pour chaque outil */
-    const SHOW = { pen:'col size op dash', marker:'col size op', eraser:'size', line:'col size op dash', arrow:'col size op dash', rect:'col size op dash fill', ellipse:'col size op dash fill', text:'col size op', bucket:'col', picker:'pick' };
+    const SHOW = { select:'sel', pen:'col size op dash', marker:'col size op', eraser:'size', line:'col size op dash', arrow:'col size op dash', rect:'col size op dash fill', ellipse:'col size op dash fill', text:'col size op', bucket:'col', picker:'pick' };
     const cur = (paths, hx, hy) => 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#fff" stroke-width="3">' + paths + '</g><g stroke="#1b1b1f" stroke-width="1.3">' + paths + '</g></svg>') + '") ' + hx + ' ' + hy + ', crosshair';
     const BUCKET_CUR = cur('<path d="M2.9 7.6L7.4 3.1l5.3 5.3-4.5 4.5a1.6 1.6 0 0 1-2.3 0L2.9 9.9a1.6 1.6 0 0 1 0-2.3z"/><path d="M14.1 10.4s1.1 1.5 1.1 2.3a1.1 1.1 0 0 1-2.2 0c0-.8 1.1-2.3 1.1-2.3z"/>', 21, 21);
     const PICK_CUR = cur('<path d="M10.5 2.7a1.9 1.9 0 0 1 2.8 2.8l-1.7 1.7-2.8-2.8z"/><path d="M9.6 5.5L3.5 11.6 3 13l1.4-.5 6.1-6.1"/>', 4, 20);
@@ -439,6 +442,9 @@
             <div class="rd-o" data-o="op"><span class="rd-l">${esc(L('Opacité', 'Opacity'))}</span><input type="range" class="rd-op" min="10" max="100" step="5" value="100" aria-label="${esc(L('Opacité', 'Opacity'))}"><span class="rd-v rd-op-v">100 %</span></div>
             <div class="rd-o" data-o="dash"><div class="rd-seg"><button type="button" data-dash="0" class="sel" title="${esc(L('Trait plein', 'Solid line'))}">${svg('<path d="M2 8h12"/>', 15)}</button><button type="button" data-dash="1" title="${esc(L('Pointillés (mouvement, hors champ…)', 'Dashed (movement, off-screen…)'))}">${svg('<path d="M2 8h2.6M6.7 8h2.6M11.4 8H14"/>', 15)}</button></div></div>
             <div class="rd-o" data-o="fill"><button type="button" class="rd-chip" data-a="fill" title="${esc(L('Remplir l’intérieur des rectangles et ellipses', 'Fill the inside of rectangles and ellipses'))}">${svg('<rect x="3" y="4" width="10" height="8" rx="1.2" fill="currentColor" fill-opacity=".35"/>', 14)}<span>${esc(L('Remplir', 'Fill'))}</span></button></div>
+            <div class="rd-o" data-o="sel"><button type="button" class="rd-chip" data-a="selall" title="${esc(L('Tout sélectionner (Ctrl+A) : déplacer, agrandir ou redresser tout le dessin', 'Select all (Ctrl+A): move, resize or straighten the whole drawing'))}">${svg('<rect x="2.5" y="2.5" width="11" height="11" rx="1.2" stroke-dasharray="2 1.6"/>', 14)}<span>${esc(L('Tout sélectionner', 'Select all'))}</span></button>
+              <button type="button" class="rd-chip" data-a="sellast" title="${esc(L('Prendre le dernier trait ou la dernière forme dessinés', 'Pick up the last stroke or shape you drew'))}">${svg('<path d="M3 12.5c2.5-1 3-4.5 5.5-5.5S12 6 13 3.5"/><path d="M10.5 3.2l2.6.2-.2 2.6"/>', 14)}<span>${esc(L('Dernier trait', 'Last stroke'))}</span></button>
+              <span class="rd-hint">${esc(L('Clique sur un dessin pour le prendre, ou trace un cadre autour.', 'Click a drawing to pick it up, or drag a box around it.'))}</span></div>
             <div class="rd-o rd-hint" data-o="pick">${esc(L('Clique sur le dessin pour prendre sa couleur.', 'Click the drawing to pick its colour.'))}</div>
           </div>
           <div class="rd-flt" hidden role="group" aria-label="${esc(L('Filtre de couleur', 'Colour filter'))}"><span class="rd-l">${esc(L('Filtre', 'Filter'))}</span>
@@ -446,7 +452,14 @@
             <label class="rd-fc rd-fc-cust" title="${esc(L('Autre couleur…', 'Other colour…'))}"><i></i>${esc(L('Autre', 'Other'))}<input type="color" class="rd-flt-col" value="#7a3cc8" aria-label="${esc(L('Autre couleur de filtre', 'Other filter colour'))}"></label>
             <span class="rd-flt-k" hidden><span class="rd-l">${esc(L('Intensité', 'Strength'))}</span><input type="range" class="rd-flt-r" min="10" max="100" step="5" value="100" aria-label="${esc(L('Intensité du filtre', 'Filter strength'))}"><span class="rd-v rd-flt-v">100 %</span></span>
           </div>
-          <div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><div class="rd-tint"></div><div class="rp-draw-guides"></div>
+          <div class="rp-draw-cv"><canvas width="960" height="540"></canvas><canvas class="rd-ov" width="960" height="540"></canvas><div class="rd-tint"></div><canvas class="rd-selov" width="960" height="540"></canvas><div class="rp-draw-guides"></div>
+            <div class="rp-crop-bar rd-selbar" hidden><span class="h">${esc(L('Glisse pour déplacer · coins pour agrandir · rond pour tourner', 'Drag to move · corners to resize · circle to rotate'))}</span>
+              <button type="button" data-sel="dup" title="${esc(L('Dupliquer (Ctrl+D) : une copie se pose à côté, prête à être déplacée', 'Duplicate (Ctrl+D): a copy lands next to it, ready to move'))}">${svg('<rect x="5.5" y="5.5" width="8" height="8" rx="1.3"/><path d="M10.5 3.5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h.5"/>', 14)}<span>${esc(L('Dupliquer', 'Duplicate'))}</span></button>
+              <button type="button" data-sel="flipx" title="${esc(L('Miroir gauche ↔ droite', 'Mirror left ↔ right'))}">${svg('<path d="M8 1.8v12.4" stroke-dasharray="1.6 1.6"/><path d="M5.8 4.2L2 11.8h3.8zM10.2 4.2l3.8 7.6h-3.8z"/>', 14)}<span>${esc(L('Miroir', 'Mirror'))}</span></button>
+              <button type="button" data-sel="flipy" title="${esc(L('Retourner haut ↕ bas', 'Flip top ↕ bottom'))}">${svg('<path d="M1.8 8h12.4" stroke-dasharray="1.6 1.6"/><path d="M4.2 5.8L11.8 2v3.8zM4.2 10.2l7.6 3.8v-3.8z"/>', 14)}</button>
+              <button type="button" data-sel="rot0" class="rd-ang" title="${esc(L('Redresser : remettre droit', 'Straighten: set back upright'))}">0°</button>
+              <button type="button" data-sel="del" title="${esc(L('Supprimer (Suppr)', 'Delete (Del)'))}">${svg('<path d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8"/>', 14)}</button>
+              <button type="button" class="ok" data-sel="ok" title="${esc(L('Valider (Entrée)', 'Apply (Enter)'))}">${esc(L('OK', 'OK'))}</button></div>
             <div class="rp-crop-bar" hidden><span class="h">${esc(L('Glisse l’image pour la placer · molette pour zoomer', 'Drag the picture to place it · scroll to zoom'))}</span>
               <button type="button" data-crop="cover" title="${esc(L('L’image remplit tout le cadre', 'The picture fills the whole frame'))}">${esc(L('Remplir', 'Fill'))}</button>
               <button type="button" data-crop="contain" title="${esc(L('Toute l’image est visible', 'The whole picture is visible'))}">${esc(L('Image entière', 'Whole picture'))}</button>
@@ -468,6 +481,7 @@
     }
     let color = COLORS[0][0], size = 3, tool = 'pen', fill = false, hist = [], fwd = [], last = null, prevMid = null, down = false, moved = false, start = null, base = null, txt = null, origIm = null, crop = null, lastCrop = null;
     let opac = 1, dash = false, path = null, prevTool = 'pen';
+    let sel = null, selDrag = null, marq = null;
     let flt = (frame && frame.raw && frame.flt) ? { c:frame.flt.c, k:frame.flt.k || 1 } : { c:'none', k:1 };
     const fltRow = bg.querySelector('.rd-flt'), fltBtn = bg.querySelector('[data-a="filter"]'), tint = bg.querySelector('.rd-tint');
     const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -615,7 +629,7 @@
     }
     /* cadrer : l'image (celle d'origine si rien n'a encore été dessiné, sinon le dessin actuel) se déplace
        et se zoome dans le cadre 16:9 ; ce qu'on voit est exactement ce qui sera enregistré et exporté. */
-    const cropBar = bg.querySelector('.rp-crop-bar'), cropRange = cropBar.querySelector('input');
+    const cropBar = bg.querySelector('.rp-crop-bar:not(.rd-selbar)'), cropRange = cropBar.querySelector('input');
     function cropStart(){
       if(crop) return;
       commitText();
@@ -691,12 +705,182 @@
       setTimeout(() => inp.focus(), 0);
     }
     function commitText(){
+      selCommit();
       if(!txt) return; const t = txt; txt = null;
       const v = t.el.value; t.el.remove();
       if(!v.trim()) return;
       snap(); cx.save(); cx.globalAlpha = t.o; cx.font = '600 ' + t.f + 'px ' + FF; cx.textBaseline = 'top'; cx.fillStyle = t.c; cx.fillText(v, t.x, t.y + t.f * 0.1); cx.restore();
     }
+    /* ---- SÉLECTION : prendre un dessin (clic), une zone (cadre), tout (Ctrl+A) ou le dernier trait ;
+       le morceau « flotte » au-dessus du dessin : déplacer, agrandir (coins = proportionnel, Maj = libre ; côtés = étirer),
+       tourner (rond, Maj = pas de 15°), dupliquer, miroir, supprimer. Le blanc du papier ne suit pas (transparent). */
+    const selov = bg.querySelector('.rd-selov'), sox = selov.getContext('2d'), selBar = bg.querySelector('.rd-selbar');
+    const kSc = () => (cv.getBoundingClientRect().width || 960) / 960;
+    const isWhite = (d, q) => d[q] > 240 && d[q + 1] > 240 && d[q + 2] > 240;
+    function selLift(mask, x0, y0, x1, y1, baseImg){
+      const cur = cx.getImageData(0, 0, 960, 540), s = cur.data;
+      x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(959, Math.ceil(x1)); y1 = Math.min(539, Math.ceil(y1));
+      let mnx = 1e9, mny = 1e9, mxx = -1, mxy = -1;
+      for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+        const i = y * 960 + x; if(mask && !mask[i]) continue;
+        if(isWhite(s, i * 4)) continue;
+        if(x < mnx) mnx = x; if(x > mxx) mxx = x; if(y < mny) mny = y; if(y > mxy) mxy = y;
+      }
+      if(mxx < 0) return false;
+      const w = mxx - mnx + 1, h = mxy - mny + 1, fc = document.createElement('canvas'); fc.width = w; fc.height = h;
+      const fxc = fc.getContext('2d'), fi = fxc.createImageData(w, h), fd = fi.data;
+      const base = new ImageData(new Uint8ClampedArray((baseImg || cur).data), 960, 540), bd = base.data;
+      for(let y = mny; y <= mxy; y++) for(let x = mnx; x <= mxx; x++){
+        const i = y * 960 + x; if(mask && !mask[i]) continue;
+        const q = i * 4; if(isWhite(s, q)) continue;
+        const o = ((y - mny) * w + (x - mnx)) * 4;
+        fd[o] = s[q]; fd[o + 1] = s[q + 1]; fd[o + 2] = s[q + 2]; fd[o + 3] = 255;
+        if(!baseImg){ bd[q] = bd[q + 1] = bd[q + 2] = 255; bd[q + 3] = 255; }
+      }
+      fxc.putImageData(fi, 0, 0);
+      snap();                                                         // état d'avant : Échap / Ctrl+Z y reviennent
+      sel = { base, img:fc, x:mnx + w / 2, y:mny + h / 2, w, h, rot:0, fx:1, fy:1 };
+      selRender(); return true;
+    }
+    function selRender(){
+      if(sel){
+        cx.putImageData(sel.base, 0, 0);
+        cx.save(); cx.translate(sel.x, sel.y); cx.rotate(sel.rot); cx.scale(sel.fx, sel.fy);
+        cx.imageSmoothingQuality = 'high'; cx.drawImage(sel.img, -sel.w / 2, -sel.h / 2, sel.w, sel.h); cx.restore();
+      }
+      selUI();
+    }
+    function selUI(){
+      sox.clearRect(0, 0, 960, 540);
+      const k = kSc(), A = '#3699D4';
+      if(marq){
+        sox.save(); sox.strokeStyle = A; sox.lineWidth = 1.5 / k; sox.setLineDash([6 / k, 4 / k]); sox.fillStyle = 'rgba(54,153,212,.08)';
+        const x = Math.min(marq.x0, marq.x1), y = Math.min(marq.y0, marq.y1), w = Math.abs(marq.x1 - marq.x0), h = Math.abs(marq.y1 - marq.y0);
+        sox.fillRect(x, y, w, h); sox.strokeRect(x, y, w, h); sox.restore();
+      }
+      selBar.hidden = !sel;
+      if(!sel) return;
+      const hw = sel.w / 2, hh = sel.h / 2, r = 5.5 / k;
+      sox.save(); sox.translate(sel.x, sel.y); sox.rotate(sel.rot);
+      sox.strokeStyle = A; sox.lineWidth = 1.5 / k; sox.setLineDash([6 / k, 4 / k]); sox.strokeRect(-hw, -hh, sel.w, sel.h); sox.setLineDash([]);
+      sox.beginPath(); sox.moveTo(0, -hh); sox.lineTo(0, -hh - 26 / k); sox.stroke();
+      sox.fillStyle = '#fff'; sox.lineWidth = 2 / k;
+      sox.beginPath(); sox.arc(0, -hh - 26 / k, 6.5 / k, 0, Math.PI * 2); sox.fill(); sox.stroke();
+      sox.beginPath(); sox.arc(0, -hh - 26 / k, 2.6 / k, 0, Math.PI * 2); sox.fillStyle = A; sox.fill(); sox.fillStyle = '#fff';
+      [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]].forEach(([a, b]) => {
+        sox.beginPath(); sox.rect(a * hw - r, b * hh - r, r * 2, r * 2); sox.fill(); sox.stroke();
+      });
+      sox.restore();
+      let deg = Math.round(sel.rot * 180 / Math.PI) % 360; if(deg > 180) deg -= 360; if(deg <= -180) deg += 360;
+      const ang = selBar.querySelector('.rd-ang'); ang.textContent = deg + '°'; ang.classList.toggle('dim', deg === 0);
+    }
+    const toLocal = (p, x, y, r) => { const dx = p.x - x, dy = p.y - y, c = Math.cos(-r), s = Math.sin(-r); return { x:dx * c - dy * s, y:dx * s + dy * c }; };
+    function selHit(p){
+      if(!sel) return null;
+      const k = kSc(), l = toLocal(p, sel.x, sel.y, sel.rot), hw = sel.w / 2, hh = sel.h / 2, R = 10 / k;
+      if(Math.hypot(l.x, l.y + hh + 26 / k) < R) return { t:'rot' };
+      for(const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) if(Math.abs(l.x - a * hw) < R && Math.abs(l.y - b * hh) < R) return { t:'c', sx:a, sy:b };
+      for(const [a, b] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) if(Math.abs(l.x - a * hw) < R && Math.abs(l.y - b * hh) < R) return { t:'e', sx:a, sy:b };
+      if(Math.abs(l.x) <= hw + 3 / k && Math.abs(l.y) <= hh + 3 / k) return { t:'move' };
+      return null;
+    }
+    function selCursor(h){
+      if(!h) return null;
+      if(h.t === 'move') return 'move';
+      if(h.t === 'rot') return 'grab';
+      /* le curseur de redimensionnement suit l'angle du morceau */
+      const a = ((Math.atan2(h.sy, h.sx) + sel.rot) * 180 / Math.PI + 360) % 180;
+      return a < 22.5 || a >= 157.5 ? 'ew-resize' : a < 67.5 ? 'nwse-resize' : a < 112.5 ? 'ns-resize' : 'nesw-resize';
+    }
+    function selCommit(){ if(!sel) return; sel = null; selDrag = null; selUI(); }
+    function selCancel(){ if(!sel) return; sel = null; selDrag = null; const h = hist.pop(); if(h) cx.putImageData(h, 0, 0); selUI(); }
+    function selDelete(){ if(!sel) return; cx.putImageData(sel.base, 0, 0); sel = null; selDrag = null; selUI(); }
+    function selDup(){
+      if(!sel) return;
+      snap(); sel.base = cx.getImageData(0, 0, 960, 540);              // la copie d'origine reste posée à sa place
+      const d = 24 / Math.max(.5, kSc() * 1.6) + 12; sel.x += d; sel.y += d; selRender();
+    }
+    function selAll(){ if(tool !== 'select') setTool('select'); else commitText(); if(!selLift(null, 0, 0, 959, 539)) snack(L('Rien à sélectionner : la page est blanche.', 'Nothing to select: the page is blank.')); }
+    function selLast(){
+      if(tool !== 'select') setTool('select'); else commitText();
+      const prev = hist[hist.length - 1];
+      if(!prev){ snack(L('Rien à prendre : dessine d’abord un trait.', 'Nothing to pick up: draw a stroke first.')); return; }
+      const cur = cx.getImageData(0, 0, 960, 540).data, pd = prev.data, m = new Uint8Array(960 * 540);
+      let x0 = 960, y0 = 540, x1 = -1, y1 = -1;
+      for(let i = 0; i < m.length; i++){ const q = i * 4; if(Math.abs(cur[q] - pd[q]) > 10 || Math.abs(cur[q + 1] - pd[q + 1]) > 10 || Math.abs(cur[q + 2] - pd[q + 2]) > 10){ m[i] = 1; const x = i % 960, y = (i / 960) | 0; if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y; } }
+      if(x1 < 0 || !selLift(m, x0, y0, x1, y1, prev)) snack(L('Le dernier geste n’a rien laissé à déplacer.', 'The last action left nothing to move.'));
+    }
+    /* clic sur un dessin : on prend tout ce qui le touche (traits reliés entre eux) */
+    function selPickAt(p){
+      const W = 960, H = 540, x0 = Math.max(0, Math.min(W - 1, Math.floor(p.x))), y0 = Math.max(0, Math.min(H - 1, Math.floor(p.y)));
+      const d = cx.getImageData(0, 0, W, H).data;
+      let sx = -1, sy = -1;
+      for(let rr = 0; rr <= 6 && sx < 0; rr++) for(let dy = -rr; dy <= rr && sx < 0; dy++) for(let dx = -rr; dx <= rr; dx++){
+        const x = x0 + dx, y = y0 + dy; if(x < 0 || y < 0 || x >= W || y >= H) continue;
+        if(!isWhite(d, (y * W + x) * 4)){ sx = x; sy = y; break; }
+      }
+      if(sx < 0) return false;
+      const m = new Uint8Array(W * H), st = [sx + sy * W]; m[st[0]] = 1;
+      let bx0 = sx, by0 = sy, bx1 = sx, by1 = sy;
+      while(st.length){
+        const i = st.pop(), x = i % W, y = (i / W) | 0;
+        if(x < bx0) bx0 = x; if(x > bx1) bx1 = x; if(y < by0) by0 = y; if(y > by1) by1 = y;
+        for(let dy = -1; dy <= 1; dy++) for(let dx = -1; dx <= 1; dx++){
+          const nx = x + dx, ny = y + dy; if(nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const j = ny * W + nx; if(m[j] || isWhite(d, j * 4)) continue; m[j] = 1; st.push(j);
+        }
+      }
+      return selLift(m, bx0, by0, bx1, by1);
+    }
+    function selDown(p, e){
+      if(sel){
+        const h = selHit(p);
+        if(h){ selDrag = { h, p0:p, x0:sel.x, y0:sel.y, w0:sel.w, h0:sel.h, r0:sel.rot, a0:Math.atan2(p.y - sel.y, p.x - sel.x) }; if(h.t === 'rot') cv.style.cursor = 'grabbing'; return true; }
+        selCommit();
+      }
+      if(tool === 'select'){ commitText(); marq = { x0:p.x, y0:p.y, x1:p.x, y1:p.y }; return true; }
+      return false;
+    }
+    function selMove(e){
+      const p = pt(e);
+      if(selDrag){
+        e.preventDefault();
+        const g = selDrag, h = g.h;
+        if(h.t === 'move'){ sel.x = g.x0 + p.x - g.p0.x; sel.y = g.y0 + p.y - g.p0.y; }
+        else if(h.t === 'rot'){
+          let r = g.r0 + Math.atan2(p.y - g.y0, p.x - g.x0) - g.a0;
+          if(e.shiftKey) r = Math.round(r / (Math.PI / 12)) * (Math.PI / 12);
+          sel.rot = r;
+        } else {
+          const l = toLocal(p, g.x0, g.y0, g.r0), ox = -h.sx * g.w0 / 2, oy = -h.sy * g.h0 / 2;
+          let nw = g.w0, nh = g.h0;
+          if(h.sx) nw = Math.max(4, (l.x - ox) * h.sx);
+          if(h.sy) nh = Math.max(4, (l.y - oy) * h.sy);
+          if(h.t === 'c' && !e.shiftKey){ const s = Math.max(nw / g.w0, nh / g.h0); nw = Math.max(4, g.w0 * s); nh = Math.max(4, g.h0 * s); }
+          const clx = h.sx ? ox + h.sx * nw / 2 : 0, cly = h.sy ? oy + h.sy * nh / 2 : 0, c = Math.cos(g.r0), s = Math.sin(g.r0);
+          sel.w = nw; sel.h = nh; sel.x = g.x0 + clx * c - cly * s; sel.y = g.y0 + clx * s + cly * c;
+        }
+        selRender(); return true;
+      }
+      if(marq){ e.preventDefault(); marq.x1 = p.x; marq.y1 = p.y; selUI(); return true; }
+      if(sel && !down) cv.style.cursor = selCursor(selHit(p)) || (tool === 'select' ? 'crosshair' : cursorFor(tool));
+      return false;
+    }
+    function selUp(){
+      if(selDrag){ selDrag = null; if(sel) cv.style.cursor = 'move'; return true; }
+      if(marq){
+        const m = marq; marq = null;
+        const w = Math.abs(m.x1 - m.x0), h = Math.abs(m.y1 - m.y0);
+        if(w < 5 && h < 5) selPickAt({ x:m.x0, y:m.y0 });
+        else if(!selLift(null, Math.min(m.x0, m.x1), Math.min(m.y0, m.y1), Math.max(m.x0, m.x1), Math.max(m.y0, m.y1))) selUI();
+        if(!sel) selUI();
+        return true;
+      }
+      return false;
+    }
+    selBar.addEventListener('mousedown', e => { if(e.target.closest('button')) e.preventDefault(); });
     cv.addEventListener('pointerdown', e => {
+      if(!crop && (sel || tool === 'select')){ e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(err){} if(selDown(pt(e), e)) return; }
       e.preventDefault(); commitText(); try{ cv.setPointerCapture(e.pointerId); }catch(err){}
       const p = pt(e);
       if(crop){ crop.drag = { x:p.x, y:p.y, ox:crop.ox, oy:crop.oy }; cv.style.cursor = 'grabbing'; return; }
@@ -709,6 +893,7 @@
       else { start = null; path = null; style(p.p); }
     });
     cv.addEventListener('pointermove', e => {
+      if(!crop && selMove(e)) return;
       if(crop && crop.drag){
         e.preventDefault(); const p = pt(e), c = crop, w = c.sw * c.s, h = c.sh * c.s;
         c.ox = cropSnap(c.drag.ox + p.x - c.drag.x, w, 960); c.oy = cropSnap(c.drag.oy + p.y - c.drag.y, h, 540); cropDraw(); return;
@@ -726,6 +911,7 @@
       prevMid = mid; last = p;
     });
     const end = () => {
+      if(selUp()) return;
       if(crop && crop.drag){ crop.drag = null; cv.style.cursor = 'grab'; return; }
       if(!down) return; down = false;
       if(start){ if(!moved) hist.pop(); start = null; base = null; return; }     // forme : déjà tracée pendant le glissement
@@ -742,6 +928,18 @@
         if(e.key === 'Enter'){ e.preventDefault(); commitText(); }
         else if(e.key === 'Escape'){ e.preventDefault(); const t = txt; txt = null; t.el.remove(); }
         e.stopPropagation(); return;
+      }
+      {
+        const mk = e.ctrlKey || e.metaKey, kk = (e.key || '').toLowerCase(), onBtn = e.target && e.target.tagName === 'BUTTON';
+        if(!crop && mk && kk === 'a'){ e.preventDefault(); e.stopPropagation(); selAll(); return; }
+        if(sel){
+          if(e.key === 'Enter' && !onBtn){ e.preventDefault(); e.stopPropagation(); selCommit(); return; }
+          if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); selCancel(); return; }
+          if(e.key === 'Delete' || e.key === 'Backspace'){ e.preventDefault(); e.stopPropagation(); selDelete(); return; }
+          if(mk && kk === 'd'){ e.preventDefault(); e.stopPropagation(); selDup(); return; }
+          const ar = { ArrowLeft:[-1, 0], ArrowRight:[1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[e.key];
+          if(ar){ e.preventDefault(); e.stopPropagation(); const st = e.shiftKey ? 10 : 1; sel.x += ar[0] * st; sel.y += ar[1] * st; selRender(); return; }
+        }
       }
       if(crop && (e.key === 'Escape' || e.key === 'Enter') && !(e.target && e.target.tagName === 'BUTTON' && e.key === 'Enter')){ e.preventDefault(); e.stopPropagation(); cropEnd(e.key === 'Enter'); return; }
       if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); close(); return; }
@@ -774,6 +972,13 @@
       else if(b.dataset.a === 'crop'){ if(crop) cropEnd(true); else cropStart(); }
       else if(b.dataset.a === 'mirror') mirror();
       else if(b.dataset.a === 'filter') fltToggle();
+      else if(b.dataset.a === 'selall') selAll();
+      else if(b.dataset.a === 'sellast') selLast();
+      else if(b.dataset.sel){
+        const k = b.dataset.sel; if(!sel) return;
+        if(k === 'dup') selDup(); else if(k === 'flipx'){ sel.fx *= -1; selRender(); } else if(k === 'flipy'){ sel.fy *= -1; selRender(); }
+        else if(k === 'rot0'){ sel.rot = 0; selRender(); } else if(k === 'del') selDelete(); else if(k === 'ok') selCommit();
+      }
       else if(b.dataset.flt){ flt.c = b.dataset.flt; fltShow(); }
       else if(b.dataset.a === 'guides'){ const g = bg.querySelector('.rp-draw-guides'); g.classList.toggle('on'); b.classList.toggle('sel', g.classList.contains('on')); if(crop) crop.guides = g.classList.contains('on'); }
       else if(b.dataset.a === 'undo'){ commitText(); if(crop) cropEnd(false); else undo(); }
@@ -1060,6 +1265,12 @@
   .rd-hint{font-size:12.5px; color:var(--ink-soft);}
   .rp-draw.v92 .rp-draw-cv{width:100%; max-width:calc((100vh - 250px) * 16 / 9);}
   .rp-draw.v92 canvas.rd-ov{position:absolute; inset:0; height:100%; background:transparent; border-color:transparent; pointer-events:none;}
+  .rp-draw.v92 canvas.rd-selov{position:absolute; inset:0; height:100%; background:transparent; border-color:transparent; pointer-events:none;}
+  .rd-selbar button{display:inline-flex; align-items:center; gap:5px;}
+  .rd-selbar button svg{flex:none;}
+  .rd-selbar .rd-ang{min-width:44px; font-variant-numeric:tabular-nums;}
+  .rd-selbar .rd-ang.dim{color:var(--ink-soft);}
+  @media (max-width:760px){ .rd-selbar button span{display:none;} }
   .rd-tint{position:absolute; inset:0; pointer-events:none; border-radius:10px; mix-blend-mode:multiply; background:transparent; transition:background .12s;}
   .rd-flt{display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:7px 10px; border:1px solid var(--hair); border-radius:12px; background:var(--surface-soft); animation:rpCropIn .14s ease;}
   .rd-flt[hidden]{display:none;}
