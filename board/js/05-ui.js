@@ -1235,7 +1235,7 @@ const ACT = {
   full:() => toggleFull(), tbChar:() => { const s = shot(), used = s.chars.map(c => c.look), k = CHAR_LOOK.findIndex((x, i) => !used.includes(i)); if(k >= 0) addChar(k); setPanel('chars'); }, immTools:() => immTools(), style:b => setStyle(b.dataset.v), ratio:b => setRatio(b.dataset.v),
   carSetup, carShot:b => carShot(b.dataset.id),
   floor:b => { lsSet('raging3d_roomtip', '1'); goRoom(+b.dataset.k); renderHead(); renderPanel(); },
-  addVeh:b => addVehicle(b.dataset.kind || 'moto'), removeVeh:b => removeVehicle(+b.dataset.k), pickVeh:b => { S.veh = +b.dataset.k; renderPanel(); requestRender(); },
+  addVeh:b => addVehicle(b.dataset.kind || 'moto'), removeVeh:b => removeVehicle(+b.dataset.k), pickVeh:b => { S.veh = +b.dataset.k; S.sel = null; S.noTarget = true; renderPanel(); renderSide(); requestRender(); },
   vehCol:b => { const v = shot().vehicles[S.veh]; if(v) edit(() => { v.col = b.dataset.c; }); },
   fridge:b => setFridge(b.dataset.src, +b.dataset.i, 'open', b.dataset.v === '1'),
   fridgeBy:b => openFridgeBy(b.dataset.src, +b.dataset.i),

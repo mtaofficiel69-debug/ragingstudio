@@ -287,7 +287,7 @@ function setLens(l){
 function focusChar(c){
   const s = shot(); if(!s.chars[c]) return;
   const same = S.target === c;
-  S.target = c; S.sel = { c, j:'pelvis' };
+  S.target = c; S.sel = { c, j:'pelvis' }; S.veh = -1; S.noTarget = false;
   const k = s.info.size;
   if(!same && (FRAMES[k] || k === 'am' || k === '2p' || k === 'pov')) frameSize(k);
   else { renderSide(); renderTools(); requestRender(); }
@@ -604,15 +604,19 @@ function physOf(id){
   const closed = !!(d.rooms && !d.levels && !d.garden);
   let lim = null;
   if(!closed){ let x0 = -30, z0 = -30, x1 = 30, z1 = 30;
-    boxes.forEach(b => { const r = Math.hypot(b[3], b[5]); x0 = Math.min(x0, b[0] - r - 10); x1 = Math.max(x1, b[0] + r + 10); z0 = Math.min(z0, b[2] - r - 10); z1 = Math.max(z1, b[2] + r + 10); });
-    walls.forEach(w => { x0 = Math.min(x0, w[0] - 10, w[2] - 10); x1 = Math.max(x1, w[0] + 10, w[2] + 10); z0 = Math.min(z0, w[1] - 10, w[3] - 10); z1 = Math.max(z1, w[1] + 10, w[3] + 10); });
-    lim = d.camLim || [x0, z0, x1, z1, 40]; }
+    // dehors, on peut reculer un peu plus loin qu'avant (on voit mieux le lieu en entier)
+    const M = 22; boxes.forEach(b => { const r = Math.hypot(b[3], b[5]); x0 = Math.min(x0, b[0] - r - M); x1 = Math.max(x1, b[0] + r + M); z0 = Math.min(z0, b[2] - r - M); z1 = Math.max(z1, b[2] + r + M); });
+    walls.forEach(w => { x0 = Math.min(x0, w[0] - M, w[2] - M); x1 = Math.max(x1, w[0] + M, w[2] + M); z0 = Math.min(z0, w[1] - M, w[3] - M); z1 = Math.max(z1, w[1] + M, w[3] + M); });
+    lim = d.camLim ? [d.camLim[0] - 12, d.camLim[1] - 12, d.camLim[2] + 12, d.camLim[3] + 12, d.camLim[4] + 15] : [x0, z0, x1, z1, 55]; }
   // un lieu « libre » (la forêt, la maison de campagne) : les meubles, les arbres, les rochers ne retiennent plus la caméra,
   // seuls les murs, le sol et les plafonds l'arrêtent : on la pose où l'on veut, même dans une petite pièce
   // (les cloisons, minces et hautes, restent des murs : on ne traverse pas d'une pièce à l'autre au travers)
   // (et seulement les cloisons : longues et hautes. Un tronc, un poteau, un piquet ne la retiennent plus : en filant entre les arbres,
   // elle ne bute plus sur un tronc pour revenir d'un coup à sa place — ce qui ressemblait à une téléportation)
   if(d.freeCam){ const keep = boxes.filter(b => Math.min(b[3], b[5]) - CAM_R <= 0.1 && b[4] - CAM_R >= 1.0 && Math.max(b[3], b[5]) - CAM_R >= 0.45); boxes.length = 0; keep.forEach(b => boxes.push(b)); }
+  // dehors (plage, rue, taxi…) : les petites choses (poteaux, parasols, panneaux, réverbères) n'arrêtent plus la caméra qui recule ;
+  // seuls les vrais volumes (immeubles, voitures, rochers) la retiennent — on peut donc dézoomer bien plus loin
+  if(!closed && d.sky && !d.freeCam){ const keep = boxes.filter(b => Math.max(b[3], b[5]) - CAM_R >= 0.5 && b[4] - CAM_R >= 0.3); boxes.length = 0; keep.forEach(b => boxes.push(b)); }
   // les cloisons (hautes, longues et minces) comptent comme des murs : la caméra ne les traverse jamais, même quand elle suit un mur
   const wb = boxes.filter(b => b[4] - CAM_R >= 0.9 && Math.max(b[3], b[5]) - CAM_R >= 0.45 && Math.min(b[3], b[5]) - CAM_R <= 0.16);
   return PHYS[id] = { boxes, walls, rooms, closed, lim, free:!!d.freeCam, wb };
@@ -630,7 +634,7 @@ function physDepth(b, p){
 /* le gabarit des véhicules posés dans le plan : la caméra en fait le tour au lieu de passer à travers la carrosserie
    (les prises de vue toutes prêtes, elles, se placent à l'intérieur, et l'on peut en ressortir) */
 const VEH_HULL = { moto:[[0, 0.55, 0, 0.3, 0.45, 0.95]], car:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]],
-  police:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], heli:[[0, 1.35, 0.4, 0.95, 0.95, 1.9]], plane:[[0, 1.15, -1.0, 0.75, 0.75, 3.6]] };
+  police:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], taxi:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], heli:[[0, 1.35, 0.4, 0.95, 0.95, 1.9]], plane:[[0, 1.15, -1.0, 0.75, 0.75, 3.6]] };
 const _physV = { key:'', P:null };
 function physScene(id, sh){
   const P = physOf(id), vs = ((sh || (S.doc && S.doc.shots[S.i]) || {}).vehicles) || []; if(!P || !vs.length) return P;
@@ -913,7 +917,21 @@ const vehKey = v => v.kind + v.col + (v.kind === 'fridge' ? (v.open ? 'o' : 'c')
 function vehMesh(v){ const k = vehKey(v); if(!R.veh[k]){ const G = geo(), g = vehicleGeo(v.kind, v.col, G, v); R.veh[k] = GL.mesh(g); R.veh[k + ':l'] = GL.mesh(edgeLines(g)); R.veh[k + ':g'] = G.p.length ? GL.mesh(G) : null; } return R.veh[k]; }
 function vehGlass(v){ vehMesh(v); return R.veh[vehKey(v) + ':g']; }
 function vehLines(v){ vehMesh(v); return R.veh[vehKey(v) + ':l']; }
-const vehMat = v => M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R));
+/* un objet se penche dans tous les sens : cabré (rx, l'avant se lève et il pivote sur son arrière, comme une roue arrière),
+   piqué (rx < 0, il pivote sur son avant), incliné sur le côté (rz, il pivote sur le bord qui reste au sol) */
+function vehTiltLocal(v){
+  const px = v.rx || 0, pz = v.rz || 0; if(!px && !pz) return null;
+  const [hx, hz] = itemSize(v), cz = px > 0 ? -hz : hz, cx = pz > 0 ? -hx : hx;
+  return M4.mul(M4.mul(M4.trans(cx, 0, cz), M4.mul(M4.rx(-px * D2R), M4.rz(pz * D2R))), M4.trans(-cx, 0, -cz));
+}
+const vehMat = v => { const B = M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R)), T = vehTiltLocal(v); return T ? M4.mul(B, T) : B; };
+// les personnages montés sur un objet penché penchent avec lui
+function rideTilt(ch){
+  if(!ch.on) return null;
+  const own = (S.doc.shots || []).find(sh => (sh.chars || []).includes(ch)) || shot(), v = own && (own.vehicles || []).find(x => x.id === ch.on.v);
+  const T = v && vehTiltLocal(v); if(!T) return null;
+  const B = M4.mul(M4.trans(v.x, v.y || 0, v.z), M4.ry((v.ry || 0) * D2R)); return M4.mul(M4.mul(B, T), M4.invert(B));
+}
 /* ouvrir, fermer, remplir un frigo : celui du lieu (src 's', son numéro) ou un frigo posé comme accessoire (src 'v') */
 function setFridge(src, i, key, val){
   const sh = shot();
@@ -1315,7 +1333,7 @@ function placeHandles(sh, vp, w, h, mats){
   sh.chars.forEach((ch, c) => {
     const el = host.children[c]; if(!el) return;
     put(el, M4.apply(mats[c].head, [0, 0.62, 0]), 18);
-    el.classList.toggle('on', (S.sel && S.sel.c === c) || S.target === c);
+    el.classList.toggle('on', (S.sel && S.sel.c === c) || (S.target === c && !S.noTarget));
     el.classList.toggle('busy', HDRAG.c === c && !HDRAG.crowd);
   });
   crowds.forEach((cr, i) => {
@@ -1337,9 +1355,9 @@ function onHandleDown(e){
   if(crowd === 'crowd' ? !shot().crowds[c] : crowd === 'veh' ? !(shot().vehicles || [])[c] : !shot().chars[c]) return;
   b.setPointerCapture(e.pointerId);
   HDRAG.c = c; HDRAG.crowd = crowd; HDRAG.kind = crowd ? b.dataset.hd.slice(1) : b.dataset.hd; HDRAG.snap = snapshot(); HDRAG.moved = false; HDRAG.x = e.clientX; HDRAG.y = e.clientY;
-  if(crowd === 'crowd'){ S.crowd = c; S.sel = null; if(typeof setPanel === 'function') setPanel('crowd', true); }
-  else if(crowd === 'veh'){ S.veh = c; S.sel = null; if(typeof setPanel === 'function') setPanel('car', true); }
-  else { S.target = c; S.sel = { c, j:'pelvis' }; }
+  if(crowd === 'crowd'){ S.crowd = c; S.sel = null; S.veh = -1; S.noTarget = true; if(typeof setPanel === 'function') setPanel('crowd', true); }
+  else if(crowd === 'veh'){ S.veh = c; S.sel = null; S.crowd = -1; S.noTarget = true; if(typeof setPanel === 'function') setPanel('car', true); }
+  else { S.target = c; S.sel = { c, j:'pelvis' }; S.veh = -1; S.crowd = -1; S.noTarget = false; }
   document.body.classList.add('dragging');
   renderSide(); renderTools(); renderHint(); requestRender();
 }
@@ -1424,7 +1442,7 @@ function onDown(e){
   DRAG.x = e.clientX; DRAG.y = e.clientY; DRAG.moved = false;
   const hit = e.button === 0 && !e.shiftKey ? pickAt(x, y) : null;
   if(hit){
-    S.sel = Object.assign(hit, { pick:true }); S.target = hit.c; S.crowd = -1; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
+    S.sel = Object.assign(hit, { pick:true }); S.target = hit.c; S.crowd = -1; S.veh = -1; S.noTarget = false; DRAG.mode = hit.j === 'pelvis' ? 'move' : 'pose';
     // attraper une main ou un pied : tout le membre suit (Alt garde l'ancienne façon, articulation par articulation)
     DRAG.ik = DRAG.mode === 'pose' ? ikStart(hit.c, hit.j, e.altKey, x, y) : null;
     if(DRAG.ik) DRAG.ik.c0 = [e.clientX, e.clientY, R.canvas.getBoundingClientRect().height || 400];   // le point de départ, en pixels d'écran
@@ -1460,7 +1478,9 @@ function zoomBy(c, f){
     c.tx -= Math.sin(y) * Math.cos(p) * step; c.ty = clamp(c.ty + Math.sin(p) * step, -0.5, 30); c.tz -= Math.cos(y) * Math.cos(p) * step;
     c.dist = Math.max(DIST_MIN, Math.min(c.dist, DIST_MIN));
   } else {
-    c.dist = Math.min(DIST_MAX, want);
+    // dehors, la molette recule jusqu'à 45 m (assez pour voir le lieu en entier, sans se perdre à l'horizon)
+    const d = SET_DEF[shot().set] || {}, out = d.sky && !d.freeCam && !(d.rooms && !d.levels && !d.garden);
+    c.dist = Math.min(out ? Math.max(45, Math.min(c.dist, DIST_MAX)) : DIST_MAX, want);
   }
   keepCam(c);
 }
@@ -1512,7 +1532,8 @@ function onUp(e){
   if(DRAG.pendIK){ const a = DRAG.pendIK; DRAG.pendIK = null; ikDrag(a[0], a[1], a[2], a[3]); }   // le dernier mouvement, pas encore affiché
   const m = DRAG.mode; DRAG.mode = null; DRAG.ik = null; R.canvas.style.cursor = 'grab';
   if(!DRAG.moved){
-    if((m === 'orbit' || m === 'pan') && S.sel){ S.sel = null; renderSide(); renderHint(); requestRender(); }
+    // un clic dans le vide (sans glisser) : plus rien n'est « verrouillé », ni personnage, ni objet, ni foule
+    if((m === 'orbit' || m === 'pan') && (S.sel || S.veh >= 0 || S.crowd >= 0 || !S.noTarget)){ S.sel = null; S.veh = -1; S.crowd = -1; S.noTarget = true; renderSide(); renderTools(); renderHint(); requestRender(); }
     return;
   }
   pushUndo(DRAG.snap); changed();
