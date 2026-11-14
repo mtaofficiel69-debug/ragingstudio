@@ -1111,7 +1111,7 @@ function drawFrame(sh, w, h, clean, o){
   // dès qu'on s'arrête, l'image complète revient
   const moving = !clean && !o && (DRAG.mode || HDRAG.c >= 0 || NAV.running || S.tween || _wheelSnap);
   // on mesure le temps entre deux images quand on bouge : si l'ordinateur peine, on passe en image simplifiée
-  if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 30) R.slow = true; } }
+  if(moving){ const now = performance.now(), dt = now - (R.lastT || 0); R.lastT = now; if(dt < 250){ R.dtAvg = R.dtAvg ? R.dtAvg * 0.8 + dt * 0.2 : dt; if(R.dtAvg > 60) R.slow = true; } }
   const fast = moving && R.slow;
   const cam = (o && o.cam) || (clean ? camStart(sh) : viewCam(sh));
   const vp = viewProj(cam, w / h), eye = camEye(cam);
@@ -1199,7 +1199,7 @@ function benchmark(){
   drawFrame(); sync();
   const t1 = performance.now();
   while(n < 3){ drawFrame(); sync(); n++; }
-  const ms = (performance.now() - t1) / n; R.slow = ms > 20;
+  const ms = (performance.now() - t1) / n; R.slow = ms > 50;   // les contours ne s'effacent en bougeant que sur un ordinateur vraiment très lent
   const scale = ms > 80 ? 0.45 : ms > 55 ? 0.55 : ms > 36 ? 0.67 : ms > 24 ? 0.8 : 1;
   // un très vieil ordinateur dans la forêt : on la reconstruit en version légère (une fois pour toutes), puis on remesure
   if(ms > 28 && !FOREST_LITE && S.doc && shot().set === 'forest'){ FOREST_LITE = true; dropSet('forest'); setMesh('forest'); requestRender(); clearTimeout(R.benchT); R.benchT = setTimeout(benchmark, 800); }
@@ -1436,6 +1436,18 @@ function onDown(e){
     R.canvas.style.cursor = 'grabbing';
   }
 }
+const ORB = { yaw:0, pitch:0, px:0, py:0, raf:0 };
+function orbStep(all){
+  ORB.raf = 0; const cam = shot().cam, k = all === true ? 1 : 0.5;
+  const dy = ORB.yaw * k, dp = ORB.pitch * k, px = ORB.px * k, py = ORB.py * k;
+  if(Math.abs(dy) + Math.abs(dp) > 0.005) camGesture(cam, () => { cam.yaw -= dy; cam.pitch = clamp(cam.pitch + dp, -88, 85); });
+  if(Math.abs(px) + Math.abs(py) > 0.02) camGesture(cam, () => panBy(cam, px, py));
+  ORB.yaw -= dy; ORB.pitch -= dp; ORB.px -= px; ORB.py -= py; requestRender();
+  if(Math.abs(ORB.yaw) + Math.abs(ORB.pitch) > 0.02 || Math.abs(ORB.px) + Math.abs(ORB.py) > 0.1) ORB.raf = requestAnimationFrame(orbStep);
+  else { ORB.yaw = ORB.pitch = ORB.px = ORB.py = 0; }
+}
+// en lâchant la souris, ce qui reste à parcourir est fait tout de suite (le plan enregistré est bien celui qu'on voit)
+document.addEventListener('pointerup', () => { if(ORB.raf){ cancelAnimationFrame(ORB.raf); orbStep(true); } }, true);
 /* zoomer : on se rapproche du point visé ; tout près, au lieu de se bloquer, la caméra continue d'avancer
    (le point visé avance avec elle) : on ne reste jamais coincé */
 const DIST_MIN = 0.25, DIST_MAX = 80;
@@ -1480,8 +1492,10 @@ function onMove(e){
   }
   const dx = e.clientX - DRAG.x, dy = e.clientY - DRAG.y; DRAG.x = e.clientX; DRAG.y = e.clientY;
   if(Math.abs(dx) + Math.abs(dy) > 0) DRAG.moved = true;
-  if(DRAG.mode === 'orbit') camGesture(cam, () => { cam.yaw -= dx * 0.3; cam.pitch = clamp(cam.pitch + dy * 0.25, -88, 85); });
-  else if(DRAG.mode === 'pan') camGesture(cam, () => panBy(cam, dx, dy));
+  // tourner et se décaler à la souris : les mouvements s'additionnent, puis la caméra les suit en douceur, une fois par image
+  // (au lieu d'un calcul à chaque petit mouvement de souris : plus fluide, plus léger, sans à-coups)
+  if(DRAG.mode === 'orbit'){ ORB.yaw += dx * 0.3; ORB.pitch += dy * 0.25; if(!ORB.raf) ORB.raf = requestAnimationFrame(orbStep); }
+  else if(DRAG.mode === 'pan'){ ORB.px += dx; ORB.py += dy; if(!ORB.raf) ORB.raf = requestAnimationFrame(orbStep); }
   else if(DRAG.mode === 'pose' && DRAG.ik){
     // un seul calcul de pose par image (la souris envoie souvent plus de mouvements que l'écran n'affiche d'images)
     const [x, y] = canvasXY(e); DRAG.pendIK = [DRAG.ik, x, y, { clientX:e.clientX, clientY:e.clientY }];

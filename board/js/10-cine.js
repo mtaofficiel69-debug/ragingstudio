@@ -15,10 +15,36 @@ fitStage = function(){
   cineFitBase.apply(this, arguments);
   const st = document.getElementById('stage'); if(!st || !R.canvas || S.rec) return;
   const w = parseFloat(st.style.width), h = parseFloat(st.style.height); if(!w || !h) return;
-  const k = Math.max(1, Math.min(window.devicePixelRatio || 1, 1.5)), cw = Math.round(w * k), ch = Math.round(h * k);
+  const k = sharpK(), cw = Math.round(w * k), ch = Math.round(h * k);
   if(R.canvas.width !== cw || R.canvas.height !== ch){ R.canvas.width = cw; R.canvas.height = ch; R.baseW = cw; R.baseH = ch; requestRender(); }
   cineSnap();
 };
+/* la netteté : l'image est calculée plus finement que l'écran puis réduite (un vrai anticrénelage : des bords nets,
+   plus d'escaliers ni d'image molle). Le choix est fait une fois pour toutes selon la carte graphique (jamais de bascule
+   floue / nette en bougeant), et on peut le forcer dans « Rendu ». */
+function sharpK(){
+  const dpr = window.devicePixelRatio || 1, pref = lsGet('raging3d_sharp') || 'auto';
+  // toujours un nombre entier de pixels calculés par pixel d'écran : réduite d'un facteur entier, l'image reste nette
+  if(pref === 'std') return Math.max(1, Math.round(dpr));
+  if(pref === 'max') return Math.max(2, Math.round(dpr * 1.5));
+  if(R.sharpAuto == null) return Math.max(1, Math.round(dpr));             // avant la première mesure
+  return R.sharpAuto;
+}
+// la première mesure de la carte graphique décide de la finesse (une seule fois)
+const cineBenchBase = benchmark;
+benchmark = function(){
+  cineBenchBase.apply(this, arguments);
+  if(R.sharpAuto == null && R.bench){ const dpr = window.devicePixelRatio || 1, b = R.bench;
+    R.sharpAuto = b < 70 ? 2 : Math.max(1, Math.round(dpr)); fitStage(); }
+};
+// le choix, dans « Rendu et format »
+const cineLookBase = PANEL_HTML.look;
+PANEL_HTML.look = function(){
+  const h = cineLookBase.call(this), pref = lsGet('raging3d_sharp') || 'auto';
+  const sec = `<div class="fly-lbl">${L('Netteté de l’image', 'Image sharpness')}</div><div class="seg wide">${[['auto', L('Auto', 'Auto')], ['std', L('Légère', 'Light')], ['max', L('Maximale', 'Maximum')]].map(([k, t]) => `<button class="${pref === k ? 'on' : ''}" data-act="sharp" data-v="${k}">${esc(t)}</button>`).join('')}</div><p class="mm-p">${L('« Maximale » donne les bords les plus nets ; « Légère » si l’ordinateur rame.', '“Maximum” gives the crispest edges; “Light” if the computer struggles.')}</p>`;
+  const i = h.lastIndexOf('</div>'); return i > 0 ? h.slice(0, i) + sec + h.slice(i) : h + sec;
+};
+ACT.sharp = b => { lsSet('raging3d_sharp', b.dataset.v); fitStage(); renderPanel(); toast(L('Netteté : ', 'Sharpness: ') + b.textContent); };
 // posé pile sur les pixels de l'écran
 function cineSnap(){
   const st = document.getElementById('stage'); if(!st) return;
