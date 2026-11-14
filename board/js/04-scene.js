@@ -913,7 +913,7 @@ function initMeshes(){
 /* un véhicule (forme et couleur), fabriqué une fois */
 R.veh = {};
 // un frigo ouvert ou fermé, rempli ou vide : quatre formes toutes prêtes pour chaque couleur
-const vehKey = v => v.kind + v.col + (v.kind === 'fridge' ? (v.open ? 'o' : 'c') + (v.full ? 'f' : 'e') : '');
+const vehKey = v => v.kind + v.col + (v.kind === 'fridge' ? (v.open ? 'o' : 'c') + (v.full ? 'f' : 'e') : '') + (v.crew ? '|c' + v.crew + ':' + (v.cv || 0) : '') + (v.kind === 'walker' ? '|w' + (v.cv || 0) : '');
 function vehMesh(v){ const k = vehKey(v); if(!R.veh[k]){ const G = geo(), g = vehicleGeo(v.kind, v.col, G, v); R.veh[k] = GL.mesh(g); R.veh[k + ':l'] = GL.mesh(edgeLines(g)); R.veh[k + ':g'] = G.p.length ? GL.mesh(G) : null; } return R.veh[k]; }
 function vehGlass(v){ vehMesh(v); return R.veh[vehKey(v) + ':g']; }
 function vehLines(v){ vehMesh(v); return R.veh[vehKey(v) + ':l']; }

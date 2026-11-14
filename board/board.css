@@ -1208,3 +1208,9 @@ body.imm:not(.imm-clean) .cine-btn kbd{display:none;}
 
 /* les anneaux d’un objet : une prise un peu plus fine, pour pouvoir aussi attraper l’objet lui-même */
 .gz-hit.vgz-hit{stroke-width:11 !important;}
+
+/* le décor vivant : les figurants et les voitures du lieu n'affichent leur étiquette que quand on les choisit ; ✕ pour les supprimer */
+.hd-veh.deco:not(.on){display:none !important;}
+.hd-del{position:absolute; left:68px; top:-27px; width:20px; height:20px; padding:0; display:grid; place-items:center; border:1.5px solid #fff; border-radius:50%; background:#C2453B; color:#fff; pointer-events:auto; cursor:pointer; box-shadow:0 2px 5px rgba(16,18,22,.3);}
+.hd-del svg{width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round;}
+.hd-del:hover{background:#A33A31;}

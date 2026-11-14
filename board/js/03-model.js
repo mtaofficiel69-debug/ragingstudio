@@ -1298,6 +1298,8 @@ const SET_DEF = {
         prism(g, [[z + 2.1, 3.0], [z - 2.1, 3.0], [z - 2.1, 2.7], [z + 2.1, 2.7]], -6.1, -6.0, c);
         { const m0 = MAT; for(let k = 0; k < 2; k++){ MAT = winLit(-6.99, 4.2, z + 1.6 - k * 2.4); wall(g, [-6.99, z + 1.6 - k * 2.4], [-6.99, z + 0.8 - k * 2.4], 1.1, '#3E4552', 4.2); } MAT = m0; }   // les fenêtres : la nuit, certaines s'allument
       });
+      // derrière la façade des boutiques : l'immeuble lui-même (vu d'en haut, il n'y a plus de trou entre les deux rangées)
+      box(g, -13.06, 3.5, 0, 12.0, 7.0, 31.96, '#8E5444'); box(g, -12.94, 7.15, 0, 12.3, 0.3, 32.2, '#6B3F33');
       cyl(g, -3.4, 4.4, -6.5, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, -3.1, 4.4, -6.5, 0.7, 0.05, 0.08, '#2C2E33'); box(g, -2.8, 4.3, -6.5, 0.3, 0.12, 0.3, '#F2D98A');
       cyl(g, -3.35, 0.7, 3.2, 0.11, 0.13, 0.56, '#B4232C', 8); ball(g, -3.35, 0.72, 3.2, 0.11, 0.08, 0.11, '#B4232C', 8);
       // le taxi : carrosserie profilée, habitacle ouvert à travers les vitres
@@ -1408,7 +1410,7 @@ const SET_DEF = {
           ['#C2453B', '#E3A33A', '#3E9E5E'].forEach((c, i) => box(g, x, 2.85 - i * 0.24, z + dir * 0.115, 0.14, 0.14, 0.02, i === 2 ? c : hexRGB(c).map(v => v * 0.45))); });
         // des voitures garées le long du trottoir d'en face
         [[-34, 0], [-21, Math.PI], [-9, 0], [19, 0], [31, Math.PI], [46, 0], [-48, Math.PI]].forEach(([z, ry], i) => {
-          if(typeof hbMerge === 'function') hbMerge(g, vehicleGeo('car', ['#3D5A80', '#B4232C', '#E9E6E0', '#24262B', '#2F6E4F', '#8E8B85', '#5E4532'][i % 7]), ry, 7.9, 0, z); });
+          /* ces voitures sont maintenant de vrais objets du plan (avec leur conducteur), voir SET_DECO */ });
         // ce qui fait de cette rue une avenue de grande ville, et de nulle part ailleurs :
         // le métro aérien qui enjambe l'avenue sur sa charpente d'acier riveté, avec une rame qui passe (fenêtres allumées la nuit)
         { const ST = '#3F5B4C', SD = '#2E4439', m0 = MAT;
@@ -1440,7 +1442,7 @@ const SET_DEF = {
           box(g, -3.7, 0.72, -12, 0.5, 1.1, 0.45, '#2F4E8E'); prism(g, [[-12.22, 1.27], [-11.78, 1.27], [-11.78, 1.4], [-12.22, 1.4]], -3.95, -3.45, '#2F4E8E');
           MAT = m0; }
         // d'autres taxis jaunes : à la file, à la borne, et sur l'avenue
-        if(typeof hbMerge === 'function') [[-1.2, 0, -9.5], [-1.2, 0, -16.5], [5.6, Math.PI, 18], [1.5, 0, 26]].forEach(([x, ry, z]) => hbMerge(g, vehicleGeo('taxi', '#F2C230'), ry, x, 0, z));
+        // (les taxis jaunes à la file et sur l'avenue sont de vrais objets du plan, voir SET_DECO)
       }
     },
   },
@@ -1656,7 +1658,6 @@ Object.assign(SET_DEF, {
       box(g, 6.3, 0.48, -8, 0.4, 0.05, 2.2, '#8A6A4A'); [-8.9, -7.1].forEach(z => box(g, 6.3, 0.23, z, 0.05, 0.46, 0.05, '#2C2E33'));   // le banc de l'abribus, sur ses pieds
       cyl(g, -4.5, 3.0, 4.2, 0.07, 0.07, 3.0, '#2C2E33', 6); box(g, -4.5, 3.25, 4.2, 0.22, 0.6, 0.2, '#24262B');
       [['#C2453B', 3.42], ['#E8B923', 3.25], ['#4E9A5B', 3.08]].forEach(([c, y]) => box(g, -4.5, y, 4.31, 0.1, 0.1, 0.02, c));
-      car(g, gl, 2.4, -14, '#3D5A80'); car(g, gl, 2.4, -24, '#9B3B33'); car(g, gl, -2.4, 18, '#E4E7EC', true); car(g, gl, 2.4, 22, '#2F6E4F');
       box(g, -4.7, 0.6, -3, 0.5, 0.9, 0.5, '#2F6E4F');
     },
   },
@@ -2349,7 +2350,7 @@ Object.assign(SET_DEF, {
       // les voitures garées
       const cols = ['#B4232C', '#2E3A4E', '#D9D6CF', '#3D5A80', '#24262B', '#5F7F48', '#C9B48F', '#8A8D93'];
       let k = 0;
-      for(let x = -12.25; x <= 12.3; x += 2.7) [-1, 1].forEach(sd => { k++; if(k % 3 === 1) return; car(g, gl, x, sd * 6.0, cols[k % cols.length], sd > 0); });
+      // (les voitures garées sont de vrais objets du plan, voir SET_DECO)
       // les néons, les tuyaux, la sortie, l'ascenseur
       for(let x = -12; x <= 12; x += 4) [-1.4, 1.4].forEach(z => { box(g, x, H - 0.04, z, 1.25, 0.05, 0.12, '#F4F6F2'); box(g, x, H - 0.015, z, 1.3, 0.03, 0.18, '#5E636C'); });
       [[-6.5, '#B4232C'], [-6.85, '#3D5A80']].forEach(([z, c]) => cyl(g, -X, H - 0.25, z, 0.09, 0.09, 2 * X, c, 8, 'x'));
@@ -2602,7 +2603,6 @@ Object.assign(SET_DEF, {
         [-0.9, 0.9].forEach(x => box(g, x, 0.55, Z1, 0.12, 1.1, 0.12, '#E9E6E0')); }
       [[-9, 6, 1.3], [9, 9, 1.1], [-11, -7, 1.4], [10, -6, 1.2]].forEach(([x, z, k]) => tree(g, x, z, k));
       [[-3.2, 4.9], [3.2, 4.9]].forEach(([x, z]) => ball(g, x, 0.35, z, 0.8, 0.45, 0.45, '#557F57', 8));
-      car(g, gl, 7.5, 5, '#3D5A80');
       box(g, -6.5, 0.4, -1, 1.6, 0.05, 0.8, '#8A6A4A'); [[-7.1, -1.3], [-5.9, -1.3], [-7.1, -0.7], [-5.9, -0.7]].forEach(([x, z]) => box(g, x, 0.2, z, 0.05, 0.4, 0.05, '#6E5440'));
       // la façade (vue du dehors), sur trois niveaux
       const X0 = H.x0 - 0.15, X1 = H.x1 + 0.15, Z0 = H.z0 - 0.15, Z1 = H.z1 + 0.15;
