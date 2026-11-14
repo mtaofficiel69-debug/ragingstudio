@@ -2927,7 +2927,7 @@ function mapDef(m){
           for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++) box(g, x0 + (i + 0.5) * W / nx, H - 0.02, z0 + (j + 0.5) * D / nz, 1.0, 0.04, 0.3, LC); }
         else if(LT === 'spot'){ const nx = Math.max(1, Math.round(W / 1.6)), nz = Math.max(1, Math.round(D / 1.6)); MAT = 5;
           for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++) cyl(g, x0 + (i + 0.5) * W / nx, H, z0 + (j + 0.5) * D / nz, 0.09, 0.09, 0.025, LC, 10); }
-        else if(LT === 'pendant'){ const nx = Math.max(1, Math.round(W / 3)), nz = Math.max(1, Math.round(D / 3)), drop = Math.min(0.9, H - 2.0);
+        else if(LT === 'pendant'){ const nx = Math.max(1, Math.round(W / 3)), nz = Math.max(1, Math.round(D / 3)), drop = clamp(H - 2.45, 0.08, 0.4);
           for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++){ const x = x0 + (i + 0.5) * W / nx, z = z0 + (j + 0.5) * D / nz;
             box(g, x, H - drop / 2, z, 0.012, drop, 0.012, '#2C2E33'); cyl(g, x, H - drop, z, 0.05, 0.22, 0.2, '#2C2E33', 10); MAT = 5; ball(g, x, H - drop - 0.2, z, 0.06, 0.06, 0.06, LC, 7); MAT = m0; } }
         MAT = m0;

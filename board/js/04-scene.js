@@ -1440,7 +1440,9 @@ function onDown(e){
    (le point visé avance avec elle) : on ne reste jamais coincé */
 const DIST_MIN = 0.25, DIST_MAX = 80;
 function zoomBy(c, f){
-  const want = c.dist * f;
+  // chaque cran de molette fait toujours au moins un vrai pas : de près, la caméra ne ralentit plus jusqu'à presque s'arrêter
+  const lf = Math.log(f || 1), minStep = Math.abs(lf) * 1.8;
+  let want = c.dist * f; if(lf && Math.abs(want - c.dist) < minStep) want = c.dist + Math.sign(lf) * minStep;
   if(want < DIST_MIN){
     const step = Math.max(0.05, c.dist - want), y = c.yaw * D2R, p = c.pitch * D2R;
     c.tx -= Math.sin(y) * Math.cos(p) * step; c.ty = clamp(c.ty + Math.sin(p) * step, -0.5, 30); c.tz -= Math.cos(y) * Math.cos(p) * step;
