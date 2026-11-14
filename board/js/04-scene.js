@@ -361,7 +361,7 @@ function supportY(sh, v, want){
   // ce qui peut porter l'objet : les meubles du lieu, et les autres accessoires
   const boxes = [];
   if(C) [C.main].concat(C.levels).forEach(L => L.b.forEach(b => { const c = Math.abs(Math.cos(b[6] || 0)), s = Math.abs(Math.sin(b[6] || 0)); boxes.push([b[0], b[2], b[3] * c + b[5] * s, b[3] * s + b[5] * c, b[1] - b[4], b[1] + b[4]]); }));
-  (sh.vehicles || []).forEach(o => { if(o === v) return; const [ox, oz, oh] = itemSize(o), oa = (o.ry || 0) * D2R, c = Math.abs(Math.cos(oa)), s = Math.abs(Math.sin(oa)); boxes.push([o.x, o.z, ox * c + oz * s, ox * s + oz * c, o.y || 0, (o.y || 0) + oh]); });
+  (sh.vehicles || []).forEach(o => { if(o === v || (o.kind || '').startsWith('sp_')) return; const [ox, oz, oh] = itemSize(o), oa = (o.ry || 0) * D2R, c = Math.abs(Math.cos(oa)), s = Math.abs(Math.sin(oa)); boxes.push([o.x, o.z, ox * c + oz * s, ox * s + oz * c, o.y || 0, (o.y || 0) + oh]); });
   for(let k = 0; k < 6; k++){
     let moved = false;
     for(const b of boxes){
@@ -637,7 +637,9 @@ const VEH_HULL = { moto:[[0, 0.55, 0, 0.3, 0.45, 0.95]], car:[[0, 0.5, 0, 0.95, 
   police:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], taxi:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], heli:[[0, 1.35, 0.4, 0.95, 0.95, 1.9]], plane:[[0, 1.15, -1.0, 0.75, 0.75, 3.6]] };
 const _physV = { key:'', P:null };
 function physScene(id, sh){
-  const P = physOf(id), vs = ((sh || (S.doc && S.doc.shots[S.i]) || {}).vehicles) || []; if(!P || !vs.length) return P;
+  // la caméra est libre autour des véhicules et des objets : elle s'en approche autant qu'on veut, et peut même y entrer
+  const P = physOf(id); return P;
+  const vs = ((sh || (S.doc && S.doc.shots[S.i]) || {}).vehicles) || []; if(!P || !vs.length) return P;
   const key = id + JSON.stringify(vs.map(v => [v.kind, v.x, v.y, v.z, v.ry]));
   if(_physV.key === key && _physV.base === P) return _physV.P;
   const boxes = P.boxes.slice();
@@ -748,7 +750,8 @@ function camSettle(c, e0, t0, restore, zoom){
       const d0 = Math.hypot(e0[0] - t[0], e0[1] - t[1], e0[2] - t[2]), at = k => [t[0] + dir[0] * k, t[1] + dir[1] * k, t[2] + dir[2] * k], h0 = physHit(P, e0);
       let k = Math.max(0.05, Math.min(c.dist, Math.max(f, d0)));
       // en avançant, on s'arrête devant un meuble qui se trouve entre la caméra et le sujet (on ne rentre pas dedans)
-      const bad = k => { const q = at(k), h = physHit(P, q); return (h >= 0 && h !== h0) || physWall(P, e0, q); };
+      // seuls les murs arrêtent le zoom : on s'approche librement des meubles, des objets, des personnages
+      const bad = k => physWall(P, e0, at(k));
       const stp = Math.max(0.04, (d0 - k) / 40); if(k < d0) for(let a = d0; a > k; a -= stp){ if(bad(Math.max(k, a - stp))){ k = a; break; } }   // par pas mesurés : léger même de très loin
       c.dist = k; return;
     }
@@ -1471,7 +1474,8 @@ document.addEventListener('pointerup', () => { if(ORB.raf){ cancelAnimationFrame
 const DIST_MIN = 0.25, DIST_MAX = 80;
 function zoomBy(c, f){
   // chaque cran de molette fait toujours au moins un vrai pas : de près, la caméra ne ralentit plus jusqu'à presque s'arrêter
-  const lf = Math.log(f || 1), minStep = Math.abs(lf) * 1.8;
+  // (de près, le pas devient fin : on peut s'arrêter à quelques centimètres d'un visage, d'une main, d'un objet)
+  const lf = Math.log(f || 1), minStep = Math.abs(lf) * clamp(c.dist * 0.9, 0.35, 1.8);
   let want = c.dist * f; if(lf && Math.abs(want - c.dist) < minStep) want = c.dist + Math.sign(lf) * minStep;
   if(want < DIST_MIN){
     const step = Math.max(0.05, c.dist - want), y = c.yaw * D2R, p = c.pitch * D2R;
