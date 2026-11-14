@@ -693,7 +693,7 @@ function physMove(P, from, to){
   const ok = q => {
     if(Math.abs(physY(P, q) - q[1]) > 1e-9 || physHit(P, q, skip) >= 0) return false;   // le sol, le plafond et le toit sont des obstacles comme les autres
     for(const k of deep){ const d = physDepth(k[0], q); if(d > 0 && d > k[1] + 1e-6) return false; k[2] = d; }
-    if(out) return physIn(P, q) || physLim(P, q) <= physLim(P, p) + 1e-6;
+    if(out) return (physIn(P, q) || physLim(P, q) <= physLim(P, p) + 1e-6) && !physWall(P, p, q);   // dehors aussi, les murs restent des murs
     return physIn(P, q) && !physWall(P, p, q);
   };
   for(let k = 0; k < n; k++){
@@ -745,7 +745,7 @@ function camSettle(c, e0, t0, restore, zoom){
       let k = Math.max(0.05, Math.min(c.dist, Math.max(f, d0)));
       // en avançant, on s'arrête devant un meuble qui se trouve entre la caméra et le sujet (on ne rentre pas dedans)
       const bad = k => { const q = at(k), h = physHit(P, q); return (h >= 0 && h !== h0) || physWall(P, e0, q); };
-      if(k < d0) for(let a = d0; a > k; a -= 0.04){ if(bad(Math.max(k, a - 0.04))){ k = a; break; } }
+      const stp = Math.max(0.04, (d0 - k) / 40); if(k < d0) for(let a = d0; a > k; a -= stp){ if(bad(Math.max(k, a - stp))){ k = a; break; } }   // par pas mesurés : léger même de très loin
       c.dist = k; return;
     }
     // dans une pièce, une rame, une maison ou la forêt : seuls les murs (et les sols, les plafonds) rapprochent la caméra sur sa ligne de visée.
@@ -1515,17 +1515,39 @@ function onWheel(e){
     renderSide(true); requestRender(); return;
   }
   if(!_wheelSnap) _wheelSnap = snapshot();
-  const c = shot().cam, f = Math.exp(clamp(e.deltaY, -120, 120) * 0.0015);
-  const [x, y] = canvasXY(e), hit = f < 1 && pickAt(x, y), g = groundAt(x, y, c.ty);
+  // la molette ne saute plus d'un coup : chaque cran s'ajoute à une réserve que la caméra parcourt en douceur,
+  // image par image (fluide comme un logiciel pro, et léger : jamais un grand bond à calculer d'un coup)
+  const px = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
+  const at = canvasXY(e);
+  // ce qu'il y a sous la souris (un visage, une main) : cherché une fois par geste, pas à chaque image (c'est ce qui coûte)
+  if(!WZ.raf || Math.hypot(at[0] - WZ.at[0], at[1] - WZ.at[1]) > 6){ WZ.hit = e.deltaY < 0 ? pickAt(at[0], at[1]) : null; }
+  WZ.q += clamp(e.deltaY * px, -240, 240) * 0.0015; WZ.at = at;
+  if(!WZ.raf) WZ.raf = requestAnimationFrame(wheelStep);
+}
+const WZ = { q:0, at:[0, 0], raf:0, hit:null };
+function wheelStep(){
+  WZ.raf = 0; if(Math.abs(WZ.q) < 0.002){ WZ.q = 0; return; }
+  const part = Math.abs(WZ.q) < 0.02 ? WZ.q : WZ.q * 0.32; WZ.q -= part;
+  wheelApply(WZ.at[0], WZ.at[1], Math.exp(clamp(part, -0.12, 0.12)), WZ.hit);
+  if(WZ.q) WZ.raf = requestAnimationFrame(wheelStep);
+}
+function wheelApply(x, y, f, h){
+  if(!_wheelSnap) _wheelSnap = snapshot();
+  const c = shot().cam, hit = f < 1 && h, g = groundAt(x, y, c.ty);
   // sous la souris, un personnage : on avance vers ce qu'on montre (un visage, une main), pour un gros plan précis
   if(hit){ const M = charMatrices(shot().chars[hit.c]), J = M[hit.j]; if(J){ const q = M4.apply(J, [0, hit.j === 'head' ? 0.1 : 0, 0]);
-    camGesture(c, () => { const k = (1 - f) * 0.9; c.tx += (q[0] - c.tx) * k; c.ty += (q[1] - c.ty) * k; c.tz += (q[2] - c.tz) * k; zoomBy(c, f); }, true);
+    camGesture(c, () => { const k = c.dist > DIST_MIN + 0.35 ? (1 - f) * 0.9 : 0; c.tx += (q[0] - c.tx) * k; c.ty += (q[1] - c.ty) * k; c.tz += (q[2] - c.tz) * k; zoomBy(c, f); }, true);
     requestRender(); clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350); return; } }
   // vers le point sous la souris, mais jamais plus loin que le recul actuel (sinon on part à l'horizon)
+  const c0 = clone(c), e0 = camEyeRaw(c), vd = [Math.sin(c.yaw * D2R) * Math.cos(c.pitch * D2R), -Math.sin(c.pitch * D2R), Math.cos(c.yaw * D2R) * Math.cos(c.pitch * D2R)];
   camGesture(c, () => {
-    if(g && f < 1){ const k = (1 - f) * 0.5, dx = (g[0] - c.tx) * k, dz = (g[1] - c.tz) * k, l = Math.hypot(dx, dz), m = c.dist * 0.25; c.tx += l > m ? dx * m / l : dx; c.tz += l > m ? dz * m / l : dz; }
+    if(g && f < 1 && c.dist > DIST_MIN + 0.35){ const k = (1 - f) * 0.5, dx = (g[0] - c.tx) * k, dz = (g[1] - c.tz) * k, l = Math.hypot(dx, dz), m = c.dist * 0.25; c.tx += l > m ? dx * m / l : dx; c.tz += l > m ? dz * m / l : dz; }
     zoomBy(c, f);
-  }, true); requestRender();
+  }, true);
+  // en avançant contre un mur : la caméra s'arrête net (elle ne glisse plus le long du mur, de plus en plus lentement)
+  if(f < 1){ const e1 = camEyeRaw(c), mv = [e1[0] - e0[0], e1[1] - e0[1], e1[2] - e0[2]], fw = -(mv[0] * vd[0] + mv[1] * vd[1] + mv[2] * vd[2]), tot = Math.hypot(...mv);
+    if(tot > 1e-4 && fw < tot * 0.45 && c.dist <= DIST_MIN + 0.36){ Object.assign(c, c0); WZ.q = 0; } }
+  requestRender();
   clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350);
 }
 /* double-clic : sur un personnage, la caméra le recadre ; ailleurs, elle vise ce point du sol */
