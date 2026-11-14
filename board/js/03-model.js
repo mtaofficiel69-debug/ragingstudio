@@ -390,7 +390,8 @@ function charMatrices(ch){
     const o = B.off[J.id] || J.off, local = M4.mul(M4.trans(o[0], o[1], o[2]), R);
     if(!J.parent){
       const k = B.scale * A.k, W = M4.mul(M4.mul(M4.trans(ch.root.x, ch.root.y, ch.root.z), M4.ry(ch.root.ry * D2R)), [k,0,0,0, 0,k,0,0, 0,0,k,0, 0,0,0,1]);
-      out[J.id] = M4.mul(W, local);
+      const T = typeof rideTilt === 'function' ? rideTilt(ch) : null;
+      out[J.id] = M4.mul(T ? M4.mul(T, W) : W, local);
     } else out[J.id] = M4.mul(out[J.parent], local);
   }
   // les enfants : une tête un peu plus grosse que le corps
@@ -1295,7 +1296,7 @@ const SET_DEF = {
         [z + 1.9, z + 1.0, z - 1.0, z - 1.9].forEach(m => wall(g, [-6.985, m + 0.05], [-6.985, m - 0.05], 2.4, '#2C2E33', 0.15));
         prism(g, [[z + 2.1, 3.0], [z - 2.1, 3.0], [z - 2.1, 3.12], [z + 2.1, 3.12]], -7, -6.1, c);
         prism(g, [[z + 2.1, 3.0], [z - 2.1, 3.0], [z - 2.1, 2.7], [z + 2.1, 2.7]], -6.1, -6.0, c);
-        { const m0 = MAT; MAT = 6; for(let k = 0; k < 2; k++) wall(g, [-6.99, z + 1.6 - k * 2.4], [-6.99, z + 0.8 - k * 2.4], 1.1, '#3E4552', 4.2); MAT = m0; }   // les fenêtres : la nuit, certaines s'allument
+        { const m0 = MAT; for(let k = 0; k < 2; k++){ MAT = winLit(-6.99, 4.2, z + 1.6 - k * 2.4); wall(g, [-6.99, z + 1.6 - k * 2.4], [-6.99, z + 0.8 - k * 2.4], 1.1, '#3E4552', 4.2); } MAT = m0; }   // les fenêtres : la nuit, certaines s'allument
       });
       cyl(g, -3.4, 4.4, -6.5, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, -3.1, 4.4, -6.5, 0.7, 0.05, 0.08, '#2C2E33'); box(g, -2.8, 4.3, -6.5, 0.3, 0.12, 0.3, '#F2D98A');
       cyl(g, -3.35, 0.7, 3.2, 0.11, 0.13, 0.56, '#B4232C', 8); ball(g, -3.35, 0.72, 3.2, 0.11, 0.08, 0.11, '#B4232C', 8);
@@ -1367,7 +1368,7 @@ const SET_DEF = {
           box(g, xc + side * 0.12, h + 0.15, zc, 12.3, 0.3, len + 0.2, hexRGB(col).map(v => v * 0.75));                         // la corniche
           const n = Math.max(2, Math.round(len / 2.6));
           for(let y = 3.4; y < h - 1.4; y += 2.8) for(let i = 0; i < n; i++){ const zz = zc - len / 2 + (i + 0.5) * len / n;
-            MAT = 6; W2(zz - 0.45, zz + 0.45, 1.5, '#262C36', y); MAT = m0;
+            MAT = winLit(xf, y, zz); W2(zz - 0.45, zz + 0.45, 1.5, '#262C36', y); MAT = m0;
             box(g, xf + side * 0.05, y - 0.06, zz, 0.12, 0.08, 1.1, '#C9BBA8'); box(g, xf + side * 0.04, y + 1.58, zz, 0.08, 0.12, 1.1, '#B9AA96'); }
           // le rez-de-chaussée : une vitrine allumée la nuit, une porte, son perron
           MAT = 7; W2(zc - len / 2 + 0.8, zc - 0.9, 2.3, '#55606C', 0.2); MAT = m0; W2(zc - 0.6, zc + 0.6, 2.2, '#2A2420', 0.15);
@@ -1384,7 +1385,9 @@ const SET_DEF = {
         };
         const tower = (xf, side, zc, len, h, col) => {
           const xc = xf - side * 6.02, W2 = W2f(xf, side), m0 = MAT; box(g, xc, h / 2, zc, 12, h, len - 0.04, col);
-          for(let y = 3.6; y < h - 1.0; y += 3.2){ MAT = 6; W2(zc - len / 2 + 0.3, zc + len / 2 - 0.3, 2.2, '#1F2833', y); MAT = m0; }
+          // chaque bureau a sa fenêtre : allumée ou éteinte en entier (jamais de carrés noirs au milieu d'une vitre allumée)
+          const np = Math.round(len / 1.6), pw = (len - 0.6) / np;
+          for(let y = 3.6; y < h - 1.0; y += 3.2) for(let i = 0; i < np; i++){ const a = zc - len / 2 + 0.3 + i * pw; MAT = winLit(xf, y, a + pw / 2); W2(a + 0.04, a + pw - 0.04, 2.2, '#1F2833', y); MAT = m0; }
           for(let i = 0; i <= Math.round(len / 1.6); i++){ const zz = zc - len / 2 + 0.3 + i * (len - 0.6) / Math.round(len / 1.6); box(g, xf + side * 0.03, h / 2 + 1.6, zz, 0.06, h - 3.2, 0.07, '#6E7A86'); }
           MAT = 7; W2(zc - len / 2 + 0.4, zc + len / 2 - 0.4, 3.0, '#5E6B78', 0.15); MAT = m0;                               // le hall, vitré, éclairé la nuit
           box(g, xf + side * 0.9, 3.4, zc, 1.8, 0.12, len * 0.5, '#2C2E33');                                               // sa marquise
@@ -1394,8 +1397,8 @@ const SET_DEF = {
           (k % 3 === 1 ? tower : walkup)(-7.02, 1, -z - 6, 12, k % 3 === 1 ? 34 : 8.6 + ((k + 1) % 2) * 2.8, k % 3 === 1 ? TW[(k + 1) % 3] : BR[(k + 3) % BR.length], k + 1); }
         for(let z = -136, k = 0; z < 136; z += 12, k++) (k % 4 === 3 ? tower : walkup)(14.02, -1, z + 6, 12, k % 4 === 3 ? 28 + (k % 3) * 8 : 8.6 + (k % 3) * 2.8, k % 4 === 3 ? TW[k % 3] : BR[(k + 2) % BR.length], k);
         // au loin, au-dessus des toits : les tours du centre, aux fenêtres allumées la nuit
-        [[-40, -60, 70], [-46, 20, 90], [-38, 80, 60], [40, -40, 80], [46, 30, 64], [38, 95, 100]].forEach(([x, z, h], i) => { const m0 = MAT; box(g, x, h / 2, z, 14, h, 14, TW[i % 3]); MAT = 6;
-          [x > 0 ? x - 7.01 : x + 7.01].forEach(xf => { for(let y = 4; y < h - 2; y += 3.2) (x > 0 ? wall(g, [xf, z - 6.5], [xf, z + 6.5], 2.0, '#1F2833', y) : wall(g, [xf, z + 6.5], [xf, z - 6.5], 2.0, '#1F2833', y)); }); MAT = m0; });
+        [[-40, -60, 70], [-46, 20, 90], [-38, 80, 60], [40, -40, 80], [46, 30, 64], [38, 95, 100]].forEach(([x, z, h], i) => { const m0 = MAT; box(g, x, h / 2, z, 14, h, 14, TW[i % 3]);
+          [x > 0 ? x - 7.01 : x + 7.01].forEach(xf => { for(let y = 4; y < h - 2; y += 3.2) for(let q = -6.5; q < 6.4; q += 1.625){ MAT = winLit(xf, y, z + q); x > 0 ? wall(g, [xf, z + q + 0.05], [xf, z + q + 1.575], 2.0, '#1F2833', y) : wall(g, [xf, z + q + 1.575], [xf, z + q + 0.05], 2.0, '#1F2833', y); } }); MAT = m0; });
         // la borne de taxis, sur le trottoir, à côté du taxi
         { const m0 = MAT; cyl(g, -3.55, 1.5, -3.2, 0.05, 0.05, 1.5, '#2C2E33', 6); MAT = 5; box(g, -3.55, 1.75, -3.2, 0.1, 0.36, 0.9, '#E8B923'); MAT = m0;
           pixText(g, 'TAXI', -3.2, 1.72, -3.494, 1, 0.022, '#1E2025', true); pixText(g, 'TAXI', -3.2, 1.72, -3.606, -1, 0.022, '#1E2025', true); }
@@ -1410,6 +1413,41 @@ const SET_DEF = {
         // des voitures garées le long du trottoir d'en face
         [[-34, 0], [-21, Math.PI], [-9, 0], [19, 0], [31, Math.PI], [46, 0], [-48, Math.PI]].forEach(([z, ry], i) => {
           if(typeof hbMerge === 'function') hbMerge(g, vehicleGeo('car', ['#3D5A80', '#B4232C', '#E9E6E0', '#24262B', '#2F6E4F', '#8E8B85', '#5E4532'][i % 7]), ry, 7.9, 0, z); });
+        // ce qui fait de cette rue une avenue de grande ville, et de nulle part ailleurs :
+        // le métro aérien qui enjambe l'avenue sur sa charpente d'acier riveté, avec une rame qui passe (fenêtres allumées la nuit)
+        { const ST = '#3F5B4C', SD = '#2E4439', m0 = MAT;
+          [-46, -34].forEach(z => { box(g, 3.1, 6.55, z, 22.2, 0.7, 0.35, ST); box(g, 3.1, 6.95, z, 22.2, 0.1, 0.5, SD); for(let x = -7.6; x < 13.9; x += 1.1) beam(g, [x, 6.25, z], [x + 0.55, 6.85, z], 0.05, 0.05, SD); });
+          box(g, 3.1, 7.0, -40, 22.2, 0.18, 12.4, SD); for(let x = -7.4; x < 14; x += 1.6) box(g, x, 6.84, -40, 0.18, 0.12, 12.2, ST);
+          [[-3.25, -46], [-3.25, -34], [9.45, -46], [9.45, -34]].forEach(([x, z]) => { box(g, x, 3.2, z, 0.42, 6.4, 0.42, ST); box(g, x, 0.25, z, 0.7, 0.5, 0.7, '#8D9198');
+            box(g, x, 6.0, z, 0.9, 0.12, 0.9, SD); beam(g, [x, 4.6, z], [x + (x < 0 ? 1.4 : -1.4), 6.2, z], 0.1, 0.1, SD); });
+          [-41.2, -38.8].forEach(z => [-0.72, 0.72].forEach(o => box(g, 3.1, 7.16, z + o, 22.2, 0.08, 0.08, '#6E6A64')));
+          for(let c = 0; c < 2; c++){ const x0 = -4.2 + c * 9.4; box(g, x0 + 4.4, 8.75, -41.2, 8.8, 3.1, 2.9, '#A9B0B8'); box(g, x0 + 4.4, 10.35, -41.2, 8.6, 0.12, 2.7, '#8C939B');
+            box(g, x0 + 4.4, 8.0, -39.74, 8.8, 0.18, 0.02, '#7A2F8E'); box(g, x0 + 4.4, 8.0, -42.66, 8.8, 0.18, 0.02, '#7A2F8E');
+            for(let k = 0; k < 6; k++){ const xa = x0 + 0.6 + k * 1.4; MAT = 7; wall(g, [xa, -39.74], [xa + 1.0, -39.74], 0.9, '#55606C', 8.75); wall(g, [xa + 1.0, -42.66], [xa, -42.66], 0.9, '#55606C', 8.75); MAT = m0; } }
+          MAT = m0; }
+        // la bouche de métro, sur le trottoir : sa rampe vert sombre, l'escalier qui descend, ses deux globes verts allumés
+        { const zc = 24, m0 = MAT, RG = '#2E4439';
+          box(g, -5.0, 0.142, zc, 1.8, 0.004, 4.4, '#1C1E22'); for(let k = 0; k < 9; k++) box(g, -5.0, 0.15 - k * 0.001, zc - 2 + k * 0.5, 1.7, 0.01, 0.06, '#5E6168');
+          [-5.95, -4.05].forEach(x => { box(g, x, 0.62, zc, 0.06, 0.06, 4.5, RG); box(g, x, 0.38, zc, 0.12, 0.48, 4.5, RG); });
+          box(g, -5.0, 0.62, zc + 2.25, 1.96, 0.06, 0.06, RG); box(g, -5.0, 0.38, zc + 2.25, 2.02, 0.48, 0.12, RG);
+          [-5.95, -4.05].forEach(x => { cyl(g, x, 1.4, zc - 2.25, 0.04, 0.04, 1.3, RG, 6); MAT = 5; box(g, x, 1.5, zc - 2.25, 0.26, 0.26, 0.26, '#4FD17A'); MAT = m0; });
+          MAT = 5; box(g, -5.0, 1.25, zc - 2.3, 1.5, 0.3, 0.06, '#E9E6E0'); MAT = m0;
+          pixText(g, 'SUBWAY', -5.0, 1.21, zc - 2.34, -1, 0.04, '#1E2025'); pixText(g, 'SUBWAY', -5.0, 1.21, zc - 2.26, 1, 0.04, '#1E2025'); }
+        // le kiosque à journaux, le chariot de hot-dogs sous son parasol, la borne à incendie, la boîte aux lettres
+        { const m0 = MAT;
+          box(g, -5.6, 1.25, -9, 1.6, 2.2, 2.4, '#2F4E3E'); box(g, -5.6, 2.45, -9, 2.0, 0.12, 2.8, '#24262B'); MAT = 7; wall(g, [-4.79, -8.1], [-4.79, -9.9], 0.9, '#8C7A5E', 1.0); MAT = m0;
+          for(let k = 0; k < 5; k++) box(g, -4.7, 0.55 + (k % 2) * 0.1, -9.9 + k * 0.42, 0.14, 0.42, 0.36, ['#E9E6E0', '#C2453B', '#E8B923', '#3D5A80', '#E9E6E0'][k]);
+          box(g, -4.4, 0.75, 10.5, 0.8, 0.7, 1.6, '#C9CDD2'); box(g, -4.4, 1.12, 10.5, 0.84, 0.04, 1.64, '#8C9199');
+          [-0.6, 0.6].forEach(o => cyl(g, -4.4, 0.18, 10.5 + o, 0.16, 0.16, 0.06, '#24262B', 10, 'x'));
+          cyl(g, -4.4, 2.35, 10.5, 0.03, 0.03, 1.2, '#2C2E33', 6); cyl(g, -4.4, 2.35, 10.5, 0.02, 1.0, 0.4, '#E8572E', 10); cyl(g, -4.4, 2.35, 10.5, 1.0, 0.0, 0.02, '#F2C14E', 10);
+          cyl(g, -3.55, 0.44, 13.5, 0.13, 0.13, 0.3, '#C2453B', 8); cyl(g, -3.55, 0.6, 13.5, 0.09, 0.13, 0.16, '#C2453B', 8); cyl(g, -3.55, 0.45, 13.5, 0.05, 0.05, 0.36, '#A33A31', 6, 'x');
+          box(g, -3.7, 0.72, -12, 0.5, 1.1, 0.45, '#2F4E8E'); prism(g, [[-12.22, 1.27], [-11.78, 1.27], [-11.78, 1.4], [-12.22, 1.4]], -3.95, -3.45, '#2F4E8E');
+          MAT = m0; }
+        // les cheminées de vapeur orange et blanc, au milieu de la chaussée
+        [[5.6, -20], [1.4, 30]].forEach(([x, z]) => { for(let k = 0; k < 4; k++) cyl(g, x, 0.3 + k * 0.3, z, 0.22, 0.2, 0.3, k % 2 ? '#F4F2EE' : '#E8572E', 10);
+          { const e0 = EDGE_ON; EDGE_ON = 0; for(let k = 0; k < 4; k++) cyl(g, x + k * 0.08, 1.7 + k * 0.6, z, 0.25 + k * 0.12, 0.35 + k * 0.14, 0.55, '#E6E8EB', 9); EDGE_ON = e0; } });
+        // d'autres taxis jaunes : à la file, à la borne, et sur l'avenue
+        if(typeof hbMerge === 'function') [[-1.2, 0, -9.5], [-1.2, 0, -16.5], [5.6, Math.PI, 18], [1.5, 0, 26]].forEach(([x, ry, z]) => hbMerge(g, vehicleGeo('taxi', '#F2C230'), ry, x, 0, z));
       }
     },
   },
@@ -1548,7 +1586,7 @@ function rotY(g, from, t, x, y, z){
 /* une façade d'immeuble, vue de la rue : sa couleur, ses fenêtres, sa vitrine en bas */
 /* des lettres en petits carrés (police 3 × 5), posées sur un plan vertical z, tournées vers +z (dir 1) ou -z (dir -1) */
 const PIX = { T:['111', '010', '010', '010', '010'], A:['010', '101', '111', '101', '101'], X:['101', '101', '010', '101', '101'], I:['111', '010', '010', '010', '111'],
-  P:['110', '101', '110', '100', '100'], O:['111', '101', '101', '101', '111'], L:['100', '100', '100', '100', '111'], C:['111', '100', '100', '100', '111'], E:['111', '100', '110', '100', '111'],
+  Y:['101', '101', '010', '010', '010'], J:['001', '001', '001', '101', '111'], P:['110', '101', '110', '100', '100'], O:['111', '101', '101', '101', '111'], L:['100', '100', '100', '100', '111'], C:['111', '100', '100', '100', '111'], E:['111', '100', '110', '100', '111'],
   B:['110', '101', '110', '101', '110'], N:['101', '111', '111', '111', '101'], Q:['111', '101', '101', '111', '001'], U:['101', '101', '101', '101', '111'], K:['101', '110', '100', '110', '101'], S:['111', '100', '111', '001', '111'], H:['101', '101', '111', '101', '101'], R:['110', '101', '110', '101', '101'], F:['111', '100', '110', '100', '100'], D:['110', '101', '101', '101', '110'], M:['101', '111', '111', '101', '101'], W:['101', '101', '111', '111', '101'], '0':['111', '101', '101', '101', '111'], '1':['010', '110', '010', '010', '111'], '2':['111', '001', '111', '100', '111'], '3':['111', '001', '111', '001', '111'], '4':['101', '101', '111', '001', '001'], '5':['111', '100', '111', '001', '111'], '6':['111', '100', '111', '101', '111'], '7':['111', '001', '001', '001', '001'], '8':['111', '101', '111', '101', '111'], '9':['111', '101', '111', '001', '111'], '.':['000', '000', '000', '000', '010'], ':':['000', '010', '000', '010', '000'], G:['111', '100', '101', '101', '111'], V:['101', '101', '101', '101', '010'], ' ':['000', '000', '000', '000', '000'] };
 /* une fenêtre d'immeuble vue de loin : allumée la nuit (7) ou éteinte (8), décidée une fois pour toute la fenêtre */
 const winLit = (x, y, z) => { const h = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453; return h - Math.floor(h) < 0.38 ? 7 : 8; };
@@ -3502,7 +3540,7 @@ function propGeo(id){
 
 /* ---------- Les véhicules qu'on pose où l'on veut (la moto) ----------
    Repère du véhicule : il regarde vers +z ; la selle du pilote est en z = -0.2, celle du passager en -0.55. */
-const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['car', 'Voiture', 'Car'], ['police', 'Voiture de police', 'Police car'], ['heli', 'Hélicoptère', 'Helicopter'], ['plane', 'Avion', 'Plane']];
+const VEHICLES = [['moto', 'Moto', 'Motorbike'], ['car', 'Voiture', 'Car'], ['police', 'Voiture de police', 'Police car'], ['taxi', 'TAXI', 'TAXI'], ['heli', 'Hélicoptère', 'Helicopter'], ['plane', 'Avion', 'Plane']];
 const MOTO_COLS = ['#B4232C', '#24262B', '#3D5A80', '#E8B923'];
 function vehicleGeo(kind, col, glass, st){
   if(VEH_DEF[kind] && VEH_DEF[kind].obj) return objGeo(kind, col, st);
@@ -3510,7 +3548,7 @@ function vehicleGeo(kind, col, glass, st){
   MAT = 4; try {
   if(kind === 'heli') return heliGeo(col, glass);
   if(kind === 'plane') return planeGeo(col, glass);
-  if(kind === 'car' || kind === 'police') return carGeo(col, glass, kind === 'police');
+  if(kind === 'car' || kind === 'police' || kind === 'taxi') return carGeo(col, glass, kind === 'police', kind === 'taxi');
   if(kind === 'moto'){
     // une vraie moto, d'une seule pièce : les deux roues tiennent au cadre (la fourche devant, le bras oscillant,
     // la chaîne et l'amortisseur derrière), le moteur est pris dans le berceau, la selle et la coque arrière
@@ -3662,8 +3700,8 @@ const PLANE_SHOTS = [
 /* ---------- La voiture qu'on pose où l'on veut (civile ou de police) ----------
    Repère : elle regarde vers +z, le conducteur est à gauche (x = 0.37). Même gabarit que le taxi :
    les prises de vue du taxi marchent telles quelles. */
-function carGeo(col, glass, police){
-  const g = geo(), C = col || '#3D5A80', K = '#24262B', S = '#3B3E45', CH = '#A9AEB6', W = 0.92, D = police ? '#F4F2EE' : C;
+function carGeo(col, glass, police, taxi){
+  const g = geo(), C = col || (taxi ? '#F2C230' : '#3D5A80'), K = '#24262B', S = '#3B3E45', CH = '#A9AEB6', W = 0.92, D = police ? '#F4F2EE' : C;
   prism(g, [[2.42, 0.3], [2.44, 0.62], [2.32, 0.82], [1.2, 0.92], [1.15, 0.6], [1.15, 0.3]], -W, W, C);            // le capot
   prism(g, [[-1.75, 0.3], [-1.75, 0.95], [-2.4, 0.86], [-2.47, 0.62], [-2.45, 0.3]], -W, W, C);                    // le coffre
   [[W - 0.06, W], [-W, -W + 0.06]].forEach(([a, b]) => prism(g, [[1.15, 0.3], [1.15, 0.92], [-1.75, 0.95], [-1.75, 0.3]], a, b, D));   // les portières
@@ -3703,6 +3741,16 @@ function carGeo(col, glass, police){
       wall(g, sd > 0 ? [x, 0.75] : [x, 0.45], sd > 0 ? [x, 0.45] : [x, 0.75], 0.2, '#E8B923', 0.6);
       wall(g, sd > 0 ? [x, 1.1] : [x, -1.7], sd > 0 ? [x, -1.7] : [x, 1.1], 0.05, '#2F6FE0', 0.42); });
   }
+  if(taxi){
+    // le taxi : l'enseigne TAXI sur le toit (allumée la nuit), le damier sur les portières, le numéro sur le coffre
+    box(g, 0, 1.585, -0.3, 0.16, 0.05, 0.12, K);
+    { const m0 = MAT; MAT = 5; prism(g, [[-0.19, 1.61], [-0.41, 1.61], [-0.39, 1.83], [-0.21, 1.83]], -0.36, 0.36, '#F4EFD8'); MAT = m0; }
+    box(g, 0, 1.835, -0.3, 0.72, 0.012, 0.2, '#C99A1E');
+    pixText(g, 'TAXI', 0, 1.72, -0.186, 1, 0.022, K); pixText(g, 'TAXI', 0, 1.72, -0.414, -1, 0.022, K);
+    for(let i = 0; i < 24; i++){ const z = 1.05 - i * 0.12; for(let r = 0; r < 2; r++) if((i + r) % 2 === 0){
+      wall(g, [W + 0.002, z], [W + 0.002, z - 0.12], 0.06, K, 0.68 + r * 0.06); wall(g, [-W - 0.002, z - 0.12], [-W - 0.002, z], 0.06, K, 0.68 + r * 0.06); } }
+    pixText(g, '7342', 0, 0.82, -2.475, -1, 0.018, K);
+  }
   return g;
 }
 const SEDAN_SHOTS = CAR_SHOTS.map(P => P[0] === 'arrive' ? ['arrive', 'La voiture arrive (plan large)', 'The car pulls up (wide)'].concat(P.slice(3)) : P);
@@ -3713,6 +3761,7 @@ const VEH_DEF = {
     seats:[{ fr:'Pilote', en:'Rider', pose:'ride', x:0, z:-0.2 }, { fr:'Passager', en:'Passenger', pose:'rideBack', x:0, z:-0.55 }] },
   car:{ fr:'Voiture', en:'Car', ic:'car', cols:['#3D5A80', '#B4232C', '#E9E6E0', '#24262B', '#2F6E4F'], label:2.0, shots:SEDAN_SHOTS, seats:CAR_SEATS },
   police:{ fr:'Voiture de police', en:'Police car', tag:['Police', 'Police'], ic:'police', cols:['#1E1F23'], label:2.1, shots:SEDAN_SHOTS, seats:CAR_SEATS },
+  taxi:{ fr:'TAXI', en:'TAXI', tag:['Taxi', 'Taxi'], ic:'car', cols:['#F2C230', '#E8B923', '#E9E6E0', '#24262B'], label:2.15, shots:SEDAN_SHOTS, seats:CAR_SEATS },
   heli:{ fr:'Hélicoptère', en:'Helicopter', ic:'heli', cols:['#2F6E4F', '#B4232C', '#24262B', '#E9E6E0'], label:3.3, shots:HELI_SHOTS, fly:true,
     seats:[{ fr:'Pilote', en:'Pilot', pose:'pilot', x:-0.33, z:0.55, py:0.8 }, { fr:'Copilote', en:'Co-pilot', pose:'sit', x:0.33, z:0.55, py:0.8 }, { fr:'Passager', en:'Passenger', pose:'sit', x:-0.33, z:-0.45, py:0.8 }, { fr:'Passager 2', en:'Passenger 2', pose:'sit', x:0.33, z:-0.45, py:0.8 }] },
   plane:{ fr:'Avion', en:'Plane', ic:'plane', cols:['#E9E6E0', '#3D5A80', '#E8B923', '#2F6E4F'], label:3.0, shots:PLANE_SHOTS, fly:true,
