@@ -115,7 +115,7 @@ document.addEventListener('pointerup', () => {
 // le bouton, dans la retouche du membre choisi
 const gzPoseBase = PANEL_HTML.pose;
 PANEL_HTML.pose = function(){
-  const h = gzPoseBase.call(this), btn = `<button class="btn btn-sm gz-btn ${GZ.on ? 'on' : ''}" data-act="gzTog" title="${esc(L('Afficher les anneaux pour tourner le membre choisi, comme dans un logiciel 3D', 'Show the rings to rotate the chosen limb, like in a 3D app'))}">${gzIco()}${GZ.on ? L('Anneaux de rotation : affichés', 'Rotation rings: on') : L('Anneaux de rotation', 'Rotation rings')}</button>`;
+  const h = gzPoseBase.call(this), btn = `<button class="btn btn-sm gz-btn ${GZ.on ? 'on' : ''}" data-act="gzTog" aria-pressed="${GZ.on}" title="${esc(L('Afficher les anneaux pour tourner le membre choisi, comme dans un logiciel 3D', 'Show the rings to rotate the chosen limb, like in a 3D app'))}">${gzIco()}${L('Anneaux', 'Rings')}</button>`;
   return h.replace('<button class="btn btn-sm" data-act="resetPart">', `<div class="gz-row">${btn}<button class="btn btn-sm" data-act="resetPart">`).replace(/(data-act="resetPart">[\s\S]*?<\/button>)/, '$1</div>')
     .replace(/(<p class="empty-n">[\s\S]*?<span>)([\s\S]*?)(<\/span><\/p>)/, `$1$2 ${L('Choisis-en une : des anneaux apparaissent pour la tourner.', 'Pick one: rings appear to rotate it.')}$3`);
 };
@@ -188,6 +188,6 @@ renderRail = function(){
 const proGestureBase = camGesture;
 camGesture = function(c, fn, zoom){
   try{ const id = shot().set, P = physOf(id);
-    if(P && P.closed && c === shot().cam && !physIn(P, camEyeRaw(c))) Object.assign(c, camSafe(clone(c), id, true)); }catch(err){}
+    if(!S.freeCam && P && P.closed && c === shot().cam && !physIn(P, camEyeRaw(c))) Object.assign(c, camSafe(clone(c), id, true)); }catch(err){}
   return proGestureBase.apply(this, arguments);
 };

@@ -1527,7 +1527,7 @@ function onWheel(e){
 const WZ = { q:0, at:[0, 0], raf:0, hit:null };
 function wheelStep(){
   WZ.raf = 0; if(Math.abs(WZ.q) < 0.002){ WZ.q = 0; return; }
-  const part = Math.abs(WZ.q) < 0.02 ? WZ.q : WZ.q * 0.32; WZ.q -= part;
+  const part = Math.abs(WZ.q) < 0.02 ? WZ.q : WZ.q * 0.5; WZ.q -= part;
   wheelApply(WZ.at[0], WZ.at[1], Math.exp(clamp(part, -0.12, 0.12)), WZ.hit);
   if(WZ.q) WZ.raf = requestAnimationFrame(wheelStep);
 }
