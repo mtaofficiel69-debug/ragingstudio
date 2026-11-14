@@ -1280,7 +1280,7 @@ const SET_DEF = {
     },
   },
   taxi:{
-    bg:'#CFD8E1', sky:{ top:'#8FB3D4', hor:'#DCE4EB', low:'#8A8E95' }, fog:[30, 140],
+    bg:'#CFD8E1', sky:{ top:'#8FB3D4', hor:'#DCE4EB', low:'#8A8E95' }, fog:[35, 150],
     cam:{ tx:0, ty:1.0, tz:-0.2, yaw:58, pitch:-9, dist:6.4, lens:35 },
     build(g, gl){
       // la rue : chaussée, passage piéton, trottoir, façades de boutiques
@@ -1347,6 +1347,42 @@ const SET_DEF = {
       [0.37, -0.37].forEach(x => { box(g, x, 0.44, 0.3, 0.54, 0.12, 0.5, S); box(g, x, 0.34, 0.3, 0.4, 0.08, 0.36, K); prism(g, [[0.05, 0.5], [-0.07, 0.5], [-0.12, 1.22], [0.0, 1.22]], x - 0.27, x + 0.27, S); box(g, x, 1.3, -0.06, 0.24, 0.14, 0.09, S); });
       box(g, 0, 0.44, -0.82, 1.62, 0.12, 0.56, S); prism(g, [[-1.05, 0.5], [-1.17, 0.5], [-1.24, 1.12], [-1.12, 1.12]], -0.81, 0.81, S);
       box(g, 0, 0.66, -0.4, 0.04, 0.72, 0.02, '#8C9199');                     // la vitre de séparation, posée sur le plancher
+      // la rue autour du taxi : elle file à perte de vue, avec l'autre trottoir, des immeubles des deux côtés,
+      // leurs fenêtres et leurs boutiques, des réverbères, des arbres, des feux au passage piéton, des voitures garées
+      { const AS = '#4A4E55', SW = '#8A8E95', CU = '#8D9198', LN = '#D9D3B8', RX = 9.25;
+        let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+        [[-140, -16], [16, 140]].forEach(([z0, z1]) => { floor(g, -3.04, z0, RX, z1, 0, AS); floor(g, -14, z0, -3.04, z1, 0.14, SW); box(g, -2.95, 0.07, (z0 + z1) / 2, 0.18, 0.14, z1 - z0, CU); });
+        floor(g, RX + 0.09, -140, 30, 140, 0.14, SW); box(g, RX, 0.07, 0, 0.18, 0.14, 280, CU);
+        floor(g, -40, -140, -14, 140, 0.14, SW);
+        for(let z = -139; z < 140; z += 3.2) if(z < -16 || z > 16) box(g, 3.1, 0.003, z, 0.12, 0.006, 1.7, LN);
+        for(let z = -139; z < 140; z += 1.2) if(z < -16 || z > 16) box(g, -5, 0.142, z, 3.9, 0.004, 0.02, '#7C8087');
+        for(let z = -139; z < 140; z += 1.2) box(g, 11.7, 0.142, z, 4.6, 0.004, 0.02, '#7C8087');
+        const FAC = ['#9A8B7E', '#B9A48A', '#8E8B85', '#A86F55', '#C9B9A3', '#7D8590', '#B98E78', '#9DA7A1'], AW = ['#2F6E4F', '#9B3B33', '#3D5A80', '#C99E2A', '#5E4532'];
+        // un immeuble : son volume, ses fenêtres par étage, sa boutique au rez-de-chaussée (sd : le côté de la rue, 1 à gauche, -1 à droite)
+        const bld = (xf, side, zc, len, h, col, aw) => {
+          const xc = xf - side * 6.02; box(g, xc, h / 2, zc, 12, h, len - 0.04, col);
+          box(g, xc, h + 0.1, zc, 12.2, 0.2, len + 0.1, hexRGB(col).map(v => v * 0.8));                   // la corniche
+          const xw = xf + side * 0.01, W2 = (a, b, hh, c, y) => side > 0 ? wall(g, [xw, b], [xw, a], hh, c, y) : wall(g, [xw, a], [xw, b], hh, c, y);
+          const n = Math.max(2, Math.round(len / 3));
+          for(let y = 3.6; y < h - 1.2; y += 2.8) for(let k = 0; k < n; k++){ const zz = zc - len / 2 + (k + 0.5) * len / n; W2(zz - 0.55, zz + 0.55, 1.4, rr() < 0.18 ? '#5E6B78' : '#3E4552', y); }
+          W2(zc - len / 2 + 0.6, zc + len / 2 - 0.6, 2.4, '#7F98A8', 0.15); W2(zc - 0.45, zc + 0.45, 2.1, '#3A3024', 0.15);   // la vitrine et sa porte
+          prism(g, [[zc + len / 2 - 0.4, 3.0], [zc - len / 2 + 0.4, 3.0], [zc - len / 2 + 0.4, 3.12], [zc + len / 2 - 0.4, 3.12]], side > 0 ? xf : xf - 0.9, side > 0 ? xf + 0.9 : xf, aw);
+        };
+        box(g, -13.04, 3.5, 0, 12, 7, 31.96, '#9A8B7E'); box(g, -13.04, 7.1, 0, 12.2, 0.2, 32, hexRGB('#9A8B7E').map(v => v * 0.8));   // derrière la façade du milieu : son volume (ses fenêtres sont déjà dessinées)
+        for(let z = 16; z < 136; z += 12){ bld(-7.02, 1, z + 6, 12, 7 + Math.round(rr() * 4) * 2.8, FAC[(z / 12 | 0) % FAC.length], AW[(z / 12 | 0) % AW.length]); bld(-7.02, 1, -z - 6, 12, 7 + Math.round(rr() * 4) * 2.8, FAC[(z / 12 + 3 | 0) % FAC.length], AW[(z / 12 + 2 | 0) % AW.length]); }
+        for(let z = -136; z < 136; z += 12) bld(14.02, -1, z + 6, 12, 7 + Math.round(rr() * 5) * 2.8, FAC[((z + 136) / 12 + 5 | 0) % FAC.length], AW[((z + 136) / 12 | 0) % AW.length]);
+        // les réverbères, des deux côtés
+        const lamp = (x, z, dir) => { cyl(g, x, 4.4, z, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, x + dir * 0.3, 4.4, z, 0.7, 0.05, 0.08, '#2C2E33'); box(g, x + dir * 0.6, 4.3, z, 0.3, 0.12, 0.3, '#F2D98A'); };
+        for(let z = -134; z < 135; z += 16){ if(Math.abs(z + 6.5) > 1) lamp(-3.4, z - 6.5 + 16, 1); lamp(8.85, z + 2, -1); }
+        // les arbres, dans leurs fosses, sur le trottoir d'en face
+        for(let z = -128; z < 130; z += 11){ if(Math.abs(z - 5) < 4) continue; box(g, 11.6, 0.145, z, 1.2, 0.01, 1.2, '#5E5144'); tree(g, 11.6, z, 0.85); }
+        // les feux, au passage piéton
+        [[-3.3, 3.9, 1], [8.9, 6.6, -1]].forEach(([x, z, dir]) => { cyl(g, x, 3.0, z, 0.06, 0.06, 3.0, '#2C2E33', 6); box(g, x, 2.6, z, 0.26, 0.75, 0.22, '#24262B');
+          ['#C2453B', '#E3A33A', '#3E9E5E'].forEach((c, i) => box(g, x, 2.85 - i * 0.24, z + dir * 0.115, 0.14, 0.14, 0.02, i === 2 ? c : hexRGB(c).map(v => v * 0.45))); });
+        // des voitures garées le long du trottoir d'en face
+        [[-34, 0], [-21, Math.PI], [-9, 0], [19, 0], [31, Math.PI], [46, 0], [-48, Math.PI]].forEach(([z, ry], i) => {
+          if(typeof hbMerge === 'function') hbMerge(g, vehicleGeo('car', ['#3D5A80', '#B4232C', '#E9E6E0', '#24262B', '#2F6E4F', '#8E8B85', '#5E4532'][i % 7]), ry, 7.9, 0, z); });
+      }
     },
   },
   living:{
@@ -1576,7 +1612,7 @@ Object.assign(SET_DEF, {
           return (hh(i, j) * (1 - u) + hh(i + 1, j) * u) * (1 - w) + (hh(i, j + 1) * (1 - u) + hh(i + 1, j + 1) * u) * w; };
         const DRY = hexRGB('#E2D2A9'), WET = hexRGB('#B9A884'), mixC = (a, b, t) => a.map((v, k) => v + (b[k] - v) * t);
         const scol = (x, z) => mixC(DRY, WET, Math.min(1, Math.max(0, (-z - 3.5) / 6.5))).map(v => v * (0.95 + vn(x * 0.18, z * 0.18) * 0.08));
-        const xs = [], zs = []; for(let v = -90; v <= 90; v += 6) xs.push(v); for(let v = -10; v <= 80; v += v < 0 ? 1 : v < 20 ? 4 : 10) zs.push(v);
+        const xs = [], zs = []; for(let v = -600; v <= 600; v += v < -90 || v >= 90 ? 30 : 6) xs.push(v); for(let v = -10; v <= 80; v += v < 0 ? 1 : v < 20 ? 4 : 10) zs.push(v);
         const m0 = MAT, e0 = EDGE_ON; MAT = 1; EDGE_ON = 0;
         for(let i = 0; i < xs.length - 1; i++) for(let j = 0; j < zs.length - 1; j++){ const a = xs[i], b = xs[i + 1], c = zs[j], d = zs[j + 1];
           const P = [[a, 0, d], [b, 0, d], [b, 0, c], [a, 0, c]], C = P.map(q => scol(q[0], q[2]));
@@ -1585,22 +1621,33 @@ Object.assign(SET_DEF, {
       // la mer : une seule nappe, turquoise et claire au bord (l'écume), plus profonde au large ; les rides et les reflets se calculent à l'écran
       { const FOAM = hexRGB('#E4EEEC'), SH = hexRGB('#5FA9B4'), DEEP = hexRGB('#2E6C8C'), mixC = (a, b, t) => a.map((v, k) => v + (b[k] - v) * Math.min(1, Math.max(0, t)));
         const wcol = (x, z) => { const d = -10 - z; return d < 0.9 ? mixC(FOAM, SH, d / 0.9) : mixC(SH, DEEP, (d - 0.9) / 45); };
-        const xs = [], zs = []; for(let v = -260; v <= 260; v += 20) xs.push(v); [-10, -10.35, -10.9, -12, -14, -18, -25, -40, -70, -120, -200, -300].forEach(v => zs.push(v));
-        water(g, -260, -300, 260, -10, -0.03, wcol, xs, zs.reverse()); }
-      // parasols, serviettes, transats
-      [[-2.6, -1.2, '#C9503C'], [3.8, 2.2, '#3D5A80'], [-7.5, 3.5, '#E3A33A'], [9, -0.5, '#2F6E4F']].forEach(([x, z, c]) => {
-        cyl(g, x, 2.3, z, 0.025, 0.025, 2.3, '#E9E6E0', 6); cyl(g, x, 2.42, z, 0.05, 1.15, 0.34, c, 12); cyl(g, x, 2.08, z, 1.15, 1.12, 0.05, '#E9E6E0', 12);
-        box(g, x + 1.0, 0.01, z + 0.6, 0.85, 0.02, 1.8, c === '#3D5A80' ? '#E8D9B5' : '#E9E4DA'); box(g, x + 1.0, 0.016, z + 0.6, 0.86, 0.022, 0.25, c);   // la serviette et sa bande (bien au-dessus : pas de scintillement)
-      });
-      [[1.6, 1.0], [-5.2, -0.4]].forEach(([x, z]) => { prism(g, [[z - 0.8, 0.28], [z + 0.8, 0.28], [z + 0.8, 0.34], [z - 0.8, 0.34]], x - 0.3, x + 0.3, '#F4F2EE'); prism(g, [[z - 0.8, 0.34], [z - 0.7, 0.34], [z - 1.15, 0.95], [z - 1.25, 0.95]], x - 0.3, x + 0.3, '#F4F2EE'); [z - 0.7, z + 0.7].forEach(zz => box(g, x, 0.14, zz, 0.6, 0.28, 0.05, '#C9C3B5')); });
+        const xs = [], zs = []; for(let v = -600; v <= 600; v += 40) xs.push(v); [-10, -10.35, -10.9, -12, -14, -18, -25, -40, -70, -120, -200, -300].forEach(v => zs.push(v));
+        water(g, -600, -300, 600, -10, -0.03, wcol, xs, zs.reverse());
+        // les vagues : l'écume qui meurt sur le sable, puis deux lignes de rouleaux qui arrivent du large (des bandes claires, posées sur l'eau)
+        const m0 = MAT, e0 = EDGE_ON; MAT = 1; EDGE_ON = 0; let sd = 11; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+        for(let x = -300; x < 300; x += 7){ const z = -10.2 - 0.25 * Math.sin(x * 0.21) - rr() * 0.15, L0 = 5 + rr() * 2.5; floor(g, x, z - 0.55, x + L0, z, -0.012, '#EEF4F2'); floor(g, x + 0.6, z - 0.95, x + L0 - 0.4, z - 0.55, -0.014, '#CFE4E2'); }
+        [[-12.6, 0.28, 9, 0.75], [-16.4, 0.22, 12, 0.6], [-22, 0.16, 16, 0.45]].forEach(([z0, w, step, k]) => {
+          for(let x = -240; x < 240; x += step){ const L0 = step * (0.35 + rr() * 0.4), z = z0 - rr() * 0.8, c = hexRGB('#D7E7E8').map(v => v * (0.92 + k * 0.08)); floor(g, x + rr() * 3, z - w, x + L0, z, -0.012, c); } });
+        MAT = m0; EDGE_ON = e0; }
+      // les parasols, en deux rangées bien droites le long de la mer (comme sur une vraie plage), chacun avec sa serviette ;
+      // un transat de temps en temps. Les deux serviettes où l'on se pose restent exactement à leur place.
+      const PAR = (x, z, c) => { cyl(g, x, 2.3, z, 0.025, 0.025, 2.3, '#E9E6E0', 6); cyl(g, x, 2.42, z, 0.05, 1.15, 0.34, c, 12); cyl(g, x, 2.08, z, 1.15, 1.12, 0.05, '#E9E6E0', 12);
+        box(g, x + 1.0, 0.01, z + 0.6, 0.85, 0.02, 1.8, c === '#3D5A80' ? '#E8D9B5' : '#E9E4DA'); box(g, x + 1.0, 0.016, z + 0.6, 0.86, 0.022, 0.25, c); };
+      const PCOL = ['#C9503C', '#3D5A80', '#E3A33A', '#2F6E4F', '#C9503C', '#3D5A80', '#E3A33A'];
+      [-23, -16.2, -9.4, -2.6, 4.2, 11.0].forEach((x, k) => PAR(x, -1.2, x === -2.6 ? '#C9503C' : PCOL[k]));
+      [-23.4, -16.6, -9.8, 3.8, 10.6, 17.4].forEach((x, k) => PAR(x, 2.2, x === 3.8 ? '#3D5A80' : PCOL[(k + 3) % PCOL.length]));
+      [[1.6, 1.0], [-5.2, -0.4], [-12.0, -0.4], [8.4, -0.4], [-19.6, 3.0], [14.0, 3.0]].forEach(([x, z]) => { prism(g, [[z - 0.8, 0.28], [z + 0.8, 0.28], [z + 0.8, 0.34], [z - 0.8, 0.34]], x - 0.3, x + 0.3, '#F4F2EE'); prism(g, [[z - 0.8, 0.34], [z - 0.7, 0.34], [z - 1.15, 0.95], [z - 1.25, 0.95]], x - 0.3, x + 0.3, '#F4F2EE'); [z - 0.7, z + 0.7].forEach(zz => box(g, x, 0.14, zz, 0.6, 0.28, 0.05, '#C9C3B5')); });
       // le poste de secours, les palmiers, les rochers, le filet de volley
       [[-14.6, 4.4], [-12.4, 4.4], [-14.6, 6.6], [-12.4, 6.6]].forEach(([x, z]) => box(g, x, 1.1, z, 0.12, 2.2, 0.12, '#E9E6E0'));
       box(g, -13.5, 2.9, 5.5, 2.6, 1.4, 2.6, '#C9503C'); prism(g, [[4.0, 3.6], [7.0, 3.6], [5.5, 4.4]], -15, -12, '#E9E6E0');
       wall(g, [-14.3, 6.81], [-12.7, 6.81], 0.6, '#3E4552', 3.1);
       for(let i = 0; i < 8; i++) box(g, -13.5, 0.15 + i * 0.27, 7.05, 0.8, 0.04, 0.12, '#E9E6E0');
       [-13.93, -13.07].forEach(x => box(g, x, 1.15, 7.05, 0.06, 2.3, 0.06, '#E9E6E0'));   // les montants de l'échelle
-      palm(g, 13, 7, 1.0, 1.3); palm(g, 16, 3, 1.15, -1.0); palm(g, -20, 12, 1.1, 0.8);
-      [[22, -5, 1.4], [24, -7, 0.9], [-26, -6, 1.2]].forEach(([x, z, k]) => ball(g, x, 0.4 * k, z, 1.1 * k, 0.7 * k, 0.9 * k, '#8D8579', 7));
+      // les palmiers, en ligne au fond de la plage, le long du chemin
+      [[-34, 15, 1.1, 0.8], [-27, 14, 1.0, -0.6], [-20, 15.5, 1.15, 0.5], [14, 14.5, 1.0, 1.3], [21, 13.5, 1.15, -1.0], [28, 15, 1.05, 0.7], [35, 14, 1.1, -0.4]].forEach(([x, z, k, r]) => palm(g, x, z, k, r));
+      // deux avancées de rochers, aux deux bouts de la plage, qui entrent dans l'eau
+      [[-42, -9], [40, -9.5]].forEach(([cx, cz], n) => [[0, 0, 1.6], [1.6, -1.2, 1.1], [-1.4, -1.6, 1.0], [0.6, -2.8, 1.3], [-0.8, 1.4, 0.8], [2.4, 0.6, 0.7]].forEach(([dx, dz, k]) =>
+        ball(g, cx + dx * (n ? -1 : 1), 0.35 * k, cz + dz, 1.1 * k, 0.75 * k, 0.95 * k, k > 1.2 ? '#8D8579' : '#7E776C', 7)));
       [6.5, 13.5].forEach(x => cyl(g, x, 2.4, 10, 0.04, 0.04, 2.4, '#E9E6E0', 6)); box(g, 10, 2.15, 10, 7, 0.5, 0.02, '#2C2E33');
       [6.5, 13.5].forEach(x => { box(g, x + (x < 10 ? -0.8 : 0.8), 0.015, 10, 1.6, 0.03, 0.04, '#B9A884'); });   // les haubans du filet, enfouis dans le sable
       // le ponton de bois, sur ses pilotis plantés dans le sable puis dans l'eau, et la barque amarrée au bout
@@ -1623,7 +1670,7 @@ Object.assign(SET_DEF, {
       { const e0 = EDGE_ON; [-6.85, -5.15].forEach(x => box(g, x, 0.02, 17, 0.12, 0.04, 22, '#6E5440')); EDGE_ON = 0;
         for(let z = 6.2; z < 28; z += 0.3) box(g, -6, 0.055, z, 1.9, 0.03, 0.26, '#A08869'); EDGE_ON = e0; }
       // les dunes au fond et leurs touffes d'oyats
-      [[-30, 52, 14, 2.2], [-8, 56, 16, 2.6], [14, 54, 13, 2.0], [34, 58, 15, 2.4]].forEach(([x, z, r, h]) => ball(g, x, 0, z, r, h, r * 0.6, '#D9C79E', 12));
+      [[-150, 58, 22, 3.0], [-110, 54, 18, 2.4], [-70, 56, 20, 2.8], [-30, 52, 14, 2.2], [-8, 56, 16, 2.6], [14, 54, 13, 2.0], [34, 58, 15, 2.4], [70, 55, 20, 2.6], [110, 57, 18, 2.2], [150, 54, 22, 3.0]].forEach(([x, z, r, h]) => ball(g, x, 0, z, r, h, r * 0.6, '#D9C79E', 12));
       { let sd = 5; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
         for(let i = 0; i < 40; i++){ const x = -40 + rr() * 80, z = 44 + rr() * 10; cyl(g, x, 0.5, z, 0.01, 0.22, 0.5, '#9AA35A', 5); } }
       // près des serviettes : une glacière, un ballon ; au bord de l'eau, un château de sable et son seau
@@ -3437,21 +3484,64 @@ function vehicleGeo(kind, col, glass, st){
   if(kind === 'plane') return planeGeo(col, glass);
   if(kind === 'car' || kind === 'police') return carGeo(col, glass, kind === 'police');
   if(kind === 'moto'){
-    [0.7, -0.72].forEach(z => { cyl(g, -0.06, 0.31, z, 0.31, 0.31, 0.12, '#17181B', 16, 'x'); cyl(g, -0.065, 0.31, z, 0.13, 0.13, 0.13, M, 10, 'x'); });
+    // une vraie moto, d'une seule pièce : les deux roues tiennent au cadre (la fourche devant, le bras oscillant,
+    // la chaîne et l'amortisseur derrière), le moteur est pris dans le berceau, la selle et la coque arrière
+    // reposent sur leur cadre. Selle, guidon et repose-pieds restent exactement à leur place (le pilote s'y pose).
+    const T = '#17181B', R = '#9AA0A8', D = '#2C2E33', Hc = hexRGB(C), dk = k => Hc.map(v => v * k);
+    [0.7, -0.72].forEach(z => {
+      cyl(g, -0.06, 0.31, z, 0.31, 0.31, 0.12, T, 18, 'x');                       // le pneu
+      cyl(g, -0.063, 0.31, z, 0.215, 0.215, 0.126, R, 16, 'x');                   // la jante
+      cyl(g, -0.064, 0.31, z, 0.17, 0.17, 0.128, D, 14, 'x');                     // le voile de roue
+      cyl(g, -0.085, 0.31, z, 0.055, 0.055, 0.17, R, 10, 'x');                    // le moyeu et l'axe
+    });
+    cyl(g, 0.064, 0.31, 0.7, 0.13, 0.13, 0.012, R, 14, 'x');                       // le disque de frein avant
     prism(g, [[0.45, 0.78], [0.42, 0.98], [0.05, 1.0], [-0.02, 0.8]], -0.15, 0.15, C);                 // le réservoir
+    prism(g, [[0.4, 0.8], [0.38, 0.84], [0.1, 0.85], [0.08, 0.81]], -0.155, 0.155, dk(0.82));         // son liseré
     prism(g, [[-0.02, 0.8], [0.0, 0.86], [-0.62, 0.9], [-0.72, 0.84], [-0.72, 0.78]], -0.14, 0.14, '#24262B');   // la selle
-    prism(g, [[0.42, 0.5], [0.45, 0.78], [-0.02, 0.8], [-0.3, 0.45]], -0.1, 0.1, K);                   // le cadre et le moteur
-    box(g, 0, 0.42, 0.02, 0.26, 0.24, 0.36, M);                                                         // le moteur
-    prism(g, [[-0.62, 0.78], [-0.6, 0.86], [-0.98, 0.8], [-0.95, 0.74]], -0.13, 0.13, C);             // le garde-boue arrière
+    // le cadre : la colonne de direction, la poutre jusqu'au pivot, le berceau sous le moteur
+    prism(g, [[0.46, 0.99], [0.44, 0.9], [-0.14, 0.6], [-0.12, 0.7]], -0.07, 0.07, K);
+    prism(g, [[0.43, 0.96], [0.37, 0.96], [0.19, 0.28], [0.25, 0.28]], -0.035, 0.035, K);
+    prism(g, [[0.25, 0.31], [0.24, 0.25], [-0.16, 0.31], [-0.15, 0.37]], -0.07, 0.07, K);
+    prism(g, [[-0.12, 0.72], [-0.1, 0.62], [-0.2, 0.36], [-0.12, 0.36]], -0.08, 0.08, K);            // la plaque du pivot
+    // la boucle arrière, sous la selle, jusqu'au feu
+    prism(g, [[-0.1, 0.8], [-0.86, 0.84], [-0.86, 0.79], [-0.2, 0.7]], -0.1, 0.1, K);
+    // le bras oscillant (des deux côtés), du pivot à l'axe de la roue arrière
+    [[0.06, 0.1], [-0.1, -0.06]].forEach(([x0, x1]) => prism(g, [[-0.14, 0.46], [-0.74, 0.35], [-0.74, 0.27], [-0.14, 0.38]], x0, x1, D));
+    box(g, 0, 0.31, -0.72, 0.24, 0.07, 0.07, R);                                     // les bouts de l'axe
+    // l'amortisseur arrière, du bras à la boucle arrière
+    [0.075, -0.075].forEach(x => { prism(g, [[-0.47, 0.42], [-0.42, 0.42], [-0.29, 0.8], [-0.34, 0.8]], x - 0.02, x + 0.02, '#C9A64B'); });
+    // la chaîne, à gauche, du pignon à la couronne
+    prism(g, [[-0.08, 0.47], [-0.74, 0.4], [-0.74, 0.22], [-0.08, 0.36]], -0.13, -0.11, '#3A3D44');
+    cyl(g, -0.135, 0.31, -0.72, 0.12, 0.12, 0.02, R, 14, 'x');                      // la couronne
+    // le moteur : le bloc, le cylindre et ses ailettes, le carter
+    box(g, 0, 0.44, 0.03, 0.3, 0.28, 0.42, M);
+    box(g, 0, 0.32, 0.03, 0.32, 0.06, 0.38, D);
+    for(let k = 0; k < 4; k++) box(g, 0, 0.6 + k * 0.045, 0.14, 0.34, 0.022, 0.24, k % 2 ? M : dk(0.4).map(v => v + 0.2));
+    box(g, 0, 0.75, 0.12, 0.22, 0.05, 0.2, M);
+    cyl(g, -0.17, 0.42, 0.0, 0.1, 0.1, 0.03, R, 12, 'x');                            // le carter d'embrayage
+    // les caches latéraux, sous la selle
+    [[0.1, 0.13], [-0.13, -0.1]].forEach(([x0, x1]) => prism(g, [[-0.05, 0.79], [-0.36, 0.81], [-0.4, 0.6], [-0.1, 0.55]], x0, x1, C));
+    // la coque arrière et le garde-boue qui épouse la roue
+    prism(g, [[-0.66, 0.78], [-0.64, 0.87], [-0.98, 0.82], [-1.0, 0.76]], -0.12, 0.12, C);
+    prism(g, [[-0.48, 0.6], [-0.5, 0.65], [-0.78, 0.66], [-0.98, 0.56], [-0.96, 0.52], [-0.78, 0.6]], -0.075, 0.075, D);
     prism(g, [[0.88, 0.55], [0.86, 0.62], [0.5, 0.66], [0.52, 0.58]], -0.1, 0.1, C);                 // le garde-boue avant
+    // la fourche, de l'axe avant jusqu'au té de fourche
     [0.075, -0.075].forEach(x => { const a = [x, 0.31, 0.7], b = [x, 1.0, 0.44]; const n = 6;
-      for(let i = 0; i < n; i++){ const t0 = i / n, t1 = (i + 1) / n; box(g, x, a[1] + (b[1] - a[1]) * (t0 + t1) / 2, a[2] + (b[2] - a[2]) * (t0 + t1) / 2, 0.035, (b[1] - a[1]) / n + 0.01, 0.04, M); } });
-    box(g, 0, 1.03, 0.46, 0.72, 0.03, 0.03, K);                                                         // le guidon
+      for(let i = 0; i < n; i++){ const t0 = i / n, t1 = (i + 1) / n; box(g, x, a[1] + (b[1] - a[1]) * (t0 + t1) / 2, a[2] + (b[2] - a[2]) * (t0 + t1) / 2, i < 3 ? 0.05 : 0.035, (b[1] - a[1]) / n + 0.01, i < 3 ? 0.055 : 0.04, i < 3 ? D : M); } });
+    box(g, 0, 0.99, 0.45, 0.22, 0.04, 0.07, K);                                         // le té de fourche
+    box(g, 0, 1.03, 0.46, 0.72, 0.03, 0.03, K);                                         // le guidon
     [0.33, -0.33].forEach(x => cyl(g, x - 0.05, 1.03, 0.46, 0.022, 0.022, 0.1, '#2C2E33', 8, 'x'));
+    [0.26, -0.26].forEach(x => { box(g, x, 1.12, 0.47, 0.012, 0.16, 0.012, K); box(g, x, 1.2, 0.47, 0.08, 0.05, 0.015, D); });   // les rétroviseurs
     cyl(g, 0, 0.92, 0.6, 0.09, 0.09, 0.05, '#FBF6DF', 12, 'z'); box(g, 0, 0.92, 0.57, 0.2, 0.18, 0.06, C);   // le phare
-    box(g, 0, 0.82, -0.98, 0.1, 0.05, 0.03, '#C2453B');                                                // le feu arrière
-    cyl(g, 0.16, 0.36, -0.15, 0.04, 0.05, 0.7, M, 8, 'z');                                             // l'échappement
-    [0.17, -0.17].forEach(x => box(g, x, 0.38, 0.17, 0.08, 0.02, 0.04, K));                           // les repose-pieds
+    box(g, 0, 0.82, -0.99, 0.1, 0.05, 0.03, '#C2453B');                                // le feu arrière
+    box(g, 0, 0.7, -1.0, 0.16, 0.1, 0.012, '#E9E6E0');                                 // la plaque
+    // l'échappement : le collecteur qui descend du cylindre, la ligne sous le moteur, le silencieux à droite
+    prism(g, [[0.3, 0.62], [0.24, 0.62], [0.17, 0.25], [0.23, 0.25]], 0.13, 0.18, M);
+    box(g, 0.155, 0.255, -0.04, 0.05, 0.05, 0.44, M);
+    prism(g, [[-0.26, 0.29], [-0.24, 0.23], [-0.5, 0.3], [-0.5, 0.36]], 0.13, 0.18, M);
+    cyl(g, 0.165, 0.35, -0.86, 0.065, 0.055, 0.42, '#5E636C', 12, 'z');
+    [0.17, -0.17].forEach(x => box(g, x, 0.38, 0.17, 0.08, 0.02, 0.04, K));            // les repose-pieds
+    [0.13, -0.13].forEach(x => box(g, x, 0.36, 0.11, 0.04, 0.05, 0.08, D));            // leurs platines
   }
   return g;
   } finally { MAT = 0; }

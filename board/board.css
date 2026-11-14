@@ -1169,3 +1169,39 @@ html[data-theme="dark"] .bm-svg line{stroke:#3A3D45;}
 .add-steps .add-shot.rev{font-size:11px; padding:7px 3px; gap:4px;}
 @media (max-width:1300px){ .add-steps{grid-template-columns:1fr;} }
 .pro-cur-c{display:none;} .pro-cur{margin:4px 0 6px;} .pro-back{margin-bottom:0;}
+
+/* =====================================================================
+   LE MODE CINÉMA (plein écran, P) : l'image en grand, les commandes flottent par-dessus
+===================================================================== */
+body.imm .center{background:#08090B;}
+body.imm.imm-clean .stage-area{position:relative; padding:0; gap:0;}
+body.imm.imm-clean .stage-wrap{margin:58px 18px 72px;}
+body.imm.imm-clean .stage{border-radius:4px; box-shadow:0 0 0 1px rgba(255,255,255,.05), 0 30px 80px -20px rgba(0,0,0,.9);}
+/* la tête : une barre fine et sombre en haut, posée sur l'image */
+body.imm.imm-clean .stage-area .shot-head{position:absolute; left:0; right:0; top:0; z-index:8; min-height:52px; padding:10px 16px; background:linear-gradient(180deg, rgba(8,9,11,.92), rgba(8,9,11,0)); transition:opacity .35s ease, transform .35s ease;}
+/* la barre du bas : les déplacements de caméra, le moment de la journée, au centre */
+body.imm.imm-clean .under{display:flex; position:absolute; left:0; right:0; bottom:0; z-index:8; padding:14px 16px 16px; background:linear-gradient(0deg, rgba(8,9,11,.92), rgba(8,9,11,0)); transition:opacity .35s ease, transform .35s ease;}
+body.imm.imm-clean .under .hint{display:none;}
+body.imm .dock{background:rgba(28,30,36,.92); box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 10px 26px rgba(0,0,0,.5);}
+body.imm .dock .dk{color:#C9CDD6;} body.imm .dock .dk:hover{background:rgba(255,255,255,.08); color:#fff;}
+body.imm .dk-sep{background:rgba(255,255,255,.12);}
+/* au repos (la souris ne bouge plus) : tout s'efface, il ne reste que l'image */
+body.imm.imm-idle .stage-area .shot-head{opacity:0; transform:translateY(-8px); pointer-events:none;}
+body.imm.imm-idle .under{opacity:0; transform:translateY(8px); pointer-events:none;}
+body.imm.imm-idle .hplan, body.imm.imm-idle .handles{opacity:0; transition:opacity .35s ease;}
+body.imm.imm-idle, body.imm.imm-idle .stage canvas{cursor:none;}
+body.imm-clean .hplan{display:flex;}
+/* les boutons du plein écran : nommés, avec leur touche */
+.cine-btn{display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 10px; border:0; border-radius:8px; background:rgba(255,255,255,.08); color:#E9ECEF; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;}
+.cine-btn:hover{background:rgba(255,255,255,.16);}
+.cine-btn.on{background:rgba(34,160,107,.28); color:#BFF0D6;}
+.cine-btn .icon{width:15px; height:15px;}
+.cine-btn kbd{padding:1px 5px; border-radius:4px; background:rgba(255,255,255,.12); font:600 10px var(--sans); color:#B9BEC8;}
+.cine-exit{background:rgba(255,255,255,.92); color:#14161B;} .cine-exit:hover{background:#fff;} .cine-exit kbd{background:rgba(0,0,0,.08); color:#4A4E57;}
+body.imm .sh-r .seg{background:rgba(255,255,255,.06); box-shadow:none;}
+body.imm .sh-r .seg button{color:#B9BEC8;} body.imm .sh-r .seg button.on{background:rgba(255,255,255,.12); color:#fff; box-shadow:none;}
+body.imm .sh-r .ib{background:rgba(255,255,255,.06); box-shadow:none; color:#C9CDD6;} body.imm .sh-r .ib.on{background:rgba(34,160,107,.28); color:#BFF0D6; box-shadow:none;}
+body.imm .sh-chip{background:rgba(255,255,255,.08); box-shadow:none; color:#E9ECEF;}
+body.imm:not(.imm-clean) .sh-chip, body.imm:not(.imm-clean) .sh-of{display:none;}
+body.imm:not(.imm-clean) .sh-r .seg button{font-size:0; gap:0; padding:7px 9px;}
+body.imm:not(.imm-clean) .cine-btn kbd{display:none;}
