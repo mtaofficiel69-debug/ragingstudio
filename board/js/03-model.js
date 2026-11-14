@@ -1289,13 +1289,13 @@ const SET_DEF = {
       for(let x = -2.2; x <= 2.2; x += 0.62) box(g, x, 0.003, 5.2, 0.36, 0.006, 2.2, '#D9D3B8');
       box(g, -2.95, 0.07, 0, 0.18, 0.14, 32, '#8D9198'); floor(g, -14, -16, -3.04, 16, 0.14, '#8A8E95');
       for(let z = -15; z < 16; z += 1.2) box(g, -5, 0.142, z, 3.9, 0.004, 0.02, '#7C8087');
-      wall(g, [-7, 16], [-7, -16], 7, '#9A8B7E');
+      wall(g, [-7, 16], [-7, -16], 7, '#8E5444');   // la façade de briques
       [[-9.5, '#2F6E4F'], [-4.5, '#9B3B33'], [0.5, '#3D5A80'], [5.5, '#C99E2A'], [10.5, '#2F6E4F']].forEach(([z, c]) => {
-        wall(g, [-6.99, z + 2], [-6.99, z - 2], 2.4, '#7F98A8', 0.15); wall(g, [-6.98, z + 0.4], [-6.98, z - 0.5], 2.1, '#3A3024', 0.15);   // la vitrine (verre) et sa porte
+        { const m0 = MAT; MAT = 7; wall(g, [-6.99, z + 2], [-6.99, z - 2], 2.4, '#7F98A8', 0.15); MAT = m0; } wall(g, [-6.98, z + 0.4], [-6.98, z - 0.5], 2.1, '#3A3024', 0.15);   // la vitrine (allumée la nuit) et sa porte
         [z + 1.9, z + 1.0, z - 1.0, z - 1.9].forEach(m => wall(g, [-6.985, m + 0.05], [-6.985, m - 0.05], 2.4, '#2C2E33', 0.15));
         prism(g, [[z + 2.1, 3.0], [z - 2.1, 3.0], [z - 2.1, 3.12], [z + 2.1, 3.12]], -7, -6.1, c);
         prism(g, [[z + 2.1, 3.0], [z - 2.1, 3.0], [z - 2.1, 2.7], [z + 2.1, 2.7]], -6.1, -6.0, c);
-        for(let k = 0; k < 2; k++) wall(g, [-6.99, z + 1.6 - k * 2.4], [-6.99, z + 0.8 - k * 2.4], 1.1, '#3E4552', 4.2);
+        { const m0 = MAT; MAT = 6; for(let k = 0; k < 2; k++) wall(g, [-6.99, z + 1.6 - k * 2.4], [-6.99, z + 0.8 - k * 2.4], 1.1, '#3E4552', 4.2); MAT = m0; }   // les fenêtres : la nuit, certaines s'allument
       });
       cyl(g, -3.4, 4.4, -6.5, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, -3.1, 4.4, -6.5, 0.7, 0.05, 0.08, '#2C2E33'); box(g, -2.8, 4.3, -6.5, 0.3, 0.12, 0.3, '#F2D98A');
       cyl(g, -3.35, 0.7, 3.2, 0.11, 0.13, 0.56, '#B4232C', 8); ball(g, -3.35, 0.72, 3.2, 0.11, 0.08, 0.11, '#B4232C', 8);
@@ -1357,25 +1357,53 @@ const SET_DEF = {
         for(let z = -139; z < 140; z += 3.2) if(z < -16 || z > 16) box(g, 3.1, 0.003, z, 0.12, 0.006, 1.7, LN);
         for(let z = -139; z < 140; z += 1.2) if(z < -16 || z > 16) box(g, -5, 0.142, z, 3.9, 0.004, 0.02, '#7C8087');
         for(let z = -139; z < 140; z += 1.2) box(g, 11.7, 0.142, z, 4.6, 0.004, 0.02, '#7C8087');
-        const FAC = ['#9A8B7E', '#B9A48A', '#8E8B85', '#A86F55', '#C9B9A3', '#7D8590', '#B98E78', '#9DA7A1'], AW = ['#2F6E4F', '#9B3B33', '#3D5A80', '#C99E2A', '#5E4532'];
-        // un immeuble : son volume, ses fenêtres par étage, sa boutique au rez-de-chaussée (sd : le côté de la rue, 1 à gauche, -1 à droite)
-        const bld = (xf, side, zc, len, h, col, aw) => {
-          const xc = xf - side * 6.02; box(g, xc, h / 2, zc, 12, h, len - 0.04, col);
-          box(g, xc, h + 0.1, zc, 12.2, 0.2, len + 0.1, hexRGB(col).map(v => v * 0.8));                   // la corniche
-          const xw = xf + side * 0.01, W2 = (a, b, hh, c, y) => side > 0 ? wall(g, [xw, b], [xw, a], hh, c, y) : wall(g, [xw, a], [xw, b], hh, c, y);
-          const n = Math.max(2, Math.round(len / 3));
-          for(let y = 3.6; y < h - 1.2; y += 2.8) for(let k = 0; k < n; k++){ const zz = zc - len / 2 + (k + 0.5) * len / n; W2(zz - 0.55, zz + 0.55, 1.4, rr() < 0.18 ? '#5E6B78' : '#3E4552', y); }
-          W2(zc - len / 2 + 0.6, zc + len / 2 - 0.6, 2.4, '#7F98A8', 0.15); W2(zc - 0.45, zc + 0.45, 2.1, '#3A3024', 0.15);   // la vitrine et sa porte
-          prism(g, [[zc + len / 2 - 0.4, 3.0], [zc - len / 2 + 0.4, 3.0], [zc - len / 2 + 0.4, 3.12], [zc + len / 2 - 0.4, 3.12]], side > 0 ? xf : xf - 0.9, side > 0 ? xf + 0.9 : xf, aw);
+        // un quartier de grande ville, la nuit : des immeubles de briques avec leurs escaliers de secours, des tours de bureaux
+        // vitrées plus loin, des enseignes au néon ; la nuit, une partie des fenêtres s'allume (pas toutes, au hasard), les vitrines aussi
+        const BR = ['#8E4A3A', '#7A3E33', '#9A5A44', '#6E4436', '#8A6A55', '#5E4A44'], TW = ['#3E4C5A', '#4A5560', '#2F3A46'];
+        const NEON = [['HOTEL', '#E8467C'], ['BAR', '#4FA3E0'], ['DINER', '#F2C14E'], ['CLUB', '#B455E0'], ['PIZZA', '#E8572E'], ['24H', '#4FD1A5']];
+        const W2f = (xf, side) => (a, b, hh, c, y) => { const xw = xf + side * 0.01; side > 0 ? wall(g, [xw, b], [xw, a], hh, c, y) : wall(g, [xw, a], [xw, b], hh, c, y); };
+        const walkup = (xf, side, zc, len, h, col, k) => {
+          const xc = xf - side * 6.02, W2 = W2f(xf, side), m0 = MAT; box(g, xc, h / 2, zc, 12, h, len - 0.04, col);
+          box(g, xc + side * 0.12, h + 0.15, zc, 12.3, 0.3, len + 0.2, hexRGB(col).map(v => v * 0.75));                         // la corniche
+          const n = Math.max(2, Math.round(len / 2.6));
+          for(let y = 3.4; y < h - 1.4; y += 2.8) for(let i = 0; i < n; i++){ const zz = zc - len / 2 + (i + 0.5) * len / n;
+            MAT = 6; W2(zz - 0.45, zz + 0.45, 1.5, '#262C36', y); MAT = m0;
+            box(g, xf + side * 0.05, y - 0.06, zz, 0.12, 0.08, 1.1, '#C9BBA8'); box(g, xf + side * 0.04, y + 1.58, zz, 0.08, 0.12, 1.1, '#B9AA96'); }
+          // le rez-de-chaussée : une vitrine allumée la nuit, une porte, son perron
+          MAT = 7; W2(zc - len / 2 + 0.8, zc - 0.9, 2.3, '#55606C', 0.2); MAT = m0; W2(zc - 0.6, zc + 0.6, 2.2, '#2A2420', 0.15);
+          box(g, xf + side * 0.35, 0.22, zc, 0.7, 0.16, 1.6, '#8E8B85');
+          // l'escalier de secours : un palier noir à chaque étage, ses garde-corps, et les échelles en biais d'un palier à l'autre
+          const zs = zc + len * 0.18, FE = '#24262B', xo = xf + side * 0.55;
+          for(let y = 3.2; y < h - 1.6; y += 2.8){ box(g, xo, y, zs, 1.0, 0.05, 3.2, FE); box(g, xf + side * 1.04, y + 0.5, zs, 0.04, 0.04, 3.2, FE);
+            [zs - 1.58, zs + 1.58].forEach(z => box(g, xf + side * 1.04, y + 0.25, z, 0.04, 0.5, 0.04, FE)); for(let q = -1.4; q <= 1.41; q += 0.35) box(g, xf + side * 1.04, y + 0.25, zs + q, 0.015, 0.5, 0.015, FE);
+            if(y + 2.8 < h - 1.6) beam(g, [xo, y + 0.03, zs - 1.2], [xo, y + 2.83, zs + 1.0], 0.025, 0.025, FE); }
+          // une enseigne au néon, en drapeau, qui s'allume la nuit
+          if(k % 2 === 0){ const [txt, nc] = NEON[k / 2 % NEON.length | 0], zn = zc - len * 0.3; MAT = 5;
+            box(g, xf + side * 0.6, 4.4, zn, 0.9, 1.9, 0.12, nc); MAT = m0; box(g, xf + side * 0.6, 4.4, zn, 0.96, 1.96, 0.08, '#1E2025');
+            box(g, xf + side * 0.08, 4.4, zn, 0.16, 0.1, 0.1, '#1E2025'); }
         };
-        box(g, -13.04, 3.5, 0, 12, 7, 31.96, '#9A8B7E'); box(g, -13.04, 7.1, 0, 12.2, 0.2, 32, hexRGB('#9A8B7E').map(v => v * 0.8));   // derrière la façade du milieu : son volume (ses fenêtres sont déjà dessinées)
-        for(let z = 16; z < 136; z += 12){ bld(-7.02, 1, z + 6, 12, 7 + Math.round(rr() * 4) * 2.8, FAC[(z / 12 | 0) % FAC.length], AW[(z / 12 | 0) % AW.length]); bld(-7.02, 1, -z - 6, 12, 7 + Math.round(rr() * 4) * 2.8, FAC[(z / 12 + 3 | 0) % FAC.length], AW[(z / 12 + 2 | 0) % AW.length]); }
-        for(let z = -136; z < 136; z += 12) bld(14.02, -1, z + 6, 12, 7 + Math.round(rr() * 5) * 2.8, FAC[((z + 136) / 12 + 5 | 0) % FAC.length], AW[((z + 136) / 12 | 0) % AW.length]);
+        const tower = (xf, side, zc, len, h, col) => {
+          const xc = xf - side * 6.02, W2 = W2f(xf, side), m0 = MAT; box(g, xc, h / 2, zc, 12, h, len - 0.04, col);
+          for(let y = 3.6; y < h - 1.0; y += 3.2){ MAT = 6; W2(zc - len / 2 + 0.3, zc + len / 2 - 0.3, 2.2, '#1F2833', y); MAT = m0; }
+          for(let i = 0; i <= Math.round(len / 1.6); i++){ const zz = zc - len / 2 + 0.3 + i * (len - 0.6) / Math.round(len / 1.6); box(g, xf + side * 0.03, h / 2 + 1.6, zz, 0.06, h - 3.2, 0.07, '#6E7A86'); }
+          MAT = 7; W2(zc - len / 2 + 0.4, zc + len / 2 - 0.4, 3.0, '#5E6B78', 0.15); MAT = m0;                               // le hall, vitré, éclairé la nuit
+          box(g, xf + side * 0.9, 3.4, zc, 1.8, 0.12, len * 0.5, '#2C2E33');                                               // sa marquise
+        };
+        for(let z = 16, k = 0; z < 136; z += 12, k++){
+          (k % 3 === 2 ? tower : walkup)(-7.02, 1, z + 6, 12, k % 3 === 2 ? 30 + (k % 2) * 12 : 8.6 + (k % 2) * 2.8, k % 3 === 2 ? TW[k % 3] : BR[k % BR.length], k);
+          (k % 3 === 1 ? tower : walkup)(-7.02, 1, -z - 6, 12, k % 3 === 1 ? 34 : 8.6 + ((k + 1) % 2) * 2.8, k % 3 === 1 ? TW[(k + 1) % 3] : BR[(k + 3) % BR.length], k + 1); }
+        for(let z = -136, k = 0; z < 136; z += 12, k++) (k % 4 === 3 ? tower : walkup)(14.02, -1, z + 6, 12, k % 4 === 3 ? 28 + (k % 3) * 8 : 8.6 + (k % 3) * 2.8, k % 4 === 3 ? TW[k % 3] : BR[(k + 2) % BR.length], k);
+        // au loin, au-dessus des toits : les tours du centre, aux fenêtres allumées la nuit
+        [[-40, -60, 70], [-46, 20, 90], [-38, 80, 60], [40, -40, 80], [46, 30, 64], [38, 95, 100]].forEach(([x, z, h], i) => { const m0 = MAT; box(g, x, h / 2, z, 14, h, 14, TW[i % 3]); MAT = 6;
+          [x > 0 ? x - 7.01 : x + 7.01].forEach(xf => { for(let y = 4; y < h - 2; y += 3.2) (x > 0 ? wall(g, [xf, z - 6.5], [xf, z + 6.5], 2.0, '#1F2833', y) : wall(g, [xf, z + 6.5], [xf, z - 6.5], 2.0, '#1F2833', y)); }); MAT = m0; });
+        // la borne de taxis, sur le trottoir, à côté du taxi
+        { const m0 = MAT; cyl(g, -3.55, 1.5, -3.2, 0.05, 0.05, 1.5, '#2C2E33', 6); MAT = 5; box(g, -3.55, 1.75, -3.2, 0.1, 0.36, 0.9, '#E8B923'); MAT = m0;
+          pixText(g, 'TAXI', -3.2, 1.72, -3.494, 1, 0.022, '#1E2025', true); pixText(g, 'TAXI', -3.2, 1.72, -3.606, -1, 0.022, '#1E2025', true); }
         // les réverbères, des deux côtés
         const lamp = (x, z, dir) => { cyl(g, x, 4.4, z, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, x + dir * 0.3, 4.4, z, 0.7, 0.05, 0.08, '#2C2E33'); box(g, x + dir * 0.6, 4.3, z, 0.3, 0.12, 0.3, '#F2D98A'); };
         for(let z = -134; z < 135; z += 16){ if(Math.abs(z + 6.5) > 1) lamp(-3.4, z - 6.5 + 16, 1); lamp(8.85, z + 2, -1); }
         // les arbres, dans leurs fosses, sur le trottoir d'en face
-        for(let z = -128; z < 130; z += 11){ if(Math.abs(z - 5) < 4) continue; box(g, 11.6, 0.145, z, 1.2, 0.01, 1.2, '#5E5144'); tree(g, 11.6, z, 0.85); }
+        for(let z = -128; z < 130; z += 24){ if(Math.abs(z - 5) < 4) continue; box(g, 11.6, 0.145, z, 1.2, 0.01, 1.2, '#5E5144'); tree(g, 11.6, z, 0.85); }
         // les feux, au passage piéton
         [[-3.3, 3.9, 1], [8.9, 6.6, -1]].forEach(([x, z, dir]) => { cyl(g, x, 3.0, z, 0.06, 0.06, 3.0, '#2C2E33', 6); box(g, x, 2.6, z, 0.26, 0.75, 0.22, '#24262B');
           ['#C2453B', '#E3A33A', '#3E9E5E'].forEach((c, i) => box(g, x, 2.85 - i * 0.24, z + dir * 0.115, 0.14, 0.14, 0.02, i === 2 ? c : hexRGB(c).map(v => v * 0.45))); });
