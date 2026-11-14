@@ -1015,3 +1015,68 @@ html[data-theme="dark"] .hb-g2{stroke:rgba(255,255,255,.09);}
 .mm-big > .icon{margin-left:auto; flex:none; color:var(--ink-soft);}
 .mm-big-ic{flex:none; display:grid; place-items:center; width:38px; height:38px; border-radius:10px; background:var(--accent-tint); color:var(--accent);} .mm-big-ic .icon{width:19px; height:19px;}
 .ptile span .icon{width:12px; height:12px; margin-right:4px; vertical-align:-1px; color:var(--accent);}
+
+/* =====================================================================
+   FINITIONS PRO : l'inspecteur en colonne, « Mon lieu » rangé, les anneaux de rotation
+===================================================================== */
+.side{width:376px; flex-direction:row;}
+.side-in{min-width:0;}
+.tabs.tabs-v{display:flex; flex-direction:column; align-items:stretch; width:70px; flex:none; gap:1px; padding:6px 6px 12px; border-bottom:0; border-right:1px solid var(--hair); overflow-y:auto; background:var(--surface-soft); scrollbar-width:none;}
+.tabs.tabs-v::-webkit-scrollbar{display:none;}
+.tabs-v .tab{padding:8px 2px 7px; border-radius:9px; flex:none;}
+.tabs-v .tab .icon{width:18px; height:18px;}
+.tabs-v .tab.active{background:var(--surface); box-shadow:var(--shadow-sm), inset 0 0 0 1px rgba(34,160,107,.28);}
+.tabs-v .tab.active::before{content:''; position:absolute; left:-6px; top:9px; bottom:9px; width:3px; border-radius:0 3px 3px 0; background:var(--accent);}
+.tab-g{margin:8px 0 3px; font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-align:center; color:var(--ink-soft); opacity:.72;}
+.tab-sep{display:block; height:1px; margin:6px 6px 0; background:var(--hair);}
+@media (max-width:1380px){ .side{width:356px;} }
+@media (max-width:900px){
+  .side{flex-direction:column;}
+  .tabs.tabs-v{flex-direction:row; width:auto; overflow-x:auto; border-right:0; border-bottom:1px solid var(--hair); padding:6px;}
+  .tabs-v .tab{min-width:58px;} .tab-g{display:none;} .tab-sep{width:1px; height:auto; margin:6px 2px;} .tabs-v .tab.active::before{display:none;}
+}
+/* « Lieu » : le rappel vers ses propres lieux */
+.pro-mine{width:100%; display:flex; align-items:center; gap:11px; margin:4px 0 6px; padding:10px 12px; border:1px dashed var(--hair); border-radius:10px; background:transparent; color:var(--ink); text-align:left; font:inherit; cursor:pointer;}
+.pro-mine:hover{border-color:var(--accent); border-style:solid; background:var(--accent-tint);}
+.pro-mine.on{border-style:solid; border-color:var(--accent); background:var(--accent-tint);}
+.pro-mine > .icon:first-child{width:18px; height:18px; color:var(--accent);}
+.pro-mine span{display:flex; flex-direction:column; min-width:0;} .pro-mine b{font-size:13px;} .pro-mine small{font-size:11.5px; color:var(--ink-soft);}
+.pro-mine > .icon:last-child{margin-left:auto; color:var(--ink-soft);}
+/* « Mon lieu » : créer, puis tous ses lieux */
+.pro-hub .fly-lbl:first-child{margin-top:8px;}
+.pro-new{display:flex; flex-direction:column; gap:6px;}
+.pro-nc{display:grid; grid-template-columns:auto 1fr; column-gap:12px; row-gap:1px; align-items:center; min-width:0; padding:10px 12px 10px 10px; border:1px solid var(--hair); border-radius:12px; background:var(--surface); color:var(--ink); text-align:left; font:inherit; cursor:pointer; transition:border-color .12s, transform .12s, box-shadow .12s;}
+.pro-nc:hover{border-color:var(--accent); transform:translateY(-1px); box-shadow:var(--shadow-sm);}
+.pro-nc.on{border-color:var(--accent); background:var(--accent-tint);}
+.pro-nc b{grid-column:2; font-size:13.5px; align-self:end;} .pro-nc small{grid-column:2; font-size:11.5px; line-height:1.35; color:var(--ink-soft); align-self:start;}
+.pro-nc-ic{grid-row:1 / 3; display:grid; place-items:center; width:36px; height:36px; border-radius:9px; background:var(--accent-tint); color:var(--accent);} .pro-nc-ic .icon{width:17px; height:17px;}
+.pro-pcs{display:flex; flex-direction:column; gap:6px;}
+.pro-pc{display:flex; align-items:center; gap:4px; padding:5px 6px 5px 5px; border:1px solid var(--hair); border-radius:11px; background:var(--surface); transition:border-color .12s;}
+.pro-pc:hover{border-color:var(--accent-soft);}
+.pro-pc.on{border-color:var(--accent); background:var(--accent-tint);}
+.pro-pc-main{flex:1; min-width:0; display:flex; align-items:center; gap:10px; padding:0; border:0; background:transparent; color:var(--ink); text-align:left; font:inherit; cursor:pointer;}
+.pro-pc-main i{flex:none; width:72px; height:44px; border-radius:7px; background:var(--surface-soft-2) center/cover;}
+.pro-pc-t{display:flex; flex-direction:column; min-width:0;} .pro-pc-t b{font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} .pro-pc-t small{font-size:11.5px; color:var(--ink-soft);}
+.pro-empty{display:flex; align-items:center; gap:10px; padding:14px; border:1px dashed var(--hair); border-radius:11px; font-size:12.5px; color:var(--ink-soft);} .pro-empty .icon{width:20px; height:20px; color:var(--accent); flex:none;}
+.pro-cur{margin:6px 0 10px;}
+.pro-back{display:inline-flex; align-items:center; gap:6px; margin:0 0 8px -4px; padding:4px 6px; border:0; border-radius:7px; background:transparent; color:var(--ink-soft); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;}
+.pro-back:hover{background:var(--overlay-hover); color:var(--ink);}
+.pro-cur-c{display:flex; align-items:center; gap:11px; padding:8px; border-radius:12px; background:var(--surface-soft-2);}
+.pro-cur-c i{flex:none; width:84px; height:50px; border-radius:8px; background:var(--surface) center/cover;}
+.pro-cur-c span{display:flex; flex-direction:column; min-width:0;} .pro-cur-c small{font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft);} .pro-cur-c b{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+/* les anneaux de rotation */
+.gizmo{position:absolute; left:0; top:0; overflow:visible; pointer-events:none;}
+.gz-c{fill:none; stroke:rgba(255,255,255,.55); stroke-width:1; stroke-dasharray:2 4;}
+.gz-ring path{fill:none; stroke:var(--gc); stroke-linecap:round;}
+.gz-front{stroke-width:2.6;} .gz-back{stroke-width:1.4; opacity:.32;}
+.gz-hit{stroke:transparent !important; stroke-width:16 !important; pointer-events:stroke; cursor:grab;}
+.gz-ring.on .gz-front{stroke-width:4;} .gz-ring.on .gz-back{opacity:.55;}
+.gz-ring path:not(.gz-hit){filter:drop-shadow(0 0 1.5px rgba(0,0,0,.55));}
+.gz-tip rect{fill:rgba(20,22,28,.86);} .gz-tip text{fill:#fff; font:600 12px var(--sans); text-anchor:middle;}
+.gz-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+.gz-btn.on{border-color:var(--accent); background:var(--accent-tint); color:var(--accent-2);}
+html[data-theme="dark"] .gz-btn.on{color:var(--accent-ink);}
+/* l'inspecteur un peu plus étroit : les grilles de cartes ne débordent jamais */
+.side-body{overflow-x:hidden;}
+.cars{grid-template-columns:repeat(2, minmax(0, 1fr));} .car-t{min-width:0;} .car-t span{min-width:0; overflow-wrap:anywhere;}
+.ptiles, .poses, .figs, .txs, .faces{min-width:0;}

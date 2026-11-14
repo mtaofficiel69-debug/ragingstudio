@@ -389,7 +389,7 @@ function hbBuildLevel(gg, hs, i, opt){
       const endX = (a, dir) => { const po = hbP(E, a + dir * 0.05, -0.05), pi = hbP(E, a + dir * 0.05, 0.05); return hbOcc(lv.rooms, po[0], po[1]) ? -TO : hbOcc(lv.rooms, pi[0], pi[1]) ? 0 : TO; };
       const S0 = s - endX(s, -1), E0 = e + endX(e, 1), mid = hbP(E, (s + e) / 2, 0.06);
       const coveredAbove = above && hbOcc(above.rooms, mid[0], mid[1]), overBelow = i > 0 && below && hbOcc(below.rooms, mid[0], mid[1]);
-      const yb = i > 0 && !overBelow ? y0 - HB_SL : y0, flat = !coveredAbove && !(opt.gableLv === i), par = top ? 0 : flat ? 0.38 : 0;
+      const yb = i > 0 && !overBelow ? y0 - HB_SL : y0, flat = !coveredAbove && opt.roofFlat, par = top ? 0 : flat ? 0.38 : 0;
       const yt = top ? y0 + WH : y0 + H + HB_SL + par;
       let cur = S0; const os = O.filter(o => o.s >= s - 1e-4 && o.e <= e + 1e-4 && (o.kind !== 'door'));
       os.forEach(o => {
@@ -431,7 +431,7 @@ function hbBuildLevel(gg, hs, i, opt){
   // les toits plats : là où rien n'est posé au-dessus
   if(!top){ const RF = mapSurf((hs.roof || 'gable') === 'flat' ? hs.rf : null, 'gravel');
     lv.rooms.forEach(r => { const pieces = hbMinus(hbRect(r), above ? above.rooms.map(hbRect) : []);
-      if(opt.gableLv === i) return;
+      if(!opt.roofFlat) return;
       pieces.forEach(q => tfloor(texKey(RF), q[0], q[1], q[2], q[3], y0 + H + HB_SL, RF.s, false)); }); }
 }
 /* un encadrement de porte : deux montants et la traverse, posés sur le mur (off : à quelle distance de l'axe du mur) */
@@ -460,7 +460,7 @@ function houseDef(m, opt){
   const cx = (B[0] + B[2]) / 2, cz = (B[1] + B[3]) / 2, ext = Math.max(B[2] - B[0], B[3] - B[1]);
   const lastLv = opt.cut != null ? Math.min(opt.cut, nL - 1) : nL - 1;
   // le toit à deux pentes couvre l'étage du haut (tout l'étage, d'un seul tenant)
-  const gableLv = (hs.roof || 'gable') === 'gable' && opt.cut == null ? nL - 1 : -1;
+  const roofFlat = (hs.roof || 'gable') === 'flat' || opt.cut != null;
   const d = { custom:m.id, house:true, view:hs.view === 'city' ? undefined : 'nature', roomH:H,
     bg:'#C6D6E4', sky:{ top:'#82B0D8', hor:'#DCE8EE', low:'#7C9A68' }, fog:[30, 160],
     build(g, gl, Lg){
@@ -471,8 +471,10 @@ function houseDef(m, opt){
       const lv0 = hbL(LV[0]);
       lv0.rooms.forEach(r => (r.ext || []).forEach(dr => { const E = hbEdges(r).find(x => x.s === dr.s); if(!E) return; const c = (E.ax === 'x' ? r.x : r.z) + dr.u, w = (dr.w || 1) + 0.5;
         const a = hbP(E, c - w / 2, -HB_TO - 0.5), b = hbP(E, c + w / 2, -HB_TO - 3.4), PK = { k:'cobble', c:'#A08A6E', s:1.2 }; hbH(texKey(PK), a, b, -0.008, PK.s, false); }));
-      for(let i = 0; i <= lastLv; i++) hbBuildLevel(Lg && Lg[i] && nL > 1 ? Lg[i] : g, hs, i, { H, lvY, cut:opt.cut, gableLv, furnish:opt.furnish });
-      if(gableLv >= 0 && (LV[gableLv].rooms || []).length) hbGable(nL > 1 && Lg ? Lg[gableLv] : g, hs, LV[gableLv].rooms, lvY(gableLv) + H + HB_SL);
+      for(let i = 0; i <= lastLv; i++) hbBuildLevel(Lg && Lg[i] && nL > 1 ? Lg[i] : g, hs, i, { H, lvY, cut:opt.cut, roofFlat, furnish:opt.furnish });
+      // le toit en pente : un seul toit pour toute la maison, à chaque étage là où rien n'est posé au-dessus
+      if(!roofFlat) for(let i = 0; i <= lastLv; i++){ const rs = (LV[i].rooms || []), up = (LV[i + 1] && LV[i + 1].rooms || []).map(hbRect);
+        const pieces = rs.flatMap(r => hbMinus(hbRect(r), up)); if(pieces.length) hbHip(nL > 1 && Lg ? Lg[i] : g, hs, pieces, lvY(i) + H + HB_SL, up); }
     } };
   if(nL > 1 && opt.cut == null) d.levels = LV.map((_, i) => lvY(i));
   else if(opt.cut != null && opt.cut > 0) d.levels = LV.slice(0, opt.cut + 1).map((_, i) => lvY(i));
@@ -559,6 +561,57 @@ function hbGable(gg, hs, rooms, yR){
     // au-dessus du dernier plafond : un plancher de comble (par une fenêtre de pignon, jamais le vide)
     floor(gg, R[0], R[1], R[2], R[3], yR + 0.001, '#B9A88F');
   });
+  COLL = C0;
+}
+/* le toit en pente, d'un seul tenant : on prend les plus grands rectangles qui tiennent dans le plan (ils se chevauchent),
+   chacun reçoit un toit à quatre pans de la MÊME pente : là où ils se croisent, leurs pans se rejoignent d'eux-mêmes
+   (les noues et les arêtiers d'un vrai toit). Une maison en L a un toit en L, une maison en T un toit en T, sans un raccord.
+   Le débord ne passe que dehors (jamais dans le mur d'un étage au-dessus). */
+function hbMaxRects(pieces){
+  const xs = [...new Set(pieces.flatMap(r => [r[0], r[2]]))].sort((a, b) => a - b), zs = [...new Set(pieces.flatMap(r => [r[1], r[3]]))].sort((a, b) => a - b);
+  const covered = R => R[2] - R[0] > 1e-6 && R[3] - R[1] > 1e-6 && !hbMinus(R, pieces).some(q => (q[2] - q[0]) * (q[3] - q[1]) > 1e-5);
+  const seeds = hbDecomp(pieces, false).concat(hbDecomp(pieces, true)), out = [];
+  seeds.forEach(R0 => { const R = R0.slice(); let grew = true;
+    while(grew){ grew = false;
+      const nx1 = xs.find(x => x > R[2] + 1e-6), nx0 = [...xs].reverse().find(x => x < R[0] - 1e-6), nz1 = zs.find(z => z > R[3] + 1e-6), nz0 = [...zs].reverse().find(z => z < R[1] - 1e-6);
+      if(nx1 != null && covered([R[2], R[1], nx1, R[3]])){ R[2] = nx1; grew = true; }
+      if(nx0 != null && covered([nx0, R[1], R[0], R[3]])){ R[0] = nx0; grew = true; }
+      if(nz1 != null && covered([R[0], R[3], R[2], nz1])){ R[3] = nz1; grew = true; }
+      if(nz0 != null && covered([R[0], nz0, R[2], R[1]])){ R[1] = nz0; grew = true; } }
+    if(!out.some(Q => hbInside(R, Q))){ for(let i = out.length - 1; i >= 0; i--) if(hbInside(out[i], R)) out.splice(i, 1); out.push(R); } });
+  return out;
+}
+function hbHip(gg, hs, pieces, yR, up){
+  const RT = mapSurf(hs.rf && TEX_KINDS[hs.rf.k] && TEX_KINDS[hs.rf.k].on.includes('r') ? hs.rf : null, 'rtile'), key = texKey(RT), s = RT.s;
+  const t = 0.6, ov = 0.38, yE = yR - 0.06, sl = Math.sqrt(1 + t * t) / t, m0 = MAT, C0 = COLL; COLL = null;
+  const tex = (pts, want, uvf) => { if(!TEXS) return; let mm = TEXS.get(key); if(!mm) TEXS.set(key, mm = { p:[], u:[], l:[] });
+    const [a, b, c] = pts, u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if(n[0] * want[0] + n[1] * want[1] + n[2] * want[2] < 0) pts = pts.slice().reverse();
+    const nl = Math.hypot(...want), lt = texLight(want.map(x => x / nl)), tris = pts.length === 4 ? [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]] : pts;
+    tris.forEach(P => { const q = uvf(P); mm.p.push(P[0], P[1], P[2]); mm.u.push(q[0], q[1]); mm.l.push(lt, 0); }); };
+  const under = (pts, want) => { const [a, b, c] = pts, u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if(n[0] * want[0] + n[1] * want[1] + n[2] * want[2] < 0) pts = pts.slice().reverse(); const C = hexRGB('#E9E6E0'); if(pts.length === 4) quad(gg, pts[0], pts[1], pts[2], pts[3], C); else tri(gg, pts[0], pts[1], pts[2], C); };
+  const againstUp = (x, z) => up.some(r => x > r[0] && x < r[2] && z > r[1] && z < r[3]);
+  hbMaxRects(pieces).forEach(R => {
+    const mx = (R[0] + R[2]) / 2, mz = (R[1] + R[3]) / 2, e = HB_TO + ov;
+    const x0 = R[0] - (againstUp(R[0] - 0.05, mz) ? 0 : e), x1 = R[2] + (againstUp(R[2] + 0.05, mz) ? 0 : e), z0 = R[1] - (againstUp(mx, R[1] - 0.05) ? 0 : e), z1 = R[3] + (againstUp(mx, R[3] + 0.05) ? 0 : e);
+    const W = x1 - x0, D = z1 - z0, alongX = W >= D, h = (alongX ? D : W) / 2, yt = yE + h * t, zm = (z0 + z1) / 2, xm = (x0 + x1) / 2;
+    const uvZ = P => [P[0] / s, (P[1] - yE) * sl / s], uvX = P => [P[2] / s, (P[1] - yE) * sl / s];
+    let A, B;   // les deux bouts du faîte
+    if(alongX){ A = [x0 + h, yt, zm]; B = [x1 - h, yt, zm]; } else { A = [xm, yt, z0 + h]; B = [xm, yt, z1 - h]; }
+    const c00 = [x0, yE, z0], c10 = [x1, yE, z0], c11 = [x1, yE, z1], c01 = [x0, yE, z1];
+    if(alongX){
+      tex([c01, c11, B, A], [0, 1, t], uvZ); tex([c00, c10, B, A], [0, 1, -t], uvZ); tex([c00, c01, A], [-t, 1, 0], uvX); tex([c10, c11, B], [t, 1, 0], uvX);
+      under([c01, c11, B, A], [0, -1, -t]); under([c00, c10, B, A], [0, -1, t]); under([c00, c01, A], [t, -1, 0]); under([c10, c11, B], [-t, -1, 0]);
+    } else {
+      tex([c10, c11, B, A], [t, 1, 0], uvX); tex([c00, c01, B, A], [-t, 1, 0], uvX); tex([c00, c10, A], [0, 1, -t], uvZ); tex([c01, c11, B], [0, 1, t], uvZ);
+      under([c10, c11, B, A], [-t, -1, 0]); under([c00, c01, B, A], [t, -1, 0]); under([c00, c10, A], [0, -1, t]); under([c01, c11, B], [0, -1, -t]);
+    }
+    const L0 = Math.hypot(B[0] - A[0], B[2] - A[2]);
+    if(L0 > 0.05){ MAT = 1; box(gg, (A[0] + B[0]) / 2, yt + 0.03, (A[2] + B[2]) / 2, alongX ? L0 : 0.14, 0.07, alongX ? 0.14 : L0, hexRGB(RT.k === 'img' ? '#5E636C' : RT.c).map(v => v * 0.78)); MAT = m0; }
+  });
+  // sous le toit, au-dessus du dernier plafond : un plancher de comble (par une fenêtre, jamais le vide)
+  pieces.forEach(q => floor(gg, q[0], q[1], q[2], q[3], yR + 0.001, '#B9A88F'));
   COLL = C0;
 }
 /* « Mon lieu » : une maison passe par l'atelier, le reste est fait comme avant */
@@ -1014,7 +1067,7 @@ function hbInspector(){
     + lbl(L('Prochaine pièce dessinée', 'Next room you draw')) + `<div class="hb-types">${HB_TYPES.map(t => `<button class="chip ${HB.drawType === t[0] ? 'on' : ''}" data-hb="dtype" data-t="${t[0]}">${esc(L(t[1], t[2]))}</button>`).join('')}</div>`
     + `<label class="fr"><span class="fl">${L('Hauteur sous plafond', 'Ceiling height')}</span><input type="range" data-hbr="H" min="2.3" max="4" step="0.05" value="${hs.H || 2.7}"><b class="fv">${round(hs.H || 2.7, 2)} m</b></label>`
     + lbl(L('Façade', 'Outside walls')) + texRow(kindsOf('w'), FA, 'fac') + colRow(FA.c, 'facC', (TEX_KINDS[FA.k] || TEX_KINDS.plaster).cols)
-    + lbl(L('Toit', 'Roof')) + seg('roof', hs.roof || 'gable', [['gable', L('Deux pentes', 'Pitched')], ['flat', L('Toit plat', 'Flat')]]) + texRow(rfKinds, RF, 'rf') + colRow(RF.c, 'rfC', (TEX_KINDS[RF.k] || TEX_KINDS.rtile).cols)
+    + lbl(L('Toit', 'Roof')) + seg('roof', hs.roof || 'gable', [['gable', L('En pente', 'Pitched')], ['flat', L('Toit plat', 'Flat')]]) + texRow(rfKinds, RF, 'rf') + colRow(RF.c, 'rfC', (TEX_KINDS[RF.k] || TEX_KINDS.rtile).cols)
     + lbl(L('Jardin', 'Garden')) + texRow(['grass', 'gravel', 'cobble', 'sand', 'dirt', 'concrete'], GA, 'gnd')
     + lbl(L('Lumières', 'Lights')) + seg('lights', hs.lights || 'pendant', [['pendant', L('Suspensions', 'Pendants')], ['spot', L('Spots', 'Spots')], ['panel', L('Plafonniers', 'Panels')], ['none', L('Aucune', 'None')]])
     + seg('lcol', hs.lcol || 'warm', [['warm', L('Chaud', 'Warm')], ['neutral', L('Blanc', 'White')], ['cool', L('Froid', 'Cool')]])

@@ -326,7 +326,7 @@ const GL = {
       #else
       precision mediump float;
       #endif
-      uniform vec3 uEye; uniform vec3 uWinT; uniform vec3 uWinH; uniform float uView; uniform vec3 uGrade; uniform float uBW; varying vec3 vW; varying vec3 vN;
+      uniform vec3 uEye; uniform vec3 uWinT; uniform vec3 uWinH; uniform float uView; uniform vec3 uGrade; uniform float uBW; uniform float uOut; varying vec3 vW; varying vec3 vN;
       ${BW_GLSL}
       /* un nombre au hasard, toujours le même pour un même bâtiment : calculé sur de petits nombres (sinon, sur une carte graphique
          peu précise, les immeubles se déformaient et leurs fenêtres partaient en tous sens) */
@@ -386,10 +386,24 @@ const GL = {
         c *= vec3(0.95, 0.985, 1.0);
         c = mix(c, refl, 0.07 + 0.42 * fr + 0.14 * night);
         c = mix(c, vec3(0.95, 0.97, 1.0), band * (0.1 + 0.3 * fr) * (1.0 - 0.75 * night));
+        // vue de dehors (le jardin, la rue) : une vraie vitre, qui reflète le ciel et laisse deviner une pièce sombre derrière
+        // (jamais un paysage dans la vitrine d'en face) ; la nuit, la pièce éclairée transparaît, chaude
+        if(uOut > 0.5){
+          vec3 N = normalize(vN); if(dot(N, V) < 0.0) N = -N;
+          vec3 R = reflect(-V, N); float re = R.y;
+          vec3 sky = mix(uWinH, uWinT, smoothstep(-0.05, 0.6, re)) * mix(1.0, 0.25, night);
+          if(re < 0.0) sky = mix(vec3(0.36, 0.38, 0.36), vec3(0.22, 0.24, 0.22), smoothstep(0.0, -0.5, re)) * mix(1.0, 0.3, night);
+          vec3 room = mix(vec3(0.13, 0.15, 0.17), vec3(0.62, 0.48, 0.3), night * 0.85);
+          c = mix(room, sky, 0.28 + 0.6 * fr) * mix(vec3(1.0), uGrade, 0.5);
+          c = mix(c, vec3(0.95, 0.97, 1.0), band * (0.06 + 0.22 * fr) * (1.0 - 0.75 * night));
+        }
+        // tout près de la vitre : plus de décor peint dessus, seulement du verre (le faux paysage ne remplit plus l'écran)
+        float dd = distance(uEye, vW);
+        c = mix(mix(vec3(0.7, 0.76, 0.8), refl, 0.35) * mix(vec3(1.0), uGrade, 0.6), c, smoothstep(0.45, 1.6, dd));
         if(uBW > 0.5) c = bwTone(c, -0.02);
         gl_FragColor = vec4(c, 1.0);
       }`);
-    if(this.win){ const K = this.winLoc = {}; ['aP', 'aN', 'uVP', 'uEye', 'uWinT', 'uWinH', 'uView', 'uGrade', 'uBW'].forEach(k => K[k] = k[0] === 'a' ? gl.getAttribLocation(this.win, k) : gl.getUniformLocation(this.win, k)); }
+    if(this.win){ const K = this.winLoc = {}; ['aP', 'aN', 'uVP', 'uEye', 'uWinT', 'uWinH', 'uView', 'uGrade', 'uBW', 'uOut'].forEach(k => K[k] = k[0] === 'a' ? gl.getAttribLocation(this.win, k) : gl.getUniformLocation(this.win, k)); }
     this.sky = prog(`attribute vec2 aQ; uniform mat4 uInv; varying vec3 vD; varying vec2 vQ;
         void main(){ vQ = aQ; vec4 a = uInv * vec4(aQ, -1.0, 1.0), b = uInv * vec4(aQ, 1.0, 1.0); vD = b.xyz / b.w - a.xyz / a.w; gl_Position = vec4(aQ, 0.999, 1.0); }`,
       `precision mediump float; uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow; uniform float uMode; uniform float uBW; uniform vec2 uAsp;
@@ -593,6 +607,7 @@ const GL = {
     const wt = E.winT || [0.53, 0.69, 0.83], wh = E.winH || [0.86, 0.9, 0.93], g = E.grade || [1, 1, 1];
     gl.uniform3f(K.uWinT, wt[0], wt[1], wt[2]); gl.uniform3f(K.uWinH, wh[0], wh[1], wh[2]); gl.uniform1f(K.uView, E.view === 'nature' ? 1 : 0);
     gl.uniform3f(K.uGrade, g[0], g[1], g[2]); gl.uniform1f(K.uBW, E.bw ? 1 : 0);
+    gl.uniform1f(K.uOut, typeof eyeOutside === 'function' && eyeOutside(eye) ? 1 : 0);   // la caméra est-elle dehors (hors des pièces du lieu) ?
     gl.enableVertexAttribArray(K.aP); if(K.aN >= 0) gl.enableVertexAttribArray(K.aN);
     meshes.forEach(m => { gl.bindBuffer(gl.ARRAY_BUFFER, m.p); gl.vertexAttribPointer(K.aP, 3, gl.FLOAT, false, 0, 0);
       if(K.aN >= 0){ gl.bindBuffer(gl.ARRAY_BUFFER, m.n); gl.vertexAttribPointer(K.aN, 3, gl.FLOAT, false, 0, 0); } gl.drawArrays(gl.TRIANGLES, 0, m.count); });
