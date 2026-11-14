@@ -562,7 +562,7 @@ const GL = {
         void main(){
           if(uRaw > 0.5){ gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
           vec3 c = texture2D(uT, vU).rgb * vL.x;
-          if(vL.y > 0.5) c *= mix(0.66, 1.0, smoothstep(0.0, 0.6, vW.y));
+          if(vL.y > 0.5) c *= mix(0.66, 1.0, smoothstep(0.0, 0.6, vW.y - (vL.y - 1.0)));   // vL.y - 1 : le sol de l'étage (0 au rez-de-chaussée)
           c = mix(c, c * c * (3.0 - 2.0 * c), 0.22) * uGrade;
           float d = distance(vW, uEye);
           if(uFog.x < 300.0) c = mix(c, uFogC, clamp((d - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0) * 0.82); else c *= 1.0 - 0.1 * smoothstep(6.0, 18.0, d);
