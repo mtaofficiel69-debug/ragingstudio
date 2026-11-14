@@ -336,7 +336,7 @@ function addVehicle(kind){
     const lv = SET_DEF[s.set].levels; if(lv) nv.y = lv.reduce((b, l) => l <= c.ty + 0.3 ? l : b, 0);
     if(D.obj) nv.y = supportY(s, nv, nv.y);
     s.vehicles.push(nv);
-    S.veh = s.vehicles.length - 1;
+    S.veh = s.vehicles.length - 1; S.sel = null; S.crowd = -1; S.noTarget = true;   // l'objet ajouté est l'objet choisi (ses anneaux apparaissent)
   });
 }
 /* ---------- La hauteur d'un accessoire ----------
