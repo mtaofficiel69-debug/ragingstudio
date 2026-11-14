@@ -125,3 +125,58 @@ document.addEventListener('keydown', e => {
   const vs = shot().vehicles || []; if(S.sel || S.veh < 0 || !vs[S.veh]) return;
   e.preventDefault(); e.stopPropagation(); removeVehicle(S.veh); S.veh = -1; renderPanel(); requestRender();
 }, true);
+
+/* ---------- 4. Tous les éléments du décor (réverbères, arbres, bancs…) : des objets du plan ---------- */
+// la forme d'un élément, dans le monde, puis ramenée autour de son centre (calculée une fois)
+function spPiece(set, n){
+  if(!SET_PIECES[set]) try{ setGeo(set); }catch(err){ console.warn(err); }
+  const P = (SET_PIECES[set] || [])[n]; if(!P) return null;
+  if(!P.g){
+    const g = geo(), gl = geo(), m0 = MAT, e0 = EDGE_ON, c0 = COLL; COLL = null; MAT = P.mat; EDGE_ON = P.edge;
+    try { P.fn(g, gl); } finally { MAT = m0; EDGE_ON = e0; COLL = c0; }
+    let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9, y1 = 0;
+    for(let i = 0; i < g.p.length; i += 3){ x0 = Math.min(x0, g.p[i]); x1 = Math.max(x1, g.p[i]); y1 = Math.max(y1, g.p[i + 1]); z0 = Math.min(z0, g.p[i + 2]); z1 = Math.max(z1, g.p[i + 2]); }
+    if(x0 > x1){ x0 = x1 = z0 = z1 = 0; }
+    P.cx = round((x0 + x1) / 2, 3); P.cz = round((z0 + z1) / 2, 3); P.hx = Math.max(0.1, (x1 - x0) / 2); P.hz = Math.max(0.1, (z1 - z0) / 2); P.h = Math.max(0.2, y1);
+    P.g = g; P.gl = gl;
+  }
+  return P;
+}
+const spKind = P => 'sp_' + P.en.toLowerCase().replace(/[^a-z0-9]+/g, '');
+function spDef(P){
+  const k = spKind(P);
+  if(!VEH_DEF[k]) VEH_DEF[k] = { fr:P.fr, en:P.en, ic:'obj', obj:true, cat:'decor', cols:['#888'], label:P.h + 0.35, sh:[0.01, 0.01], h:P.h, shots:[], seats:[] };
+  else VEH_DEF[k].label = Math.max(VEH_DEF[k].label, P.h + 0.35);
+  return k;
+}
+const spGeoBase = vehicleGeo;
+vehicleGeo = function(kind, col, glass, st){
+  if(kind && kind.startsWith('sp_')){
+    const g = geo(), P = st && spPiece(st.set, st.n); if(!P) return g;
+    hbMerge(g, P.g, 0, -P.cx, 0, -P.cz); if(glass) hbMerge(glass, P.gl, 0, -P.cx, 0, -P.cz);
+    return g;
+  }
+  return spGeoBase.apply(this, arguments);
+};
+// sa taille (pour le choisir d'un clic, le poser sur un meuble…)
+const spSizeBase = itemSize;
+itemSize = function(v){
+  if(v && v.kind && v.kind.startsWith('sp_')){ const P = spPiece(v.set, v.n); if(P) return [P.hx, P.hz, P.h]; }
+  return spSizeBase.apply(this, arguments);
+};
+// les éléments du lieu, ajoutés au plan (une seule fois : ensuite ils sont à lui)
+const DECO_V = 2;
+function spAdd(sh){
+  if(!SET_PIECES[sh.set]) try{ setGeo(sh.set); }catch(err){ return; }
+  (SET_PIECES[sh.set] || []).forEach((P0, n) => { const P = spPiece(sh.set, n); if(!P) return; const k = spDef(P);
+    sh.vehicles.push({ id:uidS(), kind:k, col:sh.set + ':' + n, set:sh.set, n, x:P.cx, y:0, z:P.cz, ry:0, deco:true }); });
+}
+const decoEnsureV1 = decoEnsure;
+decoEnsure = function(sh){
+  if(!sh || !sh.set) return;
+  const fresh = sh.decoSet !== sh.set;
+  decoEnsureV1(sh);
+  if(fresh || (sh.decoV || 1) < DECO_V){ spAdd(sh); sh.decoV = DECO_V; }
+  // les éléments déjà dans le plan (storyboard rouvert) : leur nom revient
+  (sh.vehicles || []).forEach(v => { if(v.kind && v.kind.startsWith('sp_') && !VEH_DEF[v.kind]){ const P = spPiece(v.set, v.n); if(P) spDef(P); } });
+};
