@@ -376,7 +376,7 @@ function hbBuildLevel(gg, hs, i, opt){
     // la lumière du plafond (allumée la nuit)
     if(!top && (hs.lights || 'pendant') !== 'none' && !stDown.some(h => hbOverlap(rect, h) && hbInside([r.x + r.w / 2 - 0.3, r.z + r.d / 2 - 0.3, r.x + r.w / 2 + 0.3, r.z + r.d / 2 + 0.3], h))){
       const x = r.x + r.w / 2, z = r.z + r.d / 2, LC = hs.lcol === 'cool' ? '#F4F7FA' : hs.lcol === 'neutral' ? '#F7F5F0' : '#F4E3C2', m0 = MAT, LT = hs.lights || 'pendant';
-      if(LT === 'pendant'){ const drop = Math.min(0.75, H - 2.05); box(gg, x, y0 + H - drop / 2, z, 0.012, drop, 0.012, '#2C2E33'); cyl(gg, x, y0 + H - drop, z, 0.05, 0.2, 0.18, '#2C2E33', 10); MAT = 5; ball(gg, x, y0 + H - drop - 0.17, z, 0.06, 0.06, 0.06, LC, 7); MAT = m0; }
+      if(LT === 'pendant'){ const drop = clamp(H - 2.45, 0.08, 0.35); box(gg, x, y0 + H - drop / 2, z, 0.012, drop, 0.012, '#2C2E33'); cyl(gg, x, y0 + H - drop, z, 0.05, 0.2, 0.18, '#2C2E33', 10); MAT = 5; ball(gg, x, y0 + H - drop - 0.17, z, 0.06, 0.06, 0.06, LC, 7); MAT = m0; }
       else if(LT === 'spot'){ MAT = 5; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => cyl(gg, x + a * r.w / 4, y0 + H, z + b * r.d / 4, 0.08, 0.08, 0.025, LC, 10)); MAT = m0; }
       else { MAT = 5; box(gg, x, y0 + H - 0.02, z, Math.min(1.2, r.w * 0.4), 0.04, 0.3, LC); MAT = m0; }
     }
@@ -509,38 +509,57 @@ function houseDef(m, opt){
   d.hplan = { box:B, n:nL };
   return d;
 }
-/* le toit à deux pentes de l'étage du haut : le faîte dans la longueur, un débord tout autour, les pignons dans la façade */
-function hbGable(gg, hs, rooms, yR){
-  const B = rooms.reduce((b, r) => [Math.min(b[0], r.x), Math.min(b[1], r.z), Math.max(b[2], r.x + r.w), Math.max(b[3], r.z + r.d)], [1e9, 1e9, -1e9, -1e9]);
-  const ov = 0.4, x0 = B[0] - HB_TO - ov, x1 = B[2] + HB_TO + ov, z0 = B[1] - HB_TO - ov, z1 = B[3] + HB_TO + ov, alongX = (x1 - x0) >= (z1 - z0);
-  const half = alongX ? (z1 - z0) / 2 : (x1 - x0) / 2, rise = Math.min(half * 0.62, 3.2), RT = mapSurf(hs.rf && TEX_KINDS[hs.rf.k] && TEX_KINDS[hs.rf.k].on.includes('r') ? hs.rf : null, 'rtile'), key = texKey(RT), s = RT.s;
-  const FA = mapSurf(hs.fac, 'plaster'), fk = texKey(FA), yE = yR - 0.06, m0 = MAT;
-  const slope = (A, Bp, Cp, D, n) => { if(!TEXS) return; let mm = TEXS.get(key); if(!mm) TEXS.set(key, mm = { p:[], u:[], l:[] }); const k = texLight(n);
-    const uv = p => alongX ? [p[0] / s, Math.hypot(p[2] - (z0 + z1) / 2, p[1] - yE) / s] : [p[2] / s, Math.hypot(p[0] - (x0 + x1) / 2, p[1] - yE) / s];
-    [A, Bp, Cp, A, Cp, D].forEach(P => { const u = uv(P); mm.p.push(P[0], P[1], P[2]); mm.u.push(u[0], u[1]); mm.l.push(k, 0); }); };
-  const nl = Math.hypot(half, rise);
-  if(alongX){ const zm = (z0 + z1) / 2, yt = yE + rise;
-    slope([x0, yE, z1], [x1, yE, z1], [x1, yt, zm], [x0, yt, zm], [0, half / nl, rise / nl]);
-    slope([x1, yE, z0], [x0, yE, z0], [x0, yt, zm], [x1, yt, zm], [0, half / nl, -rise / nl]);
-    // les dessous du débord, et les pignons (dans la matière de la façade)
-    quad(gg, [x0, yE - 0.01, z1], [x0, yt - 0.01, zm], [x1, yt - 0.01, zm], [x1, yE - 0.01, z1], hexRGB('#E9E6E0')); quad(gg, [x1, yE - 0.01, z0], [x1, yt - 0.01, zm], [x0, yt - 0.01, zm], [x0, yE - 0.01, z0], hexRGB('#E9E6E0'));
-    [[B[0] - HB_TO, -1], [B[2] + HB_TO, 1]].forEach(([x, sg]) => { const zz0 = B[1] - HB_TO, zz1 = B[3] + HB_TO, hh = rise * ((zz1 - zz0) / 2) / half;
-      let mm = TEXS && TEXS.get(fk); if(TEXS && !mm) TEXS.set(fk, mm = { p:[], u:[], l:[] }); if(!mm) return; const k = texLight([sg, 0, 0]);
-      const P = sg > 0 ? [[x, yR, zz0], [x, yR + hh, zm], [x, yR, zz1]] : [[x, yR, zz1], [x, yR + hh, zm], [x, yR, zz0]];
-      P.forEach(p => { mm.p.push(p[0], p[1], p[2]); mm.u.push(p[2] / FA.s, p[1] / FA.s); mm.l.push(k, 0); }); });
-    MAT = 1; box(gg, (x0 + x1) / 2, yt + 0.04, zm, x1 - x0, 0.08, 0.16, hexRGB(RT.k === 'img' ? '#5E636C' : RT.c).map(v => v * 0.8)); MAT = m0;
-  } else { const xm = (x0 + x1) / 2, yt = yE + rise;
-    slope([x1, yE, z1], [x1, yE, z0], [xm, yt, z0], [xm, yt, z1], [half / nl, rise / nl, 0]);
-    slope([x0, yE, z0], [x0, yE, z1], [xm, yt, z1], [xm, yt, z0], [-half / nl, rise / nl, 0]);
-    quad(gg, [x1, yE - 0.01, z1], [xm, yt - 0.01, z1], [xm, yt - 0.01, z0], [x1, yE - 0.01, z0], hexRGB('#E9E6E0')); quad(gg, [x0, yE - 0.01, z0], [xm, yt - 0.01, z0], [xm, yt - 0.01, z1], [x0, yE - 0.01, z1], hexRGB('#E9E6E0'));
-    [[B[1] - HB_TO, -1], [B[3] + HB_TO, 1]].forEach(([z, sg]) => { const xx0 = B[0] - HB_TO, xx1 = B[2] + HB_TO, hh = rise * ((xx1 - xx0) / 2) / half;
-      let mm = TEXS && TEXS.get(fk); if(TEXS && !mm) TEXS.set(fk, mm = { p:[], u:[], l:[] }); if(!mm) return; const k = texLight([0, 0, sg]);
-      const P = sg > 0 ? [[xx1, yR, z], [xm, yR + hh, z], [xx0, yR, z]] : [[xx0, yR, z], [xm, yR + hh, z], [xx1, yR, z]];
-      P.forEach(p => { mm.p.push(p[0], p[1], p[2]); mm.u.push(p[0] / FA.s, p[1] / FA.s); mm.l.push(k, 0); }); });
-    MAT = 1; box(gg, xm, yt + 0.04, (z0 + z1) / 2, 0.16, 0.08, z1 - z0, hexRGB(RT.k === 'img' ? '#5E636C' : RT.c).map(v => v * 0.8)); MAT = m0;
+/* le toit à deux pentes de l'étage du haut : il suit le plan. L'étage est découpé en rectangles (le moins possible),
+   chacun a son toit, le faîte dans sa longueur ; le débord ne dépasse que côté dehors, jamais au-dessus d'une autre partie
+   de la maison, et jamais au-dessus du jardin là où il n'y a pas de pièce */
+function hbDecomp(rects, swap){
+  const R = rects.map(r => swap ? [r[1], r[0], r[3], r[2]] : r), xs = [...new Set(R.flatMap(r => [r[0], r[2]]))].sort((a, b) => a - b), out = [];
+  let open = [];
+  for(let i = 0; i < xs.length - 1; i++){
+    const a = xs[i], b = xs[i + 1], mid = (a + b) / 2, iv = [];
+    R.filter(r => r[0] < mid && r[2] > mid).map(r => [r[1], r[3]]).sort((p, q) => p[0] - q[0]).forEach(([p, q]) => { const l = iv[iv.length - 1]; if(l && p <= l[1] + 1e-6) l[1] = Math.max(l[1], q); else iv.push([p, q]); });
+    const next = [];
+    iv.forEach(([p, q]) => { const o = open.find(k => Math.abs(k[1] - p) < 1e-6 && Math.abs(k[3] - q) < 1e-6 && Math.abs(k[2] - a) < 1e-6); if(o){ o[2] = b; next.push(o); } else next.push([a, p, b, q]); });
+    open.forEach(o => { if(!next.includes(o)) out.push(o); }); open = next;
   }
-  // sous le toit, au-dessus du dernier plafond : un plancher de comble (on ne voit jamais le vide par une fenêtre de pignon)
-  const C0 = COLL; COLL = null; floor(gg, B[0], B[1], B[2], B[3], yR + 0.001, '#B9A88F'); COLL = C0;
+  out.push(...open);
+  return out.map(r => swap ? [r[1], r[0], r[3], r[2]] : r);
+}
+function hbGable(gg, hs, rooms, yR){
+  const base = rooms.map(hbRect), A = hbDecomp(base, false), Bz = hbDecomp(base, true), parts = (Bz.length < A.length ? Bz : A);
+  const RT = mapSurf(hs.rf && TEX_KINDS[hs.rf.k] && TEX_KINDS[hs.rf.k].on.includes('r') ? hs.rf : null, 'rtile'), key = texKey(RT), s = RT.s;
+  const FA = mapSurf(hs.fac, 'plaster'), fk = texKey(FA), yE = yR - 0.06, ov = 0.4, m0 = MAT, C0 = COLL; COLL = null;
+  const touches = (R, side) => parts.some(q => q !== R && (side === 'n' ? Math.abs(q[3] - R[1]) < 1e-6 && q[0] < R[2] && q[2] > R[0] : side === 's' ? Math.abs(q[1] - R[3]) < 1e-6 && q[0] < R[2] && q[2] > R[0]
+    : side === 'w' ? Math.abs(q[2] - R[0]) < 1e-6 && q[1] < R[3] && q[3] > R[1] : Math.abs(q[0] - R[2]) < 1e-6 && q[1] < R[3] && q[3] > R[1]));
+  // une face à texture, tournée vers « want » quel que soit l'ordre des coins
+  const tex = (k, pts, want, uvf) => { if(!TEXS) return; let mm = TEXS.get(k); if(!mm) TEXS.set(k, mm = { p:[], u:[], l:[] });
+    const [a, b, c] = pts, u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if(n[0] * want[0] + n[1] * want[1] + n[2] * want[2] < 0) pts = pts.slice().reverse();
+    const nl = Math.hypot(...want) || 1, lt = texLight(want.map(x => x / nl)), tris = pts.length === 4 ? [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]] : pts;
+    tris.forEach(P => { const q = uvf(P); mm.p.push(P[0], P[1], P[2]); mm.u.push(q[0], q[1]); mm.l.push(lt, 0); }); };
+  const plain = (pts, want, col) => { const [a, b, c] = pts, u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if(n[0] * want[0] + n[1] * want[1] + n[2] * want[2] < 0) pts = pts.slice().reverse(); quad(gg, pts[0], pts[1], pts[2], pts[3], hexRGB(col)); };
+  parts.forEach(R => {
+    const ext = { n:!touches(R, 'n'), s:!touches(R, 's'), w:!touches(R, 'w'), e:!touches(R, 'e') }, eo = sd => ext[sd] ? HB_TO + ov : 0, ew = sd => ext[sd] ? HB_TO : 0;
+    const x0 = R[0] - eo('w'), x1 = R[2] + eo('e'), z0 = R[1] - eo('n'), z1 = R[3] + eo('s'), alongX = (R[2] - R[0]) >= (R[3] - R[1]);
+    // en coordonnées du toit : u le long du faîte, v en travers
+    const W = (u, y, v) => alongX ? [u, y, v] : [v, y, u], Wn = (nu, ny, nv) => alongX ? [nu, ny, nv] : [nv, ny, nu];
+    const u0 = alongX ? x0 : z0, u1 = alongX ? x1 : z1, v0 = alongX ? z0 : x0, v1 = alongX ? z1 : x1, vm = (v0 + v1) / 2, half = (v1 - v0) / 2, rise = Math.min(half * 0.62, 3.2), yt = yE + rise, nl = Math.hypot(half, rise);
+    const uvR = P => { const uu = alongX ? P[0] : P[2], vv = alongX ? P[2] : P[0]; return [uu / s, Math.hypot(vv - vm, P[1] - yt) / s]; };
+    tex(key, [W(u0, yE, v1), W(u1, yE, v1), W(u1, yt, vm), W(u0, yt, vm)], Wn(0, half / nl, rise / nl), uvR);
+    tex(key, [W(u0, yE, v0), W(u1, yE, v0), W(u1, yt, vm), W(u0, yt, vm)], Wn(0, half / nl, -rise / nl), uvR);
+    plain([W(u0, yE - 0.01, v1), W(u1, yE - 0.01, v1), W(u1, yt - 0.01, vm), W(u0, yt - 0.01, vm)], Wn(0, -half / nl, -rise / nl), '#E9E6E0');
+    plain([W(u0, yE - 0.01, v0), W(u1, yE - 0.01, v0), W(u1, yt - 0.01, vm), W(u0, yt - 0.01, vm)], Wn(0, -half / nl, rise / nl), '#E9E6E0');
+    // les pignons, dans la façade (à chaque bout, pour ne jamais laisser de trou là où deux toits se rejoignent)
+    const vw0 = alongX ? R[1] - ew('n') : R[0] - ew('w'), vw1 = alongX ? R[3] + ew('s') : R[2] + ew('e'), hh = rise * ((vw1 - vw0) / 2) / half;
+    [[alongX ? R[0] - ew('w') : R[1] - ew('n'), -1], [alongX ? R[2] + ew('e') : R[3] + ew('s'), 1]].forEach(([u, sg]) => {
+      tex(fk, [W(u, yR, vw0), W(u, yR + hh, (vw0 + vw1) / 2), W(u, yR, vw1)], Wn(sg, 0, 0), P => [(alongX ? P[2] : P[0]) / FA.s, P[1] / FA.s]); });
+    MAT = 1; const cm = W((u0 + u1) / 2, yt + 0.04, vm), dims = alongX ? [u1 - u0, 0.08, 0.16] : [0.16, 0.08, u1 - u0];
+    box(gg, cm[0], cm[1], cm[2], dims[0], dims[1], dims[2], hexRGB(RT.k === 'img' ? '#5E636C' : RT.c).map(v => v * 0.8)); MAT = m0;
+    // au-dessus du dernier plafond : un plancher de comble (par une fenêtre de pignon, jamais le vide)
+    floor(gg, R[0], R[1], R[2], R[3], yR + 0.001, '#B9A88F');
+  });
+  COLL = C0;
 }
 /* « Mon lieu » : une maison passe par l'atelier, le reste est fait comme avant */
 const hbMapDefBase = mapDef;
@@ -589,6 +608,10 @@ function hbNormalize(hs){
     const ids = new Set(lv.rooms.map(r => r.id));
     lv.open = lv.open.filter(k => k.split('|').every(id => ids.has(id)));
     lv.nd = lv.nd.filter(k => k.split('|').every(id => ids.has(id)));
+    // une porte d'entrée posée sur un mur qui donne maintenant sur une nouvelle pièce : elle devient la porte entre les deux pièces
+    lv.rooms.forEach(r => { r.ext = (r.ext || []).filter(it => { const E = hbEdges(r).find(x => x.s === it.s); if(!E) return true; const c = (E.ax === 'x' ? r.x : r.z) + it.u, w = Math.min(it.w || 1, 1.6);
+      const sh = hbShared(E, r, lv.rooms, lv.open).find(x => c - w / 2 >= x.s + 0.05 && c + w / 2 <= x.e - 0.05); if(!sh) return true;
+      if(!sh.open) lv.doors.push({ o:E.ax, c:E.c, a:round(c, 2), w }); lv.nd = lv.nd.filter(k => k !== hbPairKey(r.id, sh.q.id)); return false; }); });
     // une porte doit tomber sur un mur commun (pas ouvert) assez long
     lv.doors = lv.doors.filter(d => lv.rooms.some(r => hbEdges(r).some(E => { if(E.ax !== d.o || Math.abs(E.c - d.c) > 1e-4) return false;
       return hbShared(E, r, lv.rooms, lv.open).some(x => !x.open && d.a - (d.w || 0.9) / 2 >= x.s + 0.05 && d.a + (d.w || 0.9) / 2 <= x.e - 0.05); })));
@@ -675,14 +698,9 @@ PANEL_HTML.mymap = function(){
     <div class="pbtns"><button class="btn btn-sm btn-ghost danger" data-act="mapDel">${icon('trash')}${L('Supprimer ce lieu', 'Delete this place')}</button></div>
     <input type="file" id="mapFile" accept="image/*" hidden></div>`;
 };
-// dans le volet Lieu : à côté de « Créer mon lieu », « Modéliser ma maison »
+// le volet Lieu ne sert plus qu'à choisir : fabriquer et modifier son lieu, c'est dans son propre onglet, « Mon lieu »
 const hbPlaceBase = PANEL_HTML.place;
-PANEL_HTML.place = function(){
-  const h = hbPlaceBase.call(this), i = h.indexOf('class="myplace'); if(i < 0) return h;
-  const j = h.indexOf('</button>', i); if(j < 0) return h;
-  const btn = `<button class="myplace hb-myhouse" data-act="hbNewHouse" title="${esc(L('Dessine le plan de ta maison, pièce par pièce, et elle se construit en 3D', 'Draw your house plan, room by room, and it builds itself in 3D'))}"><span class="mp-ic">${hbIco('house')}</span><span class="mp-t"><b>${L('Modéliser ma maison', 'Model my house')}</b><small>${L('Pièces, étages, portes, fenêtres, meubles', 'Rooms, floors, doors, windows, furniture')}</small></span>${icon('plus')}</button>`;
-  return h.slice(0, j + 9) + btn + h.slice(j + 9);
-};
+PANEL_HTML.place = function(){ return hbPlaceBase.call(this).replace(/<button class="myplace[^"]*" data-act="map(?:New|Edit)"[\s\S]*?<\/button>/, ''); };
 Object.assign(ACT, {
   hbNewHouse:() => mapNewHouse(),
   hbOpen:() => hbOpen(),
@@ -1277,3 +1295,38 @@ document.addEventListener('keydown', e => {
 }, true);
 document.addEventListener('keyup', e => { if(e.key === ' ') HB.space = false; });
 window.addEventListener('resize', () => { if(HB.open){ HB.vb = null; hbFitVB(); hbDrawSvg(); } });
+
+/* ---------- 8. « Mon lieu » a son propre onglet ----------
+   Dans la colonne, juste après « Lieu » : on y crée un lieu, on modélise sa maison, on retrouve tous ses lieux.
+   Quand le plan se passe dans un de ses lieux, l'onglet ouvre directement ses réglages. */
+const hbIconBase = icon;
+icon = function(n, cls){ if(n === 'house') return hbIco('house').replace('class="icon"', `class="icon ${cls || ''}"`); return hbIconBase.apply(this, arguments); };
+(() => { const g = PANELS.find(x => x.items.some(i => i.id === 'place')); if(g && !g.items.some(i => i.id === 'mymap')) g.items.splice(g.items.findIndex(i => i.id === 'place') + 1, 0, PANEL.mymap); })();
+PANEL.mymap.ic = 'house';
+TAB_SHORT.mymap = ['Mon lieu', 'My place'];
+const hbRailBase = renderRail;
+renderRail = function(){ hbRailBase.apply(this, arguments); if(S.panel === 'mymap'){ const t = document.querySelector('#rail .tab[data-id="place"]'); if(t) t.classList.remove('active'); } };
+const hbSetPanelBase = setPanel;
+setPanel = function(id){ if(id === 'mymap') S.mmHub = false; return hbSetPanelBase.apply(this, arguments); };
+function hbHub(){
+  const maps = S.doc.maps || [], cur = shot().set;
+  const tile = m => { const id = 'my_' + m.id, st = SETS.find(x => x.id === id); return `<button class="ptile ${cur === id ? 'on' : ''}" data-act="mmGo" data-id="${esc(m.id)}"><i class="sw sw-${id}" data-pp="${id}"${PLACE_PREV.has(id + ':' + (S.doc.style || '')) ? ` style="background-image:url(${PLACE_PREV.get(id + ':' + (S.doc.style || ''))})"` : ''}></i><span>${m.kind === 'house' ? hbIco('house') : ''}${esc(st ? L(st.fr, st.en) : m.name || '')}</span></button>`; };
+  return ph('house', L('Mon lieu', 'My place'), L('Fabrique tes propres décors', 'Build your own sets')) + `<div class="pb">
+    <div class="mm-hub">
+      <button class="mm-big" data-act="hbNewHouse"><span class="mm-big-ic">${hbIco('house')}</span><span><b>${L('Modéliser une maison', 'Model a house')}</b><small>${L('Dessine les pièces sur un plan : portes, fenêtres, escalier, étages, toit, meubles', 'Draw the rooms on a plan: doors, windows, stairs, floors, roof, furniture')}</small></span>${icon('plus')}</button>
+      <button class="mm-big" data-act="mapNew"><span class="mm-big-ic">${icon('grid')}</span><span><b>${L('Créer une pièce ou un extérieur', 'Create a room or an outdoor set')}</b><small>${L('Une seule pièce, une cour, un terrain : la taille, le sol, les murs, tes textures', 'One room, a yard, a field: size, floor, walls, your textures')}</small></span>${icon('plus')}</button>
+    </div>
+    ${maps.length ? lbl(L('Mes lieux', 'My places') + ` <span class="cnt">${maps.length}</span>`) + `<div class="ptiles">${maps.map(tile).join('')}</div><p class="mm-p">${L('Clique un lieu pour y tourner ce plan et le modifier.', 'Click a place to shoot this shot there and edit it.')}</p>` : `<p class="mm-p">${L('Tes lieux apparaîtront ici. Ils voyagent avec le storyboard.', 'Your places will show up here. They travel with the storyboard.')}</p>`}</div>`;
+}
+const hbMymapBase2 = PANEL_HTML.mymap;
+PANEL_HTML.mymap = function(){
+  if(!curMap() || S.mmHub) return hbHub();
+  // en haut des réglages : revenir à tous ses lieux (et non plus à la liste de tous les lieux)
+  return hbMymapBase2.call(this).replace(/<button class="btn btn-sm btn-ghost" data-act="panel" data-id="place">[\s\S]*?<\/button>/, `<button class="btn btn-sm btn-ghost" data-act="mmHub">${icon('back')}${L('Mes lieux', 'My places')}</button>`);
+};
+Object.assign(ACT, {
+  mmHub:() => { S.mmHub = true; renderPanel(); },
+  mmGo:b => { const id = 'my_' + b.dataset.id; S.mmHub = false; if(shot().set !== id) setPlace(id); renderPanel(); },
+});
+// un lieu supprimé : on revient à tous ses lieux, dans le même onglet
+ACT.mapDel = () => { mapDel(); setPanel('mymap'); };
