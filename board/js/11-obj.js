@@ -6,7 +6,7 @@
    roue arrière ; bleu : pencher sur le côté), et les mêmes réglages en
    curseurs dans « Accessoires ».
 ===================================================================== */
-const VGZ = { drag:null, hot:-1, view:null };
+const VGZ = { drag:null, hot:-1, view:null, on:lsGet('raging3d_vrot') !== '0', mv:null };
 const VGZ_DEF = [
   { k:'ry', col:'#30A46C', fr:'Tourner', en:'Turn', min:-180, max:180 },
   { k:'rx', col:'#E5484D', fr:'Cabrer', en:'Pitch', min:-90, max:90 },
@@ -20,7 +20,9 @@ function vgzSet(v, k, val){
 function vgzSel(){ const sh = shot(), v = (sh.vehicles || [])[S.veh]; return S.veh >= 0 && v && !S.sel ? v : null; }
 function vgzAxes(v){
   const [hx, hz, h] = itemSize(v), M = vehMat(v), c = M4.apply(M, [0, h * 0.5, 0]), a = (v.ry || 0) * D2R;
-  return { c, size:Math.max(hx, hz, h * 0.6), axes:[
+  // l'anneau vert (tourner) est posé au sol, sous l'objet, comme un plateau tournant : il ne passe pas devant l'objet
+  const c0 = M4.apply(vehMat(Object.assign({}, v, { rx:0, rz:0 })), [0, 0.03, 0]);
+  return { c, c0, size:Math.max(hx, hz, h * 0.6), axes:[
     [0, 1, 0],
     M4.apply(M4.ry(a), [1, 0, 0]),
     M4.apply(M4.mul(M4.ry(a), M4.rx(-(v.rx || 0) * D2R)), [0, 0, 1]),
@@ -29,22 +31,24 @@ function vgzAxes(v){
 function vgzDraw(sh, vp, w, h){
   const host = document.getElementById('handles'); if(!host) return;
   let svg = host.querySelector('#vgizmo');
-  const v = vgzSel(), show = GZ.on && v && !S.final && !S.play && !S.rec;
+  const v = vgzSel(), show = VGZ.on && v && !S.final && !S.play && !S.rec;
   if(!show){ if(svg) svg.remove(); VGZ.view = null; return; }
   if(!svg){ svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.id = 'vgizmo'; svg.setAttribute('class', 'gizmo'); host.appendChild(svg); }
   const r = R.canvas.getBoundingClientRect(), k = r.width / w;
   const proj = p => { const cx = vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12], cy = vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13], cw = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15];
     return cw <= 0.02 ? null : [(cx / cw + 1) / 2 * w * k, (1 - cy / cw) / 2 * h * k]; };
-  const { c, size, axes } = vgzAxes(v), eye = camEye(viewCam(sh)), vd = gzNorm(gzSub(c, eye)), C = proj(c);
+  const { c, c0, size, axes } = vgzAxes(v), eye = camEye(viewCam(sh)), vd = gzNorm(gzSub(c, eye)), C = proj(c);
   if(!C){ svg.innerHTML = ''; VGZ.view = null; return; }
   let right = gzCross(vd, [0, 1, 0]); if(gzLen(right) < 1e-3) right = [1, 0, 0]; right = gzNorm(right);
   const Q = proj([c[0] + right[0], c[1] + right[1], c[2] + right[2]]), ppm = Q ? Math.hypot(Q[0] - C[0], Q[1] - C[1]) : 100;
   // assez grand pour entourer l'objet, mais toujours lisible à l'écran
-  const Rw = clamp(size * 0.9, 50 / Math.max(ppm, 1), 150 / Math.max(ppm, 1));
-  VGZ.view = { proj, axes, c, Rw };
+  // assez grand pour entourer l'objet (on peut cliquer l'objet lui-même pour le déplacer), toujours lisible à l'écran
+  const Rw = clamp(size * 1.2, 50 / Math.max(ppm, 1), 260 / Math.max(ppm, 1));
+  const cen = n => n === 0 ? c0 : c;
+  VGZ.view = { proj, axes, c, Rw, cen };
   svg.setAttribute('width', r.width); svg.setAttribute('height', r.height); svg.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`);
   let out = '';
-  axes.forEach((A, n) => {
+  axes.forEach((A, n) => { const c = cen(n);
     let u = gzCross(A, Math.abs(A[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]); u = gzNorm(u); const vv = gzCross(A, u);
     let front = '', back = '', hit = '', prev = null, prevF = null;
     for(let s = 0; s <= 64; s++){
@@ -68,7 +72,7 @@ document.addEventListener('pointerdown', e => {
   const g = e.target.closest && e.target.closest('.vgz-hit'); if(!g || !VGZ.view) return;
   const v = vgzSel(); if(!v) return;
   e.preventDefault(); e.stopPropagation();
-  const n = +g.dataset.n, A = VGZ.view.axes[n], D = VGZ_DEF[n], rc = R.canvas.getBoundingClientRect(), mx = e.clientX - rc.left, my = e.clientY - rc.top, c = VGZ.view.c, Rw = VGZ.view.Rw;
+  const n = +g.dataset.n, A = VGZ.view.axes[n], D = VGZ_DEF[n], rc = R.canvas.getBoundingClientRect(), mx = e.clientX - rc.left, my = e.clientY - rc.top, c = VGZ.view.cen(n), Rw = VGZ.view.Rw;
   let u = gzCross(A, Math.abs(A[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]); u = gzNorm(u); const vv = gzCross(A, u);
   let best = null; for(let s = 0; s < 64; s++){ const t = s / 64 * Math.PI * 2, p = [0, 1, 2].map(i => c[i] + (u[i] * Math.cos(t) + vv[i] * Math.sin(t)) * Rw);
     const q = VGZ.view.proj(p); if(q){ const d = Math.hypot(q[0] - mx, q[1] - my); if(!best || d < best.d) best = { d, p, q }; } }
@@ -105,7 +109,7 @@ PANEL_HTML.car = function(){
   const h = vgzCarBase.call(this), sh = shot(), vs = sh.vehicles || [], k = vs[S.veh] ? S.veh : vs.length ? 0 : -1, v = vs[k]; if(!v) return h;
   const i = h.indexOf('data-act="vehAlt"'); if(i < 0) return h;
   const j = h.indexOf('</label>', i); if(j < 0) return h;
-  const sec = `${lbl(L('Orientation', 'Orientation'))}${vgzRows(v)}<div class="gz-row"><button class="btn btn-sm gz-btn ${GZ.on ? 'on' : ''}" data-act="gzTog" aria-pressed="${GZ.on}" title="${esc(L('Afficher les anneaux autour de l’objet choisi, pour le tourner à la souris', 'Show the rings around the chosen object, to turn it with the mouse'))}">${typeof gzIco === 'function' ? gzIco() : ''}${L('Anneaux', 'Rings')}</button><button class="btn btn-sm" data-act="vehFlat" ${v.rx || v.rz ? '' : 'disabled'}>${L('Remettre à plat', 'Level it')}</button></div>`;
+  const sec = `${lbl(L('Orientation', 'Orientation'))}${vgzRows(v)}<div class="gz-row"><button class="btn btn-sm gz-btn ${VGZ.on ? 'on' : ''}" data-act="vgzTog" aria-pressed="${VGZ.on}" title="${esc(L('Afficher les anneaux autour de l’objet choisi, pour le tourner à la souris', 'Show the rings around the chosen object, to turn it with the mouse'))}">${typeof gzIco === 'function' ? gzIco() : ''}${L('Anneaux', 'Rings')}</button><button class="btn btn-sm" data-act="vehFlat" ${v.rx || v.rz ? '' : 'disabled'}>${L('Remettre à plat', 'Level it')}</button></div>`;
   return h.slice(0, j + 8) + sec + h.slice(j + 8);
 };
 ACT.vehFlat = () => { const v = (shot().vehicles || [])[S.veh < 0 ? 0 : S.veh]; if(!v) return; edit(() => { delete v.rx; delete v.rz; syncRiders(shot()); R.pickDirty = true; }); };
@@ -121,3 +125,47 @@ document.addEventListener('change', e => {
   const t = e.target; if(!t.dataset || t.dataset.act !== 'vehRot' || !vgzSnap) return;
   pushUndo(vgzSnap); vgzSnap = null; changed();
 });
+ACT.vgzTog = () => { VGZ.on = !VGZ.on; lsSet('raging3d_vrot', VGZ.on ? '1' : '0'); renderPanel(); requestRender(); };
+
+/* ---------- cliquer un objet dans l'image : il est choisi (ses anneaux apparaissent), et on le fait glisser sur le sol ---------- */
+function vehPickAt(x, y){
+  const sh = shot(), vs = sh.vehicles || []; if(!vs.length) return -1;
+  const [a, d] = rayAt(x, y); let best = -1, bt = 1e9;
+  vs.forEach((v, i) => {
+    const [hx, hz, h] = itemSize(v), inv = M4.invert(vehMat(v)), o = M4.apply(inv, a), e = M4.apply(inv, [a[0] + d[0], a[1] + d[1], a[2] + d[2]]), dir = [e[0] - o[0], e[1] - o[1], e[2] - o[2]];
+    const lo = [-hx, 0, -hz], hi = [hx, h, hz]; let t0 = 0, t1 = 1e9;
+    for(let k = 0; k < 3; k++){
+      if(Math.abs(dir[k]) < 1e-9){ if(o[k] < lo[k] || o[k] > hi[k]) return; continue; }
+      let ta = (lo[k] - o[k]) / dir[k], tb = (hi[k] - o[k]) / dir[k]; if(ta > tb) [ta, tb] = [tb, ta];
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if(t0 > t1) return;
+    }
+    if(t0 < bt){ bt = t0; best = i; }
+  });
+  return best;
+}
+document.addEventListener('pointerdown', e => {
+  if(!R.canvas || e.target !== R.canvas || e.button !== 0 || e.shiftKey || S.rec || S.play || S.final) return;
+  const [x, y] = canvasXY(e); if(pickAt(x, y)) return;          // un personnage passe devant : c'est lui qu'on attrape
+  const k = vehPickAt(x, y); if(k < 0) return;
+  e.preventDefault(); e.stopPropagation();
+  const v = shot().vehicles[k];
+  S.veh = k; S.sel = null; S.crowd = -1; S.noTarget = true;
+  if(typeof setPanel === 'function' && S.panel !== 'car') setPanel('car', true);
+  const g = groundAt(x, y, v.y || 0);
+  VGZ.mv = { k, snap:snapshot(), grab:g ? [v.x - g[0], v.z - g[1]] : null, y:v.y || 0, moved:false, x0:e.clientX, y0:e.clientY };
+  try{ R.canvas.setPointerCapture(e.pointerId); }catch(err){}
+  renderSide(); renderTools(); renderHint(); requestRender();
+}, true);
+document.addEventListener('pointermove', e => {
+  const m = VGZ.mv; if(!m || !m.grab) return;
+  if(!m.moved && Math.hypot(e.clientX - m.x0, e.clientY - m.y0) < 4) return;
+  const v = shot().vehicles[m.k]; if(!v) return;
+  const [x, y] = canvasXY(e), g = groundAt(x, y, m.y); if(!g) return;
+  v.x = round(clamp(g[0] + m.grab[0], -150, 150), 2); v.z = round(clamp(g[1] + m.grab[1], -150, 150), 2); m.moved = true;
+  e.stopPropagation(); syncRiders(shot()); R.pickDirty = true; requestRender();
+}, true);
+document.addEventListener('pointerup', e => {
+  const m = VGZ.mv; if(!m) return; VGZ.mv = null;
+  e.stopPropagation();
+  if(m.moved){ const s = shot(), v = s.vehicles[m.k]; if(v && !(VEH_DEF[v.kind] || {}).fly) v.y = supportY(s, v, m.y); syncRiders(s); pushUndo(m.snap); changed(); } else requestRender();
+}, true);

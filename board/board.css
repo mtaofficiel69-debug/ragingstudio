@@ -1205,3 +1205,6 @@ body.imm .sh-chip{background:rgba(255,255,255,.08); box-shadow:none; color:#E9EC
 body.imm:not(.imm-clean) .sh-chip, body.imm:not(.imm-clean) .sh-of{display:none;}
 body.imm:not(.imm-clean) .sh-r .seg button{font-size:0; gap:0; padding:7px 9px;}
 body.imm:not(.imm-clean) .cine-btn kbd{display:none;}
+
+/* les anneaux d’un objet : une prise un peu plus fine, pour pouvoir aussi attraper l’objet lui-même */
+.gz-hit.vgz-hit{stroke-width:11 !important;}

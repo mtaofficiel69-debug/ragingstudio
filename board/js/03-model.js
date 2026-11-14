@@ -1352,9 +1352,8 @@ const SET_DEF = {
       // leurs fenêtres et leurs boutiques, des réverbères, des arbres, des feux au passage piéton, des voitures garées
       { const AS = '#4A4E55', SW = '#8A8E95', CU = '#8D9198', LN = '#D9D3B8', RX = 9.25;
         let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-        [[-140, -16], [16, 140]].forEach(([z0, z1]) => { floor(g, -3.04, z0, RX, z1, 0, AS); floor(g, -14, z0, -3.04, z1, 0.14, SW); box(g, -2.95, 0.07, (z0 + z1) / 2, 0.18, 0.14, z1 - z0, CU); });
-        floor(g, RX + 0.09, -140, 30, 140, 0.14, SW); box(g, RX, 0.07, 0, 0.18, 0.14, 280, CU);
-        floor(g, -40, -140, -14, 140, 0.14, SW);
+        [[-140, -16], [16, 140]].forEach(([z0, z1]) => { floor(g, -3.04, z0, RX, z1, 0, AS); floor(g, -19.1, z0, -3.04, z1, 0.14, SW); box(g, -2.95, 0.07, (z0 + z1) / 2, 0.18, 0.14, z1 - z0, CU); });
+        floor(g, RX + 0.09, -140, 26.1, 140, 0.14, SW); box(g, RX, 0.07, 0, 0.18, 0.14, 280, CU);
         for(let z = -139; z < 140; z += 3.2) if(z < -16 || z > 16) box(g, 3.1, 0.003, z, 0.12, 0.006, 1.7, LN);
         for(let z = -139; z < 140; z += 1.2) if(z < -16 || z > 16) box(g, -5, 0.142, z, 3.9, 0.004, 0.02, '#7C8087');
         for(let z = -139; z < 140; z += 1.2) box(g, 11.7, 0.142, z, 4.6, 0.004, 0.02, '#7C8087');
@@ -1396,9 +1395,6 @@ const SET_DEF = {
           (k % 3 === 2 ? tower : walkup)(-7.02, 1, z + 6, 12, k % 3 === 2 ? 30 + (k % 2) * 12 : 8.6 + (k % 2) * 2.8, k % 3 === 2 ? TW[k % 3] : BR[k % BR.length], k);
           (k % 3 === 1 ? tower : walkup)(-7.02, 1, -z - 6, 12, k % 3 === 1 ? 34 : 8.6 + ((k + 1) % 2) * 2.8, k % 3 === 1 ? TW[(k + 1) % 3] : BR[(k + 3) % BR.length], k + 1); }
         for(let z = -136, k = 0; z < 136; z += 12, k++) (k % 4 === 3 ? tower : walkup)(14.02, -1, z + 6, 12, k % 4 === 3 ? 28 + (k % 3) * 8 : 8.6 + (k % 3) * 2.8, k % 4 === 3 ? TW[k % 3] : BR[(k + 2) % BR.length], k);
-        // au loin, au-dessus des toits : les tours du centre, aux fenêtres allumées la nuit
-        [[-40, -60, 70], [-46, 20, 90], [-38, 80, 60], [40, -40, 80], [46, 30, 64], [38, 95, 100]].forEach(([x, z, h], i) => { const m0 = MAT; box(g, x, h / 2, z, 14, h, 14, TW[i % 3]);
-          [x > 0 ? x - 7.01 : x + 7.01].forEach(xf => { for(let y = 4; y < h - 2; y += 3.2) for(let q = -6.5; q < 6.4; q += 1.625){ MAT = winLit(xf, y, z + q); x > 0 ? wall(g, [xf, z + q + 0.05], [xf, z + q + 1.575], 2.0, '#1F2833', y) : wall(g, [xf, z + q + 1.575], [xf, z + q + 0.05], 2.0, '#1F2833', y); } }); MAT = m0; });
         // la borne de taxis, sur le trottoir, à côté du taxi
         { const m0 = MAT; cyl(g, -3.55, 1.5, -3.2, 0.05, 0.05, 1.5, '#2C2E33', 6); MAT = 5; box(g, -3.55, 1.75, -3.2, 0.1, 0.36, 0.9, '#E8B923'); MAT = m0;
           pixText(g, 'TAXI', -3.2, 1.72, -3.494, 1, 0.022, '#1E2025', true); pixText(g, 'TAXI', -3.2, 1.72, -3.606, -1, 0.022, '#1E2025', true); }
@@ -1443,9 +1439,6 @@ const SET_DEF = {
           cyl(g, -3.55, 0.44, 13.5, 0.13, 0.13, 0.3, '#C2453B', 8); cyl(g, -3.55, 0.6, 13.5, 0.09, 0.13, 0.16, '#C2453B', 8); cyl(g, -3.55, 0.45, 13.5, 0.05, 0.05, 0.36, '#A33A31', 6, 'x');
           box(g, -3.7, 0.72, -12, 0.5, 1.1, 0.45, '#2F4E8E'); prism(g, [[-12.22, 1.27], [-11.78, 1.27], [-11.78, 1.4], [-12.22, 1.4]], -3.95, -3.45, '#2F4E8E');
           MAT = m0; }
-        // les cheminées de vapeur orange et blanc, au milieu de la chaussée
-        [[5.6, -20], [1.4, 30]].forEach(([x, z]) => { for(let k = 0; k < 4; k++) cyl(g, x, 0.3 + k * 0.3, z, 0.22, 0.2, 0.3, k % 2 ? '#F4F2EE' : '#E8572E', 10);
-          { const e0 = EDGE_ON; EDGE_ON = 0; for(let k = 0; k < 4; k++) cyl(g, x + k * 0.08, 1.7 + k * 0.6, z, 0.25 + k * 0.12, 0.35 + k * 0.14, 0.55, '#E6E8EB', 9); EDGE_ON = e0; } });
         // d'autres taxis jaunes : à la file, à la borne, et sur l'avenue
         if(typeof hbMerge === 'function') [[-1.2, 0, -9.5], [-1.2, 0, -16.5], [5.6, Math.PI, 18], [1.5, 0, 26]].forEach(([x, ry, z]) => hbMerge(g, vehicleGeo('taxi', '#F2C230'), ry, x, 0, z));
       }
