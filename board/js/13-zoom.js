@@ -76,7 +76,14 @@ function zoomPoint(x, y, h){
 }
 wheelApply = function(x, y, f, h){
   if(!_wheelSnap) _wheelSnap = snapshot();
-  const c = shot().cam, Z = zoomPoint(x, y, f < 1 ? h : null), P = Z.P, eye = Z.eye;
+  const c = shot().cam, Z = zoomPoint(x, y, f < 1 ? h : null), eye = Z.eye;
+  // jamais de bond : un cran ne fait pas plus de chemin que ce que la caméra a devant elle (si la souris passe sur le ciel
+  // ou sur un immeuble au loin, on avance pas à pas, de plus en plus vite, au lieu de sauter de 50 m d'un coup)
+  const now = performance.now(); if(!ZM.t || now - ZM.t > 400) ZM.ds = clamp(c.dist, 0.3, 80) * 1.6 + 0.6; ZM.t = now;
+  const lim = Math.min(ZM.ds * 1.15 + 0.15, clamp(c.dist, 0.3, 80) * 1.6 + 0.6);   // la portée ne grandit que doucement d'une image à l'autre
+  ZM.ds = Math.min(Z.D, lim);
+  if(Z.D > lim){ Z.D = lim; Z.P = [eye[0] + Z.rd[0] * lim, eye[1] + Z.rd[1] * lim, eye[2] + Z.rd[2] * lim]; }
+  const P = Z.P;
   const yaw = c.yaw * D2R, pit = c.pitch * D2R, back = [Math.cos(pit) * Math.sin(yaw), -Math.sin(pit), Math.cos(pit) * Math.cos(yaw)], fwd = back.map(v => -v);
   // la nouvelle place de l'objectif : sur la droite qui va de lui au point visé (plus près en avançant, plus loin en reculant)
   let r = Z.D * f;
