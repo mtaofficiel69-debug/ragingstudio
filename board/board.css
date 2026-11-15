@@ -1214,3 +1214,6 @@ body.imm:not(.imm-clean) .cine-btn kbd{display:none;}
 .hd-del{position:absolute; left:68px; top:-27px; width:20px; height:20px; padding:0; display:grid; place-items:center; border:1.5px solid #fff; border-radius:50%; background:#C2453B; color:#fff; pointer-events:auto; cursor:pointer; box-shadow:0 2px 5px rgba(16,18,22,.3);}
 .hd-del svg{width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round;}
 .hd-del:hover{background:#A33A31;}
+
+/* le point autour duquel la caméra tourne, le temps du geste */
+.cam-dot{position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:var(--accent); border:1.5px solid #fff; box-shadow:0 0 0 1px rgba(16,18,22,.35); pointer-events:none; opacity:.9;}

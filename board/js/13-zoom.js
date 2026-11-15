@@ -93,17 +93,14 @@ wheelApply = function(x, y, f, h){
   if(f < 1 && Z.D <= ZM.min + 0.02){
     ZM.push = (ZM.push || 0) + (1 - f);
     if(ZM.push > 1.4){ ZM.push = 0; const s0 = 0.14;
-      camGesture(c, () => { c.tx += Z.rd[0] * s0; c.ty += Z.rd[1] * s0; c.tz += Z.rd[2] * s0; }, true); }
+      camPut(c, [eye[0] + Z.rd[0] * s0, eye[1] + Z.rd[1] * s0, eye[2] + Z.rd[2] * s0], c.yaw, c.pitch, c.dist); }
     requestRender(); clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350); return;
   }
   ZM.push = 0;
   const ne = [P[0] - Z.rd[0] * r, P[1] - Z.rd[1] * r, P[2] - Z.rd[2] * r];
   // la caméra garde son angle ; elle tournera ensuite autour de ce qu'on a visé
   const depth = Math.max(0.05, (P[0] - ne[0]) * fwd[0] + (P[1] - ne[1]) * fwd[1] + (P[2] - ne[2]) * fwd[2]);
-  const set = () => { c.dist = depth; c.tx = ne[0] + fwd[0] * depth; c.ty = ne[1] + fwd[1] * depth; c.tz = ne[2] + fwd[2] * depth; };
-  // une caméra coincée dans un mur ou hors du lieu : elle en ressort librement (sinon elle ne pourrait plus reculer)
-  let stuck = false; try{ const PP = physOf(shot().set); stuck = !!PP && (physHit(PP, eye) >= 0 || !physIn(PP, eye)); }catch(err){}
-  if(stuck || S.freeCam){ set(); keepCam(c); } else camGesture(c, set, true);
+  camPut(c, ne, c.yaw, c.pitch, depth);   // (le passage commun à tous les gestes : 14-cam.js)
   requestRender();
   clearTimeout(_wheelT); _wheelT = setTimeout(() => { pushUndo(_wheelSnap); _wheelSnap = null; changed(); }, 350);
 };
