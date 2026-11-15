@@ -147,6 +147,11 @@ document.addEventListener('pointerdown', e => {
   if(!R.canvas || e.target !== R.canvas || e.button !== 0 || e.shiftKey || S.rec || S.play || S.final) return;
   const [x, y] = canvasXY(e); if(pickAt(x, y)) return;          // un personnage passe devant : c'est lui qu'on attrape
   const k = vehPickAt(x, y); if(k < 0) return;
+  // un élément du décor (pas encore choisi) : la caméra tourne comme d'habitude ; un simple clic dessus le choisit
+  const dv = shot().vehicles[k];
+  if(dv && dv.deco && S.veh !== k){ const x0 = e.clientX, y0 = e.clientY;
+    const up = ev => { document.removeEventListener('pointerup', up, true); if(Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) setTimeout(() => { S.veh = k; S.sel = null; S.crowd = -1; S.noTarget = true; if(typeof setPanel === 'function' && S.panel !== 'car') setPanel('car', true); renderSide(); renderTools(); renderHint(); requestRender(); }, 0); };
+    document.addEventListener('pointerup', up, true); return; }
   e.preventDefault(); e.stopPropagation();
   const v = shot().vehicles[k];
   S.veh = k; S.sel = null; S.crowd = -1; S.noTarget = true;

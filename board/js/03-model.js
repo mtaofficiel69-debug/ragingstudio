@@ -1272,10 +1272,10 @@ const SET_DEF = {
       for(let i = 0; i < 9; i++) box(g, 2.05, 1.8 + i * 0.2, -4.2 + i * 0.2, 0.6, 0.03, 0.12, '#2C2E33');
       [[1.72, 1.76], [2.34, 2.38]].forEach(([a, b]) => { prism(g, [[-4.32, 1.7], [-4.32, 1.86], [-2.44, 3.74], [-2.44, 3.58]], a, b, '#2C2E33'); prism(g, [[-4.32, 1.86], [-4.32, 1.7], [-2.44, 3.58], [-2.44, 3.74]], a, b, '#2C2E33'); });   // les limons
       // benne, caisses, poubelles, réverbère
-      box(g, -1.75, 0.6, -3.2, 1.2, 1.2, 2.0, '#2F6E4F'); box(g, -1.75, 1.24, -3.2, 1.25, 0.08, 2.05, '#26593F');
-      box(g, 1.85, 0.25, 1.6, 0.5, 0.5, 0.5, '#9A7A55'); box(g, 1.85, 0.72, 1.55, 0.44, 0.44, 0.44, '#8A6A4A'); box(g, 1.5, 0.22, 2.2, 0.44, 0.44, 0.44, '#9A7A55');
-      cyl(g, -1.95, 0.75, 1.5, 0.26, 0.22, 0.75, '#6E737B', 10); cyl(g, -1.95, 0.8, 1.5, 0.28, 0.28, 0.05, '#7D828A', 10);
-      cyl(g, 2.2, 4.0, -7.5, 0.06, 0.06, 4.0, '#2C2E33', 6); box(g, 1.95, 4.0, -7.5, 0.5, 0.05, 0.08, '#2C2E33'); box(g, 1.72, 3.9, -7.5, 0.24, 0.12, 0.24, '#F2D98A');
+      sp(g, null, 'Benne', 'Dumpster', g => { box(g, -1.75, 0.6, -3.2, 1.2, 1.2, 2.0, '#2F6E4F'); box(g, -1.75, 1.24, -3.2, 1.25, 0.08, 2.05, '#26593F'); });
+      sp(g, null, 'Cartons', 'Boxes', g => { box(g, 1.85, 0.25, 1.6, 0.5, 0.5, 0.5, '#9A7A55'); box(g, 1.85, 0.72, 1.55, 0.44, 0.44, 0.44, '#8A6A4A'); }); sp(g, null, 'Carton', 'Box', g => box(g, 1.5, 0.22, 2.2, 0.44, 0.44, 0.44, '#9A7A55'));
+      sp(g, null, 'Poubelle', 'Bin', g => { cyl(g, -1.95, 0.75, 1.5, 0.26, 0.22, 0.75, '#6E737B', 10); cyl(g, -1.95, 0.8, 1.5, 0.28, 0.28, 0.05, '#7D828A', 10); });
+      sp(g, null, 'Réverbère', 'Street lamp', g => { cyl(g, 2.2, 4.0, -7.5, 0.06, 0.06, 4.0, '#2C2E33', 6); box(g, 1.95, 4.0, -7.5, 0.5, 0.05, 0.08, '#2C2E33'); box(g, 1.72, 3.9, -7.5, 0.24, 0.12, 0.24, '#F2D98A'); });
       // fils au-dessus
       for(let z = -10; z <= 2; z += 4) box(g, 0, 7.4 - (z % 8 ? 0.3 : 0), z, 4.8, 0.02, 0.02, '#2C2E33');
     },
@@ -1300,8 +1300,8 @@ const SET_DEF = {
       });
       // derrière la façade des boutiques : l'immeuble lui-même (vu d'en haut, il n'y a plus de trou entre les deux rangées)
       box(g, -13.06, 3.5, 0, 12.0, 7.0, 31.96, '#8E5444'); box(g, -12.94, 7.15, 0, 12.3, 0.3, 32.2, '#6B3F33');
-      cyl(g, -3.4, 4.4, -6.5, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, -3.1, 4.4, -6.5, 0.7, 0.05, 0.08, '#2C2E33'); box(g, -2.8, 4.3, -6.5, 0.3, 0.12, 0.3, '#F2D98A');
-      cyl(g, -3.35, 0.7, 3.2, 0.11, 0.13, 0.56, '#B4232C', 8); ball(g, -3.35, 0.72, 3.2, 0.11, 0.08, 0.11, '#B4232C', 8);
+      sp(g, gl, 'Réverbère', 'Street lamp', g => { cyl(g, -3.4, 4.4, -6.5, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, -3.1, 4.4, -6.5, 0.7, 0.05, 0.08, '#2C2E33'); box(g, -2.8, 4.3, -6.5, 0.3, 0.12, 0.3, '#F2D98A'); });
+      sp(g, gl, 'Borne à incendie', 'Fire hydrant', g => { cyl(g, -3.35, 0.7, 3.2, 0.11, 0.13, 0.56, '#B4232C', 8); ball(g, -3.35, 0.72, 3.2, 0.11, 0.08, 0.11, '#B4232C', 8); });
       // le taxi : carrosserie profilée, habitacle ouvert à travers les vitres
       const Y = '#E8B923', Yd = '#C99A17', K = '#24262B', S = '#3B3E45', CH = '#A9AEB6', W = 0.92;
       prism(g, [[2.42, 0.3], [2.44, 0.62], [2.32, 0.82], [1.2, 0.92], [1.15, 0.6], [1.15, 0.3]], -W, W, Y);            // capot
@@ -1398,16 +1398,16 @@ const SET_DEF = {
           (k % 3 === 1 ? tower : walkup)(-7.02, 1, -z - 6, 12, k % 3 === 1 ? 34 : 8.6 + ((k + 1) % 2) * 2.8, k % 3 === 1 ? TW[(k + 1) % 3] : BR[(k + 3) % BR.length], k + 1); }
         for(let z = -136, k = 0; z < 136; z += 12, k++) (k % 4 === 3 ? tower : walkup)(14.02, -1, z + 6, 12, k % 4 === 3 ? 28 + (k % 3) * 8 : 8.6 + (k % 3) * 2.8, k % 4 === 3 ? TW[k % 3] : BR[(k + 2) % BR.length], k);
         // la borne de taxis, sur le trottoir, à côté du taxi
-        { const m0 = MAT; cyl(g, -3.55, 1.5, -3.2, 0.05, 0.05, 1.5, '#2C2E33', 6); MAT = 5; box(g, -3.55, 1.75, -3.2, 0.1, 0.36, 0.9, '#E8B923'); MAT = m0;
-          pixText(g, 'TAXI', -3.2, 1.72, -3.494, 1, 0.022, '#1E2025', true); pixText(g, 'TAXI', -3.2, 1.72, -3.606, -1, 0.022, '#1E2025', true); }
+        sp(g, gl, 'Borne de taxis', 'Taxi stand sign', g => { const m0 = MAT; cyl(g, -3.55, 1.5, -3.2, 0.05, 0.05, 1.5, '#2C2E33', 6); MAT = 5; box(g, -3.55, 1.75, -3.2, 0.1, 0.36, 0.9, '#E8B923'); MAT = m0;
+          pixText(g, 'TAXI', -3.2, 1.72, -3.494, 1, 0.022, '#1E2025', true); pixText(g, 'TAXI', -3.2, 1.72, -3.606, -1, 0.022, '#1E2025', true); });
         // les réverbères, des deux côtés
-        const lamp = (x, z, dir) => { cyl(g, x, 4.4, z, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, x + dir * 0.3, 4.4, z, 0.7, 0.05, 0.08, '#2C2E33'); box(g, x + dir * 0.6, 4.3, z, 0.3, 0.12, 0.3, '#F2D98A'); };
+        const lamp = (x, z, dir) => sp(g, gl, 'Réverbère', 'Street lamp', g => { cyl(g, x, 4.4, z, 0.07, 0.07, 4.4, '#2C2E33', 6); box(g, x + dir * 0.3, 4.4, z, 0.7, 0.05, 0.08, '#2C2E33'); box(g, x + dir * 0.6, 4.3, z, 0.3, 0.12, 0.3, '#F2D98A'); });
         for(let z = -134; z < 135; z += 16){ if(Math.abs(z + 6.5) > 1) lamp(-3.4, z - 6.5 + 16, 1); lamp(8.85, z + 2, -1); }
         // les arbres, dans leurs fosses, sur le trottoir d'en face
-        for(let z = -128; z < 130; z += 24){ if(Math.abs(z - 5) < 4) continue; box(g, 11.6, 0.145, z, 1.2, 0.01, 1.2, '#5E5144'); tree(g, 11.6, z, 0.85); }
+        for(let z = -128; z < 130; z += 24){ if(Math.abs(z - 5) < 4) continue; sp(g, gl, 'Arbre', 'Tree', g => { box(g, 11.6, 0.145, z, 1.2, 0.01, 1.2, '#5E5144'); tree(g, 11.6, z, 0.85); }); }
         // les feux, au passage piéton
-        [[-3.3, 3.9, 1], [8.9, 6.6, -1]].forEach(([x, z, dir]) => { cyl(g, x, 3.0, z, 0.06, 0.06, 3.0, '#2C2E33', 6); box(g, x, 2.6, z, 0.26, 0.75, 0.22, '#24262B');
-          ['#C2453B', '#E3A33A', '#3E9E5E'].forEach((c, i) => box(g, x, 2.85 - i * 0.24, z + dir * 0.115, 0.14, 0.14, 0.02, i === 2 ? c : hexRGB(c).map(v => v * 0.45))); });
+        [[-3.3, 3.9, 1], [8.9, 6.6, -1]].forEach(([x, z, dir]) => sp(g, gl, 'Feu tricolore', 'Traffic light', g => { cyl(g, x, 3.0, z, 0.06, 0.06, 3.0, '#2C2E33', 6); box(g, x, 2.6, z, 0.26, 0.75, 0.22, '#24262B');
+          ['#C2453B', '#E3A33A', '#3E9E5E'].forEach((c, i) => box(g, x, 2.85 - i * 0.24, z + dir * 0.115, 0.14, 0.14, 0.02, i === 2 ? c : hexRGB(c).map(v => v * 0.45))); }));
         // des voitures garées le long du trottoir d'en face
         [[-34, 0], [-21, Math.PI], [-9, 0], [19, 0], [31, Math.PI], [46, 0], [-48, Math.PI]].forEach(([z, ry], i) => {
           /* ces voitures sont maintenant de vrais objets du plan (avec leur conducteur), voir SET_DECO */ });
@@ -1424,22 +1424,23 @@ const SET_DEF = {
             for(let k = 0; k < 6; k++){ const xa = x0 + 0.6 + k * 1.4; MAT = 7; wall(g, [xa, -39.74], [xa + 1.0, -39.74], 0.9, '#55606C', 8.75); wall(g, [xa + 1.0, -42.66], [xa, -42.66], 0.9, '#55606C', 8.75); MAT = m0; } }
           MAT = m0; }
         // la bouche de métro, sur le trottoir : sa rampe vert sombre, l'escalier qui descend, ses deux globes verts allumés
-        { const zc = 24, m0 = MAT, RG = '#2E4439';
+        sp(g, gl, 'Bouche de métro', 'Subway entrance', g => { const zc = 24, m0 = MAT, RG = '#2E4439';
           box(g, -5.0, 0.142, zc, 1.8, 0.004, 4.4, '#1C1E22'); for(let k = 0; k < 9; k++) box(g, -5.0, 0.15 - k * 0.001, zc - 2 + k * 0.5, 1.7, 0.01, 0.06, '#5E6168');
           [-5.95, -4.05].forEach(x => { box(g, x, 0.62, zc, 0.06, 0.06, 4.5, RG); box(g, x, 0.38, zc, 0.12, 0.48, 4.5, RG); });
           box(g, -5.0, 0.62, zc + 2.25, 1.96, 0.06, 0.06, RG); box(g, -5.0, 0.38, zc + 2.25, 2.02, 0.48, 0.12, RG);
           [-5.95, -4.05].forEach(x => { cyl(g, x, 1.4, zc - 2.25, 0.04, 0.04, 1.3, RG, 6); MAT = 5; box(g, x, 1.5, zc - 2.25, 0.26, 0.26, 0.26, '#4FD17A'); MAT = m0; });
           MAT = 5; box(g, -5.0, 1.25, zc - 2.3, 1.5, 0.3, 0.06, '#E9E6E0'); MAT = m0;
-          pixText(g, 'SUBWAY', -5.0, 1.21, zc - 2.34, -1, 0.04, '#1E2025'); pixText(g, 'SUBWAY', -5.0, 1.21, zc - 2.26, 1, 0.04, '#1E2025'); }
+          pixText(g, 'SUBWAY', -5.0, 1.21, zc - 2.34, -1, 0.04, '#1E2025'); pixText(g, 'SUBWAY', -5.0, 1.21, zc - 2.26, 1, 0.04, '#1E2025'); });
         // le kiosque à journaux, le chariot de hot-dogs sous son parasol, la borne à incendie, la boîte aux lettres
-        { const m0 = MAT;
+        sp(g, gl, 'Kiosque à journaux', 'Newsstand', g => { const m0 = MAT;
           box(g, -5.6, 1.25, -9, 1.6, 2.2, 2.4, '#2F4E3E'); box(g, -5.6, 2.45, -9, 2.0, 0.12, 2.8, '#24262B'); MAT = 7; wall(g, [-4.79, -8.1], [-4.79, -9.9], 0.9, '#8C7A5E', 1.0); MAT = m0;
-          for(let k = 0; k < 5; k++) box(g, -4.7, 0.55 + (k % 2) * 0.1, -9.9 + k * 0.42, 0.14, 0.42, 0.36, ['#E9E6E0', '#C2453B', '#E8B923', '#3D5A80', '#E9E6E0'][k]);
-          box(g, -4.4, 0.75, 10.5, 0.8, 0.7, 1.6, '#C9CDD2'); box(g, -4.4, 1.12, 10.5, 0.84, 0.04, 1.64, '#8C9199');
+          for(let k = 0; k < 5; k++) box(g, -4.7, 0.55 + (k % 2) * 0.1, -9.9 + k * 0.42, 0.14, 0.42, 0.36, ['#E9E6E0', '#C2453B', '#E8B923', '#3D5A80', '#E9E6E0'][k]); });
+        { const m0 = MAT;
+          sp(g, gl, 'Chariot à hot-dogs', 'Hot-dog cart', g => { box(g, -4.4, 0.75, 10.5, 0.8, 0.7, 1.6, '#C9CDD2'); box(g, -4.4, 1.12, 10.5, 0.84, 0.04, 1.64, '#8C9199');
           [-0.6, 0.6].forEach(o => cyl(g, -4.4, 0.18, 10.5 + o, 0.16, 0.16, 0.06, '#24262B', 10, 'x'));
-          cyl(g, -4.4, 2.35, 10.5, 0.03, 0.03, 1.2, '#2C2E33', 6); cyl(g, -4.4, 2.35, 10.5, 0.02, 1.0, 0.4, '#E8572E', 10); cyl(g, -4.4, 2.35, 10.5, 1.0, 0.0, 0.02, '#F2C14E', 10);
-          cyl(g, -3.55, 0.44, 13.5, 0.13, 0.13, 0.3, '#C2453B', 8); cyl(g, -3.55, 0.6, 13.5, 0.09, 0.13, 0.16, '#C2453B', 8); cyl(g, -3.55, 0.45, 13.5, 0.05, 0.05, 0.36, '#A33A31', 6, 'x');
-          box(g, -3.7, 0.72, -12, 0.5, 1.1, 0.45, '#2F4E8E'); prism(g, [[-12.22, 1.27], [-11.78, 1.27], [-11.78, 1.4], [-12.22, 1.4]], -3.95, -3.45, '#2F4E8E');
+          cyl(g, -4.4, 2.35, 10.5, 0.03, 0.03, 1.2, '#2C2E33', 6); cyl(g, -4.4, 2.35, 10.5, 0.02, 1.0, 0.4, '#E8572E', 10); cyl(g, -4.4, 2.35, 10.5, 1.0, 0.0, 0.02, '#F2C14E', 10); });
+          sp(g, gl, 'Borne à incendie', 'Fire hydrant', g => { cyl(g, -3.55, 0.44, 13.5, 0.13, 0.13, 0.3, '#C2453B', 8); cyl(g, -3.55, 0.6, 13.5, 0.09, 0.13, 0.16, '#C2453B', 8); cyl(g, -3.55, 0.45, 13.5, 0.05, 0.05, 0.36, '#A33A31', 6, 'x'); });
+          sp(g, gl, 'Boîte aux lettres', 'Mailbox', g => { box(g, -3.7, 0.72, -12, 0.5, 1.1, 0.45, '#2F4E8E'); prism(g, [[-12.22, 1.27], [-11.78, 1.27], [-11.78, 1.4], [-12.22, 1.4]], -3.95, -3.45, '#2F4E8E'); });
           MAT = m0; }
         // d'autres taxis jaunes : à la file, à la borne, et sur l'avenue
         // (les taxis jaunes à la file et sur l'avenue sont de vrais objets du plan, voir SET_DECO)
@@ -1457,16 +1458,14 @@ const SET_DEF = {
       pane(g, [-3.79, 1.2], [-3.79, -0.8], 1.4, '#A9C9DE', 0.9); wall(g, [-3.785, 1.25], [-3.785, -0.85], 0.06, '#F4F2EE', 0.87); wall(g, [-3.785, 0.23], [-3.785, 0.17], 1.4, '#F4F2EE', 0.9);
       wall(g, [1.6, 3.19], [0.7, 3.19], 2.05, '#8C6B4E'); painting(g, [0.25, -3.2], [1.55, -3.2], 1.45, 0.8, ['#E3C9A0', '#C98A5A', '#2F6E4F', '#3D5A80']);   // le tableau du salon : le modèle unique
       // tapis, canapé, table basse, meuble télé et télé
-      floor(g, -1.6, -1.4, 1.6, 0.9, 0.006, '#B9876A');
-      box(g, 0, 0.22, -2.2, 2.2, 0.44, 0.9, '#5A6B7C'); box(g, 0, 0.66, -2.58, 2.2, 0.5, 0.18, '#53637A');
-      [1.18, -1.18].forEach(x => box(g, x, 0.36, -2.2, 0.2, 0.32, 0.92, '#53637A'));
-      [-0.55, 0.55].forEach(x => box(g, x, 0.47, -2.17, 1.0, 0.06, 0.8, '#66788A'));
-      box(g, 0, 0.38, -0.45, 1.1, 0.05, 0.6, '#6E5440'); [[-0.5, -0.7], [0.5, -0.7], [-0.5, -0.2], [0.5, -0.2]].forEach(([x, z]) => box(g, x, 0.18, z, 0.05, 0.36, 0.05, '#5B4532'));
-      box(g, 0, 0.27, 2.9, 2.0, 0.54, 0.45, '#6E5440'); box(g, 0, 0.92, 3.0, 1.5, 0.82, 0.05, '#1E1F23'); box(g, 0, 0.92, 2.97, 1.42, 0.74, 0.01, '#2E3846');
+      sp(g, null, 'Tapis', 'Rug', g => { floor(g, -1.6, -1.4, 1.6, 0.9, 0.006, '#B9876A'); });
+      sp(g, null, 'Canapé', 'Sofa', g => { box(g, 0, 0.22, -2.2, 2.2, 0.44, 0.9, '#5A6B7C'); box(g, 0, 0.66, -2.58, 2.2, 0.5, 0.18, '#53637A'); [1.18, -1.18].forEach(x => box(g, x, 0.36, -2.2, 0.2, 0.32, 0.92, '#53637A')); [-0.55, 0.55].forEach(x => box(g, x, 0.47, -2.17, 1.0, 0.06, 0.8, '#66788A')); });
+      sp(g, null, 'Table basse', 'Coffee table', g => { box(g, 0, 0.38, -0.45, 1.1, 0.05, 0.6, '#6E5440'); [[-0.5, -0.7], [0.5, -0.7], [-0.5, -0.2], [0.5, -0.2]].forEach(([x, z]) => box(g, x, 0.18, z, 0.05, 0.36, 0.05, '#5B4532')); });
+      sp(g, null, 'Meuble télé', 'TV stand', g => { box(g, 0, 0.27, 2.9, 2.0, 0.54, 0.45, '#6E5440'); box(g, 0, 0.92, 3.0, 1.5, 0.82, 0.05, '#1E1F23'); box(g, 0, 0.92, 2.97, 1.42, 0.74, 0.01, '#2E3846'); });
       // lampadaire, plante, étagère
-      cyl(g, 2.6, 1.6, -2.4, 0.02, 0.02, 1.6, '#2C2E33', 6); cyl(g, 2.6, 1.75, -2.4, 0.12, 0.24, 0.3, '#F2E6C9', 10); cyl(g, 2.6, 0.03, -2.4, 0.18, 0.18, 0.03, '#2C2E33', 10);
-      cyl(g, -3.2, 0.35, 2.6, 0.2, 0.16, 0.35, '#B9876A', 8); ball(g, -3.2, 0.85, 2.6, 0.34, 0.5, 0.34, '#4E7C58', 8);
-      box(g, 3.55, 1.0, 1.0, 0.4, 2.0, 1.2, '#7A5C42'); [0.5, 1.0, 1.5].forEach((y, k) => { for(let i = 0; i < 7; i++) box(g, 3.48, y + 0.13, 0.55 + i * 0.13, 0.22, 0.24 - (i % 3) * 0.03, 0.09, ['#9B3B33', '#3D5A80', '#C9B48F', '#2F6E4F'][(i + k) % 4]); });
+      sp(g, null, 'Lampadaire', 'Floor lamp', g => { cyl(g, 2.6, 1.6, -2.4, 0.02, 0.02, 1.6, '#2C2E33', 6); cyl(g, 2.6, 1.75, -2.4, 0.12, 0.24, 0.3, '#F2E6C9', 10); cyl(g, 2.6, 0.03, -2.4, 0.18, 0.18, 0.03, '#2C2E33', 10); });
+      sp(g, null, 'Plante', 'Plant', g => { cyl(g, -3.2, 0.35, 2.6, 0.2, 0.16, 0.35, '#B9876A', 8); ball(g, -3.2, 0.85, 2.6, 0.34, 0.5, 0.34, '#4E7C58', 8); });
+      sp(g, null, 'Étagère', 'Bookshelf', g => { box(g, 3.55, 1.0, 1.0, 0.4, 2.0, 1.2, '#7A5C42'); [0.5, 1.0, 1.5].forEach((y, k) => { for(let i = 0; i < 7; i++) box(g, 3.48, y + 0.13, 0.55 + i * 0.13, 0.22, 0.24 - (i % 3) * 0.03, 0.09, ['#9B3B33', '#3D5A80', '#C9B48F', '#2F6E4F'][(i + k) % 4]); }); });
     },
   },
   cafe:{
@@ -1480,19 +1479,18 @@ const SET_DEF = {
       pane(g, [4.49, -2.6], [4.49, 2.6], 2.0, '#A9C9DE', 0.5); for(let z = -2.6; z <= 2.61; z += 1.3) wall(g, [4.485, z - 0.03], [4.485, z + 0.03], 2.0, '#2C2E33', 0.5);
       wall(g, [-2.6, -3.49], [-0.4, -3.49], 1.0, '#26292F', 1.7); for(let i = 0; i < 4; i++) wall(g, [-2.4, -3.485], [-1.0 + (i % 2) * 0.3, -3.485], 0.03, '#E6E2DA', 2.45 - i * 0.18);
       // le comptoir, la machine à café, les tabourets
-      box(g, -1.0, 0.52, -2.1, 3.6, 1.04, 0.6, '#6E5440'); box(g, -1.0, 1.06, -2.05, 3.7, 0.05, 0.75, '#3A3D44');
-      box(g, -2.2, 1.28, -2.25, 0.5, 0.4, 0.4, '#A9AEB6'); box(g, -2.2, 1.12, -2.04, 0.3, 0.06, 0.06, '#2C2E33');
+      sp(g, null, 'Comptoir', 'Counter', g => { box(g, -1.0, 0.52, -2.1, 3.6, 1.04, 0.6, '#6E5440'); box(g, -1.0, 1.06, -2.05, 3.7, 0.05, 0.75, '#3A3D44'); box(g, -2.2, 1.28, -2.25, 0.5, 0.4, 0.4, '#A9AEB6'); box(g, -2.2, 1.12, -2.04, 0.3, 0.06, 0.06, '#2C2E33'); });
       box(g, -1.0, 1.0, -3.32, 3.8, 0.04, 0.35, '#6E5440'); box(g, -1.0, 1.7, -3.32, 3.8, 0.04, 0.35, '#6E5440');   // les étagères, contre le mur
       for(let i = 0; i < 9; i++) cyl(g, -2.6 + i * 0.4, 1.2, -3.3, 0.06, 0.05, 0.16, ['#2F6E4F', '#9B3B33', '#C9B48F'][i % 3], 8);
-      [-2.2, -1.0, 0.2].forEach(x => { cyl(g, x, 0.76, -1.45, 0.19, 0.19, 0.05, '#2C2E33', 12); cyl(g, x, 0.72, -1.45, 0.03, 0.03, 0.7, '#3A3D44', 6); cyl(g, x, 0.02, -1.45, 0.2, 0.2, 0.02, '#3A3D44', 10); });
+      [-2.2, -1.0, 0.2].forEach(x => sp(g, null, 'Tabouret', 'Stool', g => { cyl(g, x, 0.76, -1.45, 0.19, 0.19, 0.05, '#2C2E33', 12); cyl(g, x, 0.72, -1.45, 0.03, 0.03, 0.7, '#3A3D44', 6); cyl(g, x, 0.02, -1.45, 0.2, 0.2, 0.02, '#3A3D44', 10); }));
       // deux tables rondes avec leurs chaises
       [[2.2, 0.0], [1.2, 2.0]].forEach(([x, z]) => {
-        cyl(g, x, 0.75, z, 0.42, 0.42, 0.04, '#E6E2DA', 14); cyl(g, x, 0.71, z, 0.04, 0.04, 0.7, '#2C2E33', 6); cyl(g, x, 0.02, z, 0.22, 0.22, 0.02, '#2C2E33', 10);
-        [[-0.68, 0], [0.68, Math.PI]].forEach(([dx, ry]) => { const cx = x + dx; box(g, cx, 0.44, z, 0.42, 0.05, 0.42, '#7A5C42'); box(g, cx + (dx < 0 ? -0.19 : 0.19), 0.72, z, 0.04, 0.55, 0.4, '#7A5C42');
-          [[-0.17, -0.17], [0.17, -0.17], [-0.17, 0.17], [0.17, 0.17]].forEach(([a, b]) => box(g, cx + a, 0.21, z + b, 0.03, 0.42, 0.03, '#5B4532')); });
+        sp(g, null, 'Table ronde', 'Round table', g => { cyl(g, x, 0.75, z, 0.42, 0.42, 0.04, '#E6E2DA', 14); cyl(g, x, 0.71, z, 0.04, 0.04, 0.7, '#2C2E33', 6); cyl(g, x, 0.02, z, 0.22, 0.22, 0.02, '#2C2E33', 10); });
+        [[-0.68, 0], [0.68, Math.PI]].forEach(([dx, ry]) => sp(g, null, 'Chaise', 'Chair', g => { const cx = x + dx; box(g, cx, 0.44, z, 0.42, 0.05, 0.42, '#7A5C42'); box(g, cx + (dx < 0 ? -0.19 : 0.19), 0.72, z, 0.04, 0.55, 0.4, '#7A5C42');
+          [[-0.17, -0.17], [0.17, -0.17], [-0.17, 0.17], [0.17, 0.17]].forEach(([a, b]) => box(g, cx + a, 0.21, z + b, 0.03, 0.42, 0.03, '#5B4532')); }));
       });
       // suspensions
-      [-2.0, 0.0, 2.2].forEach(x => { cyl(g, x, 3.0, -1.1, 0.008, 0.008, 0.9, '#2C2E33', 4); cyl(g, x, 2.1, -1.1, 0.06, 0.22, 0.18, '#C99E2A', 10); });
+      [-2.0, 0.0, 2.2].forEach(x => sp(g, null, 'Suspension', 'Pendant lamp', g => { cyl(g, x, 3.0, -1.1, 0.008, 0.008, 0.9, '#2C2E33', 4); cyl(g, x, 2.1, -1.1, 0.06, 0.22, 0.18, '#C99E2A', 10); }));
     },
   },
   park:{
@@ -1650,15 +1648,17 @@ Object.assign(SET_DEF, {
         facade(g, 10, z, z + 12, 13 + (k * 5) % 10, cols[(k + 3) % 6], -1, shops[(k + 2) % 6]);
       }
       // lampadaires, arbres, abribus, banc, feu tricolore, voitures garées
-      for(let z = -60; z <= 60; z += 15) [-1, 1].forEach(sd => { const x = sd * 4.6; cyl(g, x, 4.6, z, 0.07, 0.08, 4.5, '#2C2E33', 6); box(g, x - sd * 0.35, 4.6, z, 0.8, 0.06, 0.1, '#2C2E33'); box(g, x - sd * 0.72, 4.5, z, 0.3, 0.12, 0.24, '#F2D98A'); });
-      for(let z = -54; z <= 54; z += 18) [-1, 1].forEach(sd => { const x = sd * 5.2; box(g, x, 0.2, z + 7, 0.9, 0.12, 0.9, '#5E636C'); cyl(g, x, 2.2, z + 7, 0.09, 0.12, 2.1, '#6B4E37', 7); ball(g, x, 3.0, z + 7, 1.15, 1.0, 1.15, '#557F57', 9); });
+      for(let z = -60; z <= 60; z += 15) [-1, 1].forEach(sd => sp(g, gl, 'Réverbère', 'Street lamp', g => { const x = sd * 4.6; cyl(g, x, 4.6, z, 0.07, 0.08, 4.5, '#2C2E33', 6); box(g, x - sd * 0.35, 4.6, z, 0.8, 0.06, 0.1, '#2C2E33'); box(g, x - sd * 0.72, 4.5, z, 0.3, 0.12, 0.24, '#F2D98A'); }));
+      for(let z = -54; z <= 54; z += 18) [-1, 1].forEach(sd => sp(g, gl, 'Arbre', 'Tree', g => { const x = sd * 5.2; box(g, x, 0.2, z + 7, 0.9, 0.12, 0.9, '#5E636C'); cyl(g, x, 2.2, z + 7, 0.09, 0.12, 2.1, '#6B4E37', 7); ball(g, x, 3.0, z + 7, 1.15, 1.0, 1.15, '#557F57', 9); }));
+      sp(g, gl, 'Abribus', 'Bus shelter', (g, gl) => {
       box(g, 6.8, 1.4, -8, 0.06, 2.5, 3.2, '#2C2E33'); box(g, 6.0, 2.68, -8, 1.8, 0.08, 3.4, '#3A3D44');
       [-9.55, -6.45].forEach(z => box(g, 6.0, 1.4, z, 1.6, 2.5, 0.06, '#2C2E33'));
       if(gl) wall(gl, [6.76, -9.5], [6.76, -6.5], 2.2, '#A9C4D2', 0.25);
       box(g, 6.3, 0.48, -8, 0.4, 0.05, 2.2, '#8A6A4A'); [-8.9, -7.1].forEach(z => box(g, 6.3, 0.23, z, 0.05, 0.46, 0.05, '#2C2E33'));   // le banc de l'abribus, sur ses pieds
-      cyl(g, -4.5, 3.0, 4.2, 0.07, 0.07, 3.0, '#2C2E33', 6); box(g, -4.5, 3.25, 4.2, 0.22, 0.6, 0.2, '#24262B');
-      [['#C2453B', 3.42], ['#E8B923', 3.25], ['#4E9A5B', 3.08]].forEach(([c, y]) => box(g, -4.5, y, 4.31, 0.1, 0.1, 0.02, c));
-      box(g, -4.7, 0.6, -3, 0.5, 0.9, 0.5, '#2F6E4F');
+      });
+      sp(g, gl, 'Feu tricolore', 'Traffic light', g => { cyl(g, -4.5, 3.0, 4.2, 0.07, 0.07, 3.0, '#2C2E33', 6); box(g, -4.5, 3.25, 4.2, 0.22, 0.6, 0.2, '#24262B');
+      [['#C2453B', 3.42], ['#E8B923', 3.25], ['#4E9A5B', 3.08]].forEach(([c, y]) => box(g, -4.5, y, 4.31, 0.1, 0.1, 0.02, c)); });
+      sp(g, gl, 'Poubelle', 'Bin', g => box(g, -4.7, 0.6, -3, 0.5, 0.9, 0.5, '#2F6E4F'));
     },
   },
   beach:{
@@ -2921,9 +2921,18 @@ Object.values(SET_DEF).forEach(d => { if(d.floors && d.levels){ const f = d.floo
 // les deux premières places servent de départ quand on choisit le lieu
 Object.keys(SPOTS).forEach(id => { SET_DEF[id].spawn = SPOTS[id].map(p => ({ x:p[2], z:p[3], ry:p[4], pose:p[5], y:p[6] })); });
 const SET_COLL = {};
+/* les éléments du décor qu'on peut déplacer ou supprimer : dans la construction d'un lieu, sp(...) entoure un objet
+   (réverbère, arbre, banc…). Il n'est plus collé au lieu : il est noté ici, et chaque plan le reçoit comme un objet à lui
+   (même forme, même place), qu'on choisit d'un clic, qu'on déplace, qu'on tourne ou qu'on supprime. */
+const SET_PIECES = {};
+let SP_REG = null;
+function sp(g, gl, fr, en, fn){
+  if(!SP_REG){ fn(g, gl); return; }
+  SP_REG.push({ fr, en, fn, mat:MAT, edge:EDGE_ON });
+}
 function setGeo(id){
   const g = geo(), gl = geo(), L = (SET_DEF[id].levels || []).map(() => geo());
-  COLL = new Map(); PANES = new Map(); WATERS = new Map(); TEXS = new Map(); SET_DEF[id].build(g, gl, L);
+  COLL = new Map(); PANES = new Map(); WATERS = new Map(); TEXS = new Map(); SP_REG = []; try { SET_DEF[id].build(g, gl, L); } finally { SET_PIECES[id] = SP_REG; SP_REG = null; }
   const E = { b:[], w:[], p:[] }; SET_COLL[id] = { main:COLL.get(g) || E, levels:L.map(l => COLL.get(l) || E) }; COLL = null;
   const P = PANES, T = TEXS, Wt = WATERS; PANES = null; TEXS = null; WATERS = null;
   return { g, glass:gl, levels:L, panes:P.get(g) || null, levelPanes:L.map(l => P.get(l) || null), tex:[...T.entries()], water:[[g, 0]].concat(L.map((l, i) => [l, i + 1])).filter(([m]) => Wt.has(m)).map(([m, i]) => [Wt.get(m), i]) };
