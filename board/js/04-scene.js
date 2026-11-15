@@ -637,8 +637,11 @@ const VEH_HULL = { moto:[[0, 0.55, 0, 0.3, 0.45, 0.95]], car:[[0, 0.5, 0, 0.95, 
   police:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], taxi:[[0, 0.5, 0, 0.95, 0.4, 2.45], [0, 1.2, -0.25, 0.85, 0.32, 1.15]], heli:[[0, 1.35, 0.4, 0.95, 0.95, 1.9]], plane:[[0, 1.15, -1.0, 0.75, 0.75, 3.6]] };
 const _physV = { key:'', P:null };
 function physScene(id, sh){
-  // la caméra est libre autour des véhicules et des objets : elle s'en approche autant qu'on veut, et peut même y entrer
-  const P = physOf(id); return P;
+  // la caméra est libre autour des véhicules, des objets et des meubles : seuls les murs, les cloisons et les grands volumes
+  // (les immeubles) la retiennent — plus de saut quand elle frôle une chaise, un réverbère, une table
+  const P = physOf(id); if(!P) return P;
+  if(!P.cam) P.cam = Object.assign({}, P, { boxes:P.boxes.filter(b => P.wb.includes(b) || (b[4] - CAM_R >= 1.0 && Math.max(b[3], b[5]) - CAM_R >= 2.0)) });
+  return P.cam;
   const vs = ((sh || (S.doc && S.doc.shots[S.i]) || {}).vehicles) || []; if(!P || !vs.length) return P;
   const key = id + JSON.stringify(vs.map(v => [v.kind, v.x, v.y, v.z, v.ry]));
   if(_physV.key === key && _physV.base === P) return _physV.P;
