@@ -25,12 +25,15 @@ const camBasis = (yawDeg, pitDeg) => { const y = yawDeg * D2R, p = pitDeg * D2R,
 function camPut(c, eye, yaw, pitch, focus){
   const e0 = camEyeRaw(c); let e = eye.slice();
   e[1] = clamp(e[1], 0.03, 45);
-  if(!S.freeCam){
-    try{ const P = physScene(shot().set);
-      // (une caméra déjà dans un mur ou hors du lieu en ressort librement)
-      if(P && physHit(P, e0) < 0 && physIn(P, e0) && Math.abs(physY(P, e0) - e0[1]) < 1e-6) e = physMove(P, e0, e);
-    }catch(err){}
-  }
+  // l'objectif reste toujours dans le lieu : il glisse le long des murs, des sols, des plafonds, sans jamais les traverser.
+  // S'il se trouve hors du lieu (un ancien plan, un cadrage tout prêt), il ne peut qu'y revenir : jamais s'en éloigner davantage.
+  try{ const P = physScene(shot().set);
+    if(P){ const ok = q => physHit(P, q) < 0 && physIn(P, q) && Math.abs(physY(P, q) - q[1]) < 1e-6;
+      let a = e0.slice(); if(!ok(a)){ a[1] = physY(P, a); }
+      if(ok(a)) e = physMove(P, a, e);
+      else if(!ok(e)){ const s = camSafe(clone(c), shot().set, true), es = camEyeRaw(s); e = ok(es) ? es : e0; }
+    }
+  }catch(err){}
   pitch = clamp(pitch, -88, 85);
   const B = camBasis(yaw, pitch); let d = clamp(focus, 0.05, DIST_MAX);
   // le point visé reste dans les limites permises : on raccourcit la visée plutôt que de déplacer la caméra
@@ -81,3 +84,35 @@ orbStep = function(all){
   if(Math.abs(ORB.yaw) + Math.abs(ORB.pitch) > 0.02 || Math.abs(ORB.px) + Math.abs(ORB.py) > 0.1) ORB.raf = requestAnimationFrame(orbStep);
   else { ORB.yaw = ORB.pitch = ORB.px = ORB.py = 0; }
 };
+
+/* ---------- La caméra ne sort plus du lieu ----------
+   Le bouton « Caméra libre » est retiré : sans aucune limite, la caméra passait derrière les décors (on voyait l'envers
+   des murs, le vide) et pouvait se perdre hors du lieu. Il reste une seule caméra, fluide, qui reste dans le lieu. */
+S.freeCam = false; try{ lsSet('raging3d_freecam', '0'); }catch(err){}
+ACT.freeCam = () => {};
+const camNavBase = renderNav;
+renderNav = function(){
+  camNavBase.apply(this, arguments);
+  const el = document.getElementById('nav'); if(!el) return;
+  el.querySelectorAll('.dk-free').forEach(b => { const p = b.previousElementSibling; if(p && p.classList.contains('dk-sep') && !(b.nextElementSibling && b.nextElementSibling.classList.contains('dk-help'))) p.remove(); b.remove(); });
+};
+
+/* ---------- Double-clic : viser ce qu'on montre ----------
+   Avant, le double-clic visait le point du SOL dans l'axe de la souris : sur un objet ou un mur, ce point était loin derrière,
+   hors du lieu. Maintenant, il vise la surface exacte sous la souris (objet, meuble, mur, sol) et la caméra s'en approche
+   en restant dans le lieu. Sur un personnage : comme avant, il est recadré. */
+document.addEventListener('dblclick', e => {
+  if(!R.canvas || e.target !== R.canvas || S.rec || S.play) return;
+  const [x, y] = canvasXY(e); if(pickAt(x, y)) return;          // un personnage : l'ancien recadrage
+  e.preventDefault(); e.stopPropagation();
+  const s = shot(), c = s.cam, before = clone(c);
+  let Z; try{ Z = zoomPoint(x, y, null); }catch(err){ return; }
+  const D = Math.min(Z.D, 40), P = [Z.eye[0] + Z.rd[0] * D, Z.eye[1] + Z.rd[1] * D, Z.eye[2] + Z.rd[2] * D];
+  const B = camBasis(c.yaw, c.pitch), d = clamp(D * 0.6, 0.8, 6);
+  const snap = snapshot();
+  // par petites étapes : l'objectif glisse le long des murs jusqu'à sa place (il ne peut pas les traverser)
+  const goal = [P[0] + B.back[0] * d, P[1] + B.back[1] * d, P[2] + B.back[2] * d];
+  for(let k = 0; k < 6; k++){ const e0 = camEyeRaw(c), m = [goal[0] - e0[0], goal[1] - e0[1], goal[2] - e0[2]], L0 = Math.hypot(m[0], m[1], m[2]); if(L0 < 0.02) break;
+    const f = Math.min(1, 12 / L0); camPut(c, [e0[0] + m[0] * f, e0[1] + m[1] * f, e0[2] + m[2] * f], c.yaw, c.pitch, d); }
+  pushUndo(snap); if(typeof startTween === 'function') startTween(before); changed();
+}, true);
